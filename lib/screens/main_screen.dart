@@ -101,125 +101,147 @@ class MainScreen extends StatelessWidget {
   Widget _buildWide(BuildContext context, InventoryProvider provider) {
     final fmt = NumberFormat.currency(locale: 'de_DE', symbol: '€');
     return Scaffold(
-      appBar: AppBar(
-        title: const Row(
-          children: [
-            Icon(Icons.inventory_2_rounded, size: 22),
-            SizedBox(width: 10),
-            Text('Bestell- & Verkaufs-Tracker'),
-          ],
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0F2744), Color(0xFF1A3F70)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            title: const Row(
+              children: [
+                Icon(Icons.inventory_2_rounded, size: 20, color: Colors.white),
+                SizedBox(width: 10),
+                Text(
+                  'Bestell- & Verkaufs-Tracker',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              _AppBarButton(
+                icon: Icons.upload_file_outlined,
+                label: 'Importieren',
+                onTap: () => _import(context, provider),
+              ),
+              const SizedBox(width: 6),
+              _AppBarButton(
+                icon: Icons.download_outlined,
+                label: 'Exportieren',
+                onTap: () => _export(context, provider),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                  width: 1,
+                  height: 20,
+                  color: Colors.white24,
+                  margin: const EdgeInsets.symmetric(horizontal: 4)),
+              _AppBarButton(
+                icon: Icons.settings_outlined,
+                label: 'Einstellungen',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
         ),
-        actions: [
-          _AppBarButton(
-            icon: Icons.upload_file_outlined,
-            label: 'Importieren',
-            onTap: () => _import(context, provider),
-          ),
-          const SizedBox(width: 4),
-          _AppBarButton(
-            icon: Icons.download_outlined,
-            label: 'Exportieren',
-            onTap: () => _export(context, provider),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            width: 1,
-            height: 24,
-            color: Colors.white24,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-          ),
-          TextButton.icon(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-            icon: const Icon(Icons.settings_outlined,
-                color: Colors.white70, size: 18),
-            label: const Text(
-              'Einstellungen',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showDialog(
           context: context,
           builder: (_) => const AddEditDealDialog(),
         ),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.add, size: 20),
         label: const Text('Neuer Eintrag'),
+        elevation: 3,
       ),
       body: Column(
         children: [
-          // KPI row – horizontal scroll with fixed-width cards
+          // ── KPI strip ───────────────────────────────────────────────────
           Container(
-            color: const Color(0xFF1A3A5C),
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF0F2744), Color(0xFF1A3F70)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              border: Border(
+                bottom: BorderSide(color: Color(0xFF2A4A7F), width: 1),
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 6, 20, 18),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
                   SizedBox(
-                    width: 210,
-                    child: KpiCard(
-                      icon: Icons.shopping_cart_outlined,
-                      title: 'Offene Bestellungen',
-                      value: '${provider.openOrdersCount}',
-                      color: const Color(0xFF2563EB),
-                    ),
-                  ),
+                      width: 210,
+                      child: KpiCard(
+                        icon: Icons.shopping_cart_outlined,
+                        title: 'Offene Bestellungen',
+                        value: '${provider.openOrdersCount}',
+                        color: const Color(0xFF2563EB),
+                      )),
                   const SizedBox(width: 12),
                   SizedBox(
-                    width: 210,
-                    child: KpiCard(
-                      icon: Icons.trending_up_rounded,
-                      title: 'Gesamtprofit',
-                      value: fmt.format(provider.totalProfit),
-                      color: const Color(0xFF059669),
-                    ),
-                  ),
+                      width: 210,
+                      child: KpiCard(
+                        icon: Icons.trending_up_rounded,
+                        title: 'Gesamtprofit',
+                        value: fmt.format(provider.totalProfit),
+                        color: const Color(0xFF059669),
+                      )),
                   const SizedBox(width: 12),
                   SizedBox(
-                    width: 210,
-                    child: KpiCard(
-                      icon: Icons.account_balance_wallet_outlined,
-                      title: 'Offener Betrag',
-                      value: fmt.format(provider.openAmount),
-                      color: const Color(0xFFD97706),
-                    ),
-                  ),
+                      width: 210,
+                      child: KpiCard(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: 'Offener Betrag',
+                        value: fmt.format(provider.openAmount),
+                        color: const Color(0xFFD97706),
+                      )),
                   const SizedBox(width: 12),
                   SizedBox(
-                    width: 210,
-                    child: KpiCard(
-                      icon: Icons.local_shipping_outlined,
-                      title: 'Offene Lieferungen',
-                      value: '${provider.openDeliveriesCount}',
-                      color: const Color(0xFF7C3AED),
-                    ),
-                  ),
+                      width: 210,
+                      child: KpiCard(
+                        icon: Icons.local_shipping_outlined,
+                        title: 'Offene Lieferungen',
+                        value: '${provider.openDeliveriesCount}',
+                        color: const Color(0xFF7C3AED),
+                      )),
                 ],
               ),
             ),
           ),
-          // Table + sidebar
+          // ── Table + sidebar ─────────────────────────────────────────────
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Expanded(child: DealTable()),
                 Container(
-                  width: 290,
+                  width: 292,
                   decoration: const BoxDecoration(
-                    color: Color(0xFFEEF2F7),
+                    color: Color(0xFFF1F5F9),
                     border: Border(
                       left: BorderSide(color: Color(0xFFE2E8F0)),
                     ),
                   ),
                   child: const SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(12, 12, 12, 100),
+                    padding: EdgeInsets.fromLTRB(14, 14, 14, 100),
                     child: Column(
                       children: [
                         BuyerLegend(),
@@ -245,95 +267,115 @@ class MainScreen extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Row(
-            children: [
-              Icon(Icons.inventory_2_rounded, size: 20),
-              SizedBox(width: 8),
-              Text('Tracker', style: TextStyle(fontSize: 18)),
-            ],
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.upload_file_outlined,
-                  color: Colors.white70, size: 22),
-              tooltip: 'Importieren',
-              onPressed: () => _import(context, provider),
-            ),
-            IconButton(
-              icon: const Icon(Icons.download_outlined,
-                  color: Colors.white70, size: 22),
-              tooltip: 'Exportieren',
-              onPressed: () => _export(context, provider),
-            ),
-            IconButton(
-              icon: const Icon(Icons.settings_outlined,
-                  color: Colors.white70, size: 22),
-              tooltip: 'Einstellungen',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF0F2744), Color(0xFF1A3F70)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
               ),
             ),
-          ],
+            child: AppBar(
+              backgroundColor: Colors.transparent,
+              title: const Row(
+                children: [
+                  Icon(Icons.inventory_2_rounded, size: 18, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('Tracker',
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white)),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.upload_file_outlined,
+                      color: Colors.white70, size: 20),
+                  tooltip: 'Importieren',
+                  onPressed: () => _import(context, provider),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.download_outlined,
+                      color: Colors.white70, size: 20),
+                  tooltip: 'Exportieren',
+                  onPressed: () => _export(context, provider),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.settings_outlined,
+                      color: Colors.white70, size: 20),
+                  tooltip: 'Einstellungen',
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () => showDialog(
             context: context,
             builder: (_) => const AddEditDealDialog(),
           ),
-          icon: const Icon(Icons.add),
+          icon: const Icon(Icons.add, size: 20),
           label: const Text('Neuer Eintrag'),
         ),
         body: Column(
           children: [
             // KPI 2 × 2 grid
             Container(
-              color: const Color(0xFF1A3A5C),
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0F2744), Color(0xFF1A3F70)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFF2A4A7F), width: 1),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
               child: Column(
                 children: [
                   Row(
                     children: [
                       Expanded(
-                        child: KpiCard(
-                          icon: Icons.shopping_cart_outlined,
-                          title: 'Offene Bestellungen',
-                          value: '${provider.openOrdersCount}',
-                          color: const Color(0xFF2563EB),
-                        ),
-                      ),
+                          child: KpiCard(
+                        icon: Icons.shopping_cart_outlined,
+                        title: 'Offene Bestellungen',
+                        value: '${provider.openOrdersCount}',
+                        color: const Color(0xFF2563EB),
+                      )),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: KpiCard(
-                          icon: Icons.trending_up_rounded,
-                          title: 'Gesamtprofit',
-                          value: fmt.format(provider.totalProfit),
-                          color: const Color(0xFF059669),
-                        ),
-                      ),
+                          child: KpiCard(
+                        icon: Icons.trending_up_rounded,
+                        title: 'Gesamtprofit',
+                        value: fmt.format(provider.totalProfit),
+                        color: const Color(0xFF059669),
+                      )),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
-                        child: KpiCard(
-                          icon: Icons.account_balance_wallet_outlined,
-                          title: 'Offener Betrag',
-                          value: fmt.format(provider.openAmount),
-                          color: const Color(0xFFD97706),
-                        ),
-                      ),
+                          child: KpiCard(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: 'Offener Betrag',
+                        value: fmt.format(provider.openAmount),
+                        color: const Color(0xFFD97706),
+                      )),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: KpiCard(
-                          icon: Icons.local_shipping_outlined,
-                          title: 'Offene Lieferungen',
-                          value: '${provider.openDeliveriesCount}',
-                          color: const Color(0xFF7C3AED),
-                        ),
-                      ),
+                          child: KpiCard(
+                        icon: Icons.local_shipping_outlined,
+                        title: 'Offene Lieferungen',
+                        value: '${provider.openDeliveriesCount}',
+                        color: const Color(0xFF7C3AED),
+                      )),
                     ],
                   ),
                 ],
@@ -344,15 +386,21 @@ class MainScreen extends StatelessWidget {
               color: Colors.white,
               child: const TabBar(
                 indicatorColor: Color(0xFF2563EB),
+                indicatorWeight: 2.5,
                 labelColor: Color(0xFF2563EB),
                 unselectedLabelColor: Color(0xFF94A3B8),
+                labelStyle:
+                    TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                 tabs: [
-                  Tab(icon: Icon(Icons.list_alt_rounded), text: 'Einträge'),
-                  Tab(icon: Icon(Icons.bar_chart_rounded), text: 'Übersicht'),
+                  Tab(
+                      icon: Icon(Icons.list_alt_rounded, size: 18),
+                      text: 'Einträge'),
+                  Tab(
+                      icon: Icon(Icons.bar_chart_rounded, size: 18),
+                      text: 'Übersicht'),
                 ],
               ),
             ),
-            // Tab content
             const Expanded(
               child: TabBarView(
                 children: [
@@ -377,7 +425,7 @@ class MainScreen extends StatelessWidget {
   }
 }
 
-class _AppBarButton extends StatelessWidget {
+class _AppBarButton extends StatefulWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -389,31 +437,47 @@ class _AppBarButton extends StatelessWidget {
   });
 
   @override
+  State<_AppBarButton> createState() => _AppBarButtonState();
+}
+
+class _AppBarButtonState extends State<_AppBarButton> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white.withAlpha(20),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white24),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 15, color: Colors.white.withAlpha(220)),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.white.withAlpha(220),
-                fontWeight: FontWeight.w500,
-              ),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: _hovered ? Colors.white.withAlpha(30) : Colors.transparent,
+            borderRadius: BorderRadius.circular(7),
+            border: Border.all(
+              color: _hovered ? Colors.white38 : Colors.white24,
+              width: 1,
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(widget.icon,
+                  size: 15, color: Colors.white.withAlpha(210)),
+              const SizedBox(width: 5),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withAlpha(210),
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
