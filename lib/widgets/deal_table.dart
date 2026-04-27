@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
+import '../models/shop.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/url_helper.dart';
 import 'add_edit_deal_dialog.dart';
 
 class _ColDef {
@@ -259,6 +261,13 @@ class _DealRowState extends State<_DealRow> {
       buyer = provider.buyers.firstWhere((b) => b.name == deal.buyer);
     } catch (_) {}
 
+    Shop? shop;
+    try {
+      shop = provider.shops.firstWhere((s) => s.name == deal.shop);
+    } catch (_) {}
+
+    final shopUrl = shop?.url;
+
     String fmtN(double? v) => v != null ? '€\u202F${widget.numFmt.format(v)}' : '–';
     String fmtD(DateTime? d) =>
         d != null ? widget.dateFmt.format(d) : '–';
@@ -306,10 +315,12 @@ class _DealRowState extends State<_DealRow> {
               widget.cols[3],
             ),
             _c(
-              Text(deal.shop,
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFF334155)),
-                  overflow: TextOverflow.ellipsis),
+              shopUrl != null
+                  ? _LinkCell(text: deal.shop, url: shopUrl)
+                  : Text(deal.shop,
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFF334155)),
+                      overflow: TextOverflow.ellipsis),
               widget.cols[4],
             ),
             _c(
@@ -347,10 +358,15 @@ class _DealRowState extends State<_DealRow> {
               widget.cols[9],
             ),
             _c(
-              Text(deal.ticketNumber ?? '–',
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFF64748B)),
-                  overflow: TextOverflow.ellipsis),
+              deal.ticketNumber != null
+                  ? (deal.ticketUrl != null
+                      ? _LinkCell(text: deal.ticketNumber!, url: deal.ticketUrl!)
+                      : Text(deal.ticketNumber!,
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF64748B)),
+                          overflow: TextOverflow.ellipsis))
+                  : const Text('–',
+                      style: TextStyle(fontSize: 12, color: Color(0xFFCBD5E1))),
               widget.cols[10],
             ),
             _c(
@@ -626,6 +642,41 @@ class _ActionBtnState extends State<_ActionBtn> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A tappable link cell that opens a URL in the browser.
+/// Uses dart:html on web (guaranteed), url_launcher on native.
+class _LinkCell extends StatelessWidget {
+  final String text;
+  final String url;
+  const _LinkCell({required this.text, required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: url,
+      child: TextButton.icon(
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          foregroundColor: const Color(0xFF2563EB),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
+            side: const BorderSide(color: Color(0xFFBFD7FF)),
+          ),
+          backgroundColor: const Color(0xFFEFF6FF),
+        ),
+        icon: const Icon(Icons.open_in_new, size: 12),
+        label: Text(
+          text,
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+          overflow: TextOverflow.ellipsis,
+        ),
+        onPressed: () => openUrl(url),
       ),
     );
   }

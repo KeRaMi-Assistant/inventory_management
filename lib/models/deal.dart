@@ -10,6 +10,7 @@ class Deal {
   final double? vk;
   final String? buyer;
   final String? ticketNumber;
+  final String? ticketUrl;
   final String? tracking;
   final DateTime? arrivalDate;
   final String status;
@@ -29,6 +30,7 @@ class Deal {
     this.vk,
     this.buyer,
     this.ticketNumber,
+    this.ticketUrl,
     this.tracking,
     this.arrivalDate,
     this.status = 'Bestellt',
@@ -55,6 +57,7 @@ class Deal {
         'vk': vk,
         'buyer': buyer,
         'ticketNumber': ticketNumber,
+        'ticketUrl': ticketUrl,
         'tracking': tracking,
         'arrivalDate': arrivalDate?.toIso8601String(),
         'status': status,
@@ -75,6 +78,7 @@ class Deal {
         vk: (json['vk'] as num?)?.toDouble(),
         buyer: json['buyer'] as String?,
         ticketNumber: json['ticketNumber'] as String?,
+        ticketUrl: json['ticketUrl'] as String?,
         tracking: json['tracking'] as String?,
         arrivalDate: json['arrivalDate'] != null
             ? DateTime.parse(json['arrivalDate'] as String)
@@ -97,6 +101,7 @@ class Deal {
     Object? vk = _sentinel,
     Object? buyer = _sentinel,
     Object? ticketNumber = _sentinel,
+    Object? ticketUrl = _sentinel,
     Object? tracking = _sentinel,
     Object? arrivalDate = _sentinel,
     String? status,
@@ -119,6 +124,7 @@ class Deal {
         ticketNumber: ticketNumber == _sentinel
             ? this.ticketNumber
             : ticketNumber as String?,
+        ticketUrl: ticketUrl == _sentinel ? this.ticketUrl : ticketUrl as String?,
         tracking:
             tracking == _sentinel ? this.tracking : tracking as String?,
         arrivalDate: arrivalDate == _sentinel

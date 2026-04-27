@@ -16,6 +16,7 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
   final _nameCtrl = TextEditingController();
   final _regionCtrl = TextEditingController();
   final _channelCtrl = TextEditingController();
+  final _urlCtrl = TextEditingController();
   bool _active = true;
 
   @override
@@ -26,6 +27,7 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
       _nameCtrl.text = s.name;
       _regionCtrl.text = s.region;
       _channelCtrl.text = s.channel;
+      _urlCtrl.text = s.url ?? '';
       _active = s.active;
     }
   }
@@ -35,12 +37,19 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
     _nameCtrl.dispose();
     _regionCtrl.dispose();
     _channelCtrl.dispose();
+    _urlCtrl.dispose();
     super.dispose();
   }
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
     final provider = context.read<InventoryProvider>();
+    final rawUrl = _urlCtrl.text.trim();
+    String? url = rawUrl.isEmpty ? null : rawUrl;
+    // Auto-prepend https:// if missing
+    if (url != null && !url.startsWith('http')) {
+      url = 'https://$url';
+    }
 
     final shop = Shop(
       id: widget.shop?.id ?? '',
@@ -48,6 +57,7 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
       region: _regionCtrl.text.trim(),
       channel: _channelCtrl.text.trim(),
       active: _active,
+      url: url,
     );
 
     if (widget.shop != null) {
@@ -63,7 +73,7 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
     return AlertDialog(
       title: Text(widget.shop != null ? 'Shop bearbeiten' : 'Neuer Shop'),
       content: SizedBox(
-        width: 350,
+        width: 380,
         child: Form(
           key: _formKey,
           child: Column(
@@ -86,6 +96,26 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
               TextFormField(
                 controller: _channelCtrl,
                 decoration: const InputDecoration(labelText: 'Kanal'),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _urlCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Website-URL',
+                  hintText: 'https://www.amazon.de',
+                  prefixIcon: Icon(Icons.link, size: 18),
+                ),
+                keyboardType: TextInputType.url,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  final url = v.trim().startsWith('http')
+                      ? v.trim()
+                      : 'https://${v.trim()}';
+                  if (Uri.tryParse(url)?.hasAuthority != true) {
+                    return 'Ungültige URL';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 8),
               SwitchListTile(

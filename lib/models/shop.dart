@@ -4,6 +4,7 @@ class Shop {
   final String region;
   final String channel;
   final bool active;
+  final String? url;
 
   const Shop({
     required this.id,
@@ -11,6 +12,7 @@ class Shop {
     required this.region,
     this.channel = '',
     this.active = true,
+    this.url,
   });
 
   Map<String, dynamic> toJson() => {
@@ -19,6 +21,7 @@ class Shop {
         'region': region,
         'channel': channel,
         'active': active,
+        if (url != null) 'url': url,
       };
 
   factory Shop.fromJson(Map<String, dynamic> json) => Shop(
@@ -27,6 +30,7 @@ class Shop {
         region: json['region'] as String,
         channel: json['channel'] as String? ?? '',
         active: json['active'] as bool? ?? true,
+        url: json['url'] as String?,
       );
 
   Shop copyWith({
@@ -35,6 +39,7 @@ class Shop {
     String? region,
     String? channel,
     bool? active,
+    Object? url = _sentinel,
   }) =>
       Shop(
         id: id ?? this.id,
@@ -42,5 +47,8 @@ class Shop {
         region: region ?? this.region,
         channel: channel ?? this.channel,
         active: active ?? this.active,
+        url: url == _sentinel ? this.url : url as String?,
       );
 }
+
+const Object _sentinel = Object();

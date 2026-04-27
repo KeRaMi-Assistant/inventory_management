@@ -19,6 +19,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
   final _priceCtrl = TextEditingController();
   final _vkCtrl = TextEditingController();
   final _ticketCtrl = TextEditingController();
+  final _ticketUrlCtrl = TextEditingController();
   final _trackingCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
 
@@ -47,6 +48,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       _buyer = d.buyer;
       _vkCtrl.text = d.vk?.toString() ?? '';
       _ticketCtrl.text = d.ticketNumber ?? '';
+      _ticketUrlCtrl.text = d.ticketUrl ?? '';
       _trackingCtrl.text = d.tracking ?? '';
       _noteCtrl.text = d.note ?? '';
       if (d.ekNetto != null) {
@@ -66,6 +68,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     _priceCtrl.dispose();
     _vkCtrl.dispose();
     _ticketCtrl.dispose();
+    _ticketUrlCtrl.dispose();
     _trackingCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
@@ -119,6 +122,12 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       buyer: _buyer?.isEmpty ?? true ? null : _buyer,
       ticketNumber:
           _ticketCtrl.text.isEmpty ? null : _ticketCtrl.text.trim(),
+      ticketUrl: () {
+        if (_ticketCtrl.text.isEmpty) return null;
+        final raw = _ticketUrlCtrl.text.trim();
+        if (raw.isEmpty) return null;
+        return raw.startsWith('http') ? raw : 'https://$raw';
+      }(),
       tracking:
           _trackingCtrl.text.isEmpty ? null : _trackingCtrl.text.trim(),
       arrivalDate: _arrivalDate,
@@ -264,72 +273,82 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                         // ── Preise ──────────────────────────────────────
                         _sectionLabel('Preise'),
                         const SizedBox(height: 10),
-                        _row(narrow, [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              const Text('EK Preis',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF475569))),
-                              const SizedBox(height: 6),
-                              Row(children: [
-                                _radioOption('Netto', 'Netto'),
-                                const SizedBox(width: 12),
-                                _radioOption('Brutto', 'Brutto'),
-                              ]),
-                              const SizedBox(height: 6),
-                              TextFormField(
-                                controller: _priceCtrl,
-                                decoration: const InputDecoration(
-                                  labelText: 'Betrag (€)',
-                                  prefixText: '€ ',
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    const Text('EK Preis',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFF475569))),
+                                    const SizedBox(height: 6),
+                                    Row(children: [
+                                      _radioOption('Netto', 'Netto'),
+                                      const SizedBox(width: 12),
+                                      _radioOption('Brutto', 'Brutto'),
+                                    ]),
+                                    const SizedBox(height: 6),
+                                    TextFormField(
+                                      controller: _priceCtrl,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Betrag (€)',
+                                        prefixText: '€ ',
+                                      ),
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                              decimal: true),
+                                      validator: (v) {
+                                        if (v == null || v.isEmpty) return null;
+                                        if (double.tryParse(
+                                                v.replaceAll(',', '.')) ==
+                                            null) { return 'Ungültige Zahl'; }
+                                        return null;
+                                      },
+                                    ),
+                                  ],
                                 ),
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                        decimal: true),
-                                validator: (v) {
-                                  if (v == null || v.isEmpty) return null;
-                                  if (double.tryParse(
-                                          v.replaceAll(',', '.')) ==
-                                      null) { return 'Ungültige Zahl'; }
-                                  return null;
-                                },
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    const Text('VK (Verkaufspreis)',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFF475569))),
+                                    const SizedBox(height: 6),
+                                    TextFormField(
+                                      controller: _vkCtrl,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Betrag (€)',
+                                        prefixText: '€ ',
+                                      ),
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                              decimal: true),
+                                      validator: (v) {
+                                        if (v == null || v.isEmpty) return null;
+                                        if (double.tryParse(
+                                                v.replaceAll(',', '.')) ==
+                                            null) { return 'Ungültige Zahl'; }
+                                        return null;
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('VK (Verkaufspreis)',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF475569))),
-                              const SizedBox(height: 6),
-                              const SizedBox(height: 28),
-                              const SizedBox(height: 6),
-                              TextFormField(
-                                controller: _vkCtrl,
-                                decoration: const InputDecoration(
-                                  labelText: 'Betrag (€)',
-                                  prefixText: '€ ',
-                                ),
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                        decimal: true),
-                                validator: (v) {
-                                  if (v == null || v.isEmpty) return null;
-                                  if (double.tryParse(
-                                          v.replaceAll(',', '.')) ==
-                                      null) { return 'Ungültige Zahl'; }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
-                        ]),
+                        ),
                         const SizedBox(height: 20),
                         // ── Käufer & Status ─────────────────────────────
                         _sectionLabel('Käufer & Status'),
@@ -393,6 +412,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             controller: _ticketCtrl,
                             decoration: const InputDecoration(
                                 labelText: 'Ticketnummer'),
+                            onChanged: (_) => setState(() {}),
                           ),
                           TextFormField(
                             controller: _trackingCtrl,
@@ -400,6 +420,18 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                 const InputDecoration(labelText: 'Tracking'),
                           ),
                         ]),
+                        if (_ticketCtrl.text.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _ticketUrlCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Ticket-URL (optional)',
+                              hintText: 'https://...',
+                              prefixIcon: Icon(Icons.link, size: 18),
+                            ),
+                            keyboardType: TextInputType.url,
+                          ),
+                        ],
                         const SizedBox(height: 20),
                         // ── Notiz ───────────────────────────────────────
                         _sectionLabel('Notiz'),
