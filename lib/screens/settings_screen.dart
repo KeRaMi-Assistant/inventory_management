@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/inventory_provider.dart';
+import '../services/discord_service.dart';
+import '../utils/discord_oauth.dart';
+import '../utils/url_helper.dart';
 import '../widgets/add_edit_buyer_dialog.dart';
 import '../widgets/add_edit_shop_dialog.dart';
 
@@ -10,7 +14,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Einstellungen'),
@@ -21,11 +25,12 @@ class SettingsScreen extends StatelessWidget {
             tabs: [
               Tab(icon: Icon(Icons.people_outline, size: 18), text: 'Käufer'),
               Tab(icon: Icon(Icons.store_outlined, size: 18), text: 'Shops'),
+              Tab(icon: Icon(Icons.discord, size: 18), text: 'Discord'),
             ],
           ),
         ),
         body: const TabBarView(
-          children: [_BuyersTab(), _ShopsTab()],
+          children: [_BuyersTab(), _ShopsTab(), _DiscordTab()],
         ),
       ),
     );
@@ -293,4 +298,425 @@ class _ShopsTab extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Discord Tab ────────────────────────────────────────────────────────────────
+class _DiscordTab extends StatefulWidget {
+  const _DiscordTab();
+
+  @override
+  State<_DiscordTab> createState() => _DiscordTabState();
+}
+
+class _DiscordTabState extends State<_DiscordTab> {
+  final _clientIdCtrl = TextEditingController();
+  bool _saved = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final id = context.read<InventoryProvider>().discordClientId;
+    if (_clientIdCtrl.text.isEmpty && id.isNotEmpty) {
+      _clientIdCtrl.text = id;
+    }
+  }
+
+  @override
+  void dispose() {
+    _clientIdCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveClientId() async {
+    await context
+        .read<InventoryProvider>()
+        .updateDiscordClientId(_clientIdCtrl.text.trim());
+    setState(() => _saved = true);
+    await Future<void>.delayed(const Duration(seconds: 2));
+    if (mounted) setState(() => _saved = false);
+  }
+
+  void _connectDiscord() {
+    final provider = context.read<InventoryProvider>();
+    final clientId = provider.discordClientId;
+    if (clientId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Bitte zuerst die Client-ID eintragen und speichern.')),
+      );
+      return;
+    }
+    final redirectUri = getAppBaseUrl();
+    final url = DiscordService.buildOAuthUrl(
+      clientId: clientId,
+      redirectUri: redirectUri,
+    );
+    navigateToDiscordOAuth(url);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Consumer<InventoryProvider>(
+      builder: (context, provider, _) {
+        final connected = provider.isDiscordConnected;
+        final username = provider.discordUsername;
+        final redirectUrl = getAppBaseUrl();
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Status card ──────────────────────────────────────────
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: connected
+                      ? const Color(0xFF5865F2).withAlpha(15)
+                      : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: connected
+                        ? const Color(0xFF5865F2).withAlpha(80)
+                        : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: connected
+                            ? const Color(0xFF5865F2)
+                            : const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.discord,
+                          color: Colors.white, size: 30),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            connected
+                                ? 'Verbunden als $username'
+                                : 'Nicht verbunden',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: connected
+                                  ? const Color(0xFF5865F2)
+                                  : theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            connected
+                                ? 'Ticketnummern werden automatisch in Discord-Links umgewandelt.'
+                                : 'Mit Discord anmelden, um Ticketnummern automatisch aufzulösen.',
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: theme.colorScheme.outline),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (connected)
+                      TextButton.icon(
+                        onPressed: () =>
+                            context.read<InventoryProvider>().disconnectDiscord(),
+                        icon: const Icon(Icons.logout, size: 16,
+                            color: Color(0xFF64748B)),
+                        label: const Text('Trennen',
+                            style: TextStyle(color: Color(0xFF64748B))),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // ── Setup steps ─────────────────────────────────────────
+              if (!connected) ...[
+                _SetupStep(
+                  number: '1',
+                  title: 'Discord Developer Portal öffnen',
+                  description:
+                      'Gehe zu discord.com/developers/applications → "New Application" → Name eingeben → Erstellen.',
+                  action: TextButton.icon(
+                    onPressed: () => openUrl(
+                        'https://discord.com/developers/applications'),
+                    icon: const Icon(Icons.open_in_new, size: 14),
+                    label: const Text('Developer Portal öffnen'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _SetupStep(
+                  number: '2',
+                  title: 'Redirect-URL registrieren',
+                  description:
+                      'Links auf "OAuth2" → unter "Redirects" auf "+ Add" klicken → folgende URL einfügen → Speichern:',
+                  extra: _CopyableUrl(url: redirectUrl),
+                ),
+                const SizedBox(height: 12),
+                _SetupStep(
+                  number: '3',
+                  title: 'Client-ID kopieren und eintragen',
+                  description:
+                      'Oben auf der OAuth2-Seite steht die "Client ID" — die ist öffentlich und kein Geheimnis. '
+                      'Hier eintragen und speichern:',
+                  extra: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _clientIdCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Client ID',
+                            hintText: '1234567890123456789',
+                            isDense: true,
+                            prefixIcon: Icon(Icons.tag, size: 18),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton(
+                        onPressed: _saveClientId,
+                        style: _saved
+                            ? ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green)
+                            : null,
+                        child: Text(_saved ? '✓' : 'Speichern'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _SetupStep(
+                  number: '4',
+                  title: 'Mit Discord anmelden',
+                  description:
+                      'Klicke auf den Button — du wirst zu Discord weitergeleitet. '
+                      'Nach der Anmeldung kehrst du automatisch zurück.',
+                  action: ElevatedButton.icon(
+                    onPressed: _connectDiscord,
+                    icon: const Icon(Icons.discord, size: 18),
+                    label: const Text('Mit Discord verbinden'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF5865F2),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _SetupStep(
+                  number: '5',
+                  title: 'Server-IDs pro Käufer hinterlegen',
+                  description:
+                      'Einstellungen → Käufer-Tab → Käufer bearbeiten → Discord Server IDs eintragen.\n'
+                      'Server-ID findest du in Discord Desktop: '
+                      'Entwicklermodus aktivieren (Einstellungen → Erweitert), '
+                      'dann Rechtsklick auf den Servername → "Server-ID kopieren".',
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // ── Connected: Server-IDs overview ───────────────────────
+              Text('Server-IDs pro Käufer',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(
+                'Käufer-Tab → Käufer bearbeiten → Discord Server IDs hinzufügen.',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.outline),
+              ),
+              const SizedBox(height: 12),
+              ...provider.buyers.map((b) {
+                final ids = b.discordServerIds;
+                return Card(
+                  elevation: 0,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  child: ListTile(
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: b.buyerCellColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          b.name.isNotEmpty ? b.name[0].toUpperCase() : '?',
+                          style: TextStyle(
+                              color: b.fontColor,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    title: Text(b.name,
+                        style:
+                            const TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      ids.isEmpty ? 'Keine Server-IDs' : ids.join(', '),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: ids.isEmpty
+                            ? theme.colorScheme.outline
+                            : const Color(0xFF5865F2),
+                      ),
+                    ),
+                    trailing: Icon(Icons.discord,
+                        color: ids.isEmpty
+                            ? const Color(0xFFCBD5E1)
+                            : const Color(0xFF5865F2)),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Helper widgets ─────────────────────────────────────────────────────────────
+
+class _SetupStep extends StatelessWidget {
+  final String number;
+  final String title;
+  final String description;
+  final Widget? action;
+  final Widget? extra;
+
+  const _SetupStep({
+    required this.number,
+    required this.title,
+    required this.description,
+    this.action,
+    this.extra,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: const Color(0xFF5865F2).withAlpha(20),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: const TextStyle(
+                    color: Color(0xFF5865F2),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Text(description,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.outline)),
+                if (extra != null) ...[const SizedBox(height: 10), extra!],
+                if (action != null) ...[const SizedBox(height: 8), action!],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CopyableUrl extends StatefulWidget {
+  final String url;
+  const _CopyableUrl({required this.url});
+
+  @override
+  State<_CopyableUrl> createState() => _CopyableUrlState();
+}
+
+class _CopyableUrlState extends State<_CopyableUrl> {
+  bool _copied = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              widget.url,
+              style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  color: Color(0xFF334155)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: () async {
+              await _copyToClipboard(widget.url);
+              setState(() => _copied = true);
+              await Future<void>.delayed(const Duration(seconds: 2));
+              if (mounted) setState(() => _copied = false);
+            },
+            icon: Icon(
+                _copied ? Icons.check : Icons.copy,
+                size: 14),
+            label: Text(_copied ? 'Kopiert' : 'Kopieren'),
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copyToClipboard(String text) async {
+    // Use Flutter's clipboard
+    await _clipboardSetData(text);
+  }
+}
+
+
+Future<void> _clipboardSetData(String text) async {
+  await Clipboard.setData(ClipboardData(text: text));
 }

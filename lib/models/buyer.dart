@@ -8,6 +8,7 @@ class Buyer {
   final Color fontColor;
   final int sortOrder;
   final bool active;
+  final List<String> discordServerIds;
 
   const Buyer({
     required this.id,
@@ -17,6 +18,7 @@ class Buyer {
     required this.fontColor,
     required this.sortOrder,
     this.active = true,
+    this.discordServerIds = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -27,6 +29,7 @@ class Buyer {
         'fontColor': fontColor.toARGB32(),
         'sortOrder': sortOrder,
         'active': active,
+        'discordServerIds': discordServerIds,
       };
 
   factory Buyer.fromJson(Map<String, dynamic> json) => Buyer(
@@ -37,6 +40,10 @@ class Buyer {
         fontColor: Color(json['fontColor'] as int),
         sortOrder: json['sortOrder'] as int,
         active: json['active'] as bool? ?? true,
+        discordServerIds: (json['discordServerIds'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            [],
       );
 
   Buyer copyWith({
@@ -47,6 +54,7 @@ class Buyer {
     Color? fontColor,
     int? sortOrder,
     bool? active,
+    List<String>? discordServerIds,
   }) =>
       Buyer(
         id: id ?? this.id,
@@ -56,5 +64,7 @@ class Buyer {
         fontColor: fontColor ?? this.fontColor,
         sortOrder: sortOrder ?? this.sortOrder,
         active: active ?? this.active,
+        discordServerIds: discordServerIds ?? this.discordServerIds,
       );
 }
+

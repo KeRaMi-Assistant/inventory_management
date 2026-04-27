@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../providers/inventory_provider.dart';
 
@@ -31,6 +33,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
   String _beleg = 'Nein';
   String? _buyer;
   String _priceType = 'Netto';
+
+  bool _saving = false;
 
   @override
   void initState() {
@@ -74,6 +78,12 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     super.dispose();
   }
 
+  void _onTicketChanged(String value) {
+    setState(() {
+      if (value.trim().isEmpty) _ticketUrlCtrl.text = '';
+    });
+  }
+
   Future<void> _pickDate(BuildContext context, bool isArrival) async {
     final picked = await showDatePicker(
       context: context,
@@ -92,8 +102,12 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     }
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_saving) return;
+    setState(() => _saving = true);
+
+    if (!mounted) return;
     final provider = context.read<InventoryProvider>();
 
     final price = double.tryParse(_priceCtrl.text.replaceAll(',', '.'));
@@ -109,21 +123,27 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       }
     }
 
+    final shop = _shop;
+    if (shop == null) {
+      setState(() => _saving = false);
+      return;
+    }
+
+    final ticket = _ticketCtrl.text.trim();
     final deal = Deal(
       id: widget.deal?.id ?? provider.nextDealId,
       product: _productCtrl.text.trim(),
       quantity: int.parse(_quantityCtrl.text),
       shippingType: _shippingType,
-      shop: _shop!,
+      shop: shop,
       orderDate: _orderDate,
       ekNetto: ekNetto,
       ekBrutto: ekBrutto,
       vk: double.tryParse(_vkCtrl.text.replaceAll(',', '.')),
       buyer: _buyer?.isEmpty ?? true ? null : _buyer,
-      ticketNumber:
-          _ticketCtrl.text.isEmpty ? null : _ticketCtrl.text.trim(),
+      ticketNumber: ticket.isEmpty ? null : ticket,
       ticketUrl: () {
-        if (_ticketCtrl.text.isEmpty) return null;
+        if (ticket.isEmpty) return null;
         final raw = _ticketUrlCtrl.text.trim();
         if (raw.isEmpty) return null;
         return raw.startsWith('http') ? raw : 'https://$raw';
@@ -136,12 +156,16 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       note: _noteCtrl.text.isEmpty ? null : _noteCtrl.text.trim(),
     );
 
-    if (widget.deal != null) {
-      provider.updateDeal(deal);
-    } else {
-      provider.addDeal(deal);
+    try {
+      if (widget.deal != null) {
+        await provider.updateDeal(deal);
+      } else {
+        await provider.addDeal(deal);
+      }
+      if (mounted) Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
-    Navigator.pop(context);
   }
 
   @override
@@ -364,7 +388,9 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                               ...buyers.map((b) => DropdownMenuItem(
                                   value: b.name, child: Text(b.name))),
                             ],
-                            onChanged: (v) => setState(() => _buyer = v),
+                            onChanged: (v) {
+                              setState(() => _buyer = v);
+                            },
                           ),
                           DropdownButtonFormField<String>(
                             initialValue: _status,
@@ -412,7 +438,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             controller: _ticketCtrl,
                             decoration: const InputDecoration(
                                 labelText: 'Ticketnummer'),
-                            onChanged: (_) => setState(() {}),
+                            onChanged: _onTicketChanged,
                           ),
                           TextFormField(
                             controller: _trackingCtrl,
@@ -420,18 +446,26 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                 const InputDecoration(labelText: 'Tracking'),
                           ),
                         ]),
+                        // Discord status hint
                         if (_ticketCtrl.text.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _ticketUrlCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Ticket-URL (optional)',
-                              hintText: 'https://...',
-                              prefixIcon: Icon(Icons.link, size: 18),
-                            ),
-                            keyboardType: TextInputType.url,
+                          const SizedBox(height: 6),
+                          _DiscordServerButtons(
+                            buyer: _buyer,
+                            buyers: buyers,
                           ),
                         ],
+                        if (_ticketCtrl.text.isNotEmpty) ...[
+                           const SizedBox(height: 8),
+                           TextFormField(
+                             controller: _ticketUrlCtrl,
+                             decoration: const InputDecoration(
+                               labelText: 'Ticket-URL (optional)',
+                               hintText: 'Link aus Discord einfügen…',
+                               prefixIcon: Icon(Icons.link, size: 18),
+                             ),
+                             keyboardType: TextInputType.url,
+                           ),
+                         ],
                         const SizedBox(height: 20),
                         // ── Notiz ───────────────────────────────────────
                         _sectionLabel('Notiz'),
@@ -465,9 +499,16 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton.icon(
-                    onPressed: _save,
-                    icon: const Icon(Icons.check, size: 16),
-                    label: const Text('Speichern'),
+                    onPressed: _saving ? null : _save,
+                    icon: _saving
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.check, size: 16),
+                    label: Text(_saving ? 'Speichert…' : 'Speichern'),
                   ),
                 ],
               ),
@@ -586,5 +627,106 @@ class _DatePickerField extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _DiscordServerButtons extends StatelessWidget {
+  final String? buyer;
+  final List<Buyer> buyers;
+
+  const _DiscordServerButtons({required this.buyer, required this.buyers});
+
+  @override
+  Widget build(BuildContext context) {
+    if (buyer == null) return const SizedBox.shrink();
+    final b = buyers.where((x) => x.name == buyer).firstOrNull;
+    final serverIds = b?.discordServerIds ?? [];
+    if (serverIds.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        for (int i = 0; i < serverIds.length; i++)
+          OutlinedButton.icon(
+            onPressed: () {
+              final url =
+                  'https://discord.com/channels/${serverIds[i]}';
+              // ignore: avoid_print
+              print('[Discord] Opening $url');
+              // url_launcher via html for web
+              _openUrl(url);
+            },
+            style: OutlinedButton.styleFrom(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              side: const BorderSide(color: Color(0xFF5865F2)),
+              foregroundColor: const Color(0xFF5865F2),
+              textStyle: const TextStyle(fontSize: 12),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            icon: const Icon(Icons.discord, size: 14),
+            label: Text('Server ${i + 1} in Discord öffnen'),
+          ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0F9FF),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: const Color(0xFFBAE6FD)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.info_outline, size: 12, color: Color(0xFF0369A1)),
+              SizedBox(width: 5),
+              Text(
+                'Kanal finden → Rechtsklick → „Link kopieren" → hier einfügen',
+                style: TextStyle(fontSize: 11, color: Color(0xFF0369A1)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _openUrl(String url) {
+    // Works on web via dart:html interop
+    // ignore: avoid_print
+    print('[Discord] openUrl: $url');
+    // Using url_launcher style via JS on web
+    final uri = Uri.parse(url);
+    // Just use url_launcher indirectly via anchor tag on web
+    _launchDiscord(uri.toString());
+  }
+}
+
+void _launchDiscord(String url) {
+  // Platform-agnostic: works in web via dart:html
+  // For web, we use js interop to open a new tab
+  _launchUrl(url);
+}
+
+// ignore: avoid_print
+void _launchUrl(String url) {
+  // Use url_launcher on all platforms
+  _doLaunch(url);
+}
+
+Future<void> _doLaunch(String url) async {
+  final uri = Uri.parse(url);
+  // ignore: avoid_print
+  print('[Discord] launching $url');
+  // We use a conditional import approach via the existing platform setup
+  // On web this opens a new tab
+  try {
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  } catch (e) {
+    // ignore: avoid_print
+    print('[Discord] launch error: $e');
   }
 }

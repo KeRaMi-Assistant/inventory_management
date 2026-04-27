@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../models/shop.dart';
+import '../services/discord_service.dart';
 import '../services/storage_service.dart';
 
 class InventoryProvider extends ChangeNotifier {
@@ -12,6 +13,10 @@ class InventoryProvider extends ChangeNotifier {
   List<Deal> _deals = [];
   List<Buyer> _buyers = [];
   List<Shop> _shops = [];
+  String _discordClientId = '';
+  String _discordAccessToken = '';
+  String _discordUsername = '';
+  DateTime? _discordTokenExpiry;
 
   List<Deal> get deals => List.unmodifiable(
         List.from(_deals)..sort((a, b) => b.id.compareTo(a.id)),
@@ -20,6 +25,14 @@ class InventoryProvider extends ChangeNotifier {
         List.from(_buyers)..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
       );
   List<Shop> get shops => List.unmodifiable(_shops);
+
+  String get discordClientId => _discordClientId;
+  String get discordAccessToken => _discordAccessToken;
+  String get discordUsername => _discordUsername;
+  bool get isDiscordConnected =>
+      _discordAccessToken.isNotEmpty &&
+      (_discordTokenExpiry == null ||
+          _discordTokenExpiry!.isAfter(DateTime.now()));
 
   static const List<String> statusOptions = [
     'Bestellt',
@@ -64,6 +77,13 @@ class InventoryProvider extends ChangeNotifier {
       _shops = (data['shops'] as List<dynamic>? ?? [])
           .map((e) => Shop.fromJson(e as Map<String, dynamic>))
           .toList();
+      _discordClientId = data['discordClientId'] as String? ?? '';
+      _discordAccessToken = data['discordAccessToken'] as String? ?? '';
+      _discordUsername = data['discordUsername'] as String? ?? '';
+      final expiryMs = data['discordTokenExpiry'] as int?;
+      _discordTokenExpiry = expiryMs != null
+          ? DateTime.fromMillisecondsSinceEpoch(expiryMs)
+          : null;
     } else {
       _initDefaults();
     }
@@ -128,7 +148,42 @@ class InventoryProvider extends ChangeNotifier {
       'deals': _deals.map((d) => d.toJson()).toList(),
       'buyers': _buyers.map((b) => b.toJson()).toList(),
       'shops': _shops.map((s) => s.toJson()).toList(),
+      'discordClientId': _discordClientId,
+      'discordAccessToken': _discordAccessToken,
+      'discordUsername': _discordUsername,
+      'discordTokenExpiry': _discordTokenExpiry?.millisecondsSinceEpoch,
     });
+  }
+
+  Future<void> updateDiscordClientId(String id) async {
+    _discordClientId = id.trim();
+    notifyListeners();
+    await _save();
+  }
+
+  /// Called after Discord OAuth2 redirect — parses the URL fragment,
+  /// extracts the access token, fetches the username, and persists.
+  Future<void> handleDiscordOAuthCallback(String fragment) async {
+    final params = DiscordService.parseOAuthFragment(fragment);
+    if (params == null) return;
+    final token = params['access_token'] ?? '';
+    if (token.isEmpty) return;
+    final expiresIn = int.tryParse(params['expires_in'] ?? '') ?? 604800;
+    _discordAccessToken = token;
+    _discordTokenExpiry =
+        DateTime.now().add(Duration(seconds: expiresIn));
+    _discordUsername =
+        await DiscordService.getUserName(token) ?? '';
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> disconnectDiscord() async {
+    _discordAccessToken = '';
+    _discordUsername = '';
+    _discordTokenExpiry = null;
+    notifyListeners();
+    await _save();
   }
 
   // DEALS

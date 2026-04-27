@@ -17,6 +17,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
   int _sortOrder = 0;
   int _selectedPalette = 0;
   bool _active = true;
+  final List<TextEditingController> _serverIdCtrls = [];
 
   static const List<Map<String, dynamic>> _palette = [
     {
@@ -84,19 +85,40 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
           break;
         }
       }
+      for (final id in b.discordServerIds) {
+        _serverIdCtrls.add(TextEditingController(text: id));
+      }
     }
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
+    for (final c in _serverIdCtrls) {
+      c.dispose();
+    }
     super.dispose();
+  }
+
+  void _addServerId() {
+    setState(() => _serverIdCtrls.add(TextEditingController()));
+  }
+
+  void _removeServerId(int index) {
+    setState(() {
+      _serverIdCtrls[index].dispose();
+      _serverIdCtrls.removeAt(index);
+    });
   }
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
     final provider = context.read<InventoryProvider>();
     final p = _palette[_selectedPalette];
+    final serverIds = _serverIdCtrls
+        .map((c) => c.text.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
 
     final buyer = Buyer(
       id: widget.buyer?.id ?? '',
@@ -106,6 +128,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
       fontColor: p['font'] as Color,
       sortOrder: _sortOrder,
       active: _active,
+      discordServerIds: serverIds,
     );
 
     if (widget.buyer != null) {
@@ -119,11 +142,12 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
   @override
   Widget build(BuildContext context) {
     final selected = _palette[_selectedPalette];
+    final theme = Theme.of(context);
     return AlertDialog(
       title: Text(
           widget.buyer != null ? 'Käufer bearbeiten' : 'Neuer Käufer'),
       content: SizedBox(
-        width: 400,
+        width: 420,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -134,6 +158,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                 TextFormField(
                   controller: _nameCtrl,
                   decoration: const InputDecoration(labelText: 'Name *'),
+                  onChanged: (_) => setState(() {}),
                   validator: (v) =>
                       v == null || v.isEmpty ? 'Pflichtfeld' : null,
                 ),
@@ -222,6 +247,69 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 20),
+                // Discord Server IDs section
+                Row(
+                  children: [
+                    const Icon(Icons.discord, size: 18),
+                    const SizedBox(width: 6),
+                    Text('Discord Server IDs',
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: _addServerId,
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('Hinzufügen'),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Der Bot sucht Tickets nur in diesen Servern.',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.outline),
+                ),
+                const SizedBox(height: 8),
+                if (_serverIdCtrls.isEmpty)
+                  Text(
+                    'Keine Server-IDs konfiguriert',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.outline),
+                  ),
+                ...List.generate(_serverIdCtrls.length, (i) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _serverIdCtrls[i],
+                            decoration: InputDecoration(
+                              labelText: 'Server ID ${i + 1}',
+                              hintText: 'z.B. 1234567890123456789',
+                              isDense: true,
+                            ),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline,
+                              color: Colors.red, size: 20),
+                          onPressed: () => _removeServerId(i),
+                          visualDensity: VisualDensity.compact,
+                          tooltip: 'Entfernen',
+                        ),
+                      ],
+                    ),
+                  );
+                }),
               ],
             ),
           ),
