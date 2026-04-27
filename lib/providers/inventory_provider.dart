@@ -48,6 +48,10 @@ class InventoryProvider extends ChangeNotifier {
   int get nextDealId =>
       _deals.isEmpty ? 1 : (_deals.map((d) => d.id).reduce((a, b) => a > b ? a : b) + 1);
 
+  /// All non-null ticketNumbers used as Amazon order IDs.
+  Set<String> get existingAmazonOrderIds =>
+      _deals.where((d) => d.ticketNumber != null && d.ticketNumber!.isNotEmpty).map((d) => d.ticketNumber!).toSet();
+
   Future<void> loadData() async {
     final data = await _storage.loadData();
     if (data != null) {

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/csv_service.dart';
+import '../widgets/amazon_import_dialog.dart';
 import '../widgets/buyer_legend.dart';
 import '../widgets/deal_table.dart';
 import '../widgets/kpi_card.dart';
@@ -129,6 +130,21 @@ class MainScreen extends StatelessWidget {
               ],
             ),
             actions: [
+              _AppBarButton(
+                icon: Icons.shopping_bag_outlined,
+                label: 'Amazon Import',
+                onTap: () => showDialog(
+                  context: context,
+                  builder: (_) => const AmazonImportDialog(),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                  width: 1,
+                  height: 20,
+                  color: Colors.white24,
+                  margin: const EdgeInsets.symmetric(horizontal: 2)),
+              const SizedBox(width: 6),
               _AppBarButton(
                 icon: Icons.upload_file_outlined,
                 label: 'Importieren',
@@ -289,6 +305,15 @@ class MainScreen extends StatelessWidget {
                 ],
               ),
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.shopping_bag_outlined,
+                      color: Colors.white70, size: 20),
+                  tooltip: 'Amazon Import',
+                  onPressed: () => showDialog(
+                    context: context,
+                    builder: (_) => const AmazonImportDialog(),
+                  ),
+                ),
                 IconButton(
                   icon: const Icon(Icons.upload_file_outlined,
                       color: Colors.white70, size: 20),

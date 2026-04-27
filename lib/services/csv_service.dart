@@ -36,10 +36,24 @@ class CsvService {
       final csvContent = _buildCsv(deals);
       final bytes = Uint8List.fromList(utf8.encode(csvContent));
 
+      final fileName =
+          'deals_${DateFormat('yyyy-MM-dd').format(DateTime.now())}.csv';
+
+      if (kIsWeb) {
+        // On web, saveFile triggers a browser download and always returns null.
+        await FilePicker.saveFile(
+          dialogTitle: 'CSV exportieren',
+          fileName: fileName,
+          type: FileType.custom,
+          allowedExtensions: ['csv'],
+          bytes: bytes,
+        );
+        return (fileName, null);
+      }
+
       final String? outputPath = await FilePicker.saveFile(
         dialogTitle: 'CSV exportieren',
-        fileName:
-            'deals_${DateFormat('yyyy-MM-dd').format(DateTime.now())}.csv',
+        fileName: fileName,
         type: FileType.custom,
         allowedExtensions: ['csv'],
         bytes: bytes,
@@ -47,14 +61,8 @@ class CsvService {
 
       if (outputPath == null) return (null, null); // user cancelled
 
-      // file_picker's saveBytesToFile already writes bytes on all platforms.
-      // We overwrite with writeAsString to guarantee correct UTF-8 encoding
-      // on desktop (macOS/Windows/Linux) as a safety net.
-      if (!kIsWeb) {
-        final file = File(outputPath);
-        await file.writeAsString(csvContent, encoding: utf8, flush: true);
-      }
-
+      await File(outputPath)
+          .writeAsString(csvContent, encoding: utf8, flush: true);
       return (outputPath, null);
     } catch (e) {
       return (null, e.toString());
@@ -108,6 +116,7 @@ class CsvService {
         type: FileType.custom,
         allowedExtensions: ['csv'],
         allowMultiple: false,
+        withData: true, // Required on web; harmless on desktop
       );
 
       if (result == null || result.files.isEmpty) return (null, null);
@@ -116,11 +125,21 @@ class CsvService {
       if (kIsWeb) {
         final bytes = result.files.first.bytes;
         if (bytes == null) return (null, 'Datei konnte nicht gelesen werden.');
-        content = String.fromCharCodes(bytes);
+        content = utf8.decode(bytes, allowMalformed: true);
       } else {
         final path = result.files.first.path;
-        if (path == null) return (null, 'Dateipfad nicht verfügbar.');
-        content = await File(path).readAsString(encoding: utf8);
+        if (path == null) {
+          // Fallback to bytes if path is unavailable (e.g. some desktop scenarios)
+          final bytes = result.files.first.bytes;
+          if (bytes == null) return (null, 'Dateipfad nicht verfügbar.');
+          content = utf8.decode(bytes, allowMalformed: true);
+        } else {
+          try {
+            content = await File(path).readAsString(encoding: utf8);
+          } catch (_) {
+            content = await File(path).readAsString(encoding: latin1);
+          }
+        }
       }
 
       // Strip BOM if present

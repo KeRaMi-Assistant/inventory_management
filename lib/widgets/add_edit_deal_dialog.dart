@@ -204,283 +204,215 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                 padding: const EdgeInsets.all(24),
                 child: Form(
                   key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Section: Produkt
-                      _sectionLabel('Produkt & Versand'),
-                      const SizedBox(height: 10),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: TextFormField(
-                              controller: _productCtrl,
-                              decoration: const InputDecoration(
-                                  labelText: 'Produkt *'),
-                              validator: (v) => v == null || v.isEmpty
-                                  ? 'Pflichtfeld'
-                                  : null,
-                            ),
+                  child: Builder(builder: (ctx) {
+                    final narrow = MediaQuery.of(ctx).size.width < 560;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Produkt & Versand ───────────────────────────
+                        _sectionLabel('Produkt & Versand'),
+                        const SizedBox(height: 10),
+                        _row(narrow, [
+                          TextFormField(
+                            controller: _productCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'Produkt *'),
+                            validator: (v) => v == null || v.isEmpty
+                                ? 'Pflichtfeld'
+                                : null,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _quantityCtrl,
-                              decoration: const InputDecoration(
-                                  labelText: 'Anzahl *'),
-                              keyboardType: TextInputType.number,
-                              validator: (v) {
-                                if (v == null || v.isEmpty) {
-                                  return 'Pflichtfeld';
-                                }
-                                final n = int.tryParse(v);
-                                if (n == null || n <= 0) {
-                                  return 'Muss > 0 sein';
-                                }
-                                return null;
-                              },
-                            ),
+                          TextFormField(
+                            controller: _quantityCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'Anzahl *'),
+                            keyboardType: TextInputType.number,
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Pflichtfeld';
+                              final n = int.tryParse(v);
+                              if (n == null || n <= 0) return 'Muss > 0 sein';
+                              return null;
+                            },
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _shippingType,
-                              decoration: const InputDecoration(
-                                  labelText: 'Versandtyp *'),
-                              items: InventoryProvider.shippingTypes
-                                  .map((t) => DropdownMenuItem(
-                                      value: t, child: Text(t)))
-                                  .toList(),
-                              onChanged: (v) =>
-                                  setState(() => _shippingType = v!),
-                            ),
+                        ], flex: [3, 1]),
+                        const SizedBox(height: 12),
+                        _row(narrow, [
+                          DropdownButtonFormField<String>(
+                            initialValue: _shippingType,
+                            decoration: const InputDecoration(
+                                labelText: 'Versandtyp *'),
+                            items: InventoryProvider.shippingTypes
+                                .map((t) => DropdownMenuItem(
+                                    value: t, child: Text(t)))
+                                .toList(),
+                            onChanged: (v) =>
+                                setState(() => _shippingType = v!),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _shop,
-                              decoration: const InputDecoration(
-                                  labelText: 'Shop *'),
-                              items: shops
-                                  .map((s) => DropdownMenuItem(
-                                      value: s.name,
-                                      child: Text(s.name)))
-                                  .toList(),
-                              onChanged: (v) =>
-                                  setState(() => _shop = v),
-                              validator: (v) =>
-                                  v == null || v.isEmpty
-                                      ? 'Pflichtfeld'
-                                      : null,
-                            ),
+                          DropdownButtonFormField<String>(
+                            initialValue: _shop,
+                            decoration:
+                                const InputDecoration(labelText: 'Shop *'),
+                            items: shops
+                                .map((s) => DropdownMenuItem(
+                                    value: s.name, child: Text(s.name)))
+                                .toList(),
+                            onChanged: (v) => setState(() => _shop = v),
+                            validator: (v) =>
+                                v == null || v.isEmpty ? 'Pflichtfeld' : null,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      // Section: Preise
-                      _sectionLabel('Preise'),
-                      const SizedBox(height: 10),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // EK block
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('EK Preis',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: Color(0xFF475569))),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    _radioOption('Netto', 'Netto'),
-                                    const SizedBox(width: 12),
-                                    _radioOption('Brutto', 'Brutto'),
-                                  ],
+                        ]),
+                        const SizedBox(height: 20),
+                        // ── Preise ──────────────────────────────────────
+                        _sectionLabel('Preise'),
+                        const SizedBox(height: 10),
+                        _row(narrow, [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('EK Preis',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFF475569))),
+                              const SizedBox(height: 6),
+                              Row(children: [
+                                _radioOption('Netto', 'Netto'),
+                                const SizedBox(width: 12),
+                                _radioOption('Brutto', 'Brutto'),
+                              ]),
+                              const SizedBox(height: 6),
+                              TextFormField(
+                                controller: _priceCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'Betrag (€)',
+                                  prefixText: '€ ',
                                 ),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: _priceCtrl,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Betrag (€)',
-                                    prefixText: '€ ',
-                                  ),
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                          decimal: true),
-                                  validator: (v) {
-                                    if (v == null || v.isEmpty) {
-                                      return null;
-                                    }
-                                    if (double.tryParse(
-                                            v.replaceAll(',', '.')) ==
-                                        null) { return 'Ungültige Zahl'; }
-                                    return null;
-                                  },
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) return null;
+                                  if (double.tryParse(
+                                          v.replaceAll(',', '.')) ==
+                                      null) { return 'Ungültige Zahl'; }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('VK (Verkaufspreis)',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFF475569))),
+                              const SizedBox(height: 6),
+                              const SizedBox(height: 28),
+                              const SizedBox(height: 6),
+                              TextFormField(
+                                controller: _vkCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'Betrag (€)',
+                                  prefixText: '€ ',
                                 ),
-                              ],
-                            ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) return null;
+                                  if (double.tryParse(
+                                          v.replaceAll(',', '.')) ==
+                                      null) { return 'Ungültige Zahl'; }
+                                  return null;
+                                },
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          // VK
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('VK (Verkaufspreis)',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: Color(0xFF475569))),
-                                const SizedBox(height: 6),
-                                const SizedBox(height: 28),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: _vkCtrl,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Betrag (€)',
-                                    prefixText: '€ ',
-                                  ),
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                          decimal: true),
-                                  validator: (v) {
-                                    if (v == null || v.isEmpty) {
-                                      return null;
-                                    }
-                                    if (double.tryParse(
-                                            v.replaceAll(',', '.')) ==
-                                        null) { return 'Ungültige Zahl'; }
-                                    return null;
-                                  },
-                                ),
-                              ],
-                            ),
+                        ]),
+                        const SizedBox(height: 20),
+                        // ── Käufer & Status ─────────────────────────────
+                        _sectionLabel('Käufer & Status'),
+                        const SizedBox(height: 10),
+                        _row(narrow, [
+                          DropdownButtonFormField<String>(
+                            initialValue: _buyer,
+                            decoration:
+                                const InputDecoration(labelText: 'Käufer'),
+                            items: [
+                              const DropdownMenuItem<String>(
+                                  value: null, child: Text('— Kein —')),
+                              ...buyers.map((b) => DropdownMenuItem(
+                                  value: b.name, child: Text(b.name))),
+                            ],
+                            onChanged: (v) => setState(() => _buyer = v),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      // Section: Käufer & Status
-                      _sectionLabel('Käufer & Status'),
-                      const SizedBox(height: 10),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _buyer,
-                              decoration: const InputDecoration(
-                                  labelText: 'Käufer'),
-                              items: [
-                                const DropdownMenuItem<String>(
-                                    value: null,
-                                    child: Text('— Kein —')),
-                                ...buyers.map((b) => DropdownMenuItem(
-                                    value: b.name,
-                                    child: Text(b.name))),
-                              ],
-                              onChanged: (v) =>
-                                  setState(() => _buyer = v),
-                            ),
+                          DropdownButtonFormField<String>(
+                            initialValue: _status,
+                            decoration:
+                                const InputDecoration(labelText: 'Status'),
+                            items: InventoryProvider.statusOptions
+                                .map((s) => DropdownMenuItem(
+                                    value: s, child: Text(s)))
+                                .toList(),
+                            onChanged: (v) => setState(() => _status = v!),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _status,
-                              decoration: const InputDecoration(
-                                  labelText: 'Status'),
-                              items: InventoryProvider.statusOptions
-                                  .map((s) => DropdownMenuItem(
-                                      value: s, child: Text(s)))
-                                  .toList(),
-                              onChanged: (v) =>
-                                  setState(() => _status = v!),
-                            ),
+                          DropdownButtonFormField<String>(
+                            initialValue: _beleg,
+                            decoration:
+                                const InputDecoration(labelText: 'Beleg'),
+                            items: InventoryProvider.belegOptions
+                                .map((s) => DropdownMenuItem(
+                                    value: s, child: Text(s)))
+                                .toList(),
+                            onChanged: (v) => setState(() => _beleg = v!),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _beleg,
-                              decoration: const InputDecoration(
-                                  labelText: 'Beleg'),
-                              items: InventoryProvider.belegOptions
-                                  .map((s) => DropdownMenuItem(
-                                      value: s, child: Text(s)))
-                                  .toList(),
-                              onChanged: (v) =>
-                                  setState(() => _beleg = v!),
-                            ),
+                        ]),
+                        const SizedBox(height: 20),
+                        // ── Datum & Tracking ────────────────────────────
+                        _sectionLabel('Datum & Tracking'),
+                        const SizedBox(height: 10),
+                        _row(narrow, [
+                          _DatePickerField(
+                            label: 'Bestelldatum *',
+                            date: _orderDate,
+                            onTap: () => _pickDate(ctx, false),
+                            dateFmt: dateFmt,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      // Section: Datum & Tracking
-                      _sectionLabel('Datum & Tracking'),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _DatePickerField(
-                              label: 'Bestelldatum *',
-                              date: _orderDate,
-                              onTap: () => _pickDate(context, false),
-                              dateFmt: dateFmt,
-                            ),
+                          _DatePickerField(
+                            label: 'Ankunftsdatum',
+                            date: _arrivalDate,
+                            onTap: () => _pickDate(ctx, true),
+                            dateFmt: dateFmt,
+                            placeholder: 'Nicht gesetzt',
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _DatePickerField(
-                              label: 'Ankunftsdatum',
-                              date: _arrivalDate,
-                              onTap: () => _pickDate(context, true),
-                              dateFmt: dateFmt,
-                              placeholder: 'Nicht gesetzt',
-                            ),
+                        ]),
+                        const SizedBox(height: 12),
+                        _row(narrow, [
+                          TextFormField(
+                            controller: _ticketCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'Ticketnummer'),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _ticketCtrl,
-                              decoration: const InputDecoration(
-                                  labelText: 'Ticketnummer'),
-                            ),
+                          TextFormField(
+                            controller: _trackingCtrl,
+                            decoration:
+                                const InputDecoration(labelText: 'Tracking'),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _trackingCtrl,
-                              decoration: const InputDecoration(
-                                  labelText: 'Tracking'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      // Section: Notiz
-                      _sectionLabel('Notiz'),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        controller: _noteCtrl,
-                        decoration:
-                            const InputDecoration(labelText: 'Notiz'),
-                        maxLines: 2,
-                      ),
-                    ],
-                  ),
+                        ]),
+                        const SizedBox(height: 20),
+                        // ── Notiz ───────────────────────────────────────
+                        _sectionLabel('Notiz'),
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: _noteCtrl,
+                          decoration:
+                              const InputDecoration(labelText: 'Notiz'),
+                          maxLines: 2,
+                        ),
+                      ],
+                    );
+                  }),
                 ),
               ),
             ),
@@ -511,6 +443,30 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Returns a 2-column Row on wide screens or a stacked Column on narrow screens.
+  Widget _row(bool narrow, List<Widget> children, {List<int>? flex}) {
+    if (narrow) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (int i = 0; i < children.length; i++) ...[
+            children[i],
+            if (i < children.length - 1) const SizedBox(height: 12),
+          ],
+        ],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (int i = 0; i < children.length; i++) ...[
+          Expanded(flex: flex != null ? flex[i] : 1, child: children[i]),
+          if (i < children.length - 1) const SizedBox(width: 12),
+        ],
+      ],
     );
   }
 
