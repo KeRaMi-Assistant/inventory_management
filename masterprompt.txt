@@ -1,0 +1,430 @@
+================================================================================
+MASTER PROMPT — LAGERVERWALTUNGS- & BESTELL-/VERKAUFS-TRACKER
+================================================================================
+
+ZIEL:
+Flutter-Desktop-App (macOS/Windows/Linux + Web-Fallback) zur vollstaendigen
+Verwaltung von Einkaeufen, Verkaufen, Lagerbestand und Tickets.
+Alle Daten werden LOKAL gespeichert (JSON-Datei, kein Backend, kein Login).
+
+
+================================================================================
+1. DATENMODELLE
+================================================================================
+
+-- Deal (Bestell-/Verkaufseintrag) --
+Ein Deal ist eine Einkaufsposition: ein Produkt, das bestellt oder weitergeleitet
+wurde. Mehrere Deals koennen dieselbe Ticket-Nummer haben (Sammelticket).
+
+Felder:
+  id                int (auto-increment)       Eindeutige ID
+  product           String                     Produktname
+  quantity          int                        Anzahl
+  shippingType      Reship / Dropship          Versandtyp
+  shopId            String (-> Shop)           Wo gekauft
+  orderDate         DateTime                   Bestelldatum
+  ekNetto           double?                    EK-Preis Netto
+  ekBrutto          double?                    EK-Preis Brutto (auto: Netto * 1.19)
+  vk                double?                    Verkaufspreis pro Stueck
+  buyerId           String? (-> Buyer)         Zugeordneter Kaeufer
+  ticketNumber      String?                    Ticket-ID z.B. "drittserver-14502"
+  ticketUrl         String?                    Direktlink zum Ticket
+  tracking          String?                    Tracking-Nummer (Paket)
+  arrivalDate       DateTime?                  Tatsaechliches Ankunftsdatum
+  status            enum                       Bestellt / Unterwegs / Angekommen /
+                                               Rechnung gestellt / Done
+  beleg             Ja / Nein                  Rechnung/Beleg vorhanden?
+  lexware           String?                    Lexware-Referenz
+  note              String?                    Freitext-Notiz
+  inventoryItemIds  List<String>               Verknuepfte Lagerartikel
+
+Berechnete Felder:
+  profitPerUnit   = vk - ekBrutto
+  totalProfit     = profitPerUnit * quantity
+  zuBekommen      = vk * quantity
+  ekGesamtNetto   = ekNetto * quantity
+  ekGesamtBrutto  = ekBrutto * quantity
+
+
+-- InventoryItem (Lagerartikel) --
+Repraesentiert einen physisch vorhandenen Artikel im Lager.
+
+Felder:
+  id            String (UUID)     Eindeutige ID
+  name          String            Artikelbezeichnung
+  sku           String?           Interne Artikelnummer
+  quantity      int               Aktuelle Lageranzahl
+  minStock      int               Mindestbestand (Alarm wenn unterschritten)
+  location      String?           Lagerort z.B. "Regal A-3"
+  costPrice     double?           Durchschnittlicher Einkaufspreis
+  arrivalDate   DateTime?         Wann zuletzt eingegangen
+  dealId        int?              Zugeordneter Deal
+  ticketNumber  String?           Zugeordnetes Ticket
+  note          String?           Freitext
+  status        enum              Im Lager / Reserviert / Versandt / Verkauft
+
+
+-- Ticket (virtuelle Gruppierung) --
+Tickets werden NICHT direkt gespeichert. Sie entstehen dynamisch durch Gruppierung
+aller Deals mit gleicher ticketNumber.
+
+Ticket-Aggregate (berechnet):
+  - Alle zugehoerigen Deals
+  - Gesamtanzahl Produkte und Deals
+  - Gesamt EK / VK / Profit
+  - Status-Zusammenfassung (schlechtester Status aller Deals)
+  - Zugehoerige Lagerartikel
+  - Kaeufer-Zuordnung
+
+
+-- Buyer (Kaeufer) --
+Felder wie bisher: Name, Farben (Zeile/Zelle/Schrift), sortOrder, active,
+discordServerIds.
+Neu:
+  paymentStatus  ob offene Rechnungen vorhanden
+  totalDebt      Summe aller offenen "zuBekommen"-Betraege
+
+
+-- Shop --
+Wie bisher: Name, Region, Channel, active, URL.
+
+
+================================================================================
+2. NAVIGATION & SCREENS
+================================================================================
+
+Linke Navigationsleiste (NavigationRail oder SideNav):
+
+  Dashboard       KPIs und Schnelluebersicht
+  Deals           Haupt-Tabelle aller Bestellungen
+  Tickets         Gruppenansicht nach Ticket-ID
+  Lager           Inventory / Lagerbestand
+  Statistiken     Charts und Auswertungen
+  Einstellungen   Kaeufer, Shops, Export/Import
+
+
+================================================================================
+3. DASHBOARD-SCREEN
+================================================================================
+
+KPI-Karten (oben, horizontal scrollbar):
+  - Offene Bestellungen (Status = Bestellt)
+  - Unterwegs (Status = Unterwegs)
+  - Heute angekommen (arrivalDate = heute)
+  - Gesamtprofit (alle Deals)
+  - Offener Betrag (alle nicht-Done Deals, Summe zuBekommen)
+  - Lagerbestand kritisch (Artikel unter minStock)
+  - Ausstehende Rechnungen (beleg = Nein, Status != Done)
+
+Aktivitaets-Feed (rechte Seite):
+  - Die letzten 10 Aktionen (Deal hinzugefuegt, Status geaendert, Artikel eingebucht)
+
+Kaeufer-Schnelluebersicht:
+  - Pro Kaeufer: Anzahl Deals, offener Betrag, letzter Deal
+
+
+================================================================================
+4. DEALS-SCREEN (HAUPT-TABELLE)
+================================================================================
+
+Spalten (alle sortierbar durch Klick auf Header):
+  ID, Produkt, Anzahl, Versandtyp, Shop, Bestelldatum, EK Netto, EK Brutto,
+  VK, Kaeufer, Ticket, Tracking, Ankunft, Status, Beleg,
+  Profit/Stk, Ges. Profit, Zu bekommen, Notiz, Aktionen
+
+Sortierung:
+  - Klick auf Spalten-Header = aufsteigend
+  - Zweiter Klick = absteigend
+  - Standard: Bestelldatum absteigend (neueste oben)
+
+Besondere Zellen:
+  - Ticket-Nummer klickbar -> oeffnet Ticket-Detail
+  - Tracking klickbar -> oeffnet Tracking-URL im Browser
+  - Zeile mit Status "Unterwegs" und kein Ankunftsdatum -> leicht orange markiert
+  - Zeilen farbig nach Kaeufer-Farbschema
+
+Filter-Leiste (immer sichtbar, unter Header):
+  - Suchfeld: sucht in Produkt, Ticket-Nr, Tracking, Notiz
+  - Kaeufer-Filter: Dropdown (Alle / einzelner Kaeufer)
+  - Status-Filter: Dropdown (Alle / Bestellt / Unterwegs / Angekommen /
+                   Rechnung gestellt / Done)
+  - Shop-Filter: Dropdown
+  - Datumsbereich: Von - Bis (Bestelldatum)
+  - Versandtyp: Reship / Dropship / Alle
+  - Beleg: Ja / Nein / Alle
+  - Filter-Reset-Button
+
+Massenaktionen (via Checkboxen):
+  - Mehrere Zeilen auswaehlen
+  - Ausgewaehlte: Status aendern, Kaeufer zuweisen, Loeschen
+
+Inline-Bearbeitung:
+  - Doppelklick auf Status-Zelle -> Dropdown-Inline-Edit
+  - Doppelklick auf Ankunftsdatum -> DatePicker-Inline-Edit
+
+
+================================================================================
+5. TICKET-SCREEN (GRUPPENANSICHT)
+================================================================================
+
+Deals werden nach ticketNumber gruppiert.
+Deals ohne Ticket erscheinen unter "Kein Ticket".
+
+Ticket-Karten (Liste oder Grid):
+  - Ticket-Nummer (fett, anklickbar)
+  - Kaeufer (mit Farbpunkt)
+  - Anzahl Produkte und Deals in diesem Ticket
+  - Gesamt EK / VK / Profit
+  - Status-Badge (schlechtester Status aller Deals)
+  - Ankunfts-Badge: "Alle angekommen" / "Teilweise" / "Ausstehend"
+  - Direktlink-Icon (oeffnet ticketUrl)
+
+Ticket-Detail-Panel (beim Klick auf Ticket):
+  Kopfzeile:
+    - Ticket-Nr, Kaeufer, Link, Discord-Server-Button
+  Tabelle der Deals:
+    - Produkt, Anzahl, EK, VK, Profit, Status, Ankunft, Tracking
+    - Jede Zeile inline editierbar (Status, Ankunft, Tracking)
+  Zugehoerige Lagerartikel (InventoryItems mit dieser ticketNumber)
+  Gesamt-Summen: EK gesamt, VK gesamt, Profit gesamt, Stueckzahl gesamt
+  Notiz fuer das gesamte Ticket
+  Button: "Deal hinzufuegen" (oeffnet AddDealDialog vorausgefuellt mit Ticket-Nr)
+
+Filter der Ticket-Liste:
+  - Suche nach Ticket-Nummer
+  - Filter nach Kaeufer, Status
+  - Sortierung: nach Datum, Profit, Anzahl Deals
+
+
+================================================================================
+6. LAGER-SCREEN (INVENTORY)
+================================================================================
+
+Lagerbestand-Tabelle:
+  Spalten: SKU, Name, Lagerort, Bestand, Mindestbestand, Oe EK-Preis,
+           Zugeordneter Deal/Ticket, Ankunftsdatum, Status, Aktionen
+
+Status-Ampel:
+  Gruen  = Bestand > minStock
+  Gelb   = Bestand = minStock
+  Rot    = Bestand < minStock
+
+Aktionen pro Artikel:
+  - Einbuchen (Menge hinzufuegen, mit Deal/Ticket verknuepfen)
+  - Ausbuchen (Menge reduzieren, Grund: Verkauf / Verlust / Rueckgabe)
+  - Artikel einem Deal/Ticket zuweisen
+  - Bearbeiten / Loeschen
+
+Lagerbewegungshistorie pro Artikel:
+  - Vollstaendige Liste aller Ein-/Ausbuchungen
+  - Felder: Datum, Menge, Grund, verknuepfter Deal
+
+Schnell-Einbuchen via Deal:
+  - Beim Setzen von arrivalDate in einem Deal: Popup
+    "Artikel ins Lager einbuchen?" mit vorausgefuellten Feldern
+    (Name = Produkt, Menge = quantity, Deal zugeordnet)
+
+Lager-KPIs (oben):
+  - Gesamtartikel (Typen)
+  - Gesamtbestand (Stueck)
+  - Kritische Artikel (unter minStock)
+  - Durchschnittlicher Lagerwert (Summe costPrice * quantity)
+
+
+================================================================================
+7. STATISTIK-SCREEN
+================================================================================
+
+Profit-Chart:
+  - Balkendiagramm: Profit pro Monat (letzte 12 Monate)
+  - Liniendiagramm: Kumulierter Profit ueber Zeit
+  - Filter nach Kaeufer
+
+Top-Produkte:
+  - Tabelle: Produkte nach Gesamtprofit sortiert (aggregiert ueber alle Deals)
+
+Kaeufer-Auswertung:
+  - Pro Kaeufer: Deals gesamt, EK gesamt, VK gesamt, Profit gesamt, offener Betrag
+  - Visuelle Darstellung (Balkendiagramm oder Pie Chart)
+
+Shop-Auswertung:
+  - Pro Shop: Anzahl Deals, Gesamtvolumen, Oe Profit pro Deal
+
+Zeitraum-Filter:
+  - Aktueller Monat / Letzter Monat / Dieses Jahr / Gesamte Zeit / Benutzerdefiniert
+
+
+================================================================================
+8. EINSTELLUNGEN-SCREEN
+================================================================================
+
+Kaeufer-Tab:
+  - Kaeufer hinzufuegen, bearbeiten, loeschen
+  - Farben (Zeile, Zelle, Schrift), sortOrder, Discord-Server-IDs
+  - Zahlungsstatus manuell setzen
+
+Shops-Tab:
+  - Shop hinzufuegen, bearbeiten, loeschen
+  - Name, Region, Channel, URL, active
+
+Discord-Tab:
+  - Server-ID-Anleitung (kein OAuth)
+  - Uebersicht der konfigurierten Server-IDs pro Kaeufer
+
+Export/Import-Tab:
+  - CSV-Export (alle Deals)
+  - CSV-Import (Deals)
+  - JSON-Backup (kompletter App-Export: Deals + Buyer + Shops + Inventory)
+  - JSON-Restore (vollstaendige Wiederherstellung)
+  - Amazon-Import (CSV aus Amazon-Bestellseite)
+
+Allgemein-Tab:
+  - MwSt-Satz (Standard 19%, anpassbar)
+  - Standard-Sortierung der Tabelle konfigurierbar
+  - Pfad zur lokalen Datendatei anzeigen
+  - Datenbankgroesse / Anzahl Eintraege anzeigen
+
+
+================================================================================
+9. ADD/EDIT DEAL DIALOG (ERWEITERT)
+================================================================================
+
+Abschnitte:
+  1. Produkt & Versand
+     - Produkt (Autocomplete aus bisherigen Eintraegen)
+     - Anzahl, Versandtyp, Shop
+  2. Preise
+     - EK-Typ: Netto oder Brutto waehlen
+     - EK-Betrag, VK
+     - Live-Vorschau: Profit pro Stueck und Gesamtprofit
+  3. Kaeufer & Status
+     - Kaeufer-Dropdown, Status, Beleg
+  4. Datum & Tracking
+     - Bestelldatum (Pflicht), Ankunftsdatum, Tracking-Nummer
+  5. Ticket
+     - Ticket-Nummer (Autocomplete aus bestehenden Tickets)
+     - Ticket-URL
+     - Discord-Server-Buttons (wenn Kaeufer + Ticket-Nr eingetragen)
+  6. Lager
+     - Checkbox "Artikel ins Lager einbuchen" (sichtbar wenn arrivalDate gesetzt)
+     - Wenn aktiv: Lagerort, SKU (optional)
+  7. Notiz
+     - Freitext
+
+Validierung:
+  - Produkt: Pflichtfeld
+  - Anzahl: Pflichtfeld, muss > 0 sein
+  - Shop: Pflichtfeld
+  - Bestelldatum: Pflichtfeld
+  - Wenn VK aber kein EK: Warnung (kein Fehler)
+
+Verhalten:
+  - Dialog schliesst sich automatisch nach erfolgreichem Speichern
+  - barrierDismissible = false (kein versehentliches Schliessen)
+
+
+================================================================================
+10. TECHNISCHE ANFORDERUNGEN
+================================================================================
+
+Lokale Persistenz:
+  - shared_preferences (Desktop + Web kompatibel)
+  - Alternativ: path_provider + JSON-Datei auf Desktop
+  - Automatisches Speichern nach jeder Aenderung
+  - Backup-Pfad: ~/Documents/lagerverwaltung_data.json
+
+Performance:
+  - ListView.builder (virtualisiert) fuer 10.000+ Eintraege
+  - Filterung und Sortierung clientseitig, kein Neuaufbau der kompletten Liste
+  - Optimistisches Update: UI sofort aktualisieren, im Hintergrund speichern
+  - Kein Lade-Spinner bei normalen CRUD-Operationen
+
+State Management:
+  - Provider (wie bisher)
+  - InventoryProvider      -> Deals, Buyers, Shops
+  - InventoryStockProvider -> InventoryItems, Movements
+  - FilterProvider         -> aktive Filter und Sortierung (nicht persistiert)
+
+Plattform:
+  - Flutter Desktop (macOS primaer)
+  - Responsive: funktioniert auch im Browser (localhost)
+  - Desktop-optimierte Schriftgroesse und Abstande
+
+Codestil:
+  - UI auf Deutsch, Code auf Englisch
+  - const-Konstruktoren wo moeglich
+  - Keine hardkodierten Kaeufer oder Shops (alles aus der Datenbank)
+
+
+================================================================================
+11. UI/UX-RICHTLINIEN
+================================================================================
+
+Farbpalette:
+  Primary Dark   #0F2744   (AppBar, SideNav Hintergrund)
+  Primary Light  #1A3F70   (Gradient)
+  Accent         #2563EB   (Blau, Buttons, aktive Elemente)
+  Success        #059669   (Gruen, Profit, Done)
+  Warning        #D97706   (Amber, Unterwegs, Warnungen)
+  Danger         #DC2626   (Rot, Loeschen, Fehler)
+  Background     #F1F5F9
+  Surface        #FFFFFF
+  Border         #E2E8F0
+
+Status-Badges:
+  Bestellt          Blau    #3B82F6
+  Unterwegs         Amber   #F59E0B
+  Angekommen        Teal    #0D9488
+  Rechnung gestellt Violet  #8B5CF6
+  Done              Gruen   #10B981
+
+Tabellen:
+  - Sticky Header
+  - Horizontales Scrollen bei vielen Spalten
+  - Hover-Highlight pro Zeile
+  - Sortier-Pfeile im Header (grau = inaktiv, blau = aktiv)
+  - Spaltenbreiten fix
+
+Dialoge:
+  - Maximale Breite: 760px
+  - Speichern-Button unten rechts
+  - Abbrechen-Button unten links
+  - Automatisch schliessen nach erfolgreichem Speichern
+  - barrierDismissible = false
+
+
+================================================================================
+12. UMSETZUNGSREIHENFOLGE (EMPFEHLUNG)
+================================================================================
+
+Phase 1 - Grundlagen verbessern:
+  1. Spalten sortierbar machen (Deal-Tabelle)
+  2. Filterleiste hinzufuegen (Suche, Kaeufer, Status, Shop, Datum)
+  3. Navigation auf SideNav umbauen (Dashboard, Deals, Tickets, Lager, Statistik)
+
+Phase 2 - Neue Kern-Features:
+  4. Ticket-Screen (Gruppenansicht + Detail-Panel)
+  5. Lager-Screen (InventoryItem-Modell + CRUD + Bewegungshistorie)
+  6. Dashboard ausbauen (Aktivitaets-Feed, Kaeufer-Schnelluebersicht)
+
+Phase 3 - Erweitert:
+  7. Statistik-Screen (Charts via fl_chart)
+  8. JSON-Backup/Restore im Einstellungen-Screen
+  9. Massenaktionen in der Deal-Tabelle
+  10. Inline-Bearbeitung (Status, Ankunftsdatum)
+  11. Schnell-Einbuchen via Deal (arrivalDate-Popup)
+
+
+================================================================================
+13. OPTIONALE ERWEITERUNGEN (PHASE 2+)
+================================================================================
+
+  - Barcode-Scanner fuer Lager-Einbuchungen
+  - Lieferanten-Verwaltung (eigene Entitaet)
+  - Plattformgebuehren konfigurierbar (Amazon 15%, eBay 13%)
+  - Mehrwaehrung (USD/GBP/EUR mit Wechselkurs)
+  - Tags/Labels an Deals haengen und danach filtern
+  - Template-Deals fuer haeufig bestellte Artikel
+  - Einfache PDF-Rechnungsvorschau aus Deal generieren
+
+================================================================================
