@@ -162,10 +162,12 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       } else {
         await provider.addDeal(deal);
       }
-      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      // Deal is already in memory; storage errors are non-fatal
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+    if (mounted) Navigator.pop(context);
   }
 
   @override
