@@ -107,7 +107,7 @@ class InventoryProvider extends ChangeNotifier {
       ? 1
       : (_deals.map((d) => d.id).reduce((a, b) => a > b ? a : b) + 1);
 
-  Set<String> get existingAmazonOrderIds => _deals
+  Set<String> get existingTicketNumbers => _deals
       .where((d) => d.ticketNumber != null && d.ticketNumber!.isNotEmpty)
       .map((d) => d.ticketNumber!)
       .toSet();

@@ -586,9 +586,9 @@ class _ExportImportTab extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _SettingsCard(
-              icon: Icons.shopping_bag_outlined,
-              title: 'Amazon-Import',
-              subtitle: 'Amazon-CSV-Import ist über die obere Toolbar verfügbar.',
+              icon: Icons.picture_as_pdf_outlined,
+              title: 'CSV-Backup',
+              subtitle: 'CSV-Export und -Import sind über die obere Toolbar verfügbar.',
               trailing: const Icon(Icons.north_east, color: Color(0xFF64748B)),
             ),
           ],
