@@ -40,7 +40,7 @@ class StatisticsScreen extends StatelessWidget {
                                     widthFactor: width,
                                     alignment: Alignment.centerLeft,
                                     child: Container(
-                                      height: 22,
+                                      height: 24,
                                       decoration: BoxDecoration(
                                         color: e.value >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
                                         borderRadius: BorderRadius.circular(4),
@@ -155,18 +155,35 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Icon(icon, size: 18, color: const Color(0xFF64748B)),
-            const SizedBox(width: 8),
-            Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
-          ]),
-          const SizedBox(height: 14),
-          child,
-        ]),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE0E6EF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Row(
+              children: [
+                Icon(icon, size: 16, color: const Color(0xFF6B7280)),
+                const SizedBox(width: 8),
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF111827))),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFE0E6EF)),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: child,
+          ),
+        ],
       ),
     );
   }
@@ -184,15 +201,49 @@ class _SimpleTable extends StatelessWidget {
       title: title,
       icon: Icons.table_chart_outlined,
       child: rows.isEmpty
-          ? const Text('Keine Daten vorhanden.')
-          : SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowHeight: 38,
-                columns: columns.map((c) => DataColumn(label: Text(c))).toList(),
-                rows: rows
-                    .map((row) => DataRow(cells: row.map((cell) => DataCell(Text(cell))).toList()))
-                    .toList(),
+          ? const Text('Keine Daten vorhanden.',
+              style: TextStyle(color: Color(0xFF6B7280), fontSize: 13))
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Table(
+                  defaultColumnWidth: const IntrinsicColumnWidth(),
+                  border: TableBorder(
+                    horizontalInside: const BorderSide(color: Color(0xFFE0E6EF), width: 1),
+                  ),
+                  children: [
+                    // Header
+                    TableRow(
+                      decoration: const BoxDecoration(color: Color(0xFFEEF2F7)),
+                      children: columns.map((c) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        child: Text(
+                          c.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF6B7280),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      )).toList(),
+                    ),
+                    // Data rows
+                    ...rows.asMap().entries.map((entry) => TableRow(
+                      decoration: BoxDecoration(
+                        color: entry.key.isEven ? Colors.white : const Color(0xFFFAFBFD),
+                      ),
+                      children: entry.value.map((cell) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        child: Text(
+                          cell,
+                          style: const TextStyle(fontSize: 13, color: Color(0xFF374151)),
+                        ),
+                      )).toList(),
+                    )),
+                  ],
+                ),
               ),
             ),
     );

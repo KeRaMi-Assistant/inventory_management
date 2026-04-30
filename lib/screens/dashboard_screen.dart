@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../providers/inventory_provider.dart';
 import '../widgets/kpi_card.dart';
 
@@ -13,25 +15,12 @@ class DashboardScreen extends StatelessWidget {
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _kpi(Icons.shopping_cart_outlined, 'Offene Bestellungen', '${provider.openOrdersCount}', const Color(0xFF2563EB)),
-                    _kpi(Icons.local_shipping_outlined, 'Unterwegs', '${provider.openDeliveriesCount}', const Color(0xFFD97706)),
-                    _kpi(Icons.today_outlined, 'Heute angekommen', '${provider.arrivedTodayCount}', const Color(0xFF0D9488)),
-                    _kpi(Icons.trending_up_rounded, 'Gesamtprofit', fmt.format(provider.totalProfit), const Color(0xFF059669)),
-                    _kpi(Icons.account_balance_wallet_outlined, 'Offener Betrag', fmt.format(provider.openAmount), const Color(0xFFD97706)),
-                    _kpi(Icons.warning_amber_rounded, 'Lager kritisch', '${provider.criticalStockCount}', const Color(0xFFDC2626)),
-                    _kpi(Icons.receipt_long_outlined, 'Ausstehende Rechnungen', '${provider.missingInvoiceCount}', const Color(0xFF8B5CF6)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
+              _KpiGrid(provider: provider, fmt: fmt),
+              const SizedBox(height: 24),
               LayoutBuilder(
                 builder: (context, c) {
                   final wide = c.maxWidth > 960;
@@ -60,17 +49,48 @@ class DashboardScreen extends StatelessWidget {
       },
     );
   }
+}
 
-  Widget _kpi(IconData icon, String title, String value, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: SizedBox(
-        width: 220,
-        child: KpiCard(icon: icon, title: title, value: value, color: color),
-      ),
+// ─── Responsive KPI Grid ───────────────────────────────────────────────────────
+
+class _KpiGrid extends StatelessWidget {
+  final InventoryProvider provider;
+  final NumberFormat fmt;
+  const _KpiGrid({required this.provider, required this.fmt});
+
+  @override
+  Widget build(BuildContext context) {
+    final kpis = [
+      (Icons.shopping_cart_outlined, 'Offene Bestellungen', '${provider.openOrdersCount}', AppTheme.accent),
+      (Icons.local_shipping_outlined, 'Unterwegs', '${provider.openDeliveriesCount}', AppTheme.warning),
+      (Icons.today_outlined, 'Heute angekommen', '${provider.arrivedTodayCount}', AppTheme.info),
+      (Icons.trending_up_rounded, 'Gesamtprofit', fmt.format(provider.totalProfit), AppTheme.success),
+      (Icons.account_balance_wallet_outlined, 'Offener Betrag', fmt.format(provider.openAmount), AppTheme.warning),
+      (Icons.warning_amber_rounded, 'Lager kritisch', '${provider.criticalStockCount}', AppTheme.danger),
+      (Icons.receipt_long_outlined, 'Ausstehende Rechnungen', '${provider.missingInvoiceCount}', const Color(0xFF8B5CF6)),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final cols = width < 500 ? 2 : width < 900 ? 3 : width < 1200 ? 4 : 7;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: kpis.map((k) {
+            final itemWidth = (width - (cols - 1) * 12) / cols;
+            return SizedBox(
+              width: itemWidth,
+              child: KpiCard(icon: k.$1, title: k.$2, value: k.$3, color: k.$4),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }
+
+// ─── Panels ────────────────────────────────────────────────────────────────────
 
 class _ActivityFeed extends StatelessWidget {
   const _ActivityFeed();
@@ -88,19 +108,59 @@ class _ActivityFeed extends StatelessWidget {
               ? const _MutedText('Noch keine Aktionen vorhanden.')
               : Column(
                   children: activities
-                      .map(
-                        (a) => ListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.circle, size: 8, color: Color(0xFF2563EB)),
-                          title: Text(a.message, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                          subtitle: Text(fmt.format(a.date), style: const TextStyle(fontSize: 11)),
-                        ),
-                      )
+                      .map((a) => _ActivityItem(
+                            message: a.message,
+                            date: fmt.format(a.date),
+                          ))
                       .toList(),
                 ),
         );
       },
+    );
+  }
+}
+
+class _ActivityItem extends StatelessWidget {
+  final String message;
+  final String date;
+  const _ActivityItem({required this.message, required this.date});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 5),
+            child: Container(
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                color: AppTheme.accent,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(message,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.textSecondary)),
+                const SizedBox(height: 2),
+                Text(date,
+                    style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -116,7 +176,9 @@ class _BuyerOverview extends StatelessWidget {
         final rows = provider.buyers.map((buyer) {
           final deals = provider.deals.where((d) => d.buyer == buyer.name).toList();
           deals.sort((a, b) => b.orderDate.compareTo(a.orderDate));
-          final open = deals.where((d) => d.status != 'Done').fold(0.0, (sum, d) => sum + (d.zuBekommen ?? 0));
+          final open = deals
+              .where((d) => d.status != 'Done')
+              .fold(0.0, (sum, d) => sum + (d.zuBekommen ?? 0));
           return (buyer: buyer, count: deals.length, open: open, last: deals.firstOrNull);
         }).toList();
 
@@ -126,33 +188,118 @@ class _BuyerOverview extends StatelessWidget {
           child: rows.isEmpty
               ? const _MutedText('Käufer in den Einstellungen anlegen.')
               : Column(
-                  children: rows
-                      .map(
-                        (row) => Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: const BoxDecoration(
-                            border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                  children: [
+                    // Header row
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 20),
+                          const Expanded(
+                            child: Text('KÄUFER',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textMuted,
+                                    letterSpacing: 0.5)),
                           ),
-                          child: Row(
-                            children: [
-                              Container(width: 10, height: 10, decoration: BoxDecoration(color: row.buyer.buyerCellColor, shape: BoxShape.circle)),
-                              const SizedBox(width: 10),
-                              Expanded(child: Text(row.buyer.name, style: const TextStyle(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
-                              SizedBox(width: 70, child: Text('${row.count} Deals', textAlign: TextAlign.right, overflow: TextOverflow.ellipsis)),
-                              SizedBox(width: 110, child: Text(fmt.format(row.open), textAlign: TextAlign.right, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.w700))),
-                              const SizedBox(width: 8),
-                              Flexible(child: Text(row.last?.product ?? '-', overflow: TextOverflow.ellipsis, textAlign: TextAlign.right)),
-                            ],
+                          const SizedBox(
+                            width: 70,
+                            child: Text('DEALS',
+                                textAlign: TextAlign.right,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textMuted,
+                                    letterSpacing: 0.5)),
                           ),
+                          const SizedBox(
+                            width: 110,
+                            child: Text('OFFEN',
+                                textAlign: TextAlign.right,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textMuted,
+                                    letterSpacing: 0.5)),
+                          ),
+                          const SizedBox(width: 8),
+                          const Flexible(
+                            child: Text('LETZTER DEAL',
+                                textAlign: TextAlign.right,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textMuted,
+                                    letterSpacing: 0.5)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1, color: AppTheme.borderStrong),
+                    ...rows.map(
+                      (row) => Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: const BoxDecoration(
+                          border: Border(bottom: BorderSide(color: AppTheme.border)),
                         ),
-                      )
-                      .toList(),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                  color: row.buyer.buyerCellColor,
+                                  shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(row.buyer.name,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                      color: AppTheme.textPrimary),
+                                  overflow: TextOverflow.ellipsis),
+                            ),
+                            SizedBox(
+                              width: 70,
+                              child: Text('${row.count}',
+                                  textAlign: TextAlign.right,
+                                  style: const TextStyle(
+                                      fontSize: 13, color: AppTheme.textSecondary)),
+                            ),
+                            SizedBox(
+                              width: 110,
+                              child: Text(fmt.format(row.open),
+                                  textAlign: TextAlign.right,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: AppTheme.warning,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13)),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(row.last?.product ?? '-',
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.right,
+                                  style: const TextStyle(
+                                      fontSize: 12, color: AppTheme.textMuted)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
         );
       },
     );
   }
 }
+
+// ─── Shared Panel Widget ───────────────────────────────────────────────────────
 
 class _Panel extends StatelessWidget {
   final String title;
@@ -162,23 +309,35 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.bgSurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Row(
               children: [
-                Icon(icon, size: 18, color: const Color(0xFF64748B)),
+                Icon(icon, size: 16, color: AppTheme.textMuted),
                 const SizedBox(width: 8),
-                Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                Text(title,
+                    style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary)),
               ],
             ),
-            const SizedBox(height: 12),
-            child,
-          ],
-        ),
+          ),
+          const Divider(height: 1, color: AppTheme.border),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: child,
+          ),
+        ],
       ),
     );
   }
@@ -190,6 +349,8 @@ class _MutedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: const TextStyle(color: Color(0xFF94A3B8)));
+    return Text(text,
+        style: const TextStyle(color: AppTheme.textMuted, fontSize: 13));
   }
 }
+
