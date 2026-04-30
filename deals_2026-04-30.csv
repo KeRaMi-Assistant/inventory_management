@@ -1,0 +1,42 @@
+## DEALS
+ID;Produkt;Anzahl;Versandtyp;Shop;Bestelldatum;EK Netto;EK Brutto;VK;Käufer;Ticketnummer;Ticket-URL;Tracking;Ankunft;Status;Beleg;Notiz
+1;testProdukt;1;Dropship;TestShop;30.04.2026;10.00;11.90;19.00;BountyTest;test-ticket;1463455687983108201;;;Bestellt;Nein;
+2;Nike Air Max 90;2;Reship;Nike SNKRS;28.04.2026;89.00;105.91;160.00;BountyTest;snkrs-0428;1463455687983108201;1Z999AA10123456784;30.04.2026;Angekommen;Ja;Sohle leicht vergilbt
+3;Adidas Yeezy 350 V2 Zebra;1;Dropship;Adidas;25.04.2026;;220.00;380.00;BountyTest;yeez-0425;1463455687983108201;;Unterwegs;Nein;
+4;Jordan 1 Retro High OG;3;Reship;StockX;20.04.2026;145.00;;250.00;;;;;;Bestellt;Nein;Kein Käufer zugeordnet
+5;New Balance 550 White;1;Dropship;New Balance;15.04.2026;75.00;89.25;130.00;BountyTest;nb-0415;1463455687983108201;9400111899223450088467;15.04.2026;Rechnung gestellt;Ja;
+6;Puma Suede Classic;4;Reship;Puma;10.04.2026;35.00;41.65;55.00;BountyTest;puma-0410;1463455687983108201;773185773824;10.04.2026;Done;Ja;Alles ok
+7;Off-White Hoodie Slim;1;Dropship;SSENSE;01.04.2026;210.00;249.90;;;;;;;Bestellt;Nein;Kein Ticket noch kein Käufer
+8;Stone Island Jacke;2;Reship;Farfetch;05.04.2026;;480.00;720.00;BountyTest;stone-0405;1463455687983108201;;Unterwegs;Nein;Nur EK Brutto angegeben
+9;Supreme Box Logo Tee;5;Dropship;Supreme;08.04.2026;42.00;49.98;95.00;BountyTest;sup-0408;1463455687983108201;77318577123;08.04.2026;Done;Ja;Menge 5 Stück
+10;Balenciaga Triple S;1;Reship;Balenciaga;12.04.2026;320.00;380.80;;BountyTest;bal-0412;1463455687983108201;;;Bestellt;Nein;Kein VK eingetragen
+11;Produkt ohne EK;1;Dropship;TestShop;18.04.2026;;;;99.00;BountyTest;noek-0418;1463455687983108201;;;Bestellt;Nein;Kein EK vorhanden
+12;Artikel ungültiger Status;1;Reship;TestShop;22.04.2026;20.00;23.80;35.00;;ungültig-0422;;1ZTEST123;22.04.2026;UNGÜLTIG_STATUS;Ja;Soll auf Bestellt fallen
+13;Notiz mit Semikolon;1;Dropship;TestShop;29.04.2026;15.00;17.85;25.00;;noiz-0429;;;;;Done;Ja;Notiz mit langen Text
+
+## SHOPS
+Name;Region;Channel;URL;Aktiv
+TestShop;DE;;https://testshop.de;Ja
+Nike SNKRS;DE;;https://snkrs.nike.com/de;Ja
+Adidas;DE;;https://www.adidas.de;Ja
+StockX;US;;https://stockx.com;Ja
+New Balance;DE;;https://www.newbalance.de;Ja
+Puma;DE;;https://eu.puma.com;Ja
+SSENSE;CA;;https://www.ssense.com;Ja
+Farfetch;GB;;https://www.farfetch.com;Ja
+Supreme;US;;https://www.supremenewyork.com;Ja
+Balenciaga;FR;;https://www.balenciaga.com;Ja
+InaktiverShop;DE;;https://beispiel-inaktiv.de;Nein
+
+## KÄUFER
+Name;Discord-Server-IDs;Aktiv;Zahlungsstatus;RowFillColor;BuyerCellColor;FontColor;SortOrder
+BountyTest;1028341004480286883;Ja;OK;#FFFFFFFF;#FF2563EB;#FF1E293B;0
+
+## LAGERBESTAND
+ID;Name;SKU;Anzahl;Mindestbestand;Lagerort;Einkaufspreis;Ankunft;Deal-ID;Ticketnummer;Ticket-URL;Status;Notiz
+;Nike Air Max 90;AIR-MAX-90;2;1;Regal A-1;89.00;30.04.2026;2;snkrs-0428;1463455687983108201;Im Lager;Sohle leicht vergilbt – Deal 2 Angekommen
+;New Balance 550 White;NB-550-WHT;1;0;Regal B-3;75.00;15.04.2026;5;nb-0415;1463455687983108201;Reserviert;Rechnung gestellt an BountyTest
+;Puma Suede Classic;PUMA-SDE-CLS;4;0;;35.00;10.04.2026;6;puma-0410;1463455687983108201;Verkauft;Deal 6 abgeschlossen
+;Supreme Box Logo Tee;SUP-BOX-TEE;5;0;;42.00;08.04.2026;9;sup-0408;1463455687983108201;Verkauft;Menge 5 – Deal 9 Done
+;Vintage Levi's 501;LEV-501-VTG;3;2;Regal C-2;45.00;20.03.2026;;;Im Lager;Kein Deal verknüpft – Direkteinkauf
+;Lagerartikel Kritisch;KRIT-SNK-001;0;2;Regal D-1;80.00;01.03.2026;;;Im Lager;Mindestbestand unterschritten – Nachbestellen!

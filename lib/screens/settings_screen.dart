@@ -687,52 +687,10 @@ class _GeneralTab extends StatelessWidget {
                   '${provider.deals.length} Deals · ${provider.buyers.length} Käufer · ${provider.shops.length} Shops · ${provider.inventoryItems.length} Lagerartikel',
               trailing: Text('${provider.exportJson().length ~/ 1024} KB'),
             ),
-            const SizedBox(height: 12),
-            _SettingsCard(
-              icon: Icons.science_outlined,
-              title: 'Demo-Daten laden',
-              subtitle:
-                  'Lädt Beispieldaten (Amazon DE/ES, 3 Käufer, 8 Deals). Bestehende Daten werden überschrieben.',
-              trailing: ElevatedButton.icon(
-                onPressed: () => _loadDemo(context, provider),
-                icon: const Icon(Icons.download_outlined, size: 16),
-                label: const Text('Demo laden'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
           ],
         );
       },
     );
-  }
-
-  Future<void> _loadDemo(
-      BuildContext context, InventoryProvider provider) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Demo-Daten laden'),
-        content: const Text(
-            'Alle aktuellen Daten werden durch die Demo-Daten ersetzt.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Abbrechen')),
-          ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Demo laden')),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    await provider.loadDemoData();
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Demo-Daten geladen.')));
-    }
   }
 }
 

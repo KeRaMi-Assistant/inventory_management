@@ -32,12 +32,12 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   Future<void> _export(BuildContext context, InventoryProvider provider) async {
-    final deals = provider.deals;
-    if (deals.isEmpty) {
-      _showSnack(context, 'Keine Einträge zum Exportieren.', isError: true);
-      return;
-    }
-    final (path, err) = await CsvService.exportDeals(List.from(deals));
+    final (path, err) = await CsvService.exportAll(
+      List.from(provider.deals),
+      List.from(provider.shops),
+      List.from(provider.buyers),
+      List.from(provider.inventoryItems),
+    );
     if (!context.mounted) return;
     if (err != null) {
       _showSnack(context, 'Fehler: $err', isError: true);
@@ -52,7 +52,8 @@ class _MainScreenState extends State<MainScreen> {
       builder: (_) => AlertDialog(
         title: const Text('CSV importieren'),
         content: const Text(
-          'Importierte Einträge werden zu den bestehenden Daten hinzugefügt.',
+          'Deals werden hinzugefügt. Shops, Käufer und Lagerbestand werden nur '
+          'importiert, wenn noch kein Eintrag mit demselben Namen existiert.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
@@ -62,13 +63,15 @@ class _MainScreenState extends State<MainScreen> {
     );
     if (confirmed != true || !context.mounted) return;
 
-    final (deals, err) = await CsvService.importDeals(provider.nextDealId);
+    final (result, err) = await CsvService.importAll(provider.nextDealId);
     if (!context.mounted) return;
     if (err != null) {
       _showSnack(context, 'Fehler: $err', isError: true);
-    } else if (deals != null) {
-      await provider.importDeals(deals);
-      if (context.mounted) _showSnack(context, '${deals.length} Einträge importiert.');
+    } else if (result != null) {
+      final (deals, shops, buyers, items) = await provider.importCsvAll(result);
+      if (context.mounted) {
+        _showSnack(context, '$deals Deals, $shops Shops, $buyers Käufer, $items Lagerartikel importiert.');
+      }
     }
   }
 

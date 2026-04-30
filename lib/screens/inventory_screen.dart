@@ -41,11 +41,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 Expanded(
                   child: items.isEmpty
                       ? Center(
-                          child: Text(
-                            provider.inventoryItems.isEmpty
-                                ? 'Noch keine Lagerartikel angelegt.'
-                                : 'Keine Artikel gefunden.',
-                          ),
+                          child: provider.inventoryItems.isEmpty
+                              ? _EmptyInventoryState(provider: provider)
+                              : const Text('Keine Artikel gefunden.'),
                         )
                       : isNarrow
                           ? _buildCardList(context, provider, money, items)
@@ -171,7 +169,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       IconButton(
                         tooltip: 'Discord-Ticket öffnen',
                         icon: const Icon(Icons.open_in_new, size: 18, color: Color(0xFF5865F2)),
-                        onPressed: () => openUrlWithFallback(context, item.ticketUrl!),
+                        onPressed: () => openUrlWithFallback(context, resolveDiscordUrl(item.ticketUrl!)),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
@@ -314,7 +312,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               Tooltip(
                 message: 'Discord-Ticket öffnen',
                 child: InkWell(
-                  onTap: () => openUrlWithFallback(context, item.ticketUrl!),
+                  onTap: () => openUrlWithFallback(context, resolveDiscordUrl(item.ticketUrl!)),
                   child: const Icon(Icons.open_in_new, size: 14, color: Color(0xFF5865F2)),
                 ),
               ),
@@ -711,6 +709,48 @@ class _LowStockBanner extends StatefulWidget {
 
   @override
   State<_LowStockBanner> createState() => _LowStockBannerState();
+}
+
+class _EmptyInventoryState extends StatefulWidget {
+  const _EmptyInventoryState({required this.provider});
+  final InventoryProvider provider;
+
+  @override
+  State<_EmptyInventoryState> createState() => _EmptyInventoryStateState();
+}
+
+class _EmptyInventoryStateState extends State<_EmptyInventoryState> {
+  bool _loading = false;
+
+  Future<void> _seed() async {
+    setState(() => _loading = true);
+    final added = await widget.provider.seedDemoInventory();
+    if (!mounted) return;
+    setState(() => _loading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$added Demo-Artikel angelegt.')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey),
+        const SizedBox(height: 12),
+        const Text('Noch keine Lagerartikel angelegt.'),
+        const SizedBox(height: 16),
+        _loading
+            ? const CircularProgressIndicator()
+            : OutlinedButton.icon(
+                onPressed: _seed,
+                icon: const Icon(Icons.auto_fix_high),
+                label: const Text('Demo-Daten laden'),
+              ),
+      ],
+    );
+  }
 }
 
 class _LowStockBannerState extends State<_LowStockBanner> {

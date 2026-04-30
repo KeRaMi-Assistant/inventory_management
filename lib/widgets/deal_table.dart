@@ -585,7 +585,10 @@ class _DealRowState extends State<_DealRow> {
         if (widget.onOpenTicket != null) {
           widget.onOpenTicket!(deal.ticketNumber!);
         } else if (deal.ticketUrl != null) {
-          openUrlWithFallback(context, deal.ticketUrl!);
+          final prov = context.read<InventoryProvider>();
+          final buyer = prov.buyers.where((b) => b.name == deal.buyer).firstOrNull;
+          final serverIds = buyer?.discordServerIds ?? [];
+          openUrlWithFallback(context, resolveDiscordUrl(deal.ticketUrl!, serverIds: serverIds));
         }
       },
       child: Text(

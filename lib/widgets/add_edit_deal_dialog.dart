@@ -159,6 +159,13 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
         if (ticket.isEmpty) return null;
         final raw = _ticketUrlCtrl.text.trim();
         if (raw.isEmpty) return null;
+        if (raw.contains('discord.com/channels/')) return raw;
+        // Bare Discord snowflake ID → build proper URL using buyer's first server
+        if (RegExp(r'^\d{15,21}$').hasMatch(raw)) {
+          final buyerObj = provider.buyers.where((b) => b.name == _buyer).firstOrNull;
+          final serverId = buyerObj?.discordServerIds.firstOrNull;
+          if (serverId != null) return 'https://discord.com/channels/$serverId/$raw';
+        }
         return raw.startsWith('http') ? raw : 'https://$raw';
       }(),
       tracking:
@@ -467,6 +474,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                           _DiscordServerButtons(
                             buyer: _buyer,
                             buyers: buyers,
+                            ticketUrl: _ticketUrlCtrl.text.trim(),
                           ),
                         ],
                         if (_ticketCtrl.text.isNotEmpty) ...[
@@ -718,8 +726,13 @@ class _ProfitPreview extends StatelessWidget {
 class _DiscordServerButtons extends StatelessWidget {
   final String? buyer;
   final List<Buyer> buyers;
+  final String ticketUrl;
 
-  const _DiscordServerButtons({required this.buyer, required this.buyers});
+  const _DiscordServerButtons({
+    required this.buyer,
+    required this.buyers,
+    required this.ticketUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -733,47 +746,54 @@ class _DiscordServerButtons extends StatelessWidget {
       runSpacing: 4,
       children: [
         for (int i = 0; i < serverIds.length; i++)
-          OutlinedButton.icon(
-            onPressed: () {
-              final url =
-                  'https://discord.com/channels/${serverIds[i]}';
-              openUrlWithFallback(context, url);
-            },
-            style: OutlinedButton.styleFrom(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              side: const BorderSide(color: Color(0xFF5865F2)),
-              foregroundColor: const Color(0xFF5865F2),
-              textStyle: const TextStyle(fontSize: 12),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            icon: const Icon(Icons.discord, size: 14),
-            label: Text('Server ${i + 1} in Discord öffnen'),
-          ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF0F9FF),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: const Color(0xFFBAE6FD)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.info_outline, size: 12, color: Color(0xFF0369A1)),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  'Kanal finden → Rechtsklick → „Link kopieren" → hier einfügen',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF0369A1)),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
+          Builder(
+            builder: (ctx) {
+              final serverId = serverIds[i];
+              final resolved = resolveDiscordUrl(ticketUrl, serverIds: [serverId]);
+              final hasChannel = resolved.contains('discord.com/channels/');
+              final url = hasChannel ? resolved : 'https://discord.com/channels/$serverId';
+              return OutlinedButton.icon(
+                onPressed: () => openUrlWithFallback(ctx, url),
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  side: const BorderSide(color: Color(0xFF5865F2)),
+                  foregroundColor: const Color(0xFF5865F2),
+                  textStyle: const TextStyle(fontSize: 12),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-              ),
-            ],
+                icon: const Icon(Icons.discord, size: 14),
+                label: Text(hasChannel
+                    ? 'Ticket in Discord öffnen'
+                    : 'Server ${i + 1} in Discord öffnen'),
+              );
+            },
           ),
-        ),
+        if (ticketUrl.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F9FF),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: const Color(0xFFBAE6FD)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.info_outline, size: 12, color: Color(0xFF0369A1)),
+                const SizedBox(width: 5),
+                const Flexible(
+                  child: Text(
+                    'Kanal finden → Rechtsklick → „Link kopieren" → hier einfügen',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF0369A1)),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }

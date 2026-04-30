@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'dart:ui' show Color;
-
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -12,6 +10,7 @@ import '../models/deal.dart';
 import '../models/inventory_item.dart';
 import '../models/shop.dart';
 import '../models/ticket_summary.dart';
+import '../services/csv_service.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_repository.dart';
 
@@ -273,6 +272,100 @@ class InventoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Imports all four tables from a [CsvImportResult].
+  /// Deals are always appended. Shops, buyers and inventory items are only
+  /// added when no existing entry with the same name exists (avoids duplicates).
+  Future<(int, int, int, int)> importCsvAll(CsvImportResult result) async {
+    // Deals
+    int dealCount = 0;
+    if (result.deals.isNotEmpty) {
+      final saved = await _repository.insertDeals(result.deals);
+      _deals = [...saved, ..._deals]..sort((a, b) => b.id.compareTo(a.id));
+      dealCount = saved.length;
+    }
+
+    // Shops – skip names that already exist
+    int shopCount = 0;
+    final existingShopNames = _shops.map((s) => s.name.toLowerCase()).toSet();
+    for (final shop in result.shops) {
+      if (existingShopNames.contains(shop.name.toLowerCase())) continue;
+      final withId = shop.id.isEmpty ? shop.copyWith(id: _uuid.v4()) : shop;
+      final saved = await _repository.insertShop(withId);
+      _shops.add(saved);
+      existingShopNames.add(saved.name.toLowerCase());
+      shopCount++;
+    }
+
+    // Buyers – skip names that already exist
+    int buyerCount = 0;
+    final existingBuyerNames = _buyers.map((b) => b.name.toLowerCase()).toSet();
+    for (final buyer in result.buyers) {
+      if (existingBuyerNames.contains(buyer.name.toLowerCase())) continue;
+      final withId = buyer.id.isEmpty ? buyer.copyWith(id: _uuid.v4()) : buyer;
+      final saved = await _repository.insertBuyer(withId);
+      _buyers.add(saved);
+      existingBuyerNames.add(saved.name.toLowerCase());
+      buyerCount++;
+    }
+    _buyers.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    // Inventory items – skip names that already exist; skip items that fail to insert
+    int itemCount = 0;
+    final existingItemNames = _inventoryItems.map((i) => i.name.toLowerCase()).toSet();
+    for (final item in result.inventoryItems) {
+      if (existingItemNames.contains(item.name.toLowerCase())) continue;
+      final withId = item.id.isEmpty ? item.copyWith(id: _uuid.v4()) : item;
+      try {
+        final saved = await _repository.insertInventoryItem(withId);
+        _inventoryItems.add(saved);
+        existingItemNames.add(saved.name.toLowerCase());
+        itemCount++;
+      } catch (e) {
+        if (kDebugMode) debugPrint('importCsvAll: item "${item.name}" skipped – $e');
+      }
+    }
+    _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
+
+    if (dealCount > 0 || shopCount > 0 || buyerCount > 0 || itemCount > 0) {
+      _log('CSV-Import: $dealCount Deals, $shopCount Shops, $buyerCount Käufer, $itemCount Lagerartikel', 'import');
+      notifyListeners();
+    }
+    return (dealCount, shopCount, buyerCount, itemCount);
+  }
+
+  /// Seeds 6 example inventory items into the DB.
+  /// Safe to call multiple times — skips items whose name already exists.
+  Future<int> seedDemoInventory() async {
+    final now = DateTime.now();
+    final demos = [
+      InventoryItem(id: _uuid.v4(), name: 'Nike Air Max 90', sku: 'AIR-MAX-90', quantity: 2, minStock: 1, location: 'Regal A-1', costPrice: 89.0, arrivalDate: now.subtract(const Duration(days: 1)), status: 'Im Lager', note: 'Demo-Artikel'),
+      InventoryItem(id: _uuid.v4(), name: 'New Balance 550 White', sku: 'NB-550-WHT', quantity: 1, minStock: 0, location: 'Regal B-3', costPrice: 75.0, arrivalDate: now.subtract(const Duration(days: 15)), status: 'Reserviert', note: 'Reserviert für Käufer'),
+      InventoryItem(id: _uuid.v4(), name: 'Supreme Box Logo Tee', sku: 'SUP-BOX-TEE', quantity: 5, minStock: 0, costPrice: 42.0, arrivalDate: now.subtract(const Duration(days: 22)), status: 'Im Lager'),
+      InventoryItem(id: _uuid.v4(), name: 'Puma Suede Classic', sku: 'PUMA-SDE-CLS', quantity: 4, minStock: 0, costPrice: 35.0, arrivalDate: now.subtract(const Duration(days: 20)), status: 'Im Lager'),
+      InventoryItem(id: _uuid.v4(), name: 'Vintage Levi\'s 501', sku: 'LEV-501-VTG', quantity: 3, minStock: 2, location: 'Regal C-2', costPrice: 45.0, arrivalDate: now.subtract(const Duration(days: 41)), status: 'Im Lager', note: 'Direkteinkauf'),
+      InventoryItem(id: _uuid.v4(), name: 'Lagerartikel Kritisch', sku: 'KRIT-SNK-001', quantity: 0, minStock: 2, location: 'Regal D-1', costPrice: 80.0, arrivalDate: now.subtract(const Duration(days: 60)), status: 'Im Lager', note: 'Mindestbestand unterschritten'),
+    ];
+    int added = 0;
+    final existingNames = _inventoryItems.map((i) => i.name.toLowerCase()).toSet();
+    for (final item in demos) {
+      if (existingNames.contains(item.name.toLowerCase())) continue;
+      try {
+        final saved = await _repository.insertInventoryItem(item);
+        _inventoryItems.add(saved);
+        existingNames.add(saved.name.toLowerCase());
+        added++;
+      } catch (e) {
+        if (kDebugMode) debugPrint('seedDemoInventory: "${item.name}" skipped – $e');
+      }
+    }
+    if (added > 0) {
+      _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
+      _log('Demo-Lager: $added Artikel angelegt', 'seed');
+      notifyListeners();
+    }
+    return added;
+  }
+
   // ── BUYERS ────────────────────────────────────────────────────────────────
 
   Future<void> addBuyer(Buyer buyer) async {
@@ -473,146 +566,6 @@ class InventoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Demo seed (cloud) ─────────────────────────────────────────────────────
-
-  /// Replaces the user's cloud dataset with a small set of demo deals,
-  /// buyers and shops. Useful for first-time onboarding and screenshots.
-  Future<void> loadDemoData() async {
-    final demo = _buildDemoSeed();
-    await _repository.deleteAllForCurrentUser();
-    final snapshot = await _repository.bulkImport(
-      buyers: demo.buyers,
-      shops: demo.shops,
-      deals: demo.deals,
-      items: const [],
-      movements: const [],
-      activities: const [],
-    );
-    _hydrateFrom(snapshot);
-    notifyListeners();
-  }
-
-  _DemoSeed _buildDemoSeed() {
-    const serverId = '1028341004480286883';
-    const channelId = '1463456615847170224';
-    const ticketUrl =
-        'https://discord.com/channels/$serverId/$channelId';
-    final now = DateTime.now();
-
-    final shops = [
-      Shop(
-        id: _uuid.v4(),
-        name: 'Amazon DE',
-        region: 'DE',
-        url: 'https://www.amazon.de',
-      ),
-      Shop(
-        id: _uuid.v4(),
-        name: 'Amazon ES',
-        region: 'ES',
-        url: 'https://www.amazon.es',
-      ),
-    ];
-    final buyers = [
-      Buyer(
-        id: _uuid.v4(),
-        name: 'Max Mustermann',
-        rowFillColor: const Color(0xFFEFF6FF),
-        buyerCellColor: const Color(0xFF2563EB),
-        fontColor: const Color(0xFFFFFFFF),
-        sortOrder: 0,
-        discordServerIds: const [serverId],
-      ),
-      Buyer(
-        id: _uuid.v4(),
-        name: 'Anna Schmidt',
-        rowFillColor: const Color(0xFFF5F3FF),
-        buyerCellColor: const Color(0xFF7C3AED),
-        fontColor: const Color(0xFFFFFFFF),
-        sortOrder: 1,
-        discordServerIds: const [serverId],
-      ),
-      Buyer(
-        id: _uuid.v4(),
-        name: 'Tom Weber',
-        rowFillColor: const Color(0xFFF0FDF4),
-        buyerCellColor: const Color(0xFF16A34A),
-        fontColor: const Color(0xFFFFFFFF),
-        sortOrder: 2,
-        discordServerIds: const [serverId],
-      ),
-    ];
-    final deals = [
-      Deal(
-        id: Deal.unsavedId,
-        product: 'PlayStation 5 Disc Edition',
-        quantity: 2,
-        shippingType: 'Dropship',
-        shop: 'Amazon DE',
-        orderDate: now.subtract(const Duration(days: 20)),
-        ekNetto: 410.00,
-        ekBrutto: 487.90,
-        vk: 550.00,
-        buyer: 'Max Mustermann',
-        ticketNumber: 'TICKET-001',
-        ticketUrl: ticketUrl,
-        arrivalDate: now.subtract(const Duration(days: 10)),
-        status: 'Done',
-        beleg: 'Ja',
-      ),
-      Deal(
-        id: Deal.unsavedId,
-        product: 'Xbox Series X',
-        quantity: 1,
-        shippingType: 'Reship',
-        shop: 'Amazon DE',
-        orderDate: now.subtract(const Duration(days: 14)),
-        ekNetto: 420.00,
-        ekBrutto: 499.80,
-        vk: 540.00,
-        buyer: 'Anna Schmidt',
-        ticketNumber: 'TICKET-002',
-        ticketUrl: ticketUrl,
-        arrivalDate: now.subtract(const Duration(days: 5)),
-        status: 'Angekommen',
-        beleg: 'Nein',
-      ),
-      Deal(
-        id: Deal.unsavedId,
-        product: 'Nintendo Switch OLED',
-        quantity: 3,
-        shippingType: 'Dropship',
-        shop: 'Amazon ES',
-        orderDate: now.subtract(const Duration(days: 10)),
-        ekNetto: 280.00,
-        ekBrutto: 333.20,
-        vk: 380.00,
-        buyer: 'Tom Weber',
-        ticketNumber: 'TICKET-003',
-        ticketUrl: ticketUrl,
-        status: 'Unterwegs',
-        beleg: 'Ja',
-      ),
-      Deal(
-        id: Deal.unsavedId,
-        product: 'Apple iPhone 15 Pro 256GB',
-        quantity: 1,
-        shippingType: 'Dropship',
-        shop: 'Amazon DE',
-        orderDate: now.subtract(const Duration(days: 7)),
-        ekNetto: 900.00,
-        ekBrutto: 1071.00,
-        vk: 1150.00,
-        buyer: 'Max Mustermann',
-        ticketNumber: 'TICKET-004',
-        ticketUrl: ticketUrl,
-        status: 'Bestellt',
-        beleg: 'Nein',
-      ),
-    ];
-    return _DemoSeed(buyers: buyers, shops: shops, deals: deals);
-  }
-
   // ── JSON backup / restore (across the whole user-scoped dataset) ──────────
 
   Map<String, dynamic> exportData() => {
@@ -708,15 +661,4 @@ class InventoryProvider extends ChangeNotifier {
     await _legacyStorage.clear();
     return snapshot.deals.length;
   }
-}
-
-class _DemoSeed {
-  final List<Buyer> buyers;
-  final List<Shop> shops;
-  final List<Deal> deals;
-  const _DemoSeed({
-    required this.buyers,
-    required this.shops,
-    required this.deals,
-  });
 }

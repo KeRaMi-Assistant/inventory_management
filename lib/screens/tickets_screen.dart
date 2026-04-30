@@ -361,7 +361,12 @@ class _TicketCard extends StatelessWidget {
                   IconButton(
                     tooltip: 'Ticket öffnen',
                     icon: const Icon(Icons.open_in_new, size: 16),
-                    onPressed: () => openUrlWithFallback(context, ticket.url!),
+                    onPressed: () {
+                      final prov = context.read<InventoryProvider>();
+                      final buyer = prov.buyers.where((b) => b.name == ticket.buyer).firstOrNull;
+                      final serverIds = buyer?.discordServerIds ?? [];
+                      openUrlWithFallback(context, resolveDiscordUrl(ticket.url!, serverIds: serverIds));
+                    },
                   ),
               ],
             ),
@@ -434,7 +439,15 @@ class _TicketDetail extends StatelessWidget {
                     child: Text(ticket.ticketNumber, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
                   ),
                   if (ticket.url != null)
-                    IconButton(tooltip: 'Ticket öffnen', onPressed: () => openUrlWithFallback(context, ticket.url!), icon: const Icon(Icons.open_in_new)),
+                    IconButton(
+                      tooltip: 'Ticket öffnen',
+                      onPressed: () {
+                        final buyer = provider.buyers.where((b) => b.name == ticket.buyer).firstOrNull;
+                        final serverIds = buyer?.discordServerIds ?? [];
+                        openUrlWithFallback(context, resolveDiscordUrl(ticket.url!, serverIds: serverIds));
+                      },
+                      icon: const Icon(Icons.open_in_new),
+                    ),
                   ElevatedButton.icon(
                     onPressed: () => showDialog(
                       context: context,
