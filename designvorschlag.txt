@@ -1,0 +1,421 @@
+================================================================================
+  DESIGNVORSCHLAG – Professionelle Warenwirtschafts-UI
+  Inventory Management App (Flutter)
+  Erstellt: 30.04.2026
+================================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. ANALYSE DES AKTUELLEN ZUSTANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Stärken:
+  ✓ Grundstruktur (NavigationRail + Screens) ist solide
+  ✓ Material 3 wird bereits genutzt
+  ✓ Responsive Breakpoints (800px, 1100px) sind vorhanden
+  ✓ Gute Farbkodierung für Status (grün/orange/rot)
+
+Schwächen / Verbesserungspotenzial:
+  ✗ KPI-Cards: Bunte Farbverläufe + farbige Schatten wirken zu konsumig,
+    nicht enterprise-tauglich (erinnert eher an Gaming-Apps)
+  ✗ NavigationRail: Dunkel-Navy (#0F2744) mit weißen Icons ist zu kontraststark,
+    kein visuelles Hierarchiegefühl
+  ✗ Kein einheitlicher Schriftsatz – Systemfont ohne gezielte Gewichtung
+  ✗ Fehlende visuelle Tiefe im Dashboard (alles gleich groß/wichtig)
+  ✗ Statistiken: Balkendiagramme sind zu primitiv (kein Chart-Package)
+  ✗ Einstellungen: Tab-Leiste hat keinen klaren Trenner zum Content
+  ✗ Keine konsistenten Abstände im gesamten App-Bereich
+  ✗ KPI-Karten scrollen horizontal – auf breiten Bildschirmen suboptimal
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  2. REFERENZ-ANWENDUNGEN (Orientierung)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • SAP Fiori       → Klare Grid-Struktur, Horizon-Design-System, Blau als
+                      einzige Akzentfarbe, sehr ruhige Oberfläche
+  • Odoo 17         → Weißer Hintergrund, saubere Tabellen, dezenter Sidebar
+                      in Hellgrau, KPIs als schlichte Zahlen-Kacheln
+  • Linnworks       → Datenorientiert, keine Ablenkung, konsistente Icon-Größen
+  • Katana MRP      → Modernes SaaS-Look, Teal-Akzent, großzügiges Whitespace
+  • inFlow          → Klar strukturierte Seitenleiste, Badges statt Farb-KPIs
+
+  Gemeinsamer Nenner professioneller WMS-Apps:
+  → Ein einziger Akzentton + Neutrals
+  → Daten stehen im Vordergrund, Design tritt zurück
+  → Konsistente 8px-Spacing-Grid
+  → Tabellen / Listen sind das Herzstück – sauber und lesbar
+  → Status-Farben nur dort wo semantisch notwendig
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  3. DESIGNPRINZIPIEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  I.   CLARITY FIRST – Daten sind das Produkt, nicht das Design
+  II.  ONE ACCENT – Nur eine Akzentfarbe, Rest Neutrals
+  III. 8PX GRID – Alle Abstände sind Vielfache von 4 oder 8
+  IV.  FLAT & BORDERED – Keine Schatten, klare Trennlinien
+  V.   SEMANTIC COLOR – Farbe nur bei Status (OK/Warnung/Kritisch)
+  VI.  HIERARCHY – Schriftgrößen und -gewichte zeigen Wichtigkeit
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  4. FARB-SYSTEM (vorgeschlagen)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  NEUTRAL BASE (Struktur & Hintergrund)
+  ┌─────────────────────────────────────────────────────────┐
+  │  --bg-app        #F5F7FA   App-Hintergrund (sehr helles Grau)   │
+  │  --bg-surface    #FFFFFF   Cards, Panels, Dialoge               │
+  │  --bg-subtle     #EEF2F7   Tabellenzeilen-Hover, subtile Areas  │
+  │  --border        #E0E6EF   Alle Trennlinien & Card-Ränder        │
+  │  --border-strong #C8D3E0   Abschnittstrennungen                  │
+  └─────────────────────────────────────────────────────────┘
+
+  TEXT-FARBEN
+  ┌─────────────────────────────────────────────────────────┐
+  │  --text-primary   #111827   Überschriften, wichtige Werte       │
+  │  --text-secondary #374151   Standard-Fließtext                  │
+  │  --text-muted     #6B7280   Labels, Metadaten                   │
+  │  --text-disabled  #9CA3AF   Platzhalter, deaktiviert            │
+  └─────────────────────────────────────────────────────────┘
+
+  AKZENTFARBE (einzige Markenfarbe)
+  ┌─────────────────────────────────────────────────────────┐
+  │  --accent         #2563EB   Primär-Buttons, Links, Auswahl      │
+  │  --accent-light   #EFF6FF   Hintergrund bei aktivem NavItem     │
+  │  --accent-dark    #1D4ED8   Button Hover / Pressed              │
+  └─────────────────────────────────────────────────────────┘
+
+  SEMANTISCHE STATUS-FARBEN (nur für Kennzahlen & Badges)
+  ┌─────────────────────────────────────────────────────────┐
+  │  --success        #059669   Positiver Profit, Bestand OK        │
+  │  --success-bg     #ECFDF5   Badge-Hintergrund                   │
+  │  --warning        #D97706   Unterwegs, offene Beträge           │
+  │  --warning-bg     #FFFBEB   Badge-Hintergrund                   │
+  │  --danger         #DC2626   Kritischer Bestand, Verlust         │
+  │  --danger-bg      #FEF2F2   Badge-Hintergrund                   │
+  │  --info           #0284C7   Info-Hinweise                       │
+  │  --info-bg        #F0F9FF   Badge-Hintergrund                   │
+  └─────────────────────────────────────────────────────────┘
+
+  SIDEBAR-NAVIGATION
+  ┌─────────────────────────────────────────────────────────┐
+  │  --nav-bg         #1E293B   Dunkelblau-Grau (statt reinem Navy) │
+  │  --nav-icon       #94A3B8   Inaktive Icons                      │
+  │  --nav-icon-act   #FFFFFF   Aktive Icons                        │
+  │  --nav-label      #CBD5E1   Inaktive Labels                     │
+  │  --nav-label-act  #FFFFFF   Aktive Labels                       │
+  │  --nav-item-act   #2563EB   Aktiver Item-Hintergrund (Linie)    │
+  └─────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  5. TYPOGRAFIE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Empfohlene Schriftart: "Inter" (Google Fonts, kostenlos)
+  Alternative:           System-UI / SF Pro auf Apple, Segoe auf Windows
+
+  Warum Inter?
+  → Speziell für Bildschirme entwickelt
+  → Exzellente Lesbarkeit bei kleinen Größen (ideal für Tabellen)
+  → In Odoo, Linear, Vercel, Stripe verwendet
+
+  TYPOGRAFISCHE SKALA
+  ┌────────────────────────────────────────────────────────────────┐
+  │  Display   28px / 700 (w-bold)    – Selten, große Zahlen       │
+  │  H1        22px / 700             – Seiten-Titel               │
+  │  H2        18px / 600 (w-semibold)– Panel-Überschriften        │
+  │  H3        15px / 600             – Abschnittsheader           │
+  │  Body      14px / 400             – Fließtext, Tabelleninhalt  │
+  │  Small     12px / 400             – Labels, Zeitstempel        │
+  │  Micro     11px / 500             – Badges, Tags, Chips        │
+  └────────────────────────────────────────────────────────────────┘
+
+  Letter-Spacing: 0 für Body; +0.2px für Labels; -0.5px für Display-Zahlen
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  6. NAVIGATIONS-DESIGN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  VORHER:  Volles Navy (#0F2744), weiße Icons, kein aktiver Indikator außer
+           Icon-Helligkeit
+
+  NACHHER (Vorschlag):
+  ┌────────────────────────────────────┐
+  │ [Logo/App-Name]  Lagerverwaltung   │  ← 48px Höhe, weißer Text auf Nav-BG
+  ├────────────────────────────────────┤
+  │   [▋] Dashboard                   │  ← Aktiv: Blauer 3px-Balken links +
+  │   [ ] Deals                        │    leicht helleres BG in accent-light
+  │   [ ] Tickets                      │
+  │   [ ] Lager                        │  ← Inaktiv: Grau, kein Hintergrund
+  │   [ ] Statistiken                  │
+  │   [ ] Einstellungen                │
+  └────────────────────────────────────┘
+
+  Aktiver NavItem-Stil:
+    - 3px linker Randbalken in Akzentblau
+    - Hintergrund: rgba(255,255,255,0.08) – subtil weiß aufgehellt
+    - Icon + Label: volle Weiß (#FFFFFF)
+
+  Inaktiver NavItem-Stil:
+    - Kein Rahmen / Hintergrund
+    - Icon: #94A3B8, Label: #CBD5E1
+    - Hover: rgba(255,255,255,0.05)
+
+  Breiten:
+    - Kollabiert (< 1100px): 56px – nur Icons mit Tooltip
+    - Erweitert (≥ 1100px): 220px – Icon + Label
+
+  App-Name / Branding-Bereich:
+    - 56px Höhe
+    - Kleines Lager-Icon (16px) + App-Name "InventoryOS" o.ä.
+    - Trennlinie darunter (border-strong)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  7. KPI-KARTEN (Dashboard)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  VORHER:  Bunte Farbverläufe + farbige Box-Shadow – zu viel visuelles Gewicht
+
+  NACHHER (2 Varianten zur Auswahl):
+
+  VARIANTE A – "Flat Metric" (empfohlen, modern-minimalistisch)
+  ┌──────────────────────────┐
+  │  ↗ Gesamtprofit          │  ← Label oben, kleines Icon daneben, --text-muted
+  │                          │
+  │  € 12.450,00             │  ← 28px / bold, --text-primary
+  │                          │
+  │  ████████████░░ +14 %    │  ← Optionaler Trend-Indikator (grün/rot)
+  └──────────────────────────┘
+  Stil: Weißer Hintergrund, 1px Border (--border), 8px Radius
+  Icon-Farbe: Nur semantisch (grün/orange/rot/blau), NICHT als Hintergrund
+  Kein Schatten, kein Verlauf
+
+  VARIANTE B – "Left-Accent Border"
+  ┌─╔══════════════════════════╗
+  │ ║  OFFENE BESTELLUNGEN     ║  ← 4px linker Rand in Akzentfarbe
+  │ ║  24                      ║
+  └─╚══════════════════════════╝
+  Stil: Weißer Hintergrund, 4px linker Rand in Statusfarbe
+  Gut lesbar, klassisch im ERP-Bereich (SAP-ähnlich)
+
+  LAYOUT auf Dashboard:
+  - Kein horizontales Scrollen!
+  - Grid: 2-4 Spalten je nach Bildschirmbreite
+    < 700px  → 2 Spalten
+    700-1100 → 3 Spalten
+    > 1100px → 4 Spalten (oder alle 7 in einer Reihe möglich)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  8. TABELLEN-DESIGN (Deals / Lager)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Header-Zeile:
+    - Hintergrund: --bg-subtle (#EEF2F7)
+    - Text: 12px / 600 / Uppercase / --text-muted
+    - Trennlinie unten: --border-strong
+
+  Datenzeilen:
+    - Hintergrund: --bg-surface (weiß)
+    - Hover: --bg-subtle
+    - Zeilen-Höhe: 48px (genug Luft)
+    - Trennlinie: 1px --border (nur horizontal)
+
+  Status-Badges (in Tabellenzellen):
+    - Pill-Form: 4px Radius, 6px H-Padding, 2px V-Padding
+    - "Done"        → Grün-Badge   (--success / --success-bg)
+    - "Unterwegs"   → Orange-Badge (--warning / --warning-bg)
+    - "Bestellt"    → Blau-Badge   (accent / accent-light)
+    - "Storniert"   → Grau-Badge
+
+  Aktionen (Edit/Delete):
+    - Als Icon-Buttons am Zeilenende, nur bei Hover sichtbar
+    - Statt immer sichtbarer Buttons: nur on-hover einblenden
+
+  Sortierbare Spalten:
+    - Pfeil-Icon nach Klick (↑ / ↓)
+    - Aktive Spalte: Spalten-Header in Akzentblau
+
+  Pagination / Toolbar:
+    - Oberhalb der Tabelle: Suchfeld links, Filter + "Neuer Deal"-Button rechts
+    - Unterhalb: Pagination (Einträge 1–25 von 120) oder unendliches Scrollen
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  9. CARD / PANEL-DESIGN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Einheitlicher Panel-Header:
+  ┌─────────────────────────────────────────────────────┐
+  │  [Icon]  Aktivitäts-Feed                  [Mehr →]  │
+  ├─────────────────────────────────────────────────────┤
+  │  Inhalt                                             │
+  └─────────────────────────────────────────────────────┘
+
+  Panel-Header:
+    - 48px Höhe
+    - Icon: 16px, --text-muted
+    - Titel: 14px / 600, --text-primary
+    - Optional: Rechts ein TextButton "Alle anzeigen →" in Akzentblau
+    - Trennlinie unten: --border
+
+  Card-Stil:
+    - Kein Schatten (elevation: 0)
+    - Border: 1px solid --border
+    - Border-Radius: 8px (statt 12px – wirkt professioneller)
+    - Background: --bg-surface (weiß)
+    - Padding Innen: 16px
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  10. FORMULAR / DIALOG-DESIGN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Dialoge:
+    - Max-Breite: 560px
+    - Border-Radius: 12px
+    - Header: 20px / bold, mit Icon links
+    - Trennlinie unter Header
+    - Footer mit Buttons: "Abbrechen" (TextButton) | "Speichern" (ElevatedButton)
+    - Kein barrierDismissible für Formulare mit wichtigen Daten
+
+  Eingabefelder:
+    - Height: 40px (isDense: true)
+    - Border: 1px --border, bei Fokus 1.5px Akzentblau
+    - Label: Floating Label, 12px bei Fokus
+    - Fehlerzustand: Rote Border + roter Hilfetext
+    - Gruppierung: Zusammengehörige Felder in leicht abgesetzten Sektionen
+
+  Buttons:
+    - Primary (ElevatedButton): Blau, kein Schatten, 8px Radius
+    - Secondary (OutlinedButton): Border + Text in Akzentblau, transparenter BG
+    - Danger: Roter Outlined-Button
+    - Padding: 12px vertikal, 20px horizontal
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  11. APP-BAR / TOP-HEADER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  VORHER:  Dunkle Navy AppBar mit Inventar-Icon + Titel
+
+  NACHHER:  Weißer / Surface-farbener Header (oder gar keine AppBar)
+  Begründung: Wenn die Sidebar bereits dunkel ist, braucht die TopBar keinen
+              weiteren dunklen Block. Das wirkt bei Desktop-Apps moderner.
+
+  Option A (Empfohlen – für Desktop):
+    - Kein klassischer AppBar
+    - Stattdessen: Seiten-Titel (H1) oben links im Content-Bereich
+    - Rechts: Breadcrumb + Account-Avatar + Benachrichtigungs-Icon
+    - Hintergrund des Header-Bereichs: --bg-app oder --bg-surface
+    - Trennlinie unten: --border
+
+  Option B (Mobile – bestehende AppBar angepasst):
+    - Hintergrund: --nav-bg (#1E293B) – statt #0F2744, wärmer
+    - Kein Icon im Titel (Logo gehört in die Sidebar)
+    - Nur Seiten-Titel + Hamburger
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  12. STATISTIKEN-SCREEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Aktuell: Manuelle Container-Balken (keine Chart-Library)
+
+  Empfehlung: Package "fl_chart" (pub.dev) hinzufügen
+    - BarChart für Monats-Profit → sieht sofort professionell aus
+    - LineChart für Trend-Verlauf
+    - PieChart für Käufer-Anteile
+
+  Alternativ ohne zusätzliches Package:
+    - Bestehende Balken verfeinern: Abgerundete Enden, Hover-Tooltips,
+      Grid-Linien, X/Y-Achsenbeschriftung
+    - Werte direkt am Balken anzeigen (nicht nur rechts daneben)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  13. SPACING-SYSTEM (8px-Grid)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Alle Abstände sind Vielfache von 4px:
+
+    4px  – Sehr eng, z.B. Icon-zu-Text
+    8px  – Standard-Innen-Abstand
+   12px  – Karten-Innenabstand (kompakt)
+   16px  – Standard Padding (Seiten-Content, Card-Padding)
+   20px  – Zwischen Sektionen
+   24px  – Zwischen Cards / Panels
+   32px  – Große Seitentrennungen
+
+  Seitenrand: 24px auf Desktop, 16px auf Mobile
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  14. ICONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Aktuell: Material Icons (gemischt Outlined + Filled)
+
+  Empfehlung:
+  → Konsequent OUTLINED Icons im inaktiven Zustand
+  → FILLED Icons nur im aktiven/ausgewählten Zustand (bereits so begonnen)
+  → Icon-Größen vereinheitlichen: 18px für Inline-Icons, 20px für Navigations-
+    Icons, 24px für Haupt-Aktionen
+
+  Paket-Empfehlung (optional): "lucide_icons" oder "phosphor_flutter"
+  → Lucide Icons = modern, sehr konsistent, in Linear/Vercel/Figma verwendet
+  → Würde dem App einen modernen SaaS-Charakter geben
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  15. ZUSAMMENFASSUNG: PRIORISIERTE UMSETZUNGSSCHRITTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  PHASE 1 – QUICK WINS (app_theme.dart, wenige Stunden)
+  ─────────────────────────────────────────────────────
+  [1] Farb-Tokens in app_theme.dart auf neues System anpassen
+      (nav-bg auf #1E293B, bg-app auf #F5F7FA, border auf #E0E6EF)
+  [2] KPI-Cards: Gradient + farbiger Schatten entfernen
+      → Weißer Hintergrund mit farbiger linker Border (Variante B)
+      oder flat mit farbigem Icon (Variante A)
+  [3] Card-Radius von 12px auf 8px verringern (professioneller)
+  [4] Font "Inter" einbinden (Google Fonts Package)
+  [5] NavigationRail: Aktiver-Indikator auf 3px-Randbalken ändern
+
+  PHASE 2 – LAYOUT & STRUKTUR (2–4 Stunden)
+  ──────────────────────────────────────────
+  [6] KPI-Grid auf Dashboard: horizontal scroll → echtes Responsive-Grid
+  [7] Tabellen-Header: subtle Background + uppercase Labels
+  [8] Status-Badges vereinheitlichen (alle Screens)
+  [9] Panel-Header vereinheitlichen (Icon + Titel + optionaler Mehr-Link)
+  [10] AppBar auf Desktop optional reduzieren / in Content-Header integrieren
+
+  PHASE 3 – POLISH & EXTRAS (optional, nach Bedarf)
+  ──────────────────────────────────────────────────
+  [11] fl_chart-Package für Statistiken integrieren
+  [12] Tabellen-Toolbar verbessern (Filter-Chips, Suche rechts)
+  [13] Lucide Icons oder Phosphor Icons ausprobieren
+  [14] Micro-Animationen: Hover-State Transitions (150ms ease)
+  [15] Dark-Mode-Unterstützung vorbereiten (Token-System macht es einfach)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  16. VISUELLE INSPIRATION (kostenlose Ressourcen)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • Vercel Dashboard        → dashboard.vercel.com (clean SaaS)
+  • Linear App              → linear.app (schlankes Sidebar-Design)
+  • Stripe Dashboard        → dashboard.stripe.com (Datentabellen)
+  • SAP Fiori Launchpad     → sap.com/fiori (Enterprise KPIs)
+  • Tailwind UI Components  → tailwindui.com/components (Figma-ähnliche
+                              Referenz für Table/Card-Layouts)
+
+
+================================================================================
+  ENDE DES DESIGNVORSCHLAGS
+================================================================================
