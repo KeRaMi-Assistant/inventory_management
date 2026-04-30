@@ -23,6 +23,8 @@ class Buyer {
     this.paymentStatus = 'OK',
   });
 
+  // ── Local backup JSON (camelCase) ─────────────────────────────────────────
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -49,6 +51,40 @@ class Buyer {
             [],
         paymentStatus: json['paymentStatus'] as String? ?? 'OK',
       );
+
+  // ── Supabase (snake_case) ─────────────────────────────────────────────────
+
+  /// Insert/update payload. `id` is included so the client can keep stable
+  /// UUIDs across upserts; `user_id` is added by the repository.
+  Map<String, dynamic> toSupabaseInsert() => {
+        'id': id,
+        'name': name,
+        'row_fill_color': rowFillColor.toARGB32(),
+        'buyer_cell_color': buyerCellColor.toARGB32(),
+        'font_color': fontColor.toARGB32(),
+        'sort_order': sortOrder,
+        'active': active,
+        'discord_server_ids': discordServerIds,
+        'payment_status': paymentStatus,
+      };
+
+  factory Buyer.fromSupabase(Map<String, dynamic> row) {
+    final raw = row['discord_server_ids'];
+    final ids = raw is List
+        ? raw.map((e) => e.toString()).toList()
+        : <String>[];
+    return Buyer(
+      id: row['id'] as String,
+      name: row['name'] as String,
+      rowFillColor: Color((row['row_fill_color'] as num).toInt()),
+      buyerCellColor: Color((row['buyer_cell_color'] as num).toInt()),
+      fontColor: Color((row['font_color'] as num).toInt()),
+      sortOrder: (row['sort_order'] as num?)?.toInt() ?? 0,
+      active: row['active'] as bool? ?? true,
+      discordServerIds: ids,
+      paymentStatus: row['payment_status'] as String? ?? 'OK',
+    );
+  }
 
   Buyer copyWith({
     String? id,

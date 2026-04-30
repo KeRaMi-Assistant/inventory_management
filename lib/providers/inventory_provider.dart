@@ -1,6 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/material.dart';
+
+import 'dart:ui' show Color;
+
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+
 import '../models/activity_entry.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
@@ -8,9 +13,17 @@ import '../models/inventory_item.dart';
 import '../models/shop.dart';
 import '../models/ticket_summary.dart';
 import '../services/storage_service.dart';
+import '../services/supabase_repository.dart';
 
+/// Holds the full working set of cloud data for the signed-in user and routes
+/// every mutation through [SupabaseRepository]. Local lists are caches kept in
+/// sync with the server so the rest of the UI can stay synchronous.
 class InventoryProvider extends ChangeNotifier {
-  final StorageService _storage = StorageService();
+  InventoryProvider({required SupabaseRepository repository})
+      : _repository = repository;
+
+  final SupabaseRepository _repository;
+  final StorageService _legacyStorage = StorageService();
   final _uuid = const Uuid();
 
   List<Deal> _deals = [];
@@ -20,22 +33,20 @@ class InventoryProvider extends ChangeNotifier {
   List<InventoryMovement> _movements = [];
   List<ActivityEntry> _activities = [];
 
-  List<Deal> get deals => List.unmodifiable(
-        List.from(_deals)..sort((a, b) => b.id.compareTo(a.id)),
-      );
-  List<Buyer> get buyers => List.unmodifiable(
-        List.from(_buyers)..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
-      );
+  bool _loading = false;
+  Object? _lastError;
+
+  bool get isLoading => _loading;
+  Object? get lastError => _lastError;
+
+  /// Sorted views — the underlying lists are pre-sorted on every load so the
+  /// getters are O(n) wraps, not O(n log n) re-sorts.
+  List<Deal> get deals => List.unmodifiable(_deals);
+  List<Buyer> get buyers => List.unmodifiable(_buyers);
   List<Shop> get shops => List.unmodifiable(_shops);
-  List<InventoryItem> get inventoryItems => List.unmodifiable(
-        List.from(_inventoryItems)..sort((a, b) => a.name.compareTo(b.name)),
-      );
-  List<InventoryMovement> get movements => List.unmodifiable(
-        List.from(_movements)..sort((a, b) => b.date.compareTo(a.date)),
-      );
-  List<ActivityEntry> get activities => List.unmodifiable(
-        List.from(_activities)..sort((a, b) => b.date.compareTo(a.date)),
-      );
+  List<InventoryItem> get inventoryItems => List.unmodifiable(_inventoryItems);
+  List<InventoryMovement> get movements => List.unmodifiable(_movements);
+  List<ActivityEntry> get activities => List.unmodifiable(_activities);
 
   static const List<String> statusOptions = [
     'Bestellt',
@@ -53,13 +64,13 @@ class InventoryProvider extends ChangeNotifier {
   static const List<String> shippingTypes = ['Reship', 'Dropship'];
   static const List<String> belegOptions = ['Ja', 'Nein'];
 
+  // ── Derived KPIs ──────────────────────────────────────────────────────────
+
   int get openOrdersCount =>
       _deals.where((d) => d.status == 'Bestellt').length;
 
-  double get totalProfit => _deals.fold(
-        0,
-        (sum, d) => sum + (d.totalProfit ?? 0),
-      );
+  double get totalProfit =>
+      _deals.fold(0, (sum, d) => sum + (d.totalProfit ?? 0));
 
   double get openAmount => _deals
       .where((d) => d.status != 'Done')
@@ -72,7 +83,10 @@ class InventoryProvider extends ChangeNotifier {
     final now = DateTime.now();
     return _deals.where((d) {
       final a = d.arrivalDate;
-      return a != null && a.year == now.year && a.month == now.month && a.day == now.day;
+      return a != null &&
+          a.year == now.year &&
+          a.month == now.month &&
+          a.day == now.day;
     }).length;
   }
 
@@ -88,12 +102,16 @@ class InventoryProvider extends ChangeNotifier {
   double get totalStockValue =>
       _inventoryItems.fold(0, (sum, item) => sum + item.stockValue);
 
-  int get nextDealId =>
-      _deals.isEmpty ? 1 : (_deals.map((d) => d.id).reduce((a, b) => a > b ? a : b) + 1);
+  /// Kept for UI callers that historically asked for an id ahead of save.
+  /// With BIGSERIAL the id is server-assigned — this is a hint only.
+  int get nextDealId => _deals.isEmpty
+      ? 1
+      : (_deals.map((d) => d.id).reduce((a, b) => a > b ? a : b) + 1);
 
-  /// All non-null ticketNumbers used as Amazon order IDs.
-  Set<String> get existingAmazonOrderIds =>
-      _deals.where((d) => d.ticketNumber != null && d.ticketNumber!.isNotEmpty).map((d) => d.ticketNumber!).toSet();
+  Set<String> get existingAmazonOrderIds => _deals
+      .where((d) => d.ticketNumber != null && d.ticketNumber!.isNotEmpty)
+      .map((d) => d.ticketNumber!)
+      .toSet();
 
   List<TicketSummary> get ticketSummaries {
     final grouped = <String, List<Deal>>{};
@@ -119,449 +137,255 @@ class InventoryProvider extends ChangeNotifier {
     return summaries;
   }
 
+  // ── Load / clear ──────────────────────────────────────────────────────────
+
   Future<void> loadData() async {
-    final data = await _storage.loadData();
-    if (data != null) {
-      _deals = (data['deals'] as List<dynamic>? ?? [])
-          .map((e) => Deal.fromJson(e as Map<String, dynamic>))
-          .toList();
-      _buyers = (data['buyers'] as List<dynamic>? ?? [])
-          .map((e) => Buyer.fromJson(e as Map<String, dynamic>))
-          .toList();
-      _shops = (data['shops'] as List<dynamic>? ?? [])
-          .map((e) => Shop.fromJson(e as Map<String, dynamic>))
-          .toList();
-      _inventoryItems = (data['inventoryItems'] as List<dynamic>? ?? [])
-          .map((e) => InventoryItem.fromJson(e as Map<String, dynamic>))
-          .toList();
-      _movements = (data['movements'] as List<dynamic>? ?? [])
-          .map((e) => InventoryMovement.fromJson(e as Map<String, dynamic>))
-          .toList();
-      _activities = (data['activities'] as List<dynamic>? ?? [])
-          .map((e) => ActivityEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } else {
-      _initDefaults();
-    }
+    _loading = true;
+    _lastError = null;
     notifyListeners();
+    try {
+      final snapshot = await _repository.loadAll();
+      _hydrateFrom(snapshot);
+    } catch (e) {
+      _lastError = e;
+      if (kDebugMode) debugPrint('InventoryProvider.loadData failed: $e');
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
   }
 
-  void _initDefaults() {
-    _initDemoData();
-  }
-
-  void _initDemoData() {
-    const serverId = '1028341004480286883';
-    const channelId = '1463456615847170224';
-    const ticketUrl =
-        'https://discord.com/channels/$serverId/$channelId';
-
-    _shops = [
-      const Shop(
-        id: 'shop-amazon-de',
-        name: 'Amazon DE',
-        region: 'DE',
-        url: 'https://www.amazon.de',
-      ),
-      const Shop(
-        id: 'shop-amazon-es',
-        name: 'Amazon ES',
-        region: 'ES',
-        url: 'https://www.amazon.es',
-      ),
-    ];
-
-    _buyers = [
-      const Buyer(
-        id: 'buyer-max',
-        name: 'Max Mustermann',
-        rowFillColor: Color(0xFFEFF6FF),
-        buyerCellColor: Color(0xFF2563EB),
-        fontColor: Color(0xFFFFFFFF),
-        sortOrder: 0,
-        discordServerIds: [serverId],
-      ),
-      const Buyer(
-        id: 'buyer-anna',
-        name: 'Anna Schmidt',
-        rowFillColor: Color(0xFFF5F3FF),
-        buyerCellColor: Color(0xFF7C3AED),
-        fontColor: Color(0xFFFFFFFF),
-        sortOrder: 1,
-        discordServerIds: [serverId],
-      ),
-      const Buyer(
-        id: 'buyer-tom',
-        name: 'Tom Weber',
-        rowFillColor: Color(0xFFF0FDF4),
-        buyerCellColor: Color(0xFF16A34A),
-        fontColor: Color(0xFFFFFFFF),
-        sortOrder: 2,
-        discordServerIds: [serverId],
-      ),
-    ];
-
-    final now = DateTime.now();
-    _deals = [
-      Deal(
-        id: 1,
-        product: 'PlayStation 5 Disc Edition',
-        quantity: 2,
-        shippingType: 'Dropship',
-        shop: 'Amazon DE',
-        orderDate: now.subtract(const Duration(days: 20)),
-        ekNetto: 410.00,
-        ekBrutto: 487.90,
-        vk: 550.00,
-        buyer: 'Max Mustermann',
-        ticketNumber: 'TICKET-001',
-        ticketUrl: ticketUrl,
-        arrivalDate: now.subtract(const Duration(days: 10)),
-        status: 'Done',
-        beleg: 'Ja',
-      ),
-      Deal(
-        id: 2,
-        product: 'Xbox Series X',
-        quantity: 1,
-        shippingType: 'Reship',
-        shop: 'Amazon DE',
-        orderDate: now.subtract(const Duration(days: 14)),
-        ekNetto: 420.00,
-        ekBrutto: 499.80,
-        vk: 540.00,
-        buyer: 'Anna Schmidt',
-        ticketNumber: 'TICKET-002',
-        ticketUrl: ticketUrl,
-        arrivalDate: now.subtract(const Duration(days: 5)),
-        status: 'Angekommen',
-        beleg: 'Nein',
-      ),
-      Deal(
-        id: 3,
-        product: 'Nintendo Switch OLED',
-        quantity: 3,
-        shippingType: 'Dropship',
-        shop: 'Amazon ES',
-        orderDate: now.subtract(const Duration(days: 10)),
-        ekNetto: 280.00,
-        ekBrutto: 333.20,
-        vk: 380.00,
-        buyer: 'Tom Weber',
-        ticketNumber: 'TICKET-003',
-        ticketUrl: ticketUrl,
-        status: 'Unterwegs',
-        beleg: 'Ja',
-      ),
-      Deal(
-        id: 4,
-        product: 'Apple iPhone 15 Pro 256GB',
-        quantity: 1,
-        shippingType: 'Dropship',
-        shop: 'Amazon DE',
-        orderDate: now.subtract(const Duration(days: 7)),
-        ekNetto: 900.00,
-        ekBrutto: 1071.00,
-        vk: 1150.00,
-        buyer: 'Max Mustermann',
-        ticketNumber: 'TICKET-004',
-        ticketUrl: ticketUrl,
-        status: 'Bestellt',
-        beleg: 'Nein',
-      ),
-      Deal(
-        id: 5,
-        product: 'Sony WH-1000XM5 Kopfhörer',
-        quantity: 2,
-        shippingType: 'Reship',
-        shop: 'Amazon ES',
-        orderDate: now.subtract(const Duration(days: 6)),
-        ekNetto: 270.00,
-        ekBrutto: 321.30,
-        vk: 370.00,
-        buyer: 'Anna Schmidt',
-        ticketNumber: 'TICKET-005',
-        ticketUrl: ticketUrl,
-        status: 'Rechnung gestellt',
-        beleg: 'Ja',
-      ),
-      Deal(
-        id: 6,
-        product: 'Samsung Galaxy S24 Ultra',
-        quantity: 1,
-        shippingType: 'Dropship',
-        shop: 'Amazon DE',
-        orderDate: now.subtract(const Duration(days: 4)),
-        ekNetto: 1100.00,
-        ekBrutto: 1309.00,
-        vk: 1400.00,
-        buyer: 'Tom Weber',
-        ticketNumber: 'TICKET-006',
-        ticketUrl: ticketUrl,
-        status: 'Bestellt',
-        beleg: 'Nein',
-      ),
-      Deal(
-        id: 7,
-        product: 'Apple MacBook Pro M3 14"',
-        quantity: 1,
-        shippingType: 'Dropship',
-        shop: 'Amazon ES',
-        orderDate: now.subtract(const Duration(days: 2)),
-        ekNetto: 1800.00,
-        ekBrutto: 2142.00,
-        vk: 2300.00,
-        buyer: 'Max Mustermann',
-        ticketNumber: 'TICKET-007',
-        ticketUrl: ticketUrl,
-        status: 'Unterwegs',
-        beleg: 'Ja',
-        note: 'Spacegrau, DE-Tastatur',
-      ),
-      Deal(
-        id: 8,
-        product: 'Dyson V15 Detect',
-        quantity: 2,
-        shippingType: 'Reship',
-        shop: 'Amazon DE',
-        orderDate: now.subtract(const Duration(days: 1)),
-        ekNetto: 500.00,
-        ekBrutto: 595.00,
-        vk: 650.00,
-        buyer: 'Anna Schmidt',
-        ticketNumber: 'TICKET-008',
-        ticketUrl: ticketUrl,
-        status: 'Bestellt',
-        beleg: 'Nein',
-      ),
-    ];
-
+  /// Wipes local caches — used on sign-out so the next user starts clean.
+  void clearLocalState() {
+    _deals = [];
+    _buyers = [];
+    _shops = [];
     _inventoryItems = [];
     _movements = [];
     _activities = [];
-  }
-
-  Future<void> loadDemoData() async {
-    _initDemoData();
+    _lastError = null;
     notifyListeners();
-    await _save();
   }
 
-  Map<String, dynamic> exportData() => {
-        'deals': _deals.map((d) => d.toJson()).toList(),
-        'buyers': _buyers.map((b) => b.toJson()).toList(),
-        'shops': _shops.map((s) => s.toJson()).toList(),
-        'inventoryItems': _inventoryItems.map((i) => i.toJson()).toList(),
-        'movements': _movements.map((m) => m.toJson()).toList(),
-        'activities': _activities.map((a) => a.toJson()).toList(),
-      };
-
-  Future<void> _save() async {
-    await _storage.saveData(exportData());
+  void _hydrateFrom(CloudSnapshot snapshot) {
+    _deals = List.of(snapshot.deals)..sort((a, b) => b.id.compareTo(a.id));
+    _buyers = List.of(snapshot.buyers)
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    _shops = List.of(snapshot.shops);
+    _inventoryItems = List.of(snapshot.inventoryItems)
+      ..sort((a, b) => a.name.compareTo(b.name));
+    _movements = List.of(snapshot.movements)
+      ..sort((a, b) => b.date.compareTo(a.date));
+    _activities = List.of(snapshot.activities)
+      ..sort((a, b) => b.date.compareTo(a.date));
   }
 
-  Future<void> restoreData(Map<String, dynamic> data) async {
-    _deals = (data['deals'] as List<dynamic>? ?? [])
-        .map((e) => Deal.fromJson(e as Map<String, dynamic>))
-        .toList();
-    _buyers = (data['buyers'] as List<dynamic>? ?? [])
-        .map((e) => Buyer.fromJson(e as Map<String, dynamic>))
-        .toList();
-    _shops = (data['shops'] as List<dynamic>? ?? [])
-        .map((e) => Shop.fromJson(e as Map<String, dynamic>))
-        .toList();
-    _inventoryItems = (data['inventoryItems'] as List<dynamic>? ?? [])
-        .map((e) => InventoryItem.fromJson(e as Map<String, dynamic>))
-        .toList();
-    _movements = (data['movements'] as List<dynamic>? ?? [])
-        .map((e) => InventoryMovement.fromJson(e as Map<String, dynamic>))
-        .toList();
-    _activities = (data['activities'] as List<dynamic>? ?? [])
-        .map((e) => ActivityEntry.fromJson(e as Map<String, dynamic>))
-        .toList();
-    notifyListeners();
-    await _save();
-  }
+  // ── Activity helper ───────────────────────────────────────────────────────
 
-  String exportJson() => const JsonEncoder.withIndent('  ').convert(exportData());
-
+  /// Append-and-fire-and-forget log; persistence failure must never block a
+  /// user-visible action, so we swallow errors after surfacing in debug.
   void _log(String message, String type) {
-    _activities.add(ActivityEntry(
+    final entry = ActivityEntry(
       id: _uuid.v4(),
       date: DateTime.now(),
       message: message,
       type: type,
-    ));
+    );
+    _activities.insert(0, entry);
     if (_activities.length > 50) {
-      _activities = (List<ActivityEntry>.from(_activities)
-            ..sort((a, b) => b.date.compareTo(a.date)))
-          .take(50)
-          .toList();
+      _activities = _activities.take(50).toList();
     }
+    unawaited(_repository.insertActivity(entry).catchError((Object e) {
+      if (kDebugMode) debugPrint('activity_log insert failed: $e');
+      return entry;
+    }));
   }
 
-  // DEALS
+  // ── DEALS ─────────────────────────────────────────────────────────────────
+
   Future<void> addDeal(Deal deal) async {
-    final saved = deal.copyWith(id: nextDealId);
-    _deals.add(saved);
+    final saved = await _repository.insertDeal(deal);
+    _deals.insert(0, saved);
     _log('Deal hinzugefügt: ${saved.product}', 'deal');
     notifyListeners();
-    await _save();
   }
 
   Future<void> updateDeal(Deal deal) async {
-    final idx = _deals.indexWhere((d) => d.id == deal.id);
-    if (idx != -1) {
-      final oldStatus = _deals[idx].status;
-      _deals[idx] = deal;
-      if (oldStatus != deal.status) {
-        _log('Status geändert: ${deal.product} → ${deal.status}', 'status');
-      } else {
-        _log('Deal aktualisiert: ${deal.product}', 'deal');
-      }
-      notifyListeners();
-      await _save();
+    final updated = await _repository.updateDeal(deal);
+    final idx = _deals.indexWhere((d) => d.id == updated.id);
+    if (idx == -1) return;
+    final old = _deals[idx];
+    _deals[idx] = updated.copyWith(inventoryItemIds: old.inventoryItemIds);
+    if (old.status != updated.status) {
+      _log('Status geändert: ${updated.product} → ${updated.status}', 'status');
+    } else {
+      _log('Deal aktualisiert: ${updated.product}', 'deal');
     }
+    notifyListeners();
   }
 
   Future<void> deleteDeal(int id) async {
     final deal = _deals.where((d) => d.id == id).firstOrNull;
+    await _repository.deleteDeal(id);
     _deals.removeWhere((d) => d.id == id);
     if (deal != null) _log('Deal gelöscht: ${deal.product}', 'deal');
     notifyListeners();
-    await _save();
   }
 
   Future<void> updateDealsStatus(Iterable<int> ids, String status) async {
     final idSet = ids.toSet();
+    if (idSet.isEmpty) return;
+    await _repository.updateDealsStatus(idSet, status);
     _deals = _deals
         .map((d) => idSet.contains(d.id) ? d.copyWith(status: status) : d)
         .toList();
     _log('${idSet.length} Deals auf "$status" gesetzt', 'bulk');
     notifyListeners();
-    await _save();
   }
 
   Future<void> assignDealsBuyer(Iterable<int> ids, String? buyer) async {
     final idSet = ids.toSet();
+    if (idSet.isEmpty) return;
+    await _repository.updateDealsBuyer(idSet, buyer);
     _deals = _deals
         .map((d) => idSet.contains(d.id) ? d.copyWith(buyer: buyer) : d)
         .toList();
     _log('${idSet.length} Deals Käufer zugewiesen', 'bulk');
     notifyListeners();
-    await _save();
   }
 
   Future<void> deleteDeals(Iterable<int> ids) async {
     final idSet = ids.toSet();
+    if (idSet.isEmpty) return;
+    await _repository.deleteDeals(idSet);
     _deals.removeWhere((d) => idSet.contains(d.id));
     _log('${idSet.length} Deals gelöscht', 'bulk');
     notifyListeners();
-    await _save();
   }
 
-  /// Merges imported deals (new IDs assigned sequentially).
+  /// Bulk insert via Supabase. Server assigns ids; local list is then
+  /// re-sorted by descending id.
   Future<void> importDeals(List<Deal> imported) async {
-    int id = nextDealId;
-    for (final d in imported) {
-      _deals.add(d.copyWith(id: id++));
-    }
-    _log('${imported.length} Deals importiert', 'import');
+    if (imported.isEmpty) return;
+    final saved = await _repository.insertDeals(imported);
+    _deals = [...saved, ..._deals]..sort((a, b) => b.id.compareTo(a.id));
+    _log('${saved.length} Deals importiert', 'import');
     notifyListeners();
-    await _save();
   }
 
-  // BUYERS
+  // ── BUYERS ────────────────────────────────────────────────────────────────
+
   Future<void> addBuyer(Buyer buyer) async {
-    _buyers.add(buyer.copyWith(id: _uuid.v4()));
+    final withId =
+        buyer.id.isEmpty ? buyer.copyWith(id: _uuid.v4()) : buyer;
+    final saved = await _repository.insertBuyer(withId);
+    _buyers.add(saved);
+    _buyers.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     notifyListeners();
-    await _save();
   }
 
   Future<void> updateBuyer(Buyer buyer) async {
-    final idx = _buyers.indexWhere((b) => b.id == buyer.id);
-    if (idx != -1) {
-      _buyers[idx] = buyer;
-      notifyListeners();
-      await _save();
-    }
+    final saved = await _repository.updateBuyer(buyer);
+    final idx = _buyers.indexWhere((b) => b.id == saved.id);
+    if (idx == -1) return;
+    _buyers[idx] = saved;
+    _buyers.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    notifyListeners();
   }
 
   Future<void> deleteBuyer(String id) async {
+    await _repository.deleteBuyer(id);
     _buyers.removeWhere((b) => b.id == id);
     notifyListeners();
-    await _save();
   }
 
-  // SHOPS
+  // ── SHOPS ─────────────────────────────────────────────────────────────────
+
   Future<void> addShop(Shop shop) async {
-    _shops.add(shop.copyWith(id: _uuid.v4()));
+    final withId = shop.id.isEmpty ? shop.copyWith(id: _uuid.v4()) : shop;
+    final saved = await _repository.insertShop(withId);
+    _shops.add(saved);
     notifyListeners();
-    await _save();
   }
 
   Future<void> updateShop(Shop shop) async {
-    final idx = _shops.indexWhere((s) => s.id == shop.id);
-    if (idx != -1) {
-      _shops[idx] = shop;
-      notifyListeners();
-      await _save();
-    }
+    final saved = await _repository.updateShop(shop);
+    final idx = _shops.indexWhere((s) => s.id == saved.id);
+    if (idx == -1) return;
+    _shops[idx] = saved;
+    notifyListeners();
   }
 
   Future<void> deleteShop(String id) async {
+    await _repository.deleteShop(id);
     _shops.removeWhere((s) => s.id == id);
     notifyListeners();
-    await _save();
   }
 
-  // INVENTORY
+  // ── INVENTORY ITEMS ───────────────────────────────────────────────────────
+
   Future<void> addInventoryItem(InventoryItem item) async {
-    final saved = item.copyWith(id: item.id.isEmpty ? _uuid.v4() : item.id);
+    final withId = item.id.isEmpty ? item.copyWith(id: _uuid.v4()) : item;
+    final saved = await _repository.insertInventoryItem(withId);
     _inventoryItems.add(saved);
-    _movements.add(InventoryMovement(
-      id: _uuid.v4(),
-      itemId: saved.id,
-      date: DateTime.now(),
-      quantityChange: saved.quantity,
-      reason: 'Einbuchung',
-      dealId: saved.dealId,
-      ticketNumber: saved.ticketNumber,
-    ));
+    _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
+
+    if (saved.quantity > 0) {
+      final movement = InventoryMovement(
+        id: _uuid.v4(),
+        itemId: saved.id,
+        date: DateTime.now(),
+        quantityChange: saved.quantity,
+        reason: 'Einbuchung',
+        dealId: saved.dealId,
+        ticketNumber: saved.ticketNumber,
+      );
+      final savedMovement = await _repository.insertMovement(movement);
+      _movements.insert(0, savedMovement);
+    }
+
     _log('Artikel eingebucht: ${saved.name}', 'stock');
     notifyListeners();
-    await _save();
   }
 
   Future<void> updateInventoryItem(InventoryItem item) async {
-    final idx = _inventoryItems.indexWhere((i) => i.id == item.id);
+    final old = _inventoryItems.firstWhere(
+      (i) => i.id == item.id,
+      orElse: () => item,
+    );
+    final saved = await _repository.updateInventoryItem(item);
+    final idx = _inventoryItems.indexWhere((i) => i.id == saved.id);
     if (idx == -1) return;
-    final old = _inventoryItems[idx];
-    _inventoryItems[idx] = item;
-    final delta = item.quantity - old.quantity;
+    _inventoryItems[idx] = saved;
+    _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
+
+    final delta = saved.quantity - old.quantity;
     if (delta != 0) {
-      _movements.add(InventoryMovement(
+      final movement = InventoryMovement(
         id: _uuid.v4(),
-        itemId: item.id,
+        itemId: saved.id,
         date: DateTime.now(),
         quantityChange: delta,
         reason: delta > 0 ? 'Einbuchung' : 'Ausbuchung',
-        dealId: item.dealId,
-        ticketNumber: item.ticketNumber,
-      ));
+        dealId: saved.dealId,
+        ticketNumber: saved.ticketNumber,
+      );
+      final savedMovement = await _repository.insertMovement(movement);
+      _movements.insert(0, savedMovement);
     }
-    _log('Lagerartikel aktualisiert: ${item.name}', 'stock');
+
+    _log('Lagerartikel aktualisiert: ${saved.name}', 'stock');
     notifyListeners();
-    await _save();
   }
 
   Future<void> deleteInventoryItem(String id) async {
     final item = _inventoryItems.where((i) => i.id == id).firstOrNull;
+    await _repository.deleteInventoryItem(id);
     _inventoryItems.removeWhere((i) => i.id == id);
+    // ON DELETE CASCADE removes movements server-side; mirror that locally.
     _movements.removeWhere((m) => m.itemId == id);
     if (item != null) _log('Lagerartikel gelöscht: ${item.name}', 'stock');
     notifyListeners();
-    await _save();
   }
 
   Future<void> adjustStock(
@@ -573,13 +397,16 @@ class InventoryProvider extends ChangeNotifier {
   }) async {
     final idx = _inventoryItems.indexWhere((i) => i.id == id);
     if (idx == -1 || delta == 0) return;
-    final item = _inventoryItems[idx];
-    _inventoryItems[idx] = item.copyWith(
-      quantity: (item.quantity + delta).clamp(0, 1 << 31).toInt(),
-      dealId: dealId ?? item.dealId,
-      ticketNumber: ticketNumber ?? item.ticketNumber,
+    final current = _inventoryItems[idx];
+    final updated = current.copyWith(
+      quantity: (current.quantity + delta).clamp(0, 1 << 31).toInt(),
+      dealId: dealId ?? current.dealId,
+      ticketNumber: ticketNumber ?? current.ticketNumber,
     );
-    _movements.add(InventoryMovement(
+    final saved = await _repository.updateInventoryItem(updated);
+    _inventoryItems[idx] = saved;
+
+    final movement = InventoryMovement(
       id: _uuid.v4(),
       itemId: id,
       date: DateTime.now(),
@@ -587,10 +414,13 @@ class InventoryProvider extends ChangeNotifier {
       reason: reason,
       dealId: dealId,
       ticketNumber: ticketNumber,
-    ));
-    _log('Lagerbewegung: ${item.name} ${delta > 0 ? '+' : ''}$delta', 'stock');
+    );
+    final savedMovement = await _repository.insertMovement(movement);
+    _movements.insert(0, savedMovement);
+
+    _log('Lagerbewegung: ${current.name} ${delta > 0 ? '+' : ''}$delta',
+        'stock');
     notifyListeners();
-    await _save();
   }
 
   Future<void> checkInDeal(
@@ -612,24 +442,281 @@ class InventoryProvider extends ChangeNotifier {
       ticketUrl: deal.ticketUrl,
       status: 'Im Lager',
     );
-    _inventoryItems.add(item);
-    final idx = _deals.indexWhere((d) => d.id == deal.id);
-    if (idx != -1) {
-      _deals[idx] = _deals[idx].copyWith(
-        inventoryItemIds: [..._deals[idx].inventoryItemIds, item.id],
-      );
-    }
-    _movements.add(InventoryMovement(
+
+    final savedItem = await _repository.insertInventoryItem(item);
+    _inventoryItems.add(savedItem);
+    _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
+
+    final movement = InventoryMovement(
       id: _uuid.v4(),
-      itemId: item.id,
+      itemId: savedItem.id,
       date: DateTime.now(),
-      quantityChange: item.quantity,
+      quantityChange: savedItem.quantity,
       reason: 'Einbuchung via Deal',
       dealId: deal.id,
       ticketNumber: deal.ticketNumber,
-    ));
+    );
+    final savedMovement = await _repository.insertMovement(movement);
+    _movements.insert(0, savedMovement);
+
+    final dealIdx = _deals.indexWhere((d) => d.id == deal.id);
+    if (dealIdx != -1) {
+      _deals[dealIdx] = _deals[dealIdx].copyWith(
+        inventoryItemIds: [
+          ..._deals[dealIdx].inventoryItemIds,
+          savedItem.id,
+        ],
+      );
+    }
+
     _log('Artikel via Deal eingebucht: ${deal.product}', 'stock');
     notifyListeners();
-    await _save();
   }
+
+  // ── Demo seed (cloud) ─────────────────────────────────────────────────────
+
+  /// Replaces the user's cloud dataset with a small set of demo deals,
+  /// buyers and shops. Useful for first-time onboarding and screenshots.
+  Future<void> loadDemoData() async {
+    final demo = _buildDemoSeed();
+    await _repository.deleteAllForCurrentUser();
+    final snapshot = await _repository.bulkImport(
+      buyers: demo.buyers,
+      shops: demo.shops,
+      deals: demo.deals,
+      items: const [],
+      movements: const [],
+      activities: const [],
+    );
+    _hydrateFrom(snapshot);
+    notifyListeners();
+  }
+
+  _DemoSeed _buildDemoSeed() {
+    const serverId = '1028341004480286883';
+    const channelId = '1463456615847170224';
+    const ticketUrl =
+        'https://discord.com/channels/$serverId/$channelId';
+    final now = DateTime.now();
+
+    final shops = [
+      Shop(
+        id: _uuid.v4(),
+        name: 'Amazon DE',
+        region: 'DE',
+        url: 'https://www.amazon.de',
+      ),
+      Shop(
+        id: _uuid.v4(),
+        name: 'Amazon ES',
+        region: 'ES',
+        url: 'https://www.amazon.es',
+      ),
+    ];
+    final buyers = [
+      Buyer(
+        id: _uuid.v4(),
+        name: 'Max Mustermann',
+        rowFillColor: const Color(0xFFEFF6FF),
+        buyerCellColor: const Color(0xFF2563EB),
+        fontColor: const Color(0xFFFFFFFF),
+        sortOrder: 0,
+        discordServerIds: const [serverId],
+      ),
+      Buyer(
+        id: _uuid.v4(),
+        name: 'Anna Schmidt',
+        rowFillColor: const Color(0xFFF5F3FF),
+        buyerCellColor: const Color(0xFF7C3AED),
+        fontColor: const Color(0xFFFFFFFF),
+        sortOrder: 1,
+        discordServerIds: const [serverId],
+      ),
+      Buyer(
+        id: _uuid.v4(),
+        name: 'Tom Weber',
+        rowFillColor: const Color(0xFFF0FDF4),
+        buyerCellColor: const Color(0xFF16A34A),
+        fontColor: const Color(0xFFFFFFFF),
+        sortOrder: 2,
+        discordServerIds: const [serverId],
+      ),
+    ];
+    final deals = [
+      Deal(
+        id: Deal.unsavedId,
+        product: 'PlayStation 5 Disc Edition',
+        quantity: 2,
+        shippingType: 'Dropship',
+        shop: 'Amazon DE',
+        orderDate: now.subtract(const Duration(days: 20)),
+        ekNetto: 410.00,
+        ekBrutto: 487.90,
+        vk: 550.00,
+        buyer: 'Max Mustermann',
+        ticketNumber: 'TICKET-001',
+        ticketUrl: ticketUrl,
+        arrivalDate: now.subtract(const Duration(days: 10)),
+        status: 'Done',
+        beleg: 'Ja',
+      ),
+      Deal(
+        id: Deal.unsavedId,
+        product: 'Xbox Series X',
+        quantity: 1,
+        shippingType: 'Reship',
+        shop: 'Amazon DE',
+        orderDate: now.subtract(const Duration(days: 14)),
+        ekNetto: 420.00,
+        ekBrutto: 499.80,
+        vk: 540.00,
+        buyer: 'Anna Schmidt',
+        ticketNumber: 'TICKET-002',
+        ticketUrl: ticketUrl,
+        arrivalDate: now.subtract(const Duration(days: 5)),
+        status: 'Angekommen',
+        beleg: 'Nein',
+      ),
+      Deal(
+        id: Deal.unsavedId,
+        product: 'Nintendo Switch OLED',
+        quantity: 3,
+        shippingType: 'Dropship',
+        shop: 'Amazon ES',
+        orderDate: now.subtract(const Duration(days: 10)),
+        ekNetto: 280.00,
+        ekBrutto: 333.20,
+        vk: 380.00,
+        buyer: 'Tom Weber',
+        ticketNumber: 'TICKET-003',
+        ticketUrl: ticketUrl,
+        status: 'Unterwegs',
+        beleg: 'Ja',
+      ),
+      Deal(
+        id: Deal.unsavedId,
+        product: 'Apple iPhone 15 Pro 256GB',
+        quantity: 1,
+        shippingType: 'Dropship',
+        shop: 'Amazon DE',
+        orderDate: now.subtract(const Duration(days: 7)),
+        ekNetto: 900.00,
+        ekBrutto: 1071.00,
+        vk: 1150.00,
+        buyer: 'Max Mustermann',
+        ticketNumber: 'TICKET-004',
+        ticketUrl: ticketUrl,
+        status: 'Bestellt',
+        beleg: 'Nein',
+      ),
+    ];
+    return _DemoSeed(buyers: buyers, shops: shops, deals: deals);
+  }
+
+  // ── JSON backup / restore (across the whole user-scoped dataset) ──────────
+
+  Map<String, dynamic> exportData() => {
+        'deals': _deals.map((d) => d.toJson()).toList(),
+        'buyers': _buyers.map((b) => b.toJson()).toList(),
+        'shops': _shops.map((s) => s.toJson()).toList(),
+        'inventoryItems': _inventoryItems.map((i) => i.toJson()).toList(),
+        'movements': _movements.map((m) => m.toJson()).toList(),
+        'activities': _activities.map((a) => a.toJson()).toList(),
+      };
+
+  String exportJson() =>
+      const JsonEncoder.withIndent('  ').convert(exportData());
+
+  /// Replaces the user's cloud dataset with the contents of [data]. Used by
+  /// the JSON-Restore flow in Settings.
+  Future<void> restoreData(Map<String, dynamic> data) async {
+    final deals = (data['deals'] as List<dynamic>? ?? [])
+        .map((e) => Deal.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final buyers = (data['buyers'] as List<dynamic>? ?? [])
+        .map((e) => Buyer.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final shops = (data['shops'] as List<dynamic>? ?? [])
+        .map((e) => Shop.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final items = (data['inventoryItems'] as List<dynamic>? ?? [])
+        .map((e) => InventoryItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final movements = (data['movements'] as List<dynamic>? ?? [])
+        .map((e) => InventoryMovement.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final activities = (data['activities'] as List<dynamic>? ?? [])
+        .map((e) => ActivityEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    await _repository.deleteAllForCurrentUser();
+    final snapshot = await _repository.bulkImport(
+      buyers: buyers,
+      shops: shops,
+      deals: deals,
+      items: items,
+      movements: movements,
+      activities: activities,
+    );
+    _hydrateFrom(snapshot);
+    notifyListeners();
+  }
+
+  /// One-shot migration: pulls the legacy shared_preferences JSON blob (if
+  /// any) into the current user's Supabase tables and clears the local copy.
+  /// Returns the number of imported deals (or null if nothing was imported).
+  Future<int?> migrateLegacyLocalData() async {
+    final legacy = await _legacyStorage.loadData();
+    if (legacy == null) return null;
+    final dealsList = legacy['deals'] as List<dynamic>? ?? [];
+    final buyersList = legacy['buyers'] as List<dynamic>? ?? [];
+    final shopsList = legacy['shops'] as List<dynamic>? ?? [];
+    final itemsList = legacy['inventoryItems'] as List<dynamic>? ?? [];
+    final movementsList = legacy['movements'] as List<dynamic>? ?? [];
+    final activitiesList = legacy['activities'] as List<dynamic>? ?? [];
+    if (dealsList.isEmpty &&
+        buyersList.isEmpty &&
+        shopsList.isEmpty &&
+        itemsList.isEmpty &&
+        movementsList.isEmpty &&
+        activitiesList.isEmpty) {
+      return null;
+    }
+
+    final snapshot = await _repository.bulkImport(
+      buyers: buyersList
+          .map((e) => Buyer.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      shops: shopsList
+          .map((e) => Shop.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      deals: dealsList
+          .map((e) => Deal.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      items: itemsList
+          .map((e) => InventoryItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      movements: movementsList
+          .map((e) => InventoryMovement.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      activities: activitiesList
+          .map((e) => ActivityEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+    _hydrateFrom(snapshot);
+    notifyListeners();
+    await _legacyStorage.clear();
+    return snapshot.deals.length;
+  }
+}
+
+class _DemoSeed {
+  final List<Buyer> buyers;
+  final List<Shop> shops;
+  final List<Deal> deals;
+  const _DemoSeed({
+    required this.buyers,
+    required this.shops,
+    required this.deals,
+  });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/csv_service.dart';
 import '../widgets/add_edit_deal_dialog.dart';
@@ -108,6 +109,8 @@ class _MainScreenState extends State<MainScreen> {
                 icon: const Icon(Icons.download_outlined),
                 onPressed: () => _export(context, provider),
               ),
+              const SizedBox(width: 4),
+              const _AccountMenu(),
               const SizedBox(width: 8),
             ],
           ),
@@ -175,6 +178,66 @@ class _MainScreenState extends State<MainScreen> {
       _selectedTicket = ticket;
       _selectedIndex = 2;
     });
+  }
+}
+
+class _AccountMenu extends StatelessWidget {
+  const _AccountMenu();
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final email = auth.userEmail ?? 'Unbekannt';
+    final initial = email.isNotEmpty ? email[0].toUpperCase() : '?';
+
+    return PopupMenuButton<String>(
+      tooltip: 'Konto',
+      offset: const Offset(0, 40),
+      icon: CircleAvatar(
+        radius: 14,
+        backgroundColor: Colors.white,
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: Color(0xFF0F2744),
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+      itemBuilder: (ctx) => [
+        PopupMenuItem<String>(
+          enabled: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Angemeldet als',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+              const SizedBox(height: 2),
+              Text(email,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A))),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem<String>(
+          value: 'logout',
+          child: Row(
+            children: [
+              Icon(Icons.logout, size: 18, color: Color(0xFFDC2626)),
+              SizedBox(width: 10),
+              Text('Abmelden'),
+            ],
+          ),
+        ),
+      ],
+      onSelected: (value) async {
+        if (value == 'logout') {
+          await context.read<AuthProvider>().signOut();
+        }
+      },
+    );
   }
 }
 

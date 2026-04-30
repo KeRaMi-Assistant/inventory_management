@@ -252,8 +252,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                 padding: const EdgeInsets.all(24),
                 child: Form(
                   key: _formKey,
-                  child: Builder(builder: (ctx) {
-                    final narrow = MediaQuery.of(ctx).size.width < 560;
+                  child: LayoutBuilder(builder: (ctx, formConstraints) {
+                    final narrow = formConstraints.maxWidth < 480;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -758,14 +758,18 @@ class _DiscordServerButtons extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: const Color(0xFFBAE6FD)),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.info_outline, size: 12, color: Color(0xFF0369A1)),
-              SizedBox(width: 5),
-              Text(
-                'Kanal finden → Rechtsklick → „Link kopieren" → hier einfügen',
-                style: TextStyle(fontSize: 11, color: Color(0xFF0369A1)),
+              const Icon(Icons.info_outline, size: 12, color: Color(0xFF0369A1)),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  'Kanal finden → Rechtsklick → „Link kopieren" → hier einfügen',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF0369A1)),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
               ),
             ],
           ),

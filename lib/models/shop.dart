@@ -15,6 +15,8 @@ class Shop {
     this.url,
   });
 
+  // ── Local backup JSON (camelCase) ─────────────────────────────────────────
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -31,6 +33,26 @@ class Shop {
         channel: json['channel'] as String? ?? '',
         active: json['active'] as bool? ?? true,
         url: json['url'] as String?,
+      );
+
+  // ── Supabase (snake_case) ─────────────────────────────────────────────────
+
+  Map<String, dynamic> toSupabaseInsert() => {
+        'id': id,
+        'name': name,
+        'region': region,
+        'channel': channel,
+        'active': active,
+        'url': url,
+      };
+
+  factory Shop.fromSupabase(Map<String, dynamic> row) => Shop(
+        id: row['id'] as String,
+        name: row['name'] as String,
+        region: row['region'] as String? ?? 'DE',
+        channel: row['channel'] as String? ?? '',
+        active: row['active'] as bool? ?? true,
+        url: row['url'] as String?,
       );
 
   Shop copyWith({

@@ -3,13 +3,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'storage_file_stub.dart'
     if (dart.library.io) 'storage_file_native.dart';
 
+/// Legacy local-only persistence. Kept around solely so that pre-Supabase
+/// users can be migrated into their cloud account on first login. New
+/// writes go to [SupabaseRepository].
 class StorageService {
   static const _key = 'lagerverwaltung_data';
-
-  Future<void> saveData(Map<String, dynamic> data) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, jsonEncode(data));
-  }
 
   Future<Map<String, dynamic>?> loadData() async {
     try {
@@ -29,8 +27,11 @@ class StorageService {
     }
   }
 
-  Future<String> exportJson(Map<String, dynamic> data) async {
-    return const JsonEncoder.withIndent('  ').convert(data);
+  /// Removes the legacy blob — called after a successful cloud migration so
+  /// we don't re-import on every login.
+  Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_key);
   }
 
   Map<String, dynamic>? parseJsonBackup(String content) {

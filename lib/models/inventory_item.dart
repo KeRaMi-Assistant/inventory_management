@@ -32,6 +32,8 @@ class InventoryItem {
   bool get isCritical => quantity < minStock;
   double get stockValue => (costPrice ?? 0) * quantity;
 
+  // ── Local backup JSON (camelCase) ─────────────────────────────────────────
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -64,6 +66,42 @@ class InventoryItem {
         ticketUrl: json['ticketUrl'] as String?,
         note: json['note'] as String?,
         status: json['status'] as String? ?? 'Im Lager',
+      );
+
+  // ── Supabase (snake_case) ─────────────────────────────────────────────────
+
+  Map<String, dynamic> toSupabaseInsert() => {
+        'id': id,
+        'name': name,
+        'sku': sku,
+        'quantity': quantity,
+        'min_stock': minStock,
+        'location': location,
+        'cost_price': costPrice,
+        'arrival_date': arrivalDate?.toIso8601String(),
+        'deal_id': dealId,
+        'ticket_number': ticketNumber,
+        'ticket_url': ticketUrl,
+        'note': note,
+        'status': status,
+      };
+
+  factory InventoryItem.fromSupabase(Map<String, dynamic> row) => InventoryItem(
+        id: row['id'] as String,
+        name: row['name'] as String,
+        sku: row['sku'] as String?,
+        quantity: (row['quantity'] as num?)?.toInt() ?? 0,
+        minStock: (row['min_stock'] as num?)?.toInt() ?? 0,
+        location: row['location'] as String?,
+        costPrice: (row['cost_price'] as num?)?.toDouble(),
+        arrivalDate: row['arrival_date'] != null
+            ? DateTime.parse(row['arrival_date'] as String)
+            : null,
+        dealId: (row['deal_id'] as num?)?.toInt(),
+        ticketNumber: row['ticket_number'] as String?,
+        ticketUrl: row['ticket_url'] as String?,
+        note: row['note'] as String?,
+        status: row['status'] as String? ?? 'Im Lager',
       );
 
   InventoryItem copyWith({
@@ -147,6 +185,31 @@ class InventoryMovement {
         dealId: json['dealId'] as int?,
         ticketNumber: json['ticketNumber'] as String?,
         note: json['note'] as String?,
+      );
+
+  // ── Supabase (snake_case) ─────────────────────────────────────────────────
+
+  Map<String, dynamic> toSupabaseInsert() => {
+        'id': id,
+        'item_id': itemId,
+        'date': date.toIso8601String(),
+        'quantity_change': quantityChange,
+        'reason': reason,
+        'deal_id': dealId,
+        'ticket_number': ticketNumber,
+        'note': note,
+      };
+
+  factory InventoryMovement.fromSupabase(Map<String, dynamic> row) =>
+      InventoryMovement(
+        id: row['id'] as String,
+        itemId: row['item_id'] as String,
+        date: DateTime.parse(row['date'] as String),
+        quantityChange: (row['quantity_change'] as num?)?.toInt() ?? 0,
+        reason: row['reason'] as String? ?? 'Korrektur',
+        dealId: (row['deal_id'] as num?)?.toInt(),
+        ticketNumber: row['ticket_number'] as String?,
+        note: row['note'] as String?,
       );
 }
 

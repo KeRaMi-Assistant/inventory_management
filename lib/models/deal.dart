@@ -41,6 +41,9 @@ class Deal {
     this.inventoryItemIds = const [],
   });
 
+  /// Sentinel id used for deals not yet persisted (server assigns BIGSERIAL).
+  static const int unsavedId = 0;
+
   double? get profitPerUnit =>
       (vk != null && ekBrutto != null) ? vk! - ekBrutto! : null;
   double? get totalProfit =>
@@ -48,6 +51,8 @@ class Deal {
   double? get zuBekommen => vk != null ? vk! * quantity : null;
   double? get ekGesamtNetto => ekNetto != null ? ekNetto! * quantity : null;
   double? get ekGesamtBrutto => ekBrutto != null ? ekBrutto! * quantity : null;
+
+  // ── Local backup JSON (camelCase) ─────────────────────────────────────────
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -96,6 +101,59 @@ class Deal {
                 ?.map((e) => e as String)
                 .toList() ??
             [],
+      );
+
+  // ── Supabase (PostgreSQL, snake_case) ─────────────────────────────────────
+
+  /// Payload for INSERT / UPDATE on `public.deals`.
+  /// `id` is omitted (server-assigned BIGSERIAL); `user_id` is added by the
+  /// repository so we don't bake auth state into the model.
+  Map<String, dynamic> toSupabaseInsert() => {
+        'product': product,
+        'quantity': quantity,
+        'shipping_type': shippingType,
+        'shop': shop,
+        'order_date': orderDate.toIso8601String(),
+        'ek_netto': ekNetto,
+        'ek_brutto': ekBrutto,
+        'vk': vk,
+        'buyer': buyer,
+        'ticket_number': ticketNumber,
+        'ticket_url': ticketUrl,
+        'tracking': tracking,
+        'arrival_date': arrivalDate?.toIso8601String(),
+        'status': status,
+        'lexware': lexware,
+        'beleg': beleg,
+        'note': note,
+      };
+
+  factory Deal.fromSupabase(
+    Map<String, dynamic> row, {
+    List<String> inventoryItemIds = const [],
+  }) =>
+      Deal(
+        id: (row['id'] as num).toInt(),
+        product: row['product'] as String,
+        quantity: (row['quantity'] as num).toInt(),
+        shippingType: row['shipping_type'] as String,
+        shop: row['shop'] as String,
+        orderDate: DateTime.parse(row['order_date'] as String),
+        ekNetto: (row['ek_netto'] as num?)?.toDouble(),
+        ekBrutto: (row['ek_brutto'] as num?)?.toDouble(),
+        vk: (row['vk'] as num?)?.toDouble(),
+        buyer: row['buyer'] as String?,
+        ticketNumber: row['ticket_number'] as String?,
+        ticketUrl: row['ticket_url'] as String?,
+        tracking: row['tracking'] as String?,
+        arrivalDate: row['arrival_date'] != null
+            ? DateTime.parse(row['arrival_date'] as String)
+            : null,
+        status: row['status'] as String? ?? 'Bestellt',
+        lexware: row['lexware'] as String?,
+        beleg: row['beleg'] as String? ?? 'Nein',
+        note: row['note'] as String?,
+        inventoryItemIds: inventoryItemIds,
       );
 
   Deal copyWith({

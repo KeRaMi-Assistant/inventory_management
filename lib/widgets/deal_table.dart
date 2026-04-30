@@ -263,6 +263,7 @@ class _FilterBar extends StatelessWidget {
     return SizedBox(
       width: width,
       child: DropdownButtonFormField<String>(
+        isExpanded: true,
         initialValue: value,
         decoration: InputDecoration(labelText: label),
         items: [
@@ -306,7 +307,10 @@ class _BulkActionBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       color: const Color(0xFFEFF6FF),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(
             '${ids.length} ausgewählt',
@@ -315,7 +319,6 @@ class _BulkActionBar extends StatelessWidget {
               color: Color(0xFF1D4ED8),
             ),
           ),
-          const SizedBox(width: 12),
           PopupMenuButton<String>(
             tooltip: 'Status ändern',
             onSelected: (status) async {
@@ -327,7 +330,6 @@ class _BulkActionBar extends StatelessWidget {
                 .toList(),
             child: const _BulkButton(icon: Icons.flag_outlined, label: 'Status'),
           ),
-          const SizedBox(width: 8),
           PopupMenuButton<String?>(
             tooltip: 'Käufer zuweisen',
             onSelected: (buyer) async {
@@ -341,7 +343,6 @@ class _BulkActionBar extends StatelessWidget {
             ],
             child: const _BulkButton(icon: Icons.person_outline, label: 'Käufer'),
           ),
-          const SizedBox(width: 8),
           TextButton.icon(
             onPressed: () async {
               await provider.deleteDeals(ids);
@@ -351,7 +352,6 @@ class _BulkActionBar extends StatelessWidget {
             label: const Text('Löschen'),
             style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
           ),
-          const Spacer(),
           IconButton(
             tooltip: 'Auswahl aufheben',
             onPressed: filters.clearSelection,

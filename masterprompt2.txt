@@ -1,0 +1,800 @@
+================================================================================
+MASTERPROMPT 2 — LAGERVERWALTUNGS- & BESTELL-/VERKAUFS-TRACKER
+CLOUD-MIGRATION, LOGIN, CROSS-PLATFORM & ZUKUNFTSSCHRITTE
+================================================================================
+
+Dieses Dokument baut auf masterprompt.txt auf. Es dokumentiert den aktuellen
+Zustand, die neue Cloud-Architektur mit Login und gemeinsamem Datenbankzugriff
+von allen Plattformen sowie den vollstaendigen Entwicklungsfahrplan.
+
+KERNZIEL DER NAECHSTEN PHASE:
+  Die App soll auf ALLEN Plattformen (macOS, Windows, Linux, Web, iOS, Android)
+  DIESELBE Datenbank teilen. Ein Nutzer loggt sich ein und sieht seine Daten
+  ueberall. Die lokale JSON-Speicherung wird vollstaendig ersetzt.
+
+
+================================================================================
+1. AKTUELLER ZUSTAND (IST-ANALYSE)
+================================================================================
+
+Implementiert und funktionsfaehig:
+  [x] Alle 6 Screens: Dashboard, Deals, Tickets, Lager, Statistiken, Einstellungen
+  [x] Deal-CRUD (Add, Edit, Delete, Inline-Edit Status/Ankunftsdatum)
+  [x] Buyer/Shop-CRUD in Einstellungen
+  [x] InventoryItem-CRUD + Bewegungshistorie (Einbuchen/Ausbuchen)
+  [x] Ticket-Gruppenansicht mit Detail-Panel
+  [x] Filter- und Sortierleiste (Deals + Tickets)
+  [x] Massenaktionen (Status aendern, Loeschen, Kaeufer zuweisen)
+  [x] KPI-Karten auf Dashboard
+  [x] Aktivitaets-Feed (letzte 10 Aktionen)
+  [x] Kaeufer-Schnelluebersicht
+  [x] JSON Backup/Restore
+  [x] CSV-Export
+  [x] Amazon-CSV-Import (Service vorhanden)
+  [x] Kaeufer-Farbschema in Tabelle
+  [x] Status-Badges
+  [x] Discord-Server-Links in Deal-Dialog
+  [x] Responsive UI (LayoutBuilder, FittedBox, Flexible statt fixe Breiten)
+  [x] Pixel-Overflow-Fixes (alle DropdownButtonFormField mit isExpanded: true)
+
+Kritische Schwachstellen (MUSS behoben werden):
+  [ ] Daten nur lokal in einem JSON-Blob — kein Zugriff von anderen Geraeten
+  [ ] Kein Login — keine Benutzerisolation, keine Sicherheit
+  [ ] InventoryProvider sortiert bei JEDEM Getter-Aufruf neu (O(n log n))
+  [ ] Alle Daten in einem einzigen Provider — schwer testbar
+  [ ] Kein Fehler-Handling bei Speicher-Fehler (silent failure)
+  [ ] Statistik-Charts sind FractionallySizedBox-Balken (kein echtes Chart-Package)
+  [ ] Zeitraum-Filter auf Statistik-Screen fehlt
+
+
+================================================================================
+2. PLATTFORM-STRATEGIE & CROSS-PLATFORM DATENBANKZUGRIFF
+================================================================================
+
+2.1 ZIEL-PLATTFORMEN
+----------------------
+  macOS Desktop     (primaer, bereits implementiert)
+  Web / Browser     (bereits implementiert als Flutter Web)
+  Windows Desktop   (Flutter Desktop, bereits unterstuetzt)
+  iOS               (zukuenftig, Flutter iOS)
+  Android           (zukuenftig, Flutter Android)
+
+  ALLE Plattformen verbinden sich zur SELBEN Cloud-Datenbank.
+  Ein einziger Login — Daten sind ueberall synchron.
+
+2.2 WARUM KEIN LOKALES SQLITE (drift)?
+-----------------------------------------
+  drift/SQLite ist eine lokale Datenbank — Daten liegen NUR auf dem Geraet.
+  Wenn der Nutzer die App auf Mac UND im Browser oeffnet, sieht er unterschiedliche
+  Daten. Synchronisation muesste selbst gebaut werden — enormer Aufwand.
+  FAZIT: drift ist die falsche Wahl fuer diesen Use-Case.
+
+2.3 TECHNOLOGIEVERGLEICH (CLOUD-DATENBANKEN FUER FLUTTER)
+-----------------------------------------------------------
+
+  Technologie       | Plattformen       | Auth  | SQL  | Realtime | Selbst-hostbar
+  ------------------|-------------------|-------|------|----------|-----------------
+  Supabase          | Alle              | Ja    | Ja   | Ja       | Ja (Docker)
+  Firebase          | Alle              | Ja    | Nein | Ja       | Nein
+  PocketBase        | Alle (REST)       | Ja    | Nein | Ja       | Ja (1 Binary)
+  Appwrite          | Alle              | Ja    | Nein | Ja       | Ja (Docker)
+  Hasura+Postgres   | Alle (GraphQL)    | Nein* | Ja   | Ja       | Ja
+
+  WAHL: Supabase
+  Begruendung:
+    - PostgreSQL-Basis: Relationale Daten (Deals -> Buyer, Deals -> Tickets)
+      profitieren von echten SQL-Joins — Firebase (NoSQL) wuerde das erschweren
+    - Built-in Auth: E-Mail/Passwort, Magic Link, OAuth (Google, GitHub, etc.)
+    - Row Level Security (RLS): Jeder User sieht nur SEINE Daten
+      (eine Policy: "WHERE auth.uid() = user_id")
+    - Realtime: Supabase-Channels ermoeglicht Live-Updates wenn Daten sich aendern
+    - Flutter SDK: `supabase_flutter` — offiziell unterstuetzt, alle Plattformen
+    - Kostenloses Tier: 500 MB DB, 5 GB Bandwidth, 50.000 aktive User
+    - Self-Hosting: komplett in Docker deploybar (keine Vendor-Lock-in)
+
+
+================================================================================
+3. NEUE ARCHITEKTUR MIT SUPABASE
+================================================================================
+
+3.1 UEBERBLICK
+-----------------
+  App (Flutter) <-> supabase_flutter SDK <-> Supabase Cloud
+                                              |
+                                              +- PostgreSQL (Daten)
+                                              +- Auth (Login/Session)
+                                              +- Realtime (Live-Updates)
+                                              +- Storage (Datei-Uploads, optional)
+
+  Die Flutter-App benoetigt keine lokale Datenbank mehr. Alle Daten kommen
+  via HTTPS-API von Supabase. Sessions werden im Speicher / SecureStorage gehalten.
+
+3.2 AUTHENTIFIZIERUNG
+----------------------
+  Login-Methoden (empfohlen):
+    1. E-Mail + Passwort (Pflicht)
+    2. Magic Link per E-Mail (optional, bequem)
+
+  Auth-Screens die benoetigt werden:
+    - LoginScreen        E-Mail + Passwort Felder, "Anmelden"-Button
+    - RegisterScreen     E-Mail + Passwort + Passwort-Bestaetigung
+    - ForgotPasswordScreen  E-Mail-Eingabe, sendet Reset-Link
+    - SplashScreen       Prueft ob Session vorhanden -> leitet weiter
+
+  Flutter-Paket: supabase_flutter
+    - Supabase.instance.client.auth.signInWithPassword(email, password)
+    - Supabase.instance.client.auth.signUp(email: email, password: password)
+    - Supabase.instance.client.auth.onAuthStateChange -> Stream<AuthState>
+    - Session wird automatisch in SecureStorage persistiert (flutter_secure_storage)
+    - Nach App-Neustart: Session automatisch wiederhergestellt
+
+  App-Start-Logik:
+    1. SplashScreen zeigt kurzes Ladeindikator
+    2. supabase.auth.currentSession pruefen
+    3. Session vorhanden -> MainScreen (direkt eingeloggt)
+    4. Keine Session -> LoginScreen
+
+3.3 DATENBANKSCHEMA (POSTGRESQL / SUPABASE)
+--------------------------------------------
+  Jede Tabelle bekommt eine user_id-Spalte (UUID, Fremdschluessel auf auth.users).
+  Row Level Security (RLS) stellt sicher, dass Nutzer nur ihre eigenen Daten sehen.
+
+  -- Tabelle: deals --
+  CREATE TABLE deals (
+    id              BIGSERIAL PRIMARY KEY,
+    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    product         TEXT NOT NULL,
+    quantity        INTEGER NOT NULL DEFAULT 1,
+    shipping_type   TEXT NOT NULL CHECK (shipping_type IN ('Reship', 'Dropship')),
+    shop            TEXT NOT NULL,
+    order_date      TIMESTAMPTZ NOT NULL,
+    ek_netto        NUMERIC(10,2),
+    ek_brutto       NUMERIC(10,2),
+    vk              NUMERIC(10,2),
+    buyer           TEXT,
+    ticket_number   TEXT,
+    ticket_url      TEXT,
+    tracking        TEXT,
+    arrival_date    TIMESTAMPTZ,
+    status          TEXT NOT NULL DEFAULT 'Bestellt'
+                    CHECK (status IN ('Bestellt','Unterwegs','Angekommen','Rechnung gestellt','Done')),
+    beleg           TEXT NOT NULL DEFAULT 'Nein' CHECK (beleg IN ('Ja','Nein')),
+    lexware         TEXT,
+    note            TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  ALTER TABLE deals ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "user_owns_deals" ON deals
+    USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+  -- Tabelle: buyers --
+  CREATE TABLE buyers (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name            TEXT NOT NULL,
+    row_fill_color  INTEGER NOT NULL,
+    buyer_cell_color INTEGER NOT NULL,
+    font_color      INTEGER NOT NULL,
+    sort_order      INTEGER NOT NULL DEFAULT 0,
+    active          BOOLEAN NOT NULL DEFAULT TRUE,
+    discord_server_ids JSONB NOT NULL DEFAULT '[]'
+  );
+  ALTER TABLE buyers ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "user_owns_buyers" ON buyers
+    USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+  -- Tabelle: shops --
+  CREATE TABLE shops (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name            TEXT NOT NULL,
+    region          TEXT NOT NULL DEFAULT 'DE',
+    url             TEXT,
+    active          BOOLEAN NOT NULL DEFAULT TRUE
+  );
+  ALTER TABLE shops ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "user_owns_shops" ON shops
+    USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+  -- Tabelle: inventory_items --
+  CREATE TABLE inventory_items (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name            TEXT NOT NULL,
+    sku             TEXT,
+    quantity        INTEGER NOT NULL DEFAULT 0,
+    min_stock       INTEGER NOT NULL DEFAULT 0,
+    location        TEXT,
+    cost_price      NUMERIC(10,2),
+    arrival_date    TIMESTAMPTZ,
+    deal_id         BIGINT REFERENCES deals(id) ON DELETE SET NULL,
+    ticket_number   TEXT,
+    note            TEXT,
+    status          TEXT NOT NULL DEFAULT 'Im Lager'
+                    CHECK (status IN ('Im Lager','Reserviert','Versandt','Verkauft'))
+  );
+  ALTER TABLE inventory_items ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "user_owns_inventory" ON inventory_items
+    USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+  -- Tabelle: inventory_movements --
+  CREATE TABLE inventory_movements (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    item_id         UUID NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+    date            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    quantity_delta  INTEGER NOT NULL,
+    reason          TEXT NOT NULL CHECK (reason IN ('Eingang','Verkauf','Verlust','Rueckgabe')),
+    related_deal_id BIGINT REFERENCES deals(id) ON DELETE SET NULL,
+    note            TEXT
+  );
+  ALTER TABLE inventory_movements ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "user_owns_movements" ON inventory_movements
+    USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+  -- Tabelle: activity_log --
+  CREATE TABLE activity_log (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    date            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    type            TEXT NOT NULL,
+    description     TEXT NOT NULL,
+    related_deal_id BIGINT REFERENCES deals(id) ON DELETE SET NULL
+  );
+  ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "user_owns_activity" ON activity_log
+    USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+  -- Tabelle: app_settings --
+  CREATE TABLE app_settings (
+    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    key             TEXT NOT NULL,
+    value           TEXT NOT NULL,
+    PRIMARY KEY (user_id, key)
+  );
+  ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "user_owns_settings" ON app_settings
+    USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+3.4 FLUTTER-INTEGRATION (SUPABASE)
+-------------------------------------
+  DIESES PROJEKT VERWENDET:
+    URL:             https://uzpkrdymlrrydtuxnvhy.supabase.co
+    Publishable Key: sb_publishable_6t00CUF7N9DLR7Rem33DaA_ZUElt3sQ
+    Direct ConnStr:  postgresql://postgres:[DB-PASSWORT]@db.uzpkrdymlrrydtuxnvhy.supabase.co:5432/postgres
+
+  Der Publishable Key (= Anon Key) ist sicher fuer Client-Code. Er erlaubt nur
+  was RLS-Policies erlauben. Das DB-Passwort fuer den Direct ConnStr ist ein
+  separates Secret — NIEMALS committen.
+
+  Initialisierung (main.dart):
+    await Supabase.initialize(
+      url: 'https://uzpkrdymlrrydtuxnvhy.supabase.co',
+      anonKey: 'sb_publishable_6t00CUF7N9DLR7Rem33DaA_ZUElt3sQ',
+    );
+
+  Daten lesen (Beispiel Deals):
+    final data = await supabase
+        .from('deals')
+        .select()
+        .order('id', ascending: false);
+    final deals = (data as List).map((e) => Deal.fromJson(e)).toList();
+
+  Realtime (Live-Updates):
+    supabase
+        .from('deals')
+        .stream(primaryKey: ['id'])
+        .listen((data) { /* UI aktualisieren */ });
+
+  Deal eintrafen:
+    await supabase.from('deals').insert({
+      'user_id': supabase.auth.currentUser!.id,
+      'product': deal.product,
+      ... (alle Felder)
+    });
+
+  Neues Package in pubspec.yaml:
+    supabase_flutter: ^2.x
+    flutter_secure_storage: ^9.x   (fuer Session-Persistierung)
+
+3.5 OFFLINE-STRATEGIE
+-----------------------
+  Option A — Online-Only (einfach, empfohlen fuer Start):
+    - App benoetigt Internetverbindung
+    - Fehler-Handling wenn offline: SnackBar "Keine Verbindung"
+    - Kein lokaler Cache
+
+  Option B — Offline-First mit lokalem Cache (komplex, Phase 3):
+    - Zusaetzlich drift/SQLite als lokaler Cache
+    - Supabase-Daten werden lokal gecacht
+    - Offline-Aenderungen werden in "pending_changes"-Tabelle gespeichert
+    - Beim Wiederverbinden werden Aenderungen synchronisiert
+    - Konflikte: Last-Write-Wins oder manuelle Aufloesung
+    - Pakete: drift + supabase_flutter parallel
+
+  EMPFEHLUNG: Mit Option A starten. Option B nur wenn Offline-Nutzung
+  wirklich benoetigt wird — der Implementierungsaufwand ist erheblich.
+
+
+================================================================================
+4. NEUE SCREENS & FEATURES: LOGIN
+================================================================================
+
+4.0 TEST-USER & SUPABASE AUTH-KONFIGURATION
+--------------------------------------------
+  WICHTIG — E-Mail-Bestaetigung deaktivieren (fuer Entwicklung):
+    Supabase Dashboard -> Authentication -> Providers -> Email
+    -> "Confirm email" DEAKTIVIEREN
+    Sonst muss jeder neue User erst eine E-Mail bestaetigen bevor er sich
+    einloggen kann. Im Development-Modus deaktivieren.
+
+  Test-User anlegen (einmalig, via Supabase Dashboard oder SQL):
+    Dashboard: Authentication -> Users -> "Add user" -> "Create new user"
+      E-Mail:   test@test.com
+      Passwort: passwort
+      "Auto confirm user": JA (Haken setzen)
+
+    ODER via SQL (Supabase SQL-Editor):
+      -- Erstellt User direkt in auth.users (nur in Supabase moeglich)
+      -- EMPFOHLEN: Dashboard nutzen, nicht SQL fuer auth.users
+
+    ODER via supabase_flutter beim ersten App-Start (einmalig):
+      await supabase.auth.signUp(
+        email: 'test@test.com',
+        password: 'passwort',
+      );
+
+  Login-Daten fuer Entwicklung:
+    E-Mail:    test@test.com
+    Passwort:  passwort
+
+  HINWEIS: Supabase benutzt immer E-Mail als Login-Bezeichner, kein
+  reiner Username. "test" als Benutzername -> "test@test.com" als E-Mail.
+  Im LoginScreen kann das Feld als "Benutzername / E-Mail" beschriftet werden,
+  aber technisch muss eine E-Mail-Adresse uebergeben werden.
+
+4.1 AUTH-FLOW (SCREENS)
+--------------------------
+  SplashScreen (lib/screens/auth/splash_screen.dart)
+    - Zeigt App-Logo / Ladeindikator
+    - Prueft Session -> navigiert zu Login oder Main
+
+  LoginScreen (lib/screens/auth/login_screen.dart)
+    - Felder: E-Mail, Passwort
+    - Button: "Anmelden"
+    - Link: "Noch kein Konto? Registrieren"
+    - Link: "Passwort vergessen?"
+    - Fehler-Handling: falsche Credentials -> SnackBar
+
+  RegisterScreen (lib/screens/auth/register_screen.dart)
+    - Felder: E-Mail, Passwort, Passwort bestaetigen
+    - Button: "Registrieren"
+    - Nach Registrierung: Bestaetigung-E-Mail-Hinweis
+    - Link: "Zurueck zum Login"
+
+  ForgotPasswordScreen (lib/screens/auth/forgot_password_screen.dart)
+    - Feld: E-Mail
+    - Button: "Reset-Link senden"
+    - Supabase sendet automatisch die Reset-E-Mail
+
+4.2 AUTH-GUARD IM ROUTER
+--------------------------
+  Navigation via go_router oder Navigator mit Guard:
+    - Wenn kein User eingeloggt -> redirect zu /login
+    - Wenn eingeloggt -> redirect zu /dashboard
+
+  supabase.auth.onAuthStateChange.listen((event) {
+    if (event.event == AuthChangeEvent.signedOut) navigateTo('/login');
+    if (event.event == AuthChangeEvent.signedIn) navigateTo('/dashboard');
+  });
+
+4.3 LOGOUT-BUTTON
+------------------
+  - Im SideNav unten: Avatar/E-Mail des Users + "Abmelden"-Button
+  - await supabase.auth.signOut();
+  - Session wird geloescht, Redirect zu LoginScreen
+
+4.5 AUTH-PROVIDER (KONKRETER CODE)
+------------------------------------
+  lib/providers/auth_provider.dart
+
+  class AuthProvider extends ChangeNotifier {
+    final _supabase = Supabase.instance.client;
+
+    User? get currentUser => _supabase.auth.currentUser;
+    bool get isLoggedIn => currentUser != null;
+    String? get userEmail => currentUser?.email;
+
+    // Einloggen
+    Future<String?> signIn(String email, String password) async {
+      try {
+        await _supabase.auth.signInWithPassword(
+          email: email,
+          password: password,
+        );
+        notifyListeners();
+        return null; // null = Erfolg
+      } on AuthException catch (e) {
+        return e.message; // Fehlermeldung zurueckgeben
+      }
+    }
+
+    // Registrieren
+    Future<String?> signUp(String email, String password) async {
+      try {
+        await _supabase.auth.signUp(email: email, password: password);
+        notifyListeners();
+        return null;
+      } on AuthException catch (e) {
+        return e.message;
+      }
+    }
+
+    // Ausloggen
+    Future<void> signOut() async {
+      await _supabase.auth.signOut();
+      notifyListeners();
+    }
+  }
+
+  Im Widget (LoginScreen):
+    final error = await context.read<AuthProvider>().signIn(
+      emailController.text.trim(),
+      passwordController.text,
+    );
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+    } else {
+      Navigator.of(context).pushReplacementNamed('/dashboard');
+    }
+
+4.4 BENUTZER-PROFIL (OPTIONAL, PHASE 2)
+-----------------------------------------
+  - Anzeige-Name setzen (supabase.auth.updateUser)
+  - Passwort aendern (supabase.auth.updateUser(password: newPw))
+  - Account loeschen (supabase-Admin-API oder eigene Edge Function)
+
+
+================================================================================
+5. MIGRATION: VON JSON ZU SUPABASE
+================================================================================
+
+5.1 KANN MAN ALLES PER CODE MACHEN?
+-------------------------------------
+  JA. Das Supabase-Projekt (uzpkrdymlrrydtuxnvhy) existiert bereits.
+  Es gibt drei Wege das Schema aufzusetzen — alles ohne Dashboard:
+
+  WEG 1 — Direct PostgreSQL (psql oder DBeaver/TablePlus):
+    Verbindung:
+      postgresql://postgres:[DB-PASSWORT]@db.uzpkrdymlrrydtuxnvhy.supabase.co:5432/postgres
+
+    Dann einfach das SQL aus Abschnitt 3.3 ausfuehren:
+      psql "postgresql://postgres:PASSWORT@db.uzpkrdymlrrydtuxnvhy.supabase.co:5432/postgres" \
+           -f schema.sql
+
+    schema.sql = alle CREATE TABLE + ALTER TABLE ENABLE ROW LEVEL SECURITY + CREATE POLICY
+    Statements aus Abschnitt 3.3 in eine Datei kopieren und ausfuehren.
+
+  WEG 2 — Supabase CLI (empfohlen fuer Versionierung):
+    npm install -g supabase
+    supabase login
+    supabase link --project-ref uzpkrdymlrrydtuxnvhy
+    supabase db push   # schiebt lokale Migration-Dateien in die Cloud-DB
+
+    Migration-Dateien liegen in: supabase/migrations/
+    Jede .sql-Datei = ein versionierter Schema-Schritt
+
+  WEG 3 — Supabase Dashboard SQL-Editor:
+    https://supabase.com/dashboard/project/uzpkrdymlrrydtuxnvhy/sql/new
+    SQL direkt einfuegen und ausfuehren — kein Tool noetig
+
+  EMPFEHLUNG: Weg 2 (CLI) fuer das Projekt verwenden.
+  Schema-Aenderungen werden versioniert, koennen rueckgaengig gemacht werden
+  und laufen bei jedem Entwickler automatisch.
+
+5.2 MIGRATIONSPLAN
+--------------------
+  Phase 1 — Vorbereitung (Supabase-Projekt bereits vorhanden!):
+    1. SQL-Schema (Abschnitt 3.3) in Supabase ausfuehren (Weg 1, 2 oder 3)
+    2. supabase_flutter in pubspec.yaml hinzufuegen
+    3. Supabase.initialize() in main.dart einbauen (Werte bereits in Abschnitt 3.4)
+    4. Auth-Screens implementieren (Login, Register, SplashScreen)
+
+  Phase 2 — Provider umschreiben:
+    6. StorageService ersetzen: statt shared_preferences/JSON -> Supabase-Calls
+    7. InventoryProvider: loadData() liest von Supabase, saveData wird zu
+       direkten insert/update/delete Calls
+    8. Alle CRUD-Methoden auf async Supabase-API umstellen
+
+  Phase 3 — Datenmigration (bestehende Nutzer):
+    9. Einmaligen Export-Button: aktuell gespeichertes JSON exportieren
+    10. Import-Funktion: JSON in Supabase hochladen (nach Login)
+    11. Nach erfolgreicher Migration: shared_preferences-Daten loeschen
+
+  Phase 4 — Cleanup:
+    12. shared_preferences Abhaengigkeit entfernen
+    13. StorageService-Klasse loeschen oder stark vereinfachen
+    14. Offline-Fallback pruefen (snackbar wenn kein Netz)
+
+5.3 KONFIGURATION (SECRETS)
+-----------------------------
+  Der Publishable Key ist sicher fuer Client-Code (designed fuer public use).
+  Das DB-Passwort des Direct ConnStr muss geheim bleiben.
+
+  Empfehlung: Publishable Key direkt in main.dart hardkodieren (ist ok).
+  DB-Passwort: NIEMALS in Code oder Git — nur lokal in .env fuer psql-Befehle.
+
+  Einfachste Loesung (kein flutter_dotenv noetig):
+    // lib/config/supabase_config.dart
+    class SupabaseConfig {
+      static const url = 'https://uzpkrdymlrrydtuxnvhy.supabase.co';
+      static const anonKey = 'sb_publishable_6t00CUF7N9DLR7Rem33DaA_ZUElt3sQ';
+    }
+
+    // main.dart
+    await Supabase.initialize(
+      url: SupabaseConfig.url,
+      anonKey: SupabaseConfig.anonKey,
+    );
+
+  WICHTIG: Das DB-Passwort (fuer postgresql://...) ist NICHT der Publishable Key.
+  Das DB-Passwort wird NUR fuer direkte Datenbankverbindungen (psql, Migrations)
+  benoetigt — NICHT in der Flutter-App. Die App benutzt ausschliesslich den
+  Publishable Key ueber die Supabase HTTPS-API.
+
+
+================================================================================
+6. PERFORMANCE-VERBESSERUNGEN
+================================================================================
+
+6.1 GETTER-CACHING IN INVENTORYPROVIDER
+------------------------------------------
+  Problem: deals, buyers, etc. sortieren bei JEDEM Getter-Zugriff komplett neu.
+  Mit Supabase: sortierung via .order() im Query loesen — kein In-Memory-Sort mehr.
+  Lokal gecachte Liste nur einmal sortieren und invalidieren wenn notifyListeners().
+
+6.2 PROVIDER AUFTEILEN
+-----------------------
+  Empfohlene Aufteilung (besser testbar, weniger unnecessary rebuilds):
+    AuthProvider          -> currentUser, login, logout, register
+    DealProvider          -> deals, buyers, shops, ticketSummaries
+    InventoryStockProvider -> inventoryItems, movements
+    ActivityProvider      -> activities
+    FilterProvider        -> aktive Filter und Sortierung (nicht persistiert)
+    SettingsProvider      -> MwSt, App-Einstellungen
+
+6.3 REALTIME-UPDATES
+---------------------
+  Mit Supabase Realtime: Wenn ein anderes Geraet einen Deal anlegt,
+  wird die App auf dem anderen Geraet automatisch aktualisiert.
+  Supabase Streams koennen direkt als StreamBuilder in der UI verwendet werden.
+
+
+================================================================================
+7. FEHLENDE FEATURES (AUS MASTERPROMPT 1)
+================================================================================
+
+7.1 SCHNELL-EINBUCHEN-POPUP
+-----------------------------
+  Wenn in einem Deal `arrivalDate` gesetzt wird, soll ein Dialog erscheinen:
+  "Artikel ins Lager einbuchen?" mit vorausgefuellten Feldern.
+  In DealProvider.updateDeal() pruefen ob arrivalDate von null auf Wert geaendert wurde.
+
+7.2 LAGERBEWEGUNGSHISTORIE UI
+------------------------------
+  InventoryMovement-Daten vorhanden, aber keine UI pro Artikel.
+  Icon-Button "Bewegungshistorie" pro Artikel -> Side-Panel oder Dialog.
+  Spalten: Datum, +/- Menge, Grund, verknuepfter Deal.
+
+7.3 STATISTIK-CHARTS (ECHTE CHARTS)
+--------------------------------------
+  fl_chart: ^0.69.x
+  - BarChart: Profit pro Monat (letzte 12 Monate)
+  - LineChart: Kumulierter Profit ueber Zeit
+  - PieChart: Anteil pro Kaeufer am Gesamtprofit
+
+7.4 ZEITRAUM-FILTER AUF STATISTIK-SCREEN
+------------------------------------------
+  SegmentedButton: Dieser Monat / Letzter Monat / Dieses Jahr / Alles / Custom
+  Custom: DateRangePicker (Material 3)
+
+7.5 SPALTEN-SICHTBARKEIT IN DEAL-TABELLE
+------------------------------------------
+  Icon-Button "Spalten" -> Popover-Checkbox-Liste
+  Auswahl in AppSettings (Supabase app_settings) persistieren.
+
+
+================================================================================
+8. CODE-QUALITAET & ARCHITEKTUR
+================================================================================
+
+8.1 UNIT-TESTS
+----------------
+  test/providers/deal_provider_test.dart  (Mock Supabase Client)
+  test/models/deal_test.dart              (profitPerUnit, fromJson/toJson)
+  test/widgets/kpi_card_test.dart         (Overflow-Tests)
+
+  Fuer Supabase-Mocking: supabase_flutter bietet MockSupabaseClient.
+
+8.2 FEHLER-HANDLING
+---------------------
+  Alle Supabase-Calls koennen werfen (AuthException, PostgrestException, etc.).
+  try/catch in allen Provider-Methoden.
+  User-Feedback via SnackBar oder Dialog.
+  Netzwerkfehler: "Keine Verbindung — bitte Internetverbindung pruefen."
+
+8.3 CONSTANTS AUSLAGERN
+-------------------------
+  lib/constants/deal_constants.dart
+  lib/constants/inventory_constants.dart
+  lib/constants/app_strings.dart  (alle deutschen UI-Strings)
+
+
+================================================================================
+9. UI/UX-VERBESSERUNGEN
+================================================================================
+
+9.1 DUNKELMODUS (DARK MODE)
+-----------------------------
+  AppTheme.dark + ThemeMode-Toggle in Einstellungen.
+  Persistierung in app_settings Tabelle (Supabase).
+
+9.2 TASTATURKUERZEL
+---------------------
+  Ctrl/Cmd+N  -> Neuer Deal
+  Ctrl/Cmd+F  -> Fokus Suchfeld
+  Escape      -> Dialog schliessen
+  Delete      -> Ausgewaehlte Deals loeschen
+  Implementierung: Shortcuts + Actions Widgets
+
+9.3 PDF-EXPORT
+---------------
+  pdf: ^3.x + printing: ^5.x
+  Drucken-Button in Ticket-Detail-Panel.
+
+9.4 APP-BRANDING
+------------------
+  App-Name: z.B. "DealTrack" oder "FlowDesk" (statt "Inventory Management")
+  flutter_launcher_icons: ^0.13.x
+  flutter_native_splash: ^2.x
+
+
+================================================================================
+10. OPTIONALE ERWEITERUNGEN (PHASE 3+)
+================================================================================
+
+10.1 MEHRBENUTZER / TEAMS
+---------------------------
+  Supabase unterstuetzt dies von Haus aus via RLS.
+  Erweiterung: Shared Workspaces — mehrere Nutzer teilen dieselben Daten.
+  Neue Tabelle: workspaces, workspace_members.
+  RLS-Policies anpassen: nicht mehr auth.uid() = user_id, sondern
+  Membership in workspace pruefen.
+
+10.2 PLATTFORMGEBUEHREN
+------------------------
+  Konfigurierbar pro Shop: Amazon 15%, eBay 13%.
+  Separate Spalte "Profit nach Gebuehren" in Deal-Tabelle.
+
+10.3 MEHRWAEHRUNG
+------------------
+  Deal.currency ('EUR' | 'USD' | 'GBP').
+  Wechselkurs manuell oder via Open-Exchange-Rates API (http Package).
+
+10.4 TAGS / LABELS
+-------------------
+  deals.tags JSONB-Array.
+  Farbige Tag-Chips im Deal-Table.
+  Filter nach Tags in der Filter-Leiste.
+
+10.5 CLOUD-BACKUP REDUNDANZ
+-----------------------------
+  Supabase bietet automatische PostgreSQL-Backups (taegliche Snapshots im Free Tier).
+  Pro-Tier: Point-in-time Recovery.
+  Zusaetzlich: manueller JSON-Export weiterhin anbieten als lokales Backup.
+
+10.6 MOBILE APP (iOS / ANDROID)
+---------------------------------
+  supabase_flutter laeuft auch auf iOS/Android ohne Aenderungen.
+  UI ggf. anpassen: NavigationBar statt SideNav auf kleinen Screens.
+  flutter_secure_storage speichert Session-Token sicher in Keychain/Keystore.
+
+10.7 PUSH-BENACHRICHTIGUNGEN (MOBIL)
+--------------------------------------
+  firebase_messaging oder Supabase Edge Functions + APNs/FCM.
+  Beispiel: Benachrichtigung wenn Status eines Deals geaendert wird.
+
+10.8 SUPABASE EDGE FUNCTIONS
+------------------------------
+  Serverlose TypeScript-Funktionen direkt in Supabase.
+  Anwendungsfaelle:
+    - Amazon-CSV-Import auf Server-Seite verarbeiten
+    - Automatische E-Mail bei "Rechnung gestellt"-Status
+    - Webhook fuer Discord-Benachrichtigungen bei neuem Deal
+
+
+================================================================================
+11. EMPFOHLENE PAKETE (GESAMT)
+================================================================================
+
+Neue Pakete hinzufuegen:
+  supabase_flutter: ^2.x          -> Cloud-Datenbank + Auth
+  flutter_secure_storage: ^9.x    -> Session-Token sicher speichern
+  flutter_dotenv: ^5.x            -> Secrets aus .env laden
+  go_router: ^14.x                -> Routing mit Auth-Guard
+  fl_chart: ^0.69.x               -> Echte Charts
+  pdf: ^3.x                       -> PDF-Generierung
+  printing: ^5.x                  -> PDF-Druck
+  flutter_launcher_icons: ^0.13.x -> App-Icon
+  flutter_native_splash: ^2.x     -> Splash Screen
+
+Vorhandene Pakete (behalten):
+  provider: ^6.x                  -> State Management
+  intl: ^0.19.x                   -> Datumsformatierung
+  path_provider: ^2.x             -> Dateipfade (fuer lokale Exports)
+  uuid: ^4.x                      -> UUID-Generierung
+  file_picker: ^11.x              -> Dateiauswahl fuer Import/Export
+  url_launcher: ^6.x              -> Links oeffnen
+  http: ^1.x                      -> HTTP (z.B. Amazon-Import)
+
+Entfernen nach Migration:
+  shared_preferences               -> nicht mehr fuer Daten benoetigt
+
+
+================================================================================
+12. EMPFOHLENE IMPLEMENTIERUNGSREIHENFOLGE
+================================================================================
+
+PHASE 1 — Auth & Cloud-Grundlage:
+  1. Supabase-Projekt aufsetzen, SQL-Schema deployen
+  2. supabase_flutter + flutter_dotenv in pubspec.yaml
+  3. Supabase.initialize() in main.dart
+  4. SplashScreen, LoginScreen, RegisterScreen implementieren
+  5. Auth-Guard via go_router
+  6. Logout-Button in SideNav
+
+PHASE 2 — Datenmigration:
+  7. StorageService auf Supabase-Calls umstellen
+  8. InventoryProvider: alle CRUD-Methoden auf async Supabase-API
+  9. Einmaligen Daten-Import (altes JSON -> Supabase) bauen
+  10. Realtime-Subscriptions fuer Live-Updates
+
+PHASE 3 — Fehlende Features:
+  11. Schnell-Einbuchen-Popup
+  12. Lagerbewegungshistorie-UI
+  13. fl_chart fuer Statistik-Charts
+  14. Zeitraum-Filter auf Statistik-Screen
+  15. Dunkelmodus
+
+PHASE 4 — Qualitaet & Komfort:
+  16. Unit-Tests (mit MockSupabaseClient)
+  17. Fehler-Handling ueberall
+  18. Tastaturkuerzel
+  19. PDF-Export
+  20. App-Branding (Icon, Name, Splash)
+
+PHASE 5 — Erweiterungen:
+  21. Team/Shared-Workspace Feature
+  22. Mobile UI Anpassungen (iOS/Android)
+  23. Push-Benachrichtigungen
+  24. Supabase Edge Functions
+
+
+================================================================================
+13. TECH DEBT BACKLOG
+================================================================================
+
+  [KRITISCH] Keine Authentifizierung — jeder kann auf Daten zugreifen
+  [KRITISCH] Daten nur lokal — kein Cross-Device-Zugriff
+  [HOCH]     shared_preferences JSON-Blob durch Supabase ersetzen
+  [HOCH]     Getter-Sorting-Performance in InventoryProvider
+  [MITTEL]   InventoryProvider aufteilen (DealProvider + InventoryStockProvider)
+  [MITTEL]   Fehler-Handling bei Netzwerk-/Speicher-Fehlern
+  [MITTEL]   Unit-Tests hinzufuegen
+  [MITTEL]   Status-Strings in Konstanten
+  [NIEDRIG]  Dunkelmodus
+  [NIEDRIG]  Tastaturkuerzel
+  [NIEDRIG]  App-Name und App-Icon
+
+
+================================================================================

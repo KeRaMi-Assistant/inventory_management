@@ -312,6 +312,7 @@ class _TicketFilters extends StatelessWidget {
 
   Widget _dd(String label, String? value, Iterable<String> values, ValueChanged<String?> onChanged) {
     return DropdownButtonFormField<String>(
+      isExpanded: true,
       initialValue: value,
       decoration: InputDecoration(labelText: label),
       items: [
@@ -553,16 +554,20 @@ class _Totals extends StatelessWidget {
             children: [
               Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w700)),
               const SizedBox(height: 4),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: good == null
-                      ? const Color(0xFF0F172A)
-                      : good
-                          ? const Color(0xFF059669)
-                          : const Color(0xFFDC2626),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: good == null
+                        ? const Color(0xFF0F172A)
+                        : good
+                            ? const Color(0xFF059669)
+                            : const Color(0xFFDC2626),
+                  ),
                 ),
               ),
             ],

@@ -24,4 +24,20 @@ class ActivityEntry {
         message: json['message'] as String,
         type: json['type'] as String? ?? 'info',
       );
+
+  // ── Supabase (snake_case) ─────────────────────────────────────────────────
+
+  Map<String, dynamic> toSupabaseInsert() => {
+        'id': id,
+        'date': date.toIso8601String(),
+        'message': message,
+        'type': type,
+      };
+
+  factory ActivityEntry.fromSupabase(Map<String, dynamic> row) => ActivityEntry(
+        id: row['id'] as String,
+        date: DateTime.parse(row['date'] as String),
+        message: row['message'] as String,
+        type: row['type'] as String? ?? 'info',
+      );
 }

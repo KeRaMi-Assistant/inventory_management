@@ -673,10 +673,11 @@ class _GeneralTab extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const _SettingsCard(
-              icon: Icons.folder_outlined,
-              title: 'Lokaler Speicher',
-              subtitle: 'Desktop und Web kompatibel über shared_preferences.',
-              trailing: Text('lagerverwaltung_data'),
+              icon: Icons.cloud_done_outlined,
+              title: 'Cloud-Speicher',
+              subtitle:
+                  'Daten werden in deinem Supabase-Konto gespeichert und über alle Geräte synchronisiert.',
+              trailing: Text('Supabase'),
             ),
             const SizedBox(height: 12),
             _SettingsCard(

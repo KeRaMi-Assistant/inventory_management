@@ -157,11 +157,11 @@ class _BuyerRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          SizedBox(
-            width: 56,
+          Flexible(
             child: Text(
               fmt.format(stat.profit),
               textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 11,
                 color: Color(0xFF059669),
@@ -223,11 +223,11 @@ class _StatusRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              SizedBox(
-                width: 56,
+              Flexible(
                 child: Text(
                   fmt.format(stat.profit),
                   textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 11,
                     color: Color(0xFF059669),
