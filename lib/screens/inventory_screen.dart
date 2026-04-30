@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../models/deal.dart';
 import '../models/inventory_item.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/url_helper.dart';
@@ -439,6 +440,92 @@ class _InventoryDialogState extends State<_InventoryDialog> {
     super.dispose();
   }
 
+  /// Returns the product name field: Autocomplete when a ticket with deals is
+  /// selected, plain TextFormField otherwise.
+  Widget _buildProductField(InventoryProvider provider) {
+    final ticketDeals = _selectedTicketNumber.isNotEmpty
+        ? (provider.ticketSummaries
+                .where((t) => t.ticketNumber == _selectedTicketNumber)
+                .firstOrNull
+                ?.deals ??
+            [])
+        : <Deal>[];
+
+    if (ticketDeals.isNotEmpty) {
+      return Autocomplete<Deal>(
+        initialValue: TextEditingValue(text: _name.text),
+        displayStringForOption: (deal) => deal.product,
+        optionsBuilder: (value) {
+          if (value.text.isEmpty) return ticketDeals;
+          final q = value.text.toLowerCase();
+          return ticketDeals.where((d) => d.product.toLowerCase().contains(q));
+        },
+        onSelected: (deal) {
+          setState(() {
+            _name.text = deal.product;
+            if (_quantity.text == '1' || _quantity.text.isEmpty) {
+              _quantity.text = '${deal.quantity}';
+            }
+            if (_cost.text.isEmpty && deal.ekBrutto != null) {
+              _cost.text = deal.ekBrutto!.toStringAsFixed(2);
+            }
+            if (_ticketUrl.text.isEmpty && deal.ticketUrl != null) {
+              _ticketUrl.text = deal.ticketUrl!;
+            }
+          });
+        },
+        fieldViewBuilder: (ctx, ctrl, focusNode, _) {
+          return TextFormField(
+            controller: ctrl,
+            focusNode: focusNode,
+            decoration: const InputDecoration(
+              labelText: 'Produkt *',
+              suffixIcon: Icon(Icons.arrow_drop_down, size: 20),
+              helperText: 'Aus Ticket auswählen oder frei eingeben',
+            ),
+            validator: (v) => v == null || v.trim().isEmpty ? 'Pflichtfeld' : null,
+            onChanged: (v) => _name.text = v,
+          );
+        },
+        optionsViewBuilder: (ctx, onSelected, options) {
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(8),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 240, maxWidth: 420),
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  itemBuilder: (_, i) {
+                    final deal = options.elementAt(i);
+                    final ekText = deal.ekBrutto != null
+                        ? '€ ${deal.ekBrutto!.toStringAsFixed(2)}'
+                        : '-';
+                    return ListTile(
+                      dense: true,
+                      title: Text(deal.product),
+                      subtitle: Text('${deal.quantity} Stk. · EK $ekText'),
+                      onTap: () => onSelected(deal),
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    return TextFormField(
+      controller: _name,
+      decoration: const InputDecoration(labelText: 'Produkt *'),
+      validator: (v) => v == null || v.isEmpty ? 'Pflichtfeld' : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.read<InventoryProvider>();
@@ -457,26 +544,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(
-                  controller: _name,
-                  decoration: const InputDecoration(labelText: 'Name *'),
-                  validator: (v) => v == null || v.isEmpty ? 'Pflichtfeld' : null,
-                ),
-                const SizedBox(height: 10),
-                Row(children: [
-                  Expanded(child: TextFormField(controller: _sku, decoration: const InputDecoration(labelText: 'SKU'))),
-                  const SizedBox(width: 10),
-                  Expanded(child: TextFormField(controller: _location, decoration: const InputDecoration(labelText: 'Lagerort'))),
-                ]),
-                const SizedBox(height: 10),
-                Row(children: [
-                  Expanded(child: TextFormField(controller: _quantity, decoration: const InputDecoration(labelText: 'Bestand'), keyboardType: TextInputType.number)),
-                  const SizedBox(width: 10),
-                  Expanded(child: TextFormField(controller: _min, decoration: const InputDecoration(labelText: 'Mindestbestand'), keyboardType: TextInputType.number)),
-                  const SizedBox(width: 10),
-                  Expanded(child: TextFormField(controller: _cost, decoration: const InputDecoration(labelText: 'Ø EK-Preis'), keyboardType: const TextInputType.numberWithOptions(decimal: true))),
-                ]),
-                const SizedBox(height: 10),
+                // ── 1. Ticket first so product dropdown can populate ──────────
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -491,6 +559,8 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                         onSelected: (String selection) {
                           setState(() {
                             _selectedTicketNumber = selection;
+                            // Clear product name so the new dropdown is unambiguous
+                            _name.text = '';
                             if (_ticketUrl.text.isEmpty) {
                               final match = provider.ticketSummaries
                                   .where((t) => t.ticketNumber == selection)
@@ -507,7 +577,9 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                               labelText: 'Ticket',
                               suffixIcon: Icon(Icons.arrow_drop_down, size: 20),
                             ),
-                            onChanged: (v) => _selectedTicketNumber = v,
+                            onChanged: (v) => setState(() {
+                              _selectedTicketNumber = v;
+                            }),
                           );
                         },
                         optionsViewBuilder: (ctx, onSelected, options) {
@@ -550,6 +622,36 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
+                // ── 2. Product – dropdown if ticket has deals ─────────────────
+                _buildProductField(provider),
+                const SizedBox(height: 10),
+                // ── 3. Quantity + SKU ─────────────────────────────────────────
+                Row(children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _quantity,
+                      decoration: const InputDecoration(labelText: 'Angekommen (Stk.)'),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _sku,
+                      decoration: const InputDecoration(labelText: 'Produktnummer (optional)'),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 10),
+                // ── 4. Min stock + cost + location ────────────────────────────
+                Row(children: [
+                  Expanded(child: TextFormField(controller: _min, decoration: const InputDecoration(labelText: 'Mindestbestand'), keyboardType: TextInputType.number)),
+                  const SizedBox(width: 10),
+                  Expanded(child: TextFormField(controller: _cost, decoration: const InputDecoration(labelText: 'Ø EK-Preis'), keyboardType: const TextInputType.numberWithOptions(decimal: true))),
+                  const SizedBox(width: 10),
+                  Expanded(child: TextFormField(controller: _location, decoration: const InputDecoration(labelText: 'Lagerort'))),
+                ]),
                 const SizedBox(height: 10),
                 TextFormField(
                   controller: _ticketUrl,
