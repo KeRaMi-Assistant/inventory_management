@@ -17,6 +17,7 @@ class Deal {
   final String? lexware;
   final String beleg;
   final String? note;
+  final List<String> inventoryItemIds;
 
   const Deal({
     required this.id,
@@ -37,6 +38,7 @@ class Deal {
     this.lexware,
     this.beleg = 'Nein',
     this.note,
+    this.inventoryItemIds = const [],
   });
 
   double? get profitPerUnit =>
@@ -44,6 +46,8 @@ class Deal {
   double? get totalProfit =>
       (profitPerUnit != null) ? quantity * profitPerUnit! : null;
   double? get zuBekommen => vk != null ? vk! * quantity : null;
+  double? get ekGesamtNetto => ekNetto != null ? ekNetto! * quantity : null;
+  double? get ekGesamtBrutto => ekBrutto != null ? ekBrutto! * quantity : null;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -64,6 +68,7 @@ class Deal {
         'lexware': lexware,
         'beleg': beleg,
         'note': note,
+        'inventoryItemIds': inventoryItemIds,
       };
 
   factory Deal.fromJson(Map<String, dynamic> json) => Deal(
@@ -87,6 +92,10 @@ class Deal {
         lexware: json['lexware'] as String?,
         beleg: json['beleg'] as String? ?? 'Nein',
         note: json['note'] as String?,
+        inventoryItemIds: (json['inventoryItemIds'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            [],
       );
 
   Deal copyWith({
@@ -108,6 +117,7 @@ class Deal {
     Object? lexware = _sentinel,
     String? beleg,
     Object? note = _sentinel,
+    List<String>? inventoryItemIds,
   }) =>
       Deal(
         id: id ?? this.id,
@@ -134,6 +144,7 @@ class Deal {
         lexware: lexware == _sentinel ? this.lexware : lexware as String?,
         beleg: beleg ?? this.beleg,
         note: note == _sentinel ? this.note : note as String?,
+        inventoryItemIds: inventoryItemIds ?? this.inventoryItemIds,
       );
 }
 

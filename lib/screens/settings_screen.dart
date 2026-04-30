@@ -1,34 +1,72 @@
+import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/inventory_provider.dart';
 import '../widgets/add_edit_buyer_dialog.dart';
 import '../widgets/add_edit_shop_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  final bool embedded;
+  const SettingsScreen({super.key, this.embedded = false});
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Einstellungen'),
-          bottom: const TabBar(
-            indicatorColor: Colors.white,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white60,
-            tabs: [
-              Tab(icon: Icon(Icons.people_outline, size: 18), text: 'Käufer'),
-              Tab(icon: Icon(Icons.store_outlined, size: 18), text: 'Shops'),
-              Tab(icon: Icon(Icons.discord, size: 18), text: 'Discord'),
-            ],
+    final tabs = DefaultTabController(
+      length: 5,
+      child: Column(
+        children: [
+          if (!embedded)
+            AppBar(
+              title: const Text('Einstellungen'),
+              bottom: const TabBar(
+                indicatorColor: Colors.white,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white60,
+                tabs: [
+                  Tab(icon: Icon(Icons.people_outline, size: 18), text: 'Käufer'),
+                  Tab(icon: Icon(Icons.store_outlined, size: 18), text: 'Shops'),
+                  Tab(icon: Icon(Icons.discord, size: 18), text: 'Discord'),
+                  Tab(icon: Icon(Icons.import_export, size: 18), text: 'Export/Import'),
+                  Tab(icon: Icon(Icons.tune, size: 18), text: 'Allgemein'),
+                ],
+              ),
+            )
+          else
+            const Material(
+              color: Colors.white,
+              child: TabBar(
+                indicatorColor: Color(0xFF2563EB),
+                labelColor: Color(0xFF2563EB),
+                unselectedLabelColor: Color(0xFF64748B),
+                tabs: [
+                  Tab(icon: Icon(Icons.people_outline, size: 18), text: 'Käufer'),
+                  Tab(icon: Icon(Icons.store_outlined, size: 18), text: 'Shops'),
+                  Tab(icon: Icon(Icons.discord, size: 18), text: 'Discord'),
+                  Tab(icon: Icon(Icons.import_export, size: 18), text: 'Export/Import'),
+                  Tab(icon: Icon(Icons.tune, size: 18), text: 'Allgemein'),
+                ],
+              ),
+            ),
+          const Expanded(
+            child: TabBarView(
+              children: [
+                _BuyersTab(),
+                _ShopsTab(),
+                _DiscordInfoTab(),
+                _ExportImportTab(),
+                _GeneralTab(),
+              ],
+            ),
           ),
-        ),
-        body: const TabBarView(
-          children: [_BuyersTab(), _ShopsTab(), _DiscordInfoTab()],
-        ),
+        ],
       ),
+    );
+
+    if (embedded) return tabs;
+    return Scaffold(
+      body: tabs,
     );
   }
 }
@@ -503,6 +541,236 @@ class _DiscordInfoTab extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ExportImportTab extends StatelessWidget {
+  const _ExportImportTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<InventoryProvider>(
+      builder: (context, provider, _) {
+        return ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            _SettingsCard(
+              icon: Icons.file_download_outlined,
+              title: 'CSV-Export',
+              subtitle: 'Deals als CSV exportieren kannst du weiterhin über die obere Toolbar.',
+              trailing: const Icon(Icons.table_chart_outlined, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 12),
+            _SettingsCard(
+              icon: Icons.backup_outlined,
+              title: 'JSON-Backup',
+              subtitle: 'Kompletter App-Export: Deals, Käufer, Shops, Lager und Bewegungen.',
+              trailing: ElevatedButton.icon(
+                onPressed: () => _exportJson(context, provider),
+                icon: const Icon(Icons.download_outlined, size: 16),
+                label: const Text('Exportieren'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _SettingsCard(
+              icon: Icons.restore_outlined,
+              title: 'JSON-Restore',
+              subtitle: 'Vollständige Wiederherstellung aus einem JSON-Backup.',
+              trailing: ElevatedButton.icon(
+                onPressed: () => _restoreJson(context, provider),
+                icon: const Icon(Icons.upload_file_outlined, size: 16),
+                label: const Text('Wiederherstellen'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _SettingsCard(
+              icon: Icons.shopping_bag_outlined,
+              title: 'Amazon-Import',
+              subtitle: 'Amazon-CSV-Import ist über die obere Toolbar verfügbar.',
+              trailing: const Icon(Icons.north_east, color: Color(0xFF64748B)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _exportJson(BuildContext context, InventoryProvider provider) async {
+    final json = provider.exportJson();
+    final bytes = Uint8List.fromList(utf8.encode(json));
+    final fileName = 'lagerverwaltung_data_${DateTime.now().toIso8601String().substring(0, 10)}.json';
+    await Clipboard.setData(ClipboardData(text: json));
+    final path = await FilePicker.saveFile(
+      dialogTitle: 'JSON-Backup speichern',
+      fileName: fileName,
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+      bytes: bytes,
+    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(path == null ? 'Backup in die Zwischenablage kopiert.' : 'Backup exportiert: $path')),
+    );
+  }
+
+  Future<void> _restoreJson(BuildContext context, InventoryProvider provider) async {
+    final result = await FilePicker.pickFiles(
+      dialogTitle: 'JSON-Backup auswählen',
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final bytes = result.files.first.bytes;
+    if (bytes == null) return;
+    final data = jsonDecode(utf8.decode(bytes));
+    if (data is! Map<String, dynamic>) return;
+    if (!context.mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Daten wiederherstellen'),
+        content: const Text('Alle aktuellen Daten werden durch dieses Backup ersetzt.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Wiederherstellen')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await provider.restoreData(data);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backup wiederhergestellt.')));
+      }
+    }
+  }
+}
+
+class _GeneralTab extends StatelessWidget {
+  const _GeneralTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<InventoryProvider>(
+      builder: (context, provider, _) {
+        return ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            const _SettingsCard(
+              icon: Icons.percent_outlined,
+              title: 'MwSt-Satz',
+              subtitle: 'Standard: 19%. Neue Deals berechnen EK Brutto aktuell mit 1,19.',
+              trailing: Text('19%'),
+            ),
+            const SizedBox(height: 12),
+            const _SettingsCard(
+              icon: Icons.sort_outlined,
+              title: 'Standard-Sortierung',
+              subtitle: 'Deals werden standardmäßig nach Bestelldatum absteigend angezeigt.',
+              trailing: Text('Datum ↓'),
+            ),
+            const SizedBox(height: 12),
+            const _SettingsCard(
+              icon: Icons.folder_outlined,
+              title: 'Lokaler Speicher',
+              subtitle: 'Desktop und Web kompatibel über shared_preferences.',
+              trailing: Text('lagerverwaltung_data'),
+            ),
+            const SizedBox(height: 12),
+            _SettingsCard(
+              icon: Icons.storage_outlined,
+              title: 'Datenbestand',
+              subtitle:
+                  '${provider.deals.length} Deals · ${provider.buyers.length} Käufer · ${provider.shops.length} Shops · ${provider.inventoryItems.length} Lagerartikel',
+              trailing: Text('${provider.exportJson().length ~/ 1024} KB'),
+            ),
+            const SizedBox(height: 12),
+            _SettingsCard(
+              icon: Icons.science_outlined,
+              title: 'Demo-Daten laden',
+              subtitle:
+                  'Lädt Beispieldaten (Amazon DE/ES, 3 Käufer, 8 Deals). Bestehende Daten werden überschrieben.',
+              trailing: ElevatedButton.icon(
+                onPressed: () => _loadDemo(context, provider),
+                icon: const Icon(Icons.download_outlined, size: 16),
+                label: const Text('Demo laden'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _loadDemo(
+      BuildContext context, InventoryProvider provider) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Demo-Daten laden'),
+        content: const Text(
+            'Alle aktuellen Daten werden durch die Demo-Daten ersetzt.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Abbrechen')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Demo laden')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await provider.loadDemoData();
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Demo-Daten geladen.')));
+    }
+  }
+}
+
+class _SettingsCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget trailing;
+
+  const _SettingsCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icon, color: const Color(0xFF2563EB)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 3),
+                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            trailing,
+          ],
+        ),
       ),
     );
   }

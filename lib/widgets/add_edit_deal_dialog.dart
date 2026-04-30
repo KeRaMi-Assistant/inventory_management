@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/url_helper.dart';
 
 class AddEditDealDialog extends StatefulWidget {
   final Deal? deal;
-  const AddEditDealDialog({super.key, this.deal});
+  final String? initialTicketNumber;
+  const AddEditDealDialog({super.key, this.deal, this.initialTicketNumber});
 
   @override
   State<AddEditDealDialog> createState() => _AddEditDealDialogState();
@@ -39,6 +40,9 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
   @override
   void initState() {
     super.initState();
+    _quantityCtrl.addListener(_refreshPreview);
+    _priceCtrl.addListener(_refreshPreview);
+    _vkCtrl.addListener(_refreshPreview);
     final d = widget.deal;
     if (d != null) {
       _productCtrl.text = d.product;
@@ -62,11 +66,16 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
         _priceType = 'Brutto';
         _priceCtrl.text = d.ekBrutto!.toStringAsFixed(2);
       }
+    } else if (widget.initialTicketNumber != null) {
+      _ticketCtrl.text = widget.initialTicketNumber!;
     }
   }
 
   @override
   void dispose() {
+    _quantityCtrl.removeListener(_refreshPreview);
+    _priceCtrl.removeListener(_refreshPreview);
+    _vkCtrl.removeListener(_refreshPreview);
     _productCtrl.dispose();
     _quantityCtrl.dispose();
     _priceCtrl.dispose();
@@ -76,6 +85,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     _trackingCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
+  }
+
+  void _refreshPreview() {
+    if (mounted) setState(() {});
   }
 
   void _onTicketChanged(String value) {
@@ -470,6 +483,15 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                          ],
                         const SizedBox(height: 20),
                         // ── Notiz ───────────────────────────────────────
+                        if (_priceCtrl.text.isNotEmpty || _vkCtrl.text.isNotEmpty) ...[
+                          _ProfitPreview(
+                            priceText: _priceCtrl.text,
+                            vkText: _vkCtrl.text,
+                            quantityText: _quantityCtrl.text,
+                            priceType: _priceType,
+                          ),
+                          const SizedBox(height: 20),
+                        ],
                         _sectionLabel('Notiz'),
                         const SizedBox(height: 10),
                         TextFormField(
@@ -632,6 +654,67 @@ class _DatePickerField extends StatelessWidget {
   }
 }
 
+class _ProfitPreview extends StatelessWidget {
+  final String priceText;
+  final String vkText;
+  final String quantityText;
+  final String priceType;
+
+  const _ProfitPreview({
+    required this.priceText,
+    required this.vkText,
+    required this.quantityText,
+    required this.priceType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final price = double.tryParse(priceText.replaceAll(',', '.'));
+    final vk = double.tryParse(vkText.replaceAll(',', '.'));
+    final quantity = int.tryParse(quantityText) ?? 1;
+    final ekBrutto = price == null
+        ? null
+        : priceType == 'Netto'
+            ? price * 1.19
+            : price;
+    final profit = vk != null && ekBrutto != null ? vk - ekBrutto : null;
+    final total = profit != null ? profit * quantity : null;
+    final fmt = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.calculate_outlined, size: 18, color: Color(0xFF64748B)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              profit == null
+                  ? 'Profit-Vorschau: EK und VK eintragen'
+                  : 'Profit/Stück ${fmt.format(profit)} · Gesamt ${fmt.format(total)}',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: profit == null
+                    ? const Color(0xFF64748B)
+                    : profit >= 0
+                        ? const Color(0xFF059669)
+                        : const Color(0xFFDC2626),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DiscordServerButtons extends StatelessWidget {
   final String? buyer;
   final List<Buyer> buyers;
@@ -654,10 +737,7 @@ class _DiscordServerButtons extends StatelessWidget {
             onPressed: () {
               final url =
                   'https://discord.com/channels/${serverIds[i]}';
-              // ignore: avoid_print
-              print('[Discord] Opening $url');
-              // url_launcher via html for web
-              _openUrl(url);
+              openUrlWithFallback(context, url);
             },
             style: OutlinedButton.styleFrom(
               padding:
@@ -692,43 +772,5 @@ class _DiscordServerButtons extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  void _openUrl(String url) {
-    // Works on web via dart:html interop
-    // ignore: avoid_print
-    print('[Discord] openUrl: $url');
-    // Using url_launcher style via JS on web
-    final uri = Uri.parse(url);
-    // Just use url_launcher indirectly via anchor tag on web
-    _launchDiscord(uri.toString());
-  }
-}
-
-void _launchDiscord(String url) {
-  // Platform-agnostic: works in web via dart:html
-  // For web, we use js interop to open a new tab
-  _launchUrl(url);
-}
-
-// ignore: avoid_print
-void _launchUrl(String url) {
-  // Use url_launcher on all platforms
-  _doLaunch(url);
-}
-
-Future<void> _doLaunch(String url) async {
-  final uri = Uri.parse(url);
-  // ignore: avoid_print
-  print('[Discord] launching $url');
-  // We use a conditional import approach via the existing platform setup
-  // On web this opens a new tab
-  try {
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  } catch (e) {
-    // ignore: avoid_print
-    print('[Discord] launch error: $e');
   }
 }

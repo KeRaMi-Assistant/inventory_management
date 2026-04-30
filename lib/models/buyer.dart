@@ -9,6 +9,7 @@ class Buyer {
   final int sortOrder;
   final bool active;
   final List<String> discordServerIds;
+  final String paymentStatus;
 
   const Buyer({
     required this.id,
@@ -19,6 +20,7 @@ class Buyer {
     required this.sortOrder,
     this.active = true,
     this.discordServerIds = const [],
+    this.paymentStatus = 'OK',
   });
 
   Map<String, dynamic> toJson() => {
@@ -30,6 +32,7 @@ class Buyer {
         'sortOrder': sortOrder,
         'active': active,
         'discordServerIds': discordServerIds,
+        'paymentStatus': paymentStatus,
       };
 
   factory Buyer.fromJson(Map<String, dynamic> json) => Buyer(
@@ -44,6 +47,7 @@ class Buyer {
                 ?.map((e) => e as String)
                 .toList() ??
             [],
+        paymentStatus: json['paymentStatus'] as String? ?? 'OK',
       );
 
   Buyer copyWith({
@@ -55,6 +59,7 @@ class Buyer {
     int? sortOrder,
     bool? active,
     List<String>? discordServerIds,
+    String? paymentStatus,
   }) =>
       Buyer(
         id: id ?? this.id,
@@ -65,6 +70,6 @@ class Buyer {
         sortOrder: sortOrder ?? this.sortOrder,
         active: active ?? this.active,
         discordServerIds: discordServerIds ?? this.discordServerIds,
+        paymentStatus: paymentStatus ?? this.paymentStatus,
       );
 }
-

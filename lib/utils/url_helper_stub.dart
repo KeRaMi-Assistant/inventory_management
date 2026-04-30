@@ -1,1 +1,2 @@
-Future<void> openUrl(String url) async {}
+Future<bool> openUrl(String url) async => false;
+Future<void> copyToClipboard(String text) async {}

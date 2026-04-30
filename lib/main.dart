@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'app_theme.dart';
+import 'providers/filter_provider.dart';
 import 'providers/inventory_provider.dart';
 import 'screens/main_screen.dart';
 
@@ -11,8 +12,11 @@ void main() async {
   await provider.loadData();
 
   runApp(
-    ChangeNotifierProvider.value(
-      value: provider,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: provider),
+        ChangeNotifierProvider(create: (_) => FilterProvider()),
+      ],
       child: const MyApp(),
     ),
   );

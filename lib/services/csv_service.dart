@@ -199,6 +199,7 @@ class CsvService {
       final validStatuses = [
         'Bestellt',
         'Unterwegs',
+        'Angekommen',
         'Rechnung gestellt',
         'Done',
       ];

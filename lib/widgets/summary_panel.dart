@@ -31,6 +31,7 @@ class SummaryPanel extends StatelessWidget {
         final statusColors = {
           'Bestellt': const Color(0xFF3B82F6),
           'Unterwegs': const Color(0xFFF59E0B),
+          'Angekommen': const Color(0xFF0D9488),
           'Rechnung gestellt': const Color(0xFF8B5CF6),
           'Done': const Color(0xFF10B981),
         };
