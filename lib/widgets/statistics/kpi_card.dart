@@ -1,0 +1,155 @@
+import 'package:flutter/material.dart';
+
+/// Große KPI-Karte mit großem Wert, Label und optionalem Δ%-Vergleich.
+class KpiCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color accent;
+  final double? deltaPct;
+  final String? deltaLabel;
+  final bool deltaInverted; // bei Forderungen ist "höher" schlechter
+
+  const KpiCard({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.accent,
+    this.deltaPct,
+    this.deltaLabel,
+    this.deltaInverted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDelta = deltaPct != null;
+    final isPositive = (deltaPct ?? 0) > 0.01;
+    final isNegative = (deltaPct ?? 0) < -0.01;
+    final goodDirection = deltaInverted ? isNegative : isPositive;
+    final badDirection = deltaInverted ? isPositive : isNegative;
+    final deltaColor = goodDirection
+        ? const Color(0xFF059669)
+        : badDirection
+            ? const Color(0xFFDC2626)
+            : const Color(0xFF6B7280);
+    final arrow = isPositive
+        ? Icons.arrow_upward
+        : isNegative
+            ? Icons.arrow_downward
+            : Icons.remove;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0E6EF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 16, color: accent),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7280),
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF111827),
+              letterSpacing: -0.3,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 6),
+          if (hasDelta)
+            Row(
+              children: [
+                Icon(arrow, size: 12, color: deltaColor),
+                const SizedBox(width: 2),
+                Text(
+                  '${deltaPct!.abs().toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: deltaColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (deltaLabel != null) ...[
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      deltaLabel!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
+            )
+          else
+            const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+}
+
+/// Responsives Grid: 2 Spalten auf Mobile, 3 auf Tablet, 6 auf Desktop.
+class KpiGrid extends StatelessWidget {
+  final List<Widget> cards;
+  const KpiGrid({super.key, required this.cards});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        final w = c.maxWidth;
+        final cols = w < 480
+            ? 2
+            : w < 800
+                ? 3
+                : w < 1200
+                    ? 4
+                    : 6;
+        const gap = 12.0;
+        final cardW = (w - gap * (cols - 1)) / cols;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: cards
+              .map((c) => SizedBox(width: cardW, child: c))
+              .toList(),
+        );
+      },
+    );
+  }
+}

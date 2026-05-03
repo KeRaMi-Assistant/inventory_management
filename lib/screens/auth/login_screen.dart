@@ -6,6 +6,8 @@ import '../../utils/validators.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
+enum _Provider { google, apple }
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -41,6 +43,18 @@ class _LoginScreenState extends State<LoginScreen> {
       _showSnack(error, isError: true);
     }
     // On success: AuthGate listens to authState and swaps to MainScreen.
+  }
+
+  Future<void> _socialSignIn(_Provider provider) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final auth = context.read<AuthProvider>();
+    final error = provider == _Provider.google
+        ? await auth.signInWithGoogle()
+        : await auth.signInWithApple();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (error != null) _showSnack(error, isError: true);
   }
 
   void _showSnack(String msg, {bool isError = false}) {
@@ -182,6 +196,35 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       Row(
+                        children: const [
+                          Expanded(
+                              child: Divider(color: Color(0xFFE2E8F0))),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(
+                              'oder weiter mit',
+                              style: TextStyle(
+                                  fontSize: 12, color: Color(0xFF64748B)),
+                            ),
+                          ),
+                          Expanded(
+                              child: Divider(color: Color(0xFFE2E8F0))),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _GoogleSignInButton(
+                        busy: _busy,
+                        onPressed: () => _socialSignIn(_Provider.google),
+                      ),
+                      if (context.read<AuthProvider>().appleSignInAvailable) ...[
+                        const SizedBox(height: 8),
+                        _AppleSignInButton(
+                          busy: _busy,
+                          onPressed: () => _socialSignIn(_Provider.apple),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Text('Noch kein Konto?',
@@ -207,6 +250,73 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _GoogleSignInButton extends StatelessWidget {
+  final bool busy;
+  final VoidCallback onPressed;
+  const _GoogleSignInButton({required this.busy, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: busy ? null : onPressed,
+      style: OutlinedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF0F172A),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+      ),
+      icon: const _GoogleLogo(),
+      label: const Text('Mit Google anmelden',
+          style: TextStyle(fontWeight: FontWeight.w600)),
+    );
+  }
+}
+
+class _GoogleLogo extends StatelessWidget {
+  const _GoogleLogo();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 18,
+      height: 18,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+      ),
+      child: const Text(
+        'G',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w900,
+          color: Color(0xFF4285F4),
+        ),
+      ),
+    );
+  }
+}
+
+class _AppleSignInButton extends StatelessWidget {
+  final bool busy;
+  final VoidCallback onPressed;
+  const _AppleSignInButton({required this.busy, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: busy ? null : onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+      ),
+      icon: const Icon(Icons.apple, size: 20),
+      label: const Text('Mit Apple anmelden',
+          style: TextStyle(fontWeight: FontWeight.w600)),
     );
   }
 }

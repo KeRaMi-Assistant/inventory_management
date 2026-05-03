@@ -11,6 +11,7 @@ import 'deals_screen.dart';
 import 'inventory_screen.dart';
 import 'settings_screen.dart';
 import 'statistics_screen.dart';
+import 'suppliers_screen.dart';
 import 'tickets_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -29,6 +30,7 @@ class _MainScreenState extends State<MainScreen> {
     (Icons.list_alt_outlined, Icons.list_alt_rounded, 'Deals'),
     (Icons.confirmation_number_outlined, Icons.confirmation_number_rounded, 'Tickets'),
     (Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Lager'),
+    (Icons.local_shipping_outlined, Icons.local_shipping, 'Lieferanten'),
     (Icons.bar_chart_outlined, Icons.bar_chart_rounded, 'Statistiken'),
     (Icons.settings_outlined, Icons.settings_rounded, 'Einstellungen'),
   ];
@@ -105,7 +107,8 @@ class _MainScreenState extends State<MainScreen> {
       1 => DealsScreen(onOpenTicket: _openTicket),
       2 => TicketsScreen(initialTicket: _selectedTicket),
       3 => const InventoryScreen(),
-      4 => const StatisticsScreen(),
+      4 => const SuppliersScreen(),
+      5 => const StatisticsScreen(),
       _ => const SettingsScreen(embedded: true),
     };
   }
@@ -455,10 +458,22 @@ class _AccountMenu extends StatelessWidget {
             ],
           ),
         ),
+        const PopupMenuDivider(),
+        const PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete_forever_outlined, size: 16, color: Color(0xFFC0392B)),
+              SizedBox(width: 10),
+              Text('Konto löschen',
+                  style: TextStyle(color: Color(0xFFC0392B))),
+            ],
+          ),
+        ),
       ],
       onSelected: (value) async {
+        final auth = context.read<AuthProvider>();
         if (value == 'logout') {
-          final auth = context.read<AuthProvider>();
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
@@ -481,6 +496,69 @@ class _AccountMenu extends StatelessWidget {
           );
           if (confirmed == true) {
             await auth.signOut();
+          }
+        } else if (value == 'delete') {
+          final confirmCtrl = TextEditingController();
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => StatefulBuilder(
+              builder: (ctx, setS) => AlertDialog(
+                title: const Text('Konto endgültig löschen?'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Dein Konto und alle deine Daten werden unwiderruflich gelöscht. '
+                      'Diese Aktion kann nicht rückgängig gemacht werden.',
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Tippe LÖSCHEN zur Bestätigung:',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: confirmCtrl,
+                      autofocus: true,
+                      onChanged: (_) => setS(() {}),
+                      decoration: const InputDecoration(
+                        hintText: 'LÖSCHEN',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Abbrechen'),
+                  ),
+                  ElevatedButton(
+                    onPressed: confirmCtrl.text.trim() == 'LÖSCHEN'
+                        ? () => Navigator.pop(ctx, true)
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFC0392B)),
+                    child: const Text('Konto löschen'),
+                  ),
+                ],
+              ),
+            ),
+          );
+          confirmCtrl.dispose();
+          if (confirmed == true && context.mounted) {
+            final error = await auth.deleteAccount();
+            if (error != null && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(error),
+                  backgroundColor: const Color(0xFFC0392B),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
           }
         }
       },

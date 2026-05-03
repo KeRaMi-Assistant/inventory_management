@@ -4,18 +4,19 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
 import '../../widgets/password_strength_indicator.dart';
-import 'verify_email_screen.dart';
 
-class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+/// Wird angezeigt, wenn Supabase einen `passwordRecovery`-Auth-Event sendet
+/// (Klick auf den Reset-Link in der E-Mail). Setzt das neue Passwort über
+/// `AuthProvider.updatePassword`.
+class ResetPasswordScreen extends StatefulWidget {
+  const ResetPasswordScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   bool _busy = false;
@@ -23,7 +24,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
     super.dispose();
@@ -33,48 +33,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate() || _busy) return;
     setState(() => _busy = true);
     final auth = context.read<AuthProvider>();
-    final error = await auth.signUp(
-      email: _emailCtrl.text,
-      password: _passwordCtrl.text,
-    );
+    final error = await auth.updatePassword(_passwordCtrl.text);
     if (!mounted) return;
     setState(() => _busy = false);
-    final needsVerification =
-        error != null && error.toLowerCase().contains('bestätige');
-    if (needsVerification) {
-      // Konto wurde erstellt, Mailbestätigung steht aus → VerifyEmailScreen.
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) =>
-              VerifyEmailScreen(email: _emailCtrl.text.trim()),
-        ),
-      );
-      return;
-    }
     if (error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),
           behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFFC0392B),
           margin: const EdgeInsets.all(16),
         ),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Konto erstellt. Du wirst eingeloggt.'),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.all(16),
-        ),
-      );
-      Navigator.of(context).pop();
+      return;
     }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Passwort erfolgreich geändert.'),
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.all(16),
+      ),
+    );
+    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Registrieren')),
+      appBar: AppBar(title: const Text('Neues Passwort')),
       backgroundColor: const Color(0xFFF1F5F9),
       body: Center(
         child: SingleChildScrollView(
@@ -96,34 +82,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Text(
-                        'Neues Konto erstellen',
+                        'Lege ein neues Passwort fest.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w800),
+                        style:
+                            TextStyle(fontSize: 13, color: Color(0xFF64748B)),
                       ),
                       const SizedBox(height: 18),
-                      TextFormField(
-                        controller: _emailCtrl,
-                        keyboardType: TextInputType.emailAddress,
-                        autofillHints: const [AutofillHints.email],
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          labelText: 'E-Mail',
-                          prefixIcon: Icon(Icons.email_outlined, size: 18),
-                        ),
-                        validator: Validators.validateEmail,
-                      ),
-                      const SizedBox(height: 12),
                       TextFormField(
                         controller: _passwordCtrl,
                         obscureText: _obscure,
                         autofillHints: const [AutofillHints.newPassword],
+                        autofocus: true,
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
-                          labelText: 'Passwort',
+                          labelText: 'Neues Passwort',
                           prefixIcon:
                               const Icon(Icons.lock_outline, size: 18),
-                          helperText: '8+ Zeichen, Groß/Klein, Zahl, Sonderzeichen',
+                          helperText:
+                              '8+ Zeichen, Groß/Klein, Zahl, Sonderzeichen',
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscure
@@ -169,15 +145,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 child: CircularProgressIndicator(
                                     strokeWidth: 2, color: Colors.white),
                               )
-                            : const Icon(Icons.person_add_outlined,
-                                size: 18),
+                            : const Icon(Icons.check, size: 18),
                         label: Text(
-                            _busy ? 'Registriere…' : 'Konto erstellen'),
-                      ),
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: _busy ? null : () => Navigator.pop(context),
-                        child: const Text('Zurück zum Login'),
+                            _busy ? 'Speichere…' : 'Passwort speichern'),
                       ),
                     ],
                   ),

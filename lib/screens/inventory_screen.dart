@@ -6,6 +6,7 @@ import '../models/inventory_item.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/url_helper.dart';
 import '../utils/validators.dart';
+import '../widgets/inventory_batches_sheet.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -220,6 +221,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
                     ),
                     IconButton(
+                      tooltip: 'Chargen / MHD',
+                      onPressed: () =>
+                          InventoryBatchesSheet.show(context, item),
+                      icon: const Icon(Icons.layers_outlined, size: 18),
+                    ),
+                    IconButton(
                       tooltip: 'Bearbeiten',
                       onPressed: () => showDialog(
                         context: context,
@@ -399,6 +406,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _sku = TextEditingController();
+  final _ean = TextEditingController();
   final _quantity = TextEditingController(text: '1');
   final _min = TextEditingController(text: '0');
   final _location = TextEditingController();
@@ -407,6 +415,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
   final _note = TextEditingController();
   String _status = 'Im Lager';
   String _selectedTicketNumber = '';
+  String? _supplierId;
 
   @override
   void initState() {
@@ -415,6 +424,8 @@ class _InventoryDialogState extends State<_InventoryDialog> {
     if (item != null) {
       _name.text = item.name;
       _sku.text = item.sku ?? '';
+      _ean.text = item.ean ?? '';
+      _supplierId = item.supplierId;
       _quantity.text = '${item.quantity}';
       _min.text = '${item.minStock}';
       _location.text = item.location ?? '';
@@ -430,6 +441,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
   void dispose() {
     _name.dispose();
     _sku.dispose();
+    _ean.dispose();
     _quantity.dispose();
     _min.dispose();
     _location.dispose();
@@ -648,6 +660,47 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                   ),
                 ]),
                 const SizedBox(height: 10),
+                Row(children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _ean,
+                      decoration: const InputDecoration(
+                        labelText: 'EAN/GTIN (optional)',
+                        prefixIcon: Icon(Icons.qr_code_2, size: 18),
+                      ),
+                      keyboardType: TextInputType.number,
+                      maxLength: 14,
+                      validator: (v) => Validators.validateGtin(v),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: DropdownButtonFormField<String?>(
+                      initialValue: _supplierId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Lieferant (optional)',
+                        prefixIcon:
+                            Icon(Icons.local_shipping_outlined, size: 18),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Kein Lieferant'),
+                        ),
+                        ...provider.activeSuppliers.map(
+                          (s) => DropdownMenuItem<String?>(
+                            value: s.id,
+                            child: Text(s.name,
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                        ),
+                      ],
+                      onChanged: (v) => setState(() => _supplierId = v),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 10),
                 // ── 4. Min stock + cost + location ────────────────────────────
                 Row(children: [
                   Expanded(
@@ -711,12 +764,14 @@ class _InventoryDialogState extends State<_InventoryDialog> {
               id: widget.item?.id ?? '',
               name: _name.text.trim(),
               sku: _sku.text.trim().isEmpty ? null : _sku.text.trim(),
+              ean: _ean.text.trim().isEmpty ? null : _ean.text.trim(),
               quantity: int.tryParse(_quantity.text) ?? 0,
               minStock: int.tryParse(_min.text) ?? 0,
               location: _location.text.trim().isEmpty ? null : _location.text.trim(),
               costPrice: double.tryParse(_cost.text.replaceAll(',', '.')),
               arrivalDate: widget.item?.arrivalDate ?? DateTime.now(),
               dealId: widget.item?.dealId,
+              supplierId: _supplierId,
               ticketNumber: _selectedTicketNumber.trim().isEmpty ? null : _selectedTicketNumber.trim(),
               ticketUrl: _ticketUrl.text.trim().isEmpty ? null : _ticketUrl.text.trim(),
               note: _note.text.trim().isEmpty ? null : _note.text.trim(),
@@ -745,43 +800,26 @@ class _LowStockBanner extends StatefulWidget {
   State<_LowStockBanner> createState() => _LowStockBannerState();
 }
 
-class _EmptyInventoryState extends StatefulWidget {
+class _EmptyInventoryState extends StatelessWidget {
   const _EmptyInventoryState({required this.provider});
   final InventoryProvider provider;
 
   @override
-  State<_EmptyInventoryState> createState() => _EmptyInventoryStateState();
-}
-
-class _EmptyInventoryStateState extends State<_EmptyInventoryState> {
-  bool _loading = false;
-
-  Future<void> _seed() async {
-    setState(() => _loading = true);
-    final added = await widget.provider.seedDemoInventory();
-    if (!mounted) return;
-    setState(() => _loading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$added Demo-Artikel angelegt.')),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Column(
+    return const Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey),
-        const SizedBox(height: 12),
-        const Text('Noch keine Lagerartikel angelegt.'),
-        const SizedBox(height: 16),
-        _loading
-            ? const CircularProgressIndicator()
-            : OutlinedButton.icon(
-                onPressed: _seed,
-                icon: const Icon(Icons.auto_fix_high),
-                label: const Text('Demo-Daten laden'),
-              ),
+        Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey),
+        SizedBox(height: 12),
+        Text(
+          'Noch keine Lagerartikel angelegt.',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        SizedBox(height: 4),
+        Text(
+          'Über den + Button kannst du den ersten Artikel anlegen.',
+          style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+        ),
       ],
     );
   }

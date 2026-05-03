@@ -7,11 +7,12 @@ import 'package:uuid/uuid.dart';
 import '../models/activity_entry.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
+import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
 import '../models/shop.dart';
+import '../models/supplier.dart';
 import '../models/ticket_summary.dart';
 import '../services/csv_service.dart';
-import '../services/storage_service.dart';
 import '../services/supabase_repository.dart';
 
 /// Holds the full working set of cloud data for the signed-in user and routes
@@ -22,12 +23,12 @@ class InventoryProvider extends ChangeNotifier {
       : _repository = repository;
 
   final SupabaseRepository _repository;
-  final StorageService _legacyStorage = StorageService();
   final _uuid = const Uuid();
 
   List<Deal> _deals = [];
   List<Buyer> _buyers = [];
   List<Shop> _shops = [];
+  List<Supplier> _suppliers = [];
   List<InventoryItem> _inventoryItems = [];
   List<InventoryMovement> _movements = [];
   List<ActivityEntry> _activities = [];
@@ -43,6 +44,9 @@ class InventoryProvider extends ChangeNotifier {
   List<Deal> get deals => List.unmodifiable(_deals);
   List<Buyer> get buyers => List.unmodifiable(_buyers);
   List<Shop> get shops => List.unmodifiable(_shops);
+  List<Supplier> get suppliers => List.unmodifiable(_suppliers);
+  List<Supplier> get activeSuppliers =>
+      List.unmodifiable(_suppliers.where((s) => s.active));
   List<InventoryItem> get inventoryItems => List.unmodifiable(_inventoryItems);
   List<InventoryMovement> get movements => List.unmodifiable(_movements);
   List<ActivityEntry> get activities => List.unmodifiable(_activities);
@@ -159,6 +163,7 @@ class InventoryProvider extends ChangeNotifier {
     _deals = [];
     _buyers = [];
     _shops = [];
+    _suppliers = [];
     _inventoryItems = [];
     _movements = [];
     _activities = [];
@@ -171,6 +176,8 @@ class InventoryProvider extends ChangeNotifier {
     _buyers = List.of(snapshot.buyers)
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     _shops = List.of(snapshot.shops);
+    _suppliers = List.of(snapshot.suppliers)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     _inventoryItems = List.of(snapshot.inventoryItems)
       ..sort((a, b) => a.name.compareTo(b.name));
     _movements = List.of(snapshot.movements)
@@ -333,39 +340,6 @@ class InventoryProvider extends ChangeNotifier {
     return (dealCount, shopCount, buyerCount, itemCount);
   }
 
-  /// Seeds 6 example inventory items into the DB.
-  /// Safe to call multiple times — skips items whose name already exists.
-  Future<int> seedDemoInventory() async {
-    final now = DateTime.now();
-    final demos = [
-      InventoryItem(id: _uuid.v4(), name: 'Nike Air Max 90', sku: 'AIR-MAX-90', quantity: 2, minStock: 1, location: 'Regal A-1', costPrice: 89.0, arrivalDate: now.subtract(const Duration(days: 1)), status: 'Im Lager', note: 'Demo-Artikel'),
-      InventoryItem(id: _uuid.v4(), name: 'New Balance 550 White', sku: 'NB-550-WHT', quantity: 1, minStock: 0, location: 'Regal B-3', costPrice: 75.0, arrivalDate: now.subtract(const Duration(days: 15)), status: 'Reserviert', note: 'Reserviert für Käufer'),
-      InventoryItem(id: _uuid.v4(), name: 'Supreme Box Logo Tee', sku: 'SUP-BOX-TEE', quantity: 5, minStock: 0, costPrice: 42.0, arrivalDate: now.subtract(const Duration(days: 22)), status: 'Im Lager'),
-      InventoryItem(id: _uuid.v4(), name: 'Puma Suede Classic', sku: 'PUMA-SDE-CLS', quantity: 4, minStock: 0, costPrice: 35.0, arrivalDate: now.subtract(const Duration(days: 20)), status: 'Im Lager'),
-      InventoryItem(id: _uuid.v4(), name: 'Vintage Levi\'s 501', sku: 'LEV-501-VTG', quantity: 3, minStock: 2, location: 'Regal C-2', costPrice: 45.0, arrivalDate: now.subtract(const Duration(days: 41)), status: 'Im Lager', note: 'Direkteinkauf'),
-      InventoryItem(id: _uuid.v4(), name: 'Lagerartikel Kritisch', sku: 'KRIT-SNK-001', quantity: 0, minStock: 2, location: 'Regal D-1', costPrice: 80.0, arrivalDate: now.subtract(const Duration(days: 60)), status: 'Im Lager', note: 'Mindestbestand unterschritten'),
-    ];
-    int added = 0;
-    final existingNames = _inventoryItems.map((i) => i.name.toLowerCase()).toSet();
-    for (final item in demos) {
-      if (existingNames.contains(item.name.toLowerCase())) continue;
-      try {
-        final saved = await _repository.insertInventoryItem(item);
-        _inventoryItems.add(saved);
-        existingNames.add(saved.name.toLowerCase());
-        added++;
-      } catch (e) {
-        if (kDebugMode) debugPrint('seedDemoInventory: "${item.name}" skipped – $e');
-      }
-    }
-    if (added > 0) {
-      _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
-      _log('Demo-Lager: $added Artikel angelegt', 'seed');
-      notifyListeners();
-    }
-    return added;
-  }
-
   // ── BUYERS ────────────────────────────────────────────────────────────────
 
   Future<void> addBuyer(Buyer buyer) async {
@@ -412,6 +386,38 @@ class InventoryProvider extends ChangeNotifier {
   Future<void> deleteShop(String id) async {
     await _repository.deleteShop(id);
     _shops.removeWhere((s) => s.id == id);
+    notifyListeners();
+  }
+
+  // ── SUPPLIERS ─────────────────────────────────────────────────────────────
+
+  Future<void> addSupplier(Supplier supplier) async {
+    final saved = await _repository.insertSupplier(supplier);
+    _suppliers.add(saved);
+    _suppliers.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _log('Lieferant hinzugefügt: ${saved.name}', 'supplier');
+    notifyListeners();
+  }
+
+  Future<void> updateSupplier(Supplier supplier) async {
+    final saved = await _repository.updateSupplier(supplier);
+    final idx = _suppliers.indexWhere((s) => s.id == saved.id);
+    if (idx == -1) return;
+    _suppliers[idx] = saved;
+    _suppliers.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _log('Lieferant aktualisiert: ${saved.name}', 'supplier');
+    notifyListeners();
+  }
+
+  Future<void> deleteSupplier(String id) async {
+    final supplier = _suppliers.where((s) => s.id == id).firstOrNull;
+    await _repository.deleteSupplier(id);
+    _suppliers.removeWhere((s) => s.id == id);
+    if (supplier != null) {
+      _log('Lieferant gelöscht: ${supplier.name}', 'supplier');
+    }
     notifyListeners();
   }
 
@@ -566,12 +572,41 @@ class InventoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── BATCHES ───────────────────────────────────────────────────────────────
+
+  Future<List<InventoryBatch>> loadBatchesForItem(String itemId) =>
+      _repository.loadBatchesForItem(itemId);
+
+  /// Lädt alle Chargen über alle Items. Für die Statistik-Tabs (Lager-KPIs).
+  /// Wird gecached im StatisticsService.
+  Future<List<InventoryBatch>> loadAllBatches() =>
+      _repository.loadAllBatches();
+
+  Future<InventoryBatch> addBatch(InventoryBatch batch) async {
+    final saved = await _repository.insertBatch(batch);
+    _log('Charge hinzugefügt: ${saved.batchNumber}', 'batch');
+    notifyListeners();
+    return saved;
+  }
+
+  Future<InventoryBatch> updateBatch(InventoryBatch batch) async {
+    final saved = await _repository.updateBatch(batch);
+    notifyListeners();
+    return saved;
+  }
+
+  Future<void> deleteBatch(String id) async {
+    await _repository.deleteBatch(id);
+    notifyListeners();
+  }
+
   // ── JSON backup / restore (across the whole user-scoped dataset) ──────────
 
   Map<String, dynamic> exportData() => {
         'deals': _deals.map((d) => d.toJson()).toList(),
         'buyers': _buyers.map((b) => b.toJson()).toList(),
         'shops': _shops.map((s) => s.toJson()).toList(),
+        'suppliers': _suppliers.map((s) => s.toJson()).toList(),
         'inventoryItems': _inventoryItems.map((i) => i.toJson()).toList(),
         'movements': _movements.map((m) => m.toJson()).toList(),
         'activities': _activities.map((a) => a.toJson()).toList(),
@@ -592,6 +627,9 @@ class InventoryProvider extends ChangeNotifier {
     final shops = (data['shops'] as List<dynamic>? ?? [])
         .map((e) => Shop.fromJson(e as Map<String, dynamic>))
         .toList();
+    final suppliers = (data['suppliers'] as List<dynamic>? ?? [])
+        .map((e) => Supplier.fromJson(e as Map<String, dynamic>))
+        .toList();
     final items = (data['inventoryItems'] as List<dynamic>? ?? [])
         .map((e) => InventoryItem.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -606,6 +644,7 @@ class InventoryProvider extends ChangeNotifier {
     final snapshot = await _repository.bulkImport(
       buyers: buyers,
       shops: shops,
+      suppliers: suppliers,
       deals: deals,
       items: items,
       movements: movements,
@@ -615,50 +654,4 @@ class InventoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// One-shot migration: pulls the legacy shared_preferences JSON blob (if
-  /// any) into the current user's Supabase tables and clears the local copy.
-  /// Returns the number of imported deals (or null if nothing was imported).
-  Future<int?> migrateLegacyLocalData() async {
-    final legacy = await _legacyStorage.loadData();
-    if (legacy == null) return null;
-    final dealsList = legacy['deals'] as List<dynamic>? ?? [];
-    final buyersList = legacy['buyers'] as List<dynamic>? ?? [];
-    final shopsList = legacy['shops'] as List<dynamic>? ?? [];
-    final itemsList = legacy['inventoryItems'] as List<dynamic>? ?? [];
-    final movementsList = legacy['movements'] as List<dynamic>? ?? [];
-    final activitiesList = legacy['activities'] as List<dynamic>? ?? [];
-    if (dealsList.isEmpty &&
-        buyersList.isEmpty &&
-        shopsList.isEmpty &&
-        itemsList.isEmpty &&
-        movementsList.isEmpty &&
-        activitiesList.isEmpty) {
-      return null;
-    }
-
-    final snapshot = await _repository.bulkImport(
-      buyers: buyersList
-          .map((e) => Buyer.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      shops: shopsList
-          .map((e) => Shop.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      deals: dealsList
-          .map((e) => Deal.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      items: itemsList
-          .map((e) => InventoryItem.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      movements: movementsList
-          .map((e) => InventoryMovement.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      activities: activitiesList
-          .map((e) => ActivityEntry.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
-    _hydrateFrom(snapshot);
-    notifyListeners();
-    await _legacyStorage.clear();
-    return snapshot.deals.length;
-  }
 }

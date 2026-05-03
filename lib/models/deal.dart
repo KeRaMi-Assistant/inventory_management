@@ -17,6 +17,8 @@ class Deal {
   final String? lexware;
   final String beleg;
   final String? note;
+  final double? taxRate;
+  final String currency;
   final List<String> inventoryItemIds;
 
   const Deal({
@@ -38,6 +40,8 @@ class Deal {
     this.lexware,
     this.beleg = 'Nein',
     this.note,
+    this.taxRate,
+    this.currency = 'EUR',
     this.inventoryItemIds = const [],
   });
 
@@ -51,6 +55,15 @@ class Deal {
   double? get zuBekommen => vk != null ? vk! * quantity : null;
   double? get ekGesamtNetto => ekNetto != null ? ekNetto! * quantity : null;
   double? get ekGesamtBrutto => ekBrutto != null ? ekBrutto! * quantity : null;
+
+  /// Aus Netto + taxRate berechneter Bruttopreis (pro Einheit). Fällt auf
+  /// `ekBrutto` zurück, wenn keine Steuerangabe vorliegt.
+  double? get ekNettoPlusMwst {
+    if (ekNetto != null && taxRate != null) {
+      return ekNetto! * (1 + taxRate!);
+    }
+    return ekBrutto;
+  }
 
   // ── Local backup JSON (camelCase) ─────────────────────────────────────────
 
@@ -73,6 +86,8 @@ class Deal {
         'lexware': lexware,
         'beleg': beleg,
         'note': note,
+        'taxRate': taxRate,
+        'currency': currency,
         'inventoryItemIds': inventoryItemIds,
       };
 
@@ -97,6 +112,8 @@ class Deal {
         lexware: json['lexware'] as String?,
         beleg: json['beleg'] as String? ?? 'Nein',
         note: json['note'] as String?,
+        taxRate: (json['taxRate'] as num?)?.toDouble(),
+        currency: json['currency'] as String? ?? 'EUR',
         inventoryItemIds: (json['inventoryItemIds'] as List<dynamic>?)
                 ?.map((e) => e as String)
                 .toList() ??
@@ -105,9 +122,6 @@ class Deal {
 
   // ── Supabase (PostgreSQL, snake_case) ─────────────────────────────────────
 
-  /// Payload for INSERT / UPDATE on `public.deals`.
-  /// `id` is omitted (server-assigned BIGSERIAL); `user_id` is added by the
-  /// repository so we don't bake auth state into the model.
   Map<String, dynamic> toSupabaseInsert() => {
         'product': product,
         'quantity': quantity,
@@ -126,6 +140,8 @@ class Deal {
         'lexware': lexware,
         'beleg': beleg,
         'note': note,
+        'tax_rate': taxRate,
+        'currency': currency,
       };
 
   factory Deal.fromSupabase(
@@ -153,6 +169,8 @@ class Deal {
         lexware: row['lexware'] as String?,
         beleg: row['beleg'] as String? ?? 'Nein',
         note: row['note'] as String?,
+        taxRate: (row['tax_rate'] as num?)?.toDouble(),
+        currency: row['currency'] as String? ?? 'EUR',
         inventoryItemIds: inventoryItemIds,
       );
 
@@ -175,6 +193,8 @@ class Deal {
     Object? lexware = _sentinel,
     String? beleg,
     Object? note = _sentinel,
+    Object? taxRate = _sentinel,
+    String? currency,
     List<String>? inventoryItemIds,
   }) =>
       Deal(
@@ -202,6 +222,8 @@ class Deal {
         lexware: lexware == _sentinel ? this.lexware : lexware as String?,
         beleg: beleg ?? this.beleg,
         note: note == _sentinel ? this.note : note as String?,
+        taxRate: taxRate == _sentinel ? this.taxRate : taxRate as double?,
+        currency: currency ?? this.currency,
         inventoryItemIds: inventoryItemIds ?? this.inventoryItemIds,
       );
 }

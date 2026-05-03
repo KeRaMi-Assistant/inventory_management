@@ -1,0 +1,309 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/inventory_provider.dart';
+import '../../providers/statistics_filter_provider.dart';
+
+/// Filter-Toolbar oben in der Statistik. Adaptiv: auf schmalen Bildschirmen
+/// in zwei Reihen, auf breiten in einer.
+class StatisticsFilterBar extends StatelessWidget {
+  final VoidCallback? onExport;
+  const StatisticsFilterBar({super.key, this.onExport});
+
+  @override
+  Widget build(BuildContext context) {
+    final filter = context.watch<StatisticsFilterProvider>();
+    final inv = context.watch<InventoryProvider>();
+    final dateFmt = DateFormat('dd.MM.yyyy', 'de_DE');
+    final r = filter.currentRange;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE0E6EF))),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final wide = c.maxWidth > 900;
+          final children = <Widget>[
+            _PresetGroup(
+              selected: filter.preset,
+              onSelect: (p) async {
+                if (p == StatsPreset.custom) {
+                  final picked = await showDateRangePicker(
+                    context: context,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now().add(const Duration(days: 30)),
+                    initialDateRange: DateTimeRange(
+                      start: filter.customFrom ??
+                          DateTime.now().subtract(const Duration(days: 29)),
+                      end: filter.customTo ?? DateTime.now(),
+                    ),
+                  );
+                  if (picked != null) {
+                    filter.setCustomRange(picked.start, picked.end);
+                  }
+                } else {
+                  filter.setPreset(p);
+                }
+              },
+            ),
+            const SizedBox(width: 16, height: 8),
+            _CompareToggle(
+              value: filter.compareToPrevious,
+              onChanged: (v) => filter.toggleCompare(v),
+            ),
+          ];
+
+          final filters = <Widget>[
+            _FilterDropdown<String>(
+              icon: Icons.person_outline,
+              hint: 'Käufer',
+              value: filter.buyer,
+              items: [
+                const DropdownMenuItem<String>(value: null, child: Text('Alle Käufer')),
+                ...inv.buyers.map((b) =>
+                    DropdownMenuItem<String>(value: b.name, child: Text(b.name))),
+              ],
+              onChanged: filter.setBuyer,
+            ),
+            _FilterDropdown<String>(
+              icon: Icons.store_outlined,
+              hint: 'Shop',
+              value: filter.shop,
+              items: [
+                const DropdownMenuItem<String>(value: null, child: Text('Alle Shops')),
+                ...inv.shops.map((s) =>
+                    DropdownMenuItem<String>(value: s.name, child: Text(s.name))),
+              ],
+              onChanged: filter.setShop,
+            ),
+            _FilterDropdown<String>(
+              icon: Icons.local_shipping_outlined,
+              hint: 'Lieferant',
+              value: filter.supplierId,
+              items: [
+                const DropdownMenuItem<String>(value: null, child: Text('Alle Lieferanten')),
+                ...inv.suppliers.map((s) =>
+                    DropdownMenuItem<String>(value: s.id, child: Text(s.name))),
+              ],
+              onChanged: filter.setSupplier,
+            ),
+            SizedBox(
+              width: 200,
+              child: TextField(
+                onChanged: filter.setProductSearch,
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: 'Produkt suchen…',
+                  prefixIcon: const Icon(Icons.search, size: 18),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFFE0E6EF)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFFE0E6EF)),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+            ),
+            if (filter.hasAnyFilter || filter.preset != StatsPreset.last30)
+              TextButton.icon(
+                onPressed: filter.reset,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Zurücksetzen'),
+                style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF6B7280)),
+              ),
+          ];
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.filter_alt_outlined,
+                      size: 16, color: Colors.grey.shade600),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${dateFmt.format(r.from)} – ${dateFmt.format(r.to)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF374151),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (onExport != null)
+                    OutlinedButton.icon(
+                      onPressed: onExport,
+                      icon: const Icon(Icons.file_download_outlined, size: 16),
+                      label: const Text('Report'),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFE0E6EF)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: children,
+              ),
+              if (wide)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: filters,
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: filters,
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PresetGroup extends StatelessWidget {
+  final StatsPreset selected;
+  final ValueChanged<StatsPreset> onSelect;
+  const _PresetGroup({required this.selected, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: StatsPreset.values.map((p) {
+        final isSelected = p == selected;
+        return Material(
+          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => onSelect(p),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              child: Text(
+                p.label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : const Color(0xFF374151),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _CompareToggle extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  const _CompareToggle({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: value ? const Color(0xFFE0E7FF) : const Color(0xFFF1F5F9),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => onChanged(!value),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                value ? Icons.check_box : Icons.check_box_outline_blank,
+                size: 14,
+                color: value ? const Color(0xFF2563EB) : const Color(0xFF6B7280),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'vs. Vorperiode',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: value
+                      ? const Color(0xFF1D4ED8)
+                      : const Color(0xFF374151),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterDropdown<T> extends StatelessWidget {
+  final IconData icon;
+  final String hint;
+  final T? value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+  const _FilterDropdown({
+    required this.icon,
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE0E6EF)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.grey.shade500),
+          const SizedBox(width: 6),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<T>(
+              value: value,
+              hint: Text(hint, style: const TextStyle(fontSize: 12)),
+              items: items,
+              onChanged: onChanged,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF374151)),
+              isDense: true,
+              icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,13 +10,27 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AuthProvider extends ChangeNotifier {
   AuthProvider({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client {
-    _authSub = _client.auth.onAuthStateChange.listen((_) {
+    _authSub = _client.auth.onAuthStateChange.listen((state) {
+      if (state.event == AuthChangeEvent.passwordRecovery) {
+        _passwordRecoveryController.add(true);
+      }
       notifyListeners();
     });
   }
 
   final SupabaseClient _client;
   late final StreamSubscription<AuthState> _authSub;
+
+  /// Emit `true` whenever Supabase signals an `AuthChangeEvent.passwordRecovery`
+  /// (Deep-Link nach Passwort-Reset-E-Mail). Die App routet dann zum
+  /// ResetPasswordScreen.
+  final StreamController<bool> _passwordRecoveryController =
+      StreamController<bool>.broadcast();
+  Stream<bool> get passwordRecoveryStream =>
+      _passwordRecoveryController.stream;
+
+  bool _busy = false;
+  bool get isBusy => _busy;
 
   User? get currentUser => _client.auth.currentUser;
   Session? get currentSession => _client.auth.currentSession;
@@ -64,7 +79,10 @@ class AuthProvider extends ChangeNotifier {
 
   Future<String?> sendPasswordReset(String email) async {
     try {
-      await _client.auth.resetPasswordForEmail(email.trim());
+      await _client.auth.resetPasswordForEmail(
+        email.trim(),
+        redirectTo: _resetRedirectUrl,
+      );
       return null;
     } on AuthException catch (e) {
       return _humanizeAuthError(e);
@@ -73,8 +91,115 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Setzt das Passwort des aktuell eingeloggten Users (i.d.R. nach
+  /// passwordRecovery-Deep-Link).
+  Future<String?> updatePassword(String newPassword) async {
+    try {
+      await _client.auth.updateUser(UserAttributes(password: newPassword));
+      return null;
+    } on AuthException catch (e) {
+      return _humanizeAuthError(e);
+    } catch (_) {
+      return 'Passwort konnte nicht geändert werden.';
+    }
+  }
+
+  /// Schickt die Bestätigungsmail erneut.
+  Future<String?> resendConfirmation(String email) async {
+    try {
+      await _client.auth.resend(
+        type: OtpType.signup,
+        email: email.trim(),
+      );
+      return null;
+    } on AuthException catch (e) {
+      return _humanizeAuthError(e);
+    } catch (_) {
+      return 'E-Mail konnte nicht erneut gesendet werden.';
+    }
+  }
+
+  // ── OAuth ────────────────────────────────────────────────────────────────
+
+  Future<String?> signInWithGoogle() async {
+    return _oauth(OAuthProvider.google);
+  }
+
+  Future<String?> signInWithApple() async {
+    return _oauth(OAuthProvider.apple);
+  }
+
+  Future<String?> _oauth(OAuthProvider provider) async {
+    _busy = true;
+    notifyListeners();
+    try {
+      await _client.auth.signInWithOAuth(
+        provider,
+        redirectTo: _oauthRedirectUrl,
+      );
+      return null;
+    } on AuthException catch (e) {
+      return _humanizeAuthError(e);
+    } catch (e) {
+      return 'Anmeldung mit ${_providerLabel(provider)} fehlgeschlagen.';
+    } finally {
+      _busy = false;
+      notifyListeners();
+    }
+  }
+
+  static String _providerLabel(OAuthProvider p) {
+    switch (p) {
+      case OAuthProvider.google:
+        return 'Google';
+      case OAuthProvider.apple:
+        return 'Apple';
+      default:
+        return p.name;
+    }
+  }
+
+  /// Web nutzt die aktuelle Origin als Callback; Mobile nutzt den eigenen
+  /// Deep-Link, der via Info.plist / AndroidManifest registriert wurde.
+  String? get _oauthRedirectUrl {
+    if (kIsWeb) return null;
+    return 'inventorymanagement://auth/callback';
+  }
+
+  String? get _resetRedirectUrl {
+    if (kIsWeb) return null;
+    return 'inventorymanagement://auth/reset';
+  }
+
+  /// True, wenn die Plattform Apple-Sign-In sinnvoll anzeigen kann.
+  bool get appleSignInAvailable {
+    if (kIsWeb) return false;
+    try {
+      return Platform.isIOS || Platform.isMacOS;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> signOut() async {
     await _client.auth.signOut();
+  }
+
+  /// Löscht den Account vollständig via Edge Function (nutzt service_role intern).
+  /// Gibt `null` bei Erfolg zurück, sonst eine Fehlermeldung.
+  Future<String?> deleteAccount() async {
+    try {
+      final response = await _client.functions.invoke('delete-account');
+      if (response.status != 200) {
+        return 'Konto konnte nicht gelöscht werden.';
+      }
+      await _client.auth.signOut();
+      return null;
+    } on AuthException catch (e) {
+      return _humanizeAuthError(e);
+    } catch (_) {
+      return 'Konto konnte nicht gelöscht werden. Bitte Internetverbindung prüfen.';
+    }
   }
 
   /// Aktualisiert das aktuelle Session-Token. Wird vom SessionManager
@@ -126,13 +251,16 @@ class AuthProvider extends ChangeNotifier {
         raw.contains('signup is disabled')) {
       return 'Registrierung ist derzeit deaktiviert.';
     }
-    // Fallback: Originaltext, falls nicht gemappt.
+    if (raw.contains('provider is not enabled')) {
+      return 'Dieser Anmeldeweg ist im Backend nicht aktiviert.';
+    }
     return e.message;
   }
 
   @override
   void dispose() {
     _authSub.cancel();
+    _passwordRecoveryController.close();
     super.dispose();
   }
 }

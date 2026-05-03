@@ -35,8 +35,17 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
   String _beleg = 'Nein';
   String? _buyer;
   String _priceType = 'Netto';
+  String _currency = 'EUR';
+  final _taxRateCtrl = TextEditingController(text: '19');
 
   bool _saving = false;
+
+  static const List<String> _currencyOptions = [
+    'EUR',
+    'USD',
+    'GBP',
+    'CHF',
+  ];
 
   @override
   void initState() {
@@ -67,6 +76,11 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
         _priceType = 'Brutto';
         _priceCtrl.text = d.ekBrutto!.toStringAsFixed(2);
       }
+      _currency = d.currency;
+      if (d.taxRate != null) {
+        _taxRateCtrl.text = (d.taxRate! * 100).toStringAsFixed(
+            d.taxRate! * 100 % 1 == 0 ? 0 : 2);
+      }
     } else if (widget.initialTicketNumber != null) {
       _ticketCtrl.text = widget.initialTicketNumber!;
     }
@@ -80,6 +94,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     _productCtrl.dispose();
     _quantityCtrl.dispose();
     _priceCtrl.dispose();
+    _taxRateCtrl.dispose();
     _vkCtrl.dispose();
     _ticketCtrl.dispose();
     _ticketUrlCtrl.dispose();
@@ -125,15 +140,20 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     final provider = context.read<InventoryProvider>();
 
     final price = double.tryParse(_priceCtrl.text.replaceAll(',', '.'));
+    final taxPct =
+        double.tryParse(_taxRateCtrl.text.trim().replaceAll(',', '.'));
+    final taxRate =
+        (taxPct != null && taxPct >= 0 && taxPct <= 100) ? taxPct / 100 : null;
+    final factor = 1 + (taxRate ?? 0.19);
     double? ekNetto;
     double? ekBrutto;
     if (price != null) {
       if (_priceType == 'Netto') {
         ekNetto = price;
-        ekBrutto = price * 1.19;
+        ekBrutto = price * factor;
       } else {
         ekBrutto = price;
-        ekNetto = price / 1.19;
+        ekNetto = price / factor;
       }
     }
 
@@ -175,6 +195,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       status: _status,
       beleg: _beleg,
       note: _noteCtrl.text.isEmpty ? null : _noteCtrl.text.trim(),
+      taxRate: taxRate,
+      currency: _currency,
     );
 
     try {
@@ -379,6 +401,55 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                               ),
                             ],
                           ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _currency,
+                                decoration: const InputDecoration(
+                                  labelText: 'Währung',
+                                  prefixIcon:
+                                      Icon(Icons.euro_symbol, size: 18),
+                                ),
+                                items: _currencyOptions
+                                    .map((c) => DropdownMenuItem(
+                                        value: c, child: Text(c)))
+                                    .toList(),
+                                onChanged: (v) {
+                                  if (v == null) return;
+                                  setState(() => _currency = v);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _taxRateCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'MwSt-Satz %',
+                                  hintText: 'z.B. 19',
+                                  suffixText: '%',
+                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                onChanged: (_) => _refreshPreview(),
+                                validator: (v) {
+                                  final s = (v ?? '').trim();
+                                  if (s.isEmpty) return null;
+                                  final n =
+                                      double.tryParse(s.replaceAll(',', '.'));
+                                  if (n == null) return 'Ungültige Zahl';
+                                  if (n < 0 || n > 100) {
+                                    return '0 – 100';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 20),
                         // ── Käufer & Status ─────────────────────────────

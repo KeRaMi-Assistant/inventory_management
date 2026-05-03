@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../providers/app_preferences_provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../widgets/add_edit_buyer_dialog.dart';
 import '../widgets/add_edit_shop_dialog.dart';
@@ -687,9 +690,286 @@ class _GeneralTab extends StatelessWidget {
                   '${provider.deals.length} Deals · ${provider.buyers.length} Käufer · ${provider.shops.length} Shops · ${provider.inventoryItems.length} Lagerartikel',
               trailing: Text('${provider.exportJson().length ~/ 1024} KB'),
             ),
+            const SizedBox(height: 24),
+            const _SectionHeader(title: 'Statistik'),
+            const SizedBox(height: 8),
+            const _MonthlyGoalCard(),
+            const SizedBox(height: 12),
+            const _LowStockThresholdCard(),
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 16),
+            _DeleteAccountCard(),
           ],
         );
       },
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  const _SectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        title.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF6B7280),
+          letterSpacing: 0.7,
+        ),
+      ),
+    );
+  }
+}
+
+class _MonthlyGoalCard extends StatelessWidget {
+  const _MonthlyGoalCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AppPreferencesProvider>(
+      builder: (context, prefs, _) {
+        final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+        return _SettingsCard(
+          icon: Icons.flag_outlined,
+          title: 'Monatliches Profit-Ziel',
+          subtitle:
+              'Wird in der Statistik als Fortschrittsring + Forecast angezeigt.',
+          trailing: TextButton(
+            onPressed: () async {
+              final ctrl = TextEditingController(
+                  text: prefs.monthlyProfitGoal.toStringAsFixed(0));
+              final value = await showDialog<double>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Profit-Ziel pro Monat'),
+                  content: TextField(
+                    controller: ctrl,
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true),
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      suffixText: '€',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Abbrechen'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        final v = double.tryParse(
+                            ctrl.text.replaceAll(',', '.'));
+                        if (v != null && v >= 0) Navigator.pop(ctx, v);
+                      },
+                      child: const Text('Speichern'),
+                    ),
+                  ],
+                ),
+              );
+              ctrl.dispose();
+              if (value != null) {
+                await prefs.setMonthlyProfitGoal(value);
+              }
+            },
+            child: Text(money.format(prefs.monthlyProfitGoal)),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LowStockThresholdCard extends StatelessWidget {
+  const _LowStockThresholdCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AppPreferencesProvider>(
+      builder: (context, prefs, _) {
+        return _SettingsCard(
+          icon: Icons.warning_amber_outlined,
+          title: 'Schwellwert "niedriger Bestand"',
+          subtitle:
+              'Lagerartikel unter diesem Wert werden als kritisch markiert.',
+          trailing: TextButton(
+            onPressed: () async {
+              final ctrl = TextEditingController(
+                  text: '${prefs.lowStockThreshold}');
+              final value = await showDialog<int>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Niedriger Bestand'),
+                  content: TextField(
+                    controller: ctrl,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      suffixText: 'Stück',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Abbrechen'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        final v = int.tryParse(ctrl.text);
+                        if (v != null && v >= 0) Navigator.pop(ctx, v);
+                      },
+                      child: const Text('Speichern'),
+                    ),
+                  ],
+                ),
+              );
+              ctrl.dispose();
+              if (value != null) {
+                await prefs.setLowStockThreshold(value);
+              }
+            },
+            child: Text('< ${prefs.lowStockThreshold} Stück'),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DeleteAccountCard extends StatefulWidget {
+  @override
+  State<_DeleteAccountCard> createState() => _DeleteAccountCardState();
+}
+
+class _DeleteAccountCardState extends State<_DeleteAccountCard> {
+  bool _loading = false;
+
+  Future<void> _confirmDelete() async {
+    final confirmCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Konto endgültig löschen?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Dein Konto und alle deine Daten werden unwiderruflich gelöscht. '
+                'Diese Aktion kann nicht rückgängig gemacht werden.',
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Tippe LÖSCHEN zur Bestätigung:',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: confirmCtrl,
+                autofocus: true,
+                onChanged: (_) => setS(() {}),
+                decoration: const InputDecoration(
+                  hintText: 'LÖSCHEN',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Abbrechen'),
+            ),
+            ElevatedButton(
+              onPressed: confirmCtrl.text.trim() == 'LÖSCHEN'
+                  ? () => Navigator.pop(ctx, true)
+                  : null,
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFC0392B)),
+              child: const Text('Konto löschen'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    confirmCtrl.dispose();
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _loading = true);
+    final auth = context.read<AuthProvider>();
+    final error = await auth.deleteAccount();
+    if (!mounted) return;
+    setState(() => _loading = false);
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: const Color(0xFFC0392B),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.delete_forever_outlined, color: Color(0xFFC0392B)),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Konto löschen',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFFC0392B),
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'Löscht dein Konto und alle Daten unwiderruflich.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            _loading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : OutlinedButton(
+                    onPressed: _confirmDelete,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFC0392B),
+                      side: const BorderSide(color: Color(0xFFC0392B)),
+                    ),
+                    child: const Text('Löschen'),
+                  ),
+          ],
+        ),
+      ),
     );
   }
 }

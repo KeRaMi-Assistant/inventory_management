@@ -1,15 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app_theme.dart';
 import 'config/supabase_config.dart';
+import 'providers/app_preferences_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/filter_provider.dart';
 import 'providers/inventory_provider.dart';
+import 'providers/statistics_filter_provider.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/splash_screen.dart';
 import 'screens/main_screen.dart';
 import 'services/session_manager.dart';
@@ -17,16 +21,24 @@ import 'services/supabase_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('de_DE');
   await Supabase.initialize(
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
 
-  runApp(const InventoryApp());
+  final prefs = AppPreferencesProvider();
+  await prefs.load();
+
+  runApp(InventoryApp(preferences: prefs));
 }
 
+final GlobalKey<NavigatorState> _rootNavigator =
+    GlobalKey<NavigatorState>();
+
 class InventoryApp extends StatelessWidget {
-  const InventoryApp({super.key});
+  final AppPreferencesProvider preferences;
+  const InventoryApp({super.key, required this.preferences});
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +50,10 @@ class InventoryApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
         ChangeNotifierProvider<FilterProvider>(create: (_) => FilterProvider()),
+        ChangeNotifierProvider<StatisticsFilterProvider>(
+          create: (_) => StatisticsFilterProvider(),
+        ),
+        ChangeNotifierProvider<AppPreferencesProvider>.value(value: preferences),
         Provider<SessionManager>(
           lazy: false,
           create: (ctx) =>
@@ -55,7 +71,10 @@ class InventoryApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Lagerverwaltung',
         theme: AppTheme.light,
-        home: const _ActivityListener(child: _AuthGate()),
+        navigatorKey: _rootNavigator,
+        home: const _ActivityListener(
+          child: _RecoveryListener(child: _AuthGate()),
+        ),
         debugShowCheckedModeBanner: false,
       ),
     );
@@ -75,7 +94,6 @@ class _AuthGate extends StatefulWidget {
 class _AuthGateState extends State<_AuthGate> {
   String? _hydratedFor;
   bool _hydrating = false;
-  bool _migrationOffered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -112,67 +130,48 @@ class _AuthGateState extends State<_AuthGate> {
       _hydratedFor = userId;
       _hydrating = false;
     });
-    // Offer legacy migration once per session if the cloud account is empty
-    // but local shared_preferences still hold deals from the pre-cloud build.
-    if (!_migrationOffered &&
-        inventory.deals.isEmpty &&
-        inventory.buyers.isEmpty &&
-        inventory.shops.isEmpty &&
-        inventory.inventoryItems.isEmpty) {
-      _migrationOffered = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeOfferMigration());
-    }
+  }
+}
+
+/// Hört auf `passwordRecovery`-Events des AuthProviders und pusht den
+/// ResetPasswordScreen über den Root-Navigator. Liegt um den AuthGate herum,
+/// damit auch unangemeldete Recovery-Sessions (Magic-Link) korrekt routen.
+class _RecoveryListener extends StatefulWidget {
+  final Widget child;
+  const _RecoveryListener({required this.child});
+
+  @override
+  State<_RecoveryListener> createState() => _RecoveryListenerState();
+}
+
+class _RecoveryListenerState extends State<_RecoveryListener> {
+  StreamSubscription<bool>? _sub;
+  bool _isOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final auth = context.read<AuthProvider>();
+    _sub = auth.passwordRecoveryStream.listen((_) async {
+      if (_isOpen) return;
+      final navigator = _rootNavigator.currentState;
+      if (navigator == null) return;
+      _isOpen = true;
+      await navigator.push(MaterialPageRoute(
+        builder: (_) => const ResetPasswordScreen(),
+      ));
+      _isOpen = false;
+    });
   }
 
-  Future<void> _maybeOfferMigration() async {
-    if (!mounted) return;
-    final inventory = context.read<InventoryProvider>();
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    final accept = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Lokale Daten gefunden'),
-        content: const Text(
-          'Es scheinen Daten aus der lokalen Version zu existieren. '
-          'Möchtest du sie jetzt in dein Cloud-Konto importieren? '
-          'Die lokale Kopie wird danach gelöscht.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => navigator.pop(false),
-            child: const Text('Später'),
-          ),
-          ElevatedButton(
-            onPressed: () => navigator.pop(true),
-            child: const Text('Importieren'),
-          ),
-        ],
-      ),
-    );
-    if (accept != true || !mounted) return;
-    try {
-      final imported = await inventory.migrateLegacyLocalData();
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(imported == null
-              ? 'Keine lokalen Daten zum Importieren.'
-              : '$imported Deals importiert.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Import fehlgeschlagen: $e'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFC0392B),
-        ),
-      );
-    }
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Wrapper, der jede Pointer-/Tastatur-Eingabe an den [SessionManager]

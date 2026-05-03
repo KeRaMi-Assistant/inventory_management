@@ -2,12 +2,14 @@ class InventoryItem {
   final String id;
   final String name;
   final String? sku;
+  final String? ean;
   final int quantity;
   final int minStock;
   final String? location;
   final double? costPrice;
   final DateTime? arrivalDate;
   final int? dealId;
+  final String? supplierId;
   final String? ticketNumber;
   final String? ticketUrl;
   final String? note;
@@ -17,12 +19,14 @@ class InventoryItem {
     required this.id,
     required this.name,
     this.sku,
+    this.ean,
     required this.quantity,
     this.minStock = 0,
     this.location,
     this.costPrice,
     this.arrivalDate,
     this.dealId,
+    this.supplierId,
     this.ticketNumber,
     this.ticketUrl,
     this.note,
@@ -38,12 +42,14 @@ class InventoryItem {
         'id': id,
         'name': name,
         'sku': sku,
+        'ean': ean,
         'quantity': quantity,
         'minStock': minStock,
         'location': location,
         'costPrice': costPrice,
         'arrivalDate': arrivalDate?.toIso8601String(),
         'dealId': dealId,
+        'supplierId': supplierId,
         'ticketNumber': ticketNumber,
         'ticketUrl': ticketUrl,
         'note': note,
@@ -54,6 +60,7 @@ class InventoryItem {
         id: json['id'] as String,
         name: json['name'] as String,
         sku: json['sku'] as String?,
+        ean: json['ean'] as String?,
         quantity: json['quantity'] as int? ?? 0,
         minStock: json['minStock'] as int? ?? 0,
         location: json['location'] as String?,
@@ -62,6 +69,7 @@ class InventoryItem {
             ? DateTime.parse(json['arrivalDate'] as String)
             : null,
         dealId: json['dealId'] as int?,
+        supplierId: json['supplierId'] as String?,
         ticketNumber: json['ticketNumber'] as String?,
         ticketUrl: json['ticketUrl'] as String?,
         note: json['note'] as String?,
@@ -74,12 +82,14 @@ class InventoryItem {
         'id': id,
         'name': name,
         'sku': sku,
+        'ean': ean,
         'quantity': quantity,
         'min_stock': minStock,
         'location': location,
         'cost_price': costPrice,
         'arrival_date': arrivalDate?.toIso8601String(),
         'deal_id': dealId,
+        'supplier_id': supplierId,
         'ticket_number': ticketNumber,
         'ticket_url': ticketUrl,
         'note': note,
@@ -90,6 +100,7 @@ class InventoryItem {
         id: row['id'] as String,
         name: row['name'] as String,
         sku: row['sku'] as String?,
+        ean: row['ean'] as String?,
         quantity: (row['quantity'] as num?)?.toInt() ?? 0,
         minStock: (row['min_stock'] as num?)?.toInt() ?? 0,
         location: row['location'] as String?,
@@ -98,6 +109,7 @@ class InventoryItem {
             ? DateTime.parse(row['arrival_date'] as String)
             : null,
         dealId: (row['deal_id'] as num?)?.toInt(),
+        supplierId: row['supplier_id'] as String?,
         ticketNumber: row['ticket_number'] as String?,
         ticketUrl: row['ticket_url'] as String?,
         note: row['note'] as String?,
@@ -108,12 +120,14 @@ class InventoryItem {
     String? id,
     String? name,
     Object? sku = _sentinel,
+    Object? ean = _sentinel,
     int? quantity,
     int? minStock,
     Object? location = _sentinel,
     Object? costPrice = _sentinel,
     Object? arrivalDate = _sentinel,
     Object? dealId = _sentinel,
+    Object? supplierId = _sentinel,
     Object? ticketNumber = _sentinel,
     Object? ticketUrl = _sentinel,
     Object? note = _sentinel,
@@ -123,6 +137,7 @@ class InventoryItem {
         id: id ?? this.id,
         name: name ?? this.name,
         sku: sku == _sentinel ? this.sku : sku as String?,
+        ean: ean == _sentinel ? this.ean : ean as String?,
         quantity: quantity ?? this.quantity,
         minStock: minStock ?? this.minStock,
         location:
@@ -133,6 +148,9 @@ class InventoryItem {
             ? this.arrivalDate
             : arrivalDate as DateTime?,
         dealId: dealId == _sentinel ? this.dealId : dealId as int?,
+        supplierId: supplierId == _sentinel
+            ? this.supplierId
+            : supplierId as String?,
         ticketNumber: ticketNumber == _sentinel
             ? this.ticketNumber
             : ticketNumber as String?,

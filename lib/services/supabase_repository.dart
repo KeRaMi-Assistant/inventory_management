@@ -3,8 +3,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/activity_entry.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
+import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
 import '../models/shop.dart';
+import '../models/supplier.dart';
 
 /// Snapshot of all data for the currently signed-in user, used to seed the
 /// in-memory provider after login.
@@ -12,6 +14,7 @@ class CloudSnapshot {
   final List<Deal> deals;
   final List<Buyer> buyers;
   final List<Shop> shops;
+  final List<Supplier> suppliers;
   final List<InventoryItem> inventoryItems;
   final List<InventoryMovement> movements;
   final List<ActivityEntry> activities;
@@ -20,6 +23,7 @@ class CloudSnapshot {
     required this.deals,
     required this.buyers,
     required this.shops,
+    required this.suppliers,
     required this.inventoryItems,
     required this.movements,
     required this.activities,
@@ -29,6 +33,7 @@ class CloudSnapshot {
       deals.isEmpty &&
       buyers.isEmpty &&
       shops.isEmpty &&
+      suppliers.isEmpty &&
       inventoryItems.isEmpty &&
       movements.isEmpty &&
       activities.isEmpty;
@@ -53,8 +58,6 @@ class SupabaseRepository {
   // ── Bulk load ─────────────────────────────────────────────────────────────
 
   Future<CloudSnapshot> loadAll() async {
-    // Soft-Delete-Filter: nur aktive Datensätze laden. Der Papierkorb-View
-    // (separater Ladepfad, später) zeigt deleted_at IS NOT NULL.
     final results = await Future.wait([
       _client
           .from('deals')
@@ -68,6 +71,11 @@ class SupabaseRepository {
           .order('sort_order', ascending: true),
       _client
           .from('shops')
+          .select()
+          .filter('deleted_at', 'is', null)
+          .order('name', ascending: true),
+      _client
+          .from('suppliers')
           .select()
           .filter('deleted_at', 'is', null)
           .order('name', ascending: true),
@@ -87,14 +95,14 @@ class SupabaseRepository {
     final dealRows = (results[0] as List).cast<Map<String, dynamic>>();
     final buyerRows = (results[1] as List).cast<Map<String, dynamic>>();
     final shopRows = (results[2] as List).cast<Map<String, dynamic>>();
-    final itemRows = (results[3] as List).cast<Map<String, dynamic>>();
-    final movementRows = (results[4] as List).cast<Map<String, dynamic>>();
-    final activityRows = (results[5] as List).cast<Map<String, dynamic>>();
+    final supplierRows = (results[3] as List).cast<Map<String, dynamic>>();
+    final itemRows = (results[4] as List).cast<Map<String, dynamic>>();
+    final movementRows = (results[5] as List).cast<Map<String, dynamic>>();
+    final activityRows = (results[6] as List).cast<Map<String, dynamic>>();
 
     final inventoryItems =
         itemRows.map(InventoryItem.fromSupabase).toList();
 
-    // Reverse-derive Deal.inventoryItemIds from inventory_items.deal_id.
     final byDealId = <int, List<String>>{};
     for (final item in inventoryItems) {
       if (item.dealId != null) {
@@ -114,6 +122,7 @@ class SupabaseRepository {
       deals: deals,
       buyers: buyerRows.map(Buyer.fromSupabase).toList(),
       shops: shopRows.map(Shop.fromSupabase).toList(),
+      suppliers: supplierRows.map(Supplier.fromSupabase).toList(),
       inventoryItems: inventoryItems,
       movements:
           movementRows.map(InventoryMovement.fromSupabase).toList(),
@@ -173,7 +182,6 @@ class SupabaseRepository {
   }
 
   Future<void> deleteDeal(int id) async {
-    // Soft-Delete: setzt deleted_at, statt physisch zu löschen.
     await _client
         .from('deals')
         .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
@@ -248,6 +256,36 @@ class SupabaseRepository {
         .eq('id', id);
   }
 
+  // ── Suppliers ─────────────────────────────────────────────────────────────
+
+  Future<Supplier> insertSupplier(Supplier supplier) async {
+    final payload = supplier.toSupabaseInsert()..['user_id'] = _userId;
+    final row = await _client
+        .from('suppliers')
+        .insert(payload)
+        .select()
+        .single();
+    return Supplier.fromSupabase(row);
+  }
+
+  Future<Supplier> updateSupplier(Supplier supplier) async {
+    final payload = supplier.toSupabaseInsert();
+    final row = await _client
+        .from('suppliers')
+        .update(payload)
+        .eq('id', supplier.id)
+        .select()
+        .single();
+    return Supplier.fromSupabase(row);
+  }
+
+  Future<void> deleteSupplier(String id) async {
+    await _client
+        .from('suppliers')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
   // ── Inventory items ───────────────────────────────────────────────────────
 
   Future<InventoryItem> insertInventoryItem(InventoryItem item) async {
@@ -290,6 +328,61 @@ class SupabaseRepository {
     return InventoryMovement.fromSupabase(row);
   }
 
+  // ── Inventory batches ─────────────────────────────────────────────────────
+
+  Future<List<InventoryBatch>> loadBatchesForItem(String itemId) async {
+    final rows = await _client
+        .from('inventory_batches')
+        .select()
+        .eq('item_id', itemId)
+        .filter('deleted_at', 'is', null)
+        .order('mhd', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(InventoryBatch.fromSupabase)
+        .toList();
+  }
+
+  Future<List<InventoryBatch>> loadAllBatches() async {
+    final rows = await _client
+        .from('inventory_batches')
+        .select()
+        .filter('deleted_at', 'is', null)
+        .order('mhd', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(InventoryBatch.fromSupabase)
+        .toList();
+  }
+
+  Future<InventoryBatch> insertBatch(InventoryBatch batch) async {
+    final payload = batch.toSupabaseInsert()..['user_id'] = _userId;
+    final row = await _client
+        .from('inventory_batches')
+        .insert(payload)
+        .select()
+        .single();
+    return InventoryBatch.fromSupabase(row);
+  }
+
+  Future<InventoryBatch> updateBatch(InventoryBatch batch) async {
+    final payload = batch.toSupabaseInsert();
+    final row = await _client
+        .from('inventory_batches')
+        .update(payload)
+        .eq('id', batch.id)
+        .select()
+        .single();
+    return InventoryBatch.fromSupabase(row);
+  }
+
+  Future<void> deleteBatch(String id) async {
+    await _client
+        .from('inventory_batches')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
   // ── Activity log ──────────────────────────────────────────────────────────
 
   Future<ActivityEntry> insertActivity(ActivityEntry entry) async {
@@ -302,7 +395,6 @@ class SupabaseRepository {
     return ActivityEntry.fromSupabase(row);
   }
 
-  /// Trims `activity_log` so we never grow it beyond [keep] entries per user.
   Future<void> trimActivityLog({int keep = 50}) async {
     final rows = await _client
         .from('activity_log')
@@ -321,13 +413,14 @@ class SupabaseRepository {
 
   Future<void> deleteAllForCurrentUser() async {
     final uid = _userId;
-    // Order matters: child tables first (FKs cascade, but explicit is safer).
+    await _client.from('inventory_batches').delete().eq('user_id', uid);
     await _client.from('inventory_movements').delete().eq('user_id', uid);
     await _client.from('inventory_items').delete().eq('user_id', uid);
     await _client.from('activity_log').delete().eq('user_id', uid);
     await _client.from('deals').delete().eq('user_id', uid);
     await _client.from('buyers').delete().eq('user_id', uid);
     await _client.from('shops').delete().eq('user_id', uid);
+    await _client.from('suppliers').delete().eq('user_id', uid);
   }
 
   // ── Bulk import (used by JSON restore + legacy migration) ─────────────────
@@ -335,6 +428,7 @@ class SupabaseRepository {
   Future<CloudSnapshot> bulkImport({
     required List<Buyer> buyers,
     required List<Shop> shops,
+    required List<Supplier> suppliers,
     required List<Deal> deals,
     required List<InventoryItem> items,
     required List<InventoryMovement> movements,
@@ -353,11 +447,15 @@ class SupabaseRepository {
         shops.map((s) => s.toSupabaseInsert()..['user_id'] = uid).toList(),
       );
     }
+    if (suppliers.isNotEmpty) {
+      await _client.from('suppliers').insert(
+        suppliers
+            .map((s) => s.toSupabaseInsert()..['user_id'] = uid)
+            .toList(),
+      );
+    }
 
     if (deals.isNotEmpty) {
-      // Insert deals one-by-one so we can map old → new BIGSERIAL ids.
-      // Items + movements reference deals by id; without the mapping their
-      // foreign key would silently dangle.
       for (final deal in deals) {
         final payload = deal.toSupabaseInsert()..['user_id'] = uid;
         final row = await _client
@@ -370,8 +468,6 @@ class SupabaseRepository {
     }
 
     if (items.isNotEmpty) {
-      // Items already carry client-side UUIDs; we keep them so movements
-      // resolve via item_id without an extra mapping step.
       final payload = items.map((item) {
         final mappedDealId =
             item.dealId != null ? dealIdMap[item.dealId!] : null;
