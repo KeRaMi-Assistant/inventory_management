@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,6 +12,7 @@ import 'providers/inventory_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/splash_screen.dart';
 import 'screens/main_screen.dart';
+import 'services/session_manager.dart';
 import 'services/supabase_repository.dart';
 
 Future<void> main() async {
@@ -35,6 +38,12 @@ class InventoryApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
         ChangeNotifierProvider<FilterProvider>(create: (_) => FilterProvider()),
+        Provider<SessionManager>(
+          lazy: false,
+          create: (ctx) =>
+              SessionManager(auth: ctx.read<AuthProvider>())..start(),
+          dispose: (_, sm) => sm.dispose(),
+        ),
         ChangeNotifierProxyProvider<SupabaseRepository, InventoryProvider>(
           create: (ctx) => InventoryProvider(
             repository: ctx.read<SupabaseRepository>(),
@@ -46,7 +55,7 @@ class InventoryApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Lagerverwaltung',
         theme: AppTheme.light,
-        home: const _AuthGate(),
+        home: const _ActivityListener(child: _AuthGate()),
         debugShowCheckedModeBanner: false,
       ),
     );
@@ -163,5 +172,103 @@ class _AuthGateState extends State<_AuthGate> {
         ),
       );
     }
+  }
+}
+
+/// Wrapper, der jede Pointer-/Tastatur-Eingabe an den [SessionManager]
+/// meldet, damit der Idle-Timer zurückgesetzt wird. Zeigt zusätzlich ein
+/// dezentes Banner, wenn die Session in ≤ 5 Minuten abläuft.
+class _ActivityListener extends StatefulWidget {
+  final Widget child;
+  const _ActivityListener({required this.child});
+
+  @override
+  State<_ActivityListener> createState() => _ActivityListenerState();
+}
+
+class _ActivityListenerState extends State<_ActivityListener> {
+  bool _showExpiryBanner = false;
+  StreamSubscription<bool>? _expirySub;
+
+  @override
+  void initState() {
+    super.initState();
+    final sm = context.read<SessionManager>();
+    _expirySub = sm.expiryWarningStream.listen((show) {
+      if (!mounted) return;
+      setState(() => _showExpiryBanner = show);
+    });
+  }
+
+  @override
+  void dispose() {
+    _expirySub?.cancel();
+    super.dispose();
+  }
+
+  void _bump([_]) => context.read<SessionManager>().bumpActivity();
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: _bump,
+      onPointerSignal: _bump,
+      child: Stack(
+        children: [
+          widget.child,
+          if (_showExpiryBanner)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Material(
+                  color: const Color(0xFFFEF3C7),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.timer_outlined,
+                            size: 18, color: Color(0xFF92400E)),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Sitzung läuft bald ab.',
+                            style: TextStyle(
+                                color: Color(0xFF78350F),
+                                fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        Builder(
+                          builder: (btnCtx) => TextButton(
+                            onPressed: () async {
+                              final sm = btnCtx.read<SessionManager>();
+                              final messenger =
+                                  ScaffoldMessenger.of(btnCtx);
+                              final ok = await sm.extendSession();
+                              if (!ok) {
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Sitzung konnte nicht verlängert werden.'),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            },
+                            child: const Text('Verlängern'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

@@ -1,0 +1,701 @@
+================================================================================
+MASTERPROMPT 3 — SECURITY HARDENING, AUTH-VERVOLLSTÄNDIGUNG & DATENMODELL-AUSBAU
+PRODUKTIONSREIFE FÜR DEN INVENTORY MANAGER
+================================================================================
+
+Dieses Dokument baut auf masterprompt.txt und masterprompt2.txt auf.
+Fokus: Sicherheit, Login/Authentifizierung und Datenmodell-Erweiterungen, die
+ein realer Lager-/Handelsbetrieb braucht (EAN/GTIN, Lieferant, Charge, MwSt,
+Mehrlager, Soft-Delete, Audit-Log, Versionierung, etc.).
+
+Jeder Punkt ist mit Priorität (P1=blocker, P2=wichtig, P3=optional) und
+Datei-/Tabellen-Hinweisen versehen, damit direkt umsetzbar.
+
+LEGENDE:
+  [P1]  Muss vor dem Produktivstart erledigt sein.
+  [P2]  Direkt danach, innerhalb der nächsten 1-2 Sprints.
+  [P3]  Nice-to-have / wenn Kunden es verlangen.
+  (opt) Optional, abhängig vom Geschäftsmodell.
+
+================================================================================
+INHALTSVERZEICHNIS
+================================================================================
+  TEIL A — SICHERHEIT
+  TEIL B — AUTHENTIFIZIERUNG / LOGIN
+  TEIL C — DATENMODELL: KRITISCHE DB-FEHLER & FEHLENDE FELDER
+  TEIL D — DATENMODELL: NEUE TABELLEN & ENTITÄTEN
+  TEIL E — DATENINTEGRITÄT & CONSTRAINTS
+  TEIL F — MIGRATIONS- & UMSETZUNGS-REIHENFOLGE
+  TEIL G — DEFINITION OF DONE (CHECKLISTE)
+
+
+================================================================================
+TEIL A — SICHERHEIT
+================================================================================
+
+A.1 [P1] EINGABEVALIDIERUNG (CLIENT-SEITIG)
+-------------------------------------------------------
+Aktuell werden in den Eingabe-Dialogen nur `.isEmpty`-Checks gemacht.
+Es fehlen Längen-, Format- und Sonderzeichen-Prüfungen.
+
+Was tun:
+  - Neue Datei: lib/utils/validators.dart
+      * validateEmail(s)             RFC-konformer Regex
+      * validatePassword(s)          min 8 Zeichen, 1 Groß, 1 Zahl, 1 Sonderzeichen
+      * validateProductName(s)       1..200 Zeichen, kein Steuerzeichen
+      * validateSku(s)               1..50, [A-Z0-9-_]
+      * validateEan(s)               13 Ziffern + Prüfziffer (Modulo 10)
+      * validateGtin(s)              8/12/13/14 Ziffern, Prüfziffer
+      * validateMoney(s)             Dezimal, max 2 Nachkommastellen
+      * validateNote(s)              max 2000 Zeichen
+      * validateUrl(s)               http/https
+      * sanitizeString(s)            trimmen, NUL-Bytes raus
+  - In ALLEN Insert-/Update-Pfaden vor `.insert()` / `.update()` aufrufen
+    (lib/services/supabase_repository.dart, ALLE Dialoge unter lib/screens/).
+  - In Formularfeldern als FormFieldValidator verwenden, damit Fehler im UI sofort
+    angezeigt werden.
+
+A.2 [P1] STÄRKERE PASSWORTREGELN
+-------------------------------------------------------
+Aktuell: nur "min 6 Zeichen" in register_screen.dart Z.128.
+
+Was tun:
+  - Im RegisterScreen: validatePassword aus A.1 verwenden.
+  - Live-Strength-Indikator (lib/widgets/password_strength_indicator.dart).
+  - Im Supabase Dashboard: Auth → Password Min Length = 8, plus
+    "require non-alphanumeric" aktivieren.
+
+A.3 [P1] SESSION-MANAGEMENT
+-------------------------------------------------------
+Aktuell: keine Idle-Timeout-Logik, kein Expiry-Handling.
+
+Was tun:
+  - Neue Datei: lib/services/session_manager.dart
+      * Idle-Timer (Standard 30 min) → automatischer Logout.
+      * Bei App-Resume: prüfen ob `currentSession.expiresAt` vorbei → refresh
+        oder Logout.
+      * Banner "Sitzung läuft in 5 Minuten ab" anzeigen.
+      * Refresh-Token-Rotation aktiv lassen (Supabase-Default).
+  - In MaterialApp einhängen: NavigatorObserver/RouteObserver, der bei
+    User-Interaktion den Idle-Timer zurücksetzt.
+
+A.4 [P1] FEHLER- UND RATE-LIMIT-MELDUNGEN
+-------------------------------------------------------
+Aktuell: rohe Fehlermeldungen aus Supabase werden ungefiltert angezeigt.
+
+Was tun:
+  - In lib/providers/auth_provider.dart die Fehler in benutzerfreundliche
+    Texte mappen:
+      * 400/Invalid login credentials → "E-Mail oder Passwort falsch"
+      * 422/User already registered → "Konto existiert bereits"
+      * 429 Too Many Requests → "Zu viele Versuche, bitte in 15 Minuten erneut"
+      * Netzwerkfehler → "Keine Verbindung. Prüfe deine Internetverbindung"
+
+A.5 [P1] SOFT-DELETE & DATENWIEDERHERSTELLUNG
+-------------------------------------------------------
+Aktuell: DELETE ist physisch + CASCADE → unwiderruflicher Datenverlust.
+
+Was tun (siehe TEIL C.7):
+  - `deleted_at TIMESTAMPTZ` in allen Business-Tabellen.
+  - RLS-Policy so erweitern, dass `deleted_at IS NULL` Standardfilter ist.
+  - "Papierkorb"-Screen mit Wiederherstellung, automatisch leeren nach 30 Tagen.
+
+A.6 [P2] AUDIT-LOG FÜR DATENÄNDERUNGEN
+-------------------------------------------------------
+Aktuell: activity_log enthält nur generische Strings, keine alten/neuen Werte.
+
+Was tun:
+  - Neue Tabelle audit_log:
+      id UUID, user_id UUID, table_name TEXT, row_id TEXT,
+      operation TEXT ('INSERT'|'UPDATE'|'DELETE'),
+      old_values JSONB, new_values JSONB, changed_at TIMESTAMPTZ
+  - Postgres-Trigger auf deals, buyers, shops, inventory_items,
+    inventory_movements, suppliers, products → schreibt Diff in audit_log.
+  - Im UI: "Verlauf"-Button in jedem Detail-Dialog, der die letzten Änderungen
+    zeigt (wer, wann, was).
+
+A.7 [P2] AUTH-EVENT-LOG
+-------------------------------------------------------
+Aktuell: keine Aufzeichnung von Login/Logout/Reset.
+
+Was tun:
+  - Neue Tabelle auth_events(id, user_id, event_type, ip_address, user_agent,
+    occurred_at).
+  - In AuthProvider nach erfolgreichem signIn/signUp/signOut/sendPasswordReset
+    eintragen.
+  - "Aktive Sitzungen"-Ansicht in Einstellungen zeigt die letzten 50 Events.
+
+A.8 [P2] MFA / 2FA (TOTP)
+-------------------------------------------------------
+Supabase unterstützt TOTP nativ.
+
+Was tun:
+  - Neue Screens lib/screens/auth/mfa_setup_screen.dart und
+    lib/screens/auth/mfa_verify_screen.dart.
+  - In Einstellungen → "Zwei-Faktor-Authentifizierung aktivieren".
+  - Beim Login zweiten Schritt erzwingen, wenn Faktor vorhanden.
+
+A.9 [P2] ROLLEN- UND BERECHTIGUNGSSYSTEM (RBAC)
+-------------------------------------------------------
+Aktuell: jeder eingeloggte Nutzer kann alles, was ihm gehört.
+
+Was tun:
+  - Neue Tabelle user_roles(user_id, company_id, role) mit Rollen
+    'owner' | 'manager' | 'staff' | 'viewer'.
+  - RLS-Policies erweitern: viewer darf nur SELECT, staff darf nicht DELETE,
+    nur owner darf Buyer/Shops/Suppliers anlegen/löschen.
+  - Vorbereitung für Multi-User-Firmen (siehe D.1 companies).
+
+A.10 [P3] OAUTH-LOGIN (Google / Apple / Microsoft)
+-------------------------------------------------------
+  - Buttons im LoginScreen, lib/services/oauth_service.dart.
+  - Apple Sign-In für iOS-Store-Pflicht, falls andere OAuth-Anbieter genutzt.
+
+A.11 [P3] IP-/GERÄTE-WHITELIST
+-------------------------------------------------------
+  - "Neues Gerät erkannt"-E-Mail bei Login von unbekanntem User-Agent.
+  - Optional Sperre bis Bestätigung per E-Mail.
+
+A.12 [P1] SECRETS & KONFIGURATION
+-------------------------------------------------------
+Aktuell: lib/config/supabase_config.dart hat URL+anon-Key hardcoded (ok).
+
+Was tun:
+  - Sicherstellen, dass KEIN service_role-Key in den Client kommt.
+  - Production-Build mit `--dart-define=SUPABASE_URL=...
+    --dart-define=SUPABASE_ANON_KEY=...` parametrierbar machen, damit Dev/Prod
+    getrennt sind.
+  - .env / Service-Keys nie commiten; .gitignore prüfen.
+
+
+================================================================================
+TEIL B — AUTHENTIFIZIERUNG / LOGIN
+================================================================================
+
+B.1 [P1] PASSWORT-RESET-ABSCHLUSS-FLOW
+-------------------------------------------------------
+Aktuell: Reset-Mail wird gesendet, aber es gibt keinen Bildschirm, auf dem das
+neue Passwort gesetzt wird.
+
+Was tun:
+  - Deep-Link konfigurieren (Supabase Redirect URL + Universal/App Links).
+  - Neue Datei: lib/screens/auth/password_reset_screen.dart
+      * Nimmt Token aus dem Link.
+      * Zeigt zwei Felder (neues Passwort + Bestätigung).
+      * Ruft `supabase.auth.updateUser(UserAttributes(password: ...))` auf.
+      * Erfolgsmeldung → zurück zum Login.
+  - In main.dart Router: route auf `/auth/reset?token=…` registrieren.
+
+B.2 [P1] E-MAIL-VERIFIZIERUNG (PRODUKTION)
+-------------------------------------------------------
+Aktuell: in Dev deaktiviert (siehe masterprompt2 §4.0).
+
+Was tun:
+  - In Production Supabase Projekt: Email Confirmations EIN.
+  - Neue Datei: lib/screens/auth/verify_email_screen.dart
+      * Anzeige "Wir haben dir eine Mail an X geschickt."
+      * "Mail erneut senden"-Button (max. 5×, Cooldown 60s).
+      * Pollt alle 5s `auth.refreshSession()` und prüft `email_confirmed_at`.
+  - RegisterScreen leitet nach Sign-up auf VerifyEmailScreen.
+
+B.3 [P1] LOGOUT-BUTTON & BESTÄTIGUNG
+-------------------------------------------------------
+Sichtbarkeit prüfen:
+  - Logout in SideNav klar erreichbar.
+  - Bestätigungsdialog "Wirklich abmelden?" um versehentliches Klicken zu
+    vermeiden.
+  - Beim Logout lokalen Provider-State leeren (Deals, Inventory, Settings).
+
+B.4 [P2] "ANGEMELDET BLEIBEN"-OPTION
+-------------------------------------------------------
+  - Checkbox auf LoginScreen.
+  - Bei abgeschalteter Option: kürzere Session-TTL, Session bei App-Close
+    löschen.
+
+B.5 [P2] PASSWORT-STÄRKE-INDIKATOR (LIVE)
+-------------------------------------------------------
+  - lib/widgets/password_strength_indicator.dart (Levels: schwach/mittel/stark).
+  - Echtzeit-Aktualisierung beim Tippen.
+
+B.6 [P2] SITZUNGS-ABLAUF-WARNUNG
+-------------------------------------------------------
+  - Banner 5 Min vor Token-Expiry: "Sitzung läuft ab. Verlängern?".
+  - Button → ruft `auth.refreshSession()` auf.
+
+B.7 [P3] OAUTH-BUTTONS
+-------------------------------------------------------
+  - "Mit Google fortfahren" / "Mit Apple anmelden" → Phase 3.
+
+B.8 [P3] KONTO-LÖSCHUNG (DSGVO)
+-------------------------------------------------------
+Pflicht in EU.
+  - Einstellungen → Gefahrenzone → "Konto und alle Daten löschen".
+  - Edge-Function `delete_user(user_id)`:
+      * Anonymisiert oder löscht alle Tabellenzeilen des Nutzers.
+      * Ruft `auth.admin.deleteUser` auf.
+  - Vorher Bestätigung mit Passwort + Captcha.
+
+B.9 [P3] DATENEXPORT (DSGVO ART.20)
+-------------------------------------------------------
+  - Einstellungen → "Meine Daten exportieren" → ZIP mit JSON-Dump aller
+    Tabellen des aktuellen Nutzers.
+
+
+================================================================================
+TEIL C — DATENMODELL: KRITISCHE DB-FEHLER & FEHLENDE FELDER
+================================================================================
+
+Diese Punkte werden mit ziemlicher Sicherheit im echten Betrieb zu Fehlern
+führen, wenn sie nicht adressiert werden.
+
+C.1 [P1] EAN / GTIN / BARCODE
+-------------------------------------------------------
+inventory_items hat sku (frei vergeben), aber keinen genormten Barcode.
+
+Migration:
+  ALTER TABLE inventory_items
+    ADD COLUMN gtin TEXT,
+    ADD COLUMN ean13 TEXT,
+    ADD COLUMN barcode_type TEXT,        -- 'EAN13','UPC','GTIN14','CODE128'…
+    ADD COLUMN manufacturer_part_no TEXT;
+  CREATE UNIQUE INDEX idx_items_gtin_per_user
+    ON inventory_items(user_id, gtin) WHERE gtin IS NOT NULL;
+
+UI:
+  - Lager-Dialog: Felder GTIN/EAN, Validator aus A.1.
+  - Optional Scanner-Button (mobile_scanner package) → füllt Feld.
+
+C.2 [P1] LIEFERANT (SUPPLIER)
+-------------------------------------------------------
+deals.shop ist "wo gekauft", aber keine strukturierte Lieferantenpflege.
+Siehe D.2.
+
+C.3 [P1] CHARGE / LOSNUMMER / MHD
+-------------------------------------------------------
+Pflicht für Lebensmittel, Kosmetik, Pharma, Elektronik mit Garantie.
+
+Migration:
+  ALTER TABLE inventory_items
+    ADD COLUMN batch_number TEXT,
+    ADD COLUMN lot_number TEXT,
+    ADD COLUMN expiry_date DATE,
+    ADD COLUMN manufacture_date DATE,
+    ADD COLUMN serial_number TEXT;
+  CREATE INDEX idx_items_expiry ON inventory_items(expiry_date)
+    WHERE expiry_date IS NOT NULL;
+
+Dashboard-Widget: "Läuft in <30 Tagen ab".
+
+C.4 [P1] STEUER / WÄHRUNG
+-------------------------------------------------------
+Aktuell: ek_netto/ek_brutto, Steuersatz im Code hartcodiert (19%).
+
+Migration:
+  ALTER TABLE deals
+    ADD COLUMN tax_rate NUMERIC(5,2) DEFAULT 19.00,
+    ADD COLUMN currency CHAR(3) DEFAULT 'EUR',
+    ADD COLUMN reverse_charge BOOLEAN DEFAULT FALSE;
+  ALTER TABLE buyers
+    ADD COLUMN tax_id TEXT,
+    ADD COLUMN business_type TEXT;       -- 'B2C','B2B','Reseller'
+  ALTER TABLE shops
+    ADD COLUMN tax_region TEXT DEFAULT 'DE';
+
+C.5 [P1] UPDATED_AT / UPDATED_BY / VERSION
+-------------------------------------------------------
+Aktuell: nur created_at vorhanden.
+
+Für ALLE Business-Tabellen:
+  ALTER TABLE <t>
+    ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ADD COLUMN updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    ADD COLUMN version INTEGER NOT NULL DEFAULT 1;
+
+  CREATE FUNCTION touch_row() RETURNS trigger AS $$
+  BEGIN
+    NEW.updated_at := NOW();
+    NEW.updated_by := auth.uid();
+    NEW.version    := COALESCE(OLD.version,0) + 1;
+    RETURN NEW;
+  END $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER trg_touch_<t> BEFORE UPDATE ON <t>
+    FOR EACH ROW EXECUTE FUNCTION touch_row();
+
+Optimistic Locking: Client schickt `version` mit, Update prüft Gleichheit,
+wirft Konflikt-Fehler bei Mismatch.
+
+C.6 [P1] SOFT-DELETE
+-------------------------------------------------------
+Für deals, buyers, shops, inventory_items, products, suppliers, warehouses:
+
+  ALTER TABLE <t> ADD COLUMN deleted_at TIMESTAMPTZ;
+  CREATE INDEX idx_<t>_active ON <t>(user_id) WHERE deleted_at IS NULL;
+
+RLS anpassen, damit Standardabfragen Soft-Deleted ausblenden:
+
+  DROP POLICY "user_owns_<t>" ON <t>;
+  CREATE POLICY "user_owns_<t>_select" ON <t> FOR SELECT
+    USING (auth.uid() = user_id);
+  CREATE POLICY "user_owns_<t>_modify" ON <t> FOR ALL
+    USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+  -- App-Layer filtert standardmäßig deleted_at IS NULL,
+  -- "Papierkorb"-View zeigt deleted_at IS NOT NULL.
+
+C.7 [P1] CHECK-CONSTRAINTS GEGEN UNSINNS-WERTE
+-------------------------------------------------------
+  ALTER TABLE deals
+    ADD CONSTRAINT deals_qty_positive CHECK (quantity > 0),
+    ADD CONSTRAINT deals_ek_nonneg CHECK (ek_netto IS NULL OR ek_netto >= 0),
+    ADD CONSTRAINT deals_ekb_nonneg CHECK (ek_brutto IS NULL OR ek_brutto >= 0),
+    ADD CONSTRAINT deals_vk_nonneg CHECK (vk IS NULL OR vk >= 0);
+  ALTER TABLE inventory_items
+    ADD CONSTRAINT items_qty_nonneg CHECK (quantity >= 0),
+    ADD CONSTRAINT items_min_nonneg CHECK (min_stock >= 0),
+    ADD CONSTRAINT items_cost_nonneg CHECK (cost_price IS NULL OR cost_price >= 0);
+  ALTER TABLE inventory_movements
+    ADD CONSTRAINT mov_qty_nonzero CHECK (quantity_change <> 0);
+
+C.8 [P1] FEHLENDE NOT-NULL & UNIQUE
+-------------------------------------------------------
+  ALTER TABLE deals ALTER COLUMN shop SET NOT NULL;
+  ALTER TABLE deals ALTER COLUMN product SET NOT NULL;
+  ALTER TABLE deals ALTER COLUMN order_date SET NOT NULL;
+  ALTER TABLE inventory_items ALTER COLUMN name SET NOT NULL;
+
+  ALTER TABLE shops ADD CONSTRAINT shops_name_per_user UNIQUE(user_id, name);
+  ALTER TABLE buyers ADD CONSTRAINT buyers_name_per_user UNIQUE(user_id, name);
+  ALTER TABLE inventory_items
+    ADD CONSTRAINT items_sku_per_user UNIQUE(user_id, sku) DEFERRABLE;
+
+C.9 [P2] EINHEIT (UoM) UND DEZIMALMENGEN
+-------------------------------------------------------
+quantity ist INT — passt nicht für Gewicht/Volumen/Längen.
+
+Migration:
+  ALTER TABLE inventory_items
+    ADD COLUMN unit_of_measure TEXT NOT NULL DEFAULT 'pcs',
+    ADD COLUMN quantity_decimal NUMERIC(14,3);
+  ALTER TABLE deals
+    ADD COLUMN unit_of_measure TEXT DEFAULT 'pcs',
+    ADD COLUMN quantity_decimal NUMERIC(14,3);
+
+UI: Auswahlfeld (Stk, kg, g, L, ml, m, cm, Karton, Palette).
+
+C.10 [P2] MINDESTBESTAND, BESTELLPUNKT, LIEFERZEIT
+-------------------------------------------------------
+  ALTER TABLE inventory_items
+    ADD COLUMN reorder_point INTEGER,
+    ADD COLUMN reorder_qty INTEGER,
+    ADD COLUMN lead_time_days INTEGER,
+    ADD COLUMN safety_stock INTEGER,
+    ADD COLUMN rotation_method TEXT DEFAULT 'FIFO';   -- FIFO|LIFO|FEFO
+
+Auf Dashboard "Nachbestellen!"-Liste aller Items mit
+quantity <= reorder_point.
+
+C.11 [P2] RABATTE & PROMOTIONEN
+-------------------------------------------------------
+  ALTER TABLE deals
+    ADD COLUMN discount_type TEXT,                -- 'percent','absolute'
+    ADD COLUMN discount_value NUMERIC(12,2),
+    ADD COLUMN promo_code TEXT,
+    ADD COLUMN actual_vk NUMERIC(12,2);
+
+C.12 [P2] ZAHLUNGS- UND RECHNUNGSDATEN
+-------------------------------------------------------
+beleg ist nur Ja/Nein. Reicht für echte Buchhaltung nicht.
+
+  ALTER TABLE deals
+    ADD COLUMN invoice_number TEXT,
+    ADD COLUMN invoice_date DATE,
+    ADD COLUMN due_date DATE,
+    ADD COLUMN payment_status TEXT DEFAULT 'unpaid',  -- unpaid|partial|paid|overdue|refunded
+    ADD COLUMN payment_method TEXT,                   -- transfer|card|paypal|cash
+    ADD COLUMN payment_date DATE,
+    ADD COLUMN paid_amount NUMERIC(12,2);
+
+  CREATE UNIQUE INDEX idx_deals_invoice
+    ON deals(user_id, invoice_number) WHERE invoice_number IS NOT NULL;
+
+C.13 [P2] VERSAND-/TRACKING-DATEN STRUKTURIERT
+-------------------------------------------------------
+tracking ist heute eine Freitext-Spalte.
+
+  ALTER TABLE deals
+    ADD COLUMN carrier TEXT,                  -- DHL,UPS,DPD,Hermes,GLS…
+    ADD COLUMN tracking_number TEXT,
+    ADD COLUMN tracking_url TEXT,
+    ADD COLUMN shipped_at TIMESTAMPTZ,
+    ADD COLUMN delivered_at TIMESTAMPTZ;
+
+C.14 [P2] BUYER: KONTAKT- UND ADRESSDATEN
+-------------------------------------------------------
+buyers hat heute nur Name + Farben + Discord-IDs.
+
+  ALTER TABLE buyers
+    ADD COLUMN email TEXT,
+    ADD COLUMN phone TEXT,
+    ADD COLUMN address_line1 TEXT,
+    ADD COLUMN address_line2 TEXT,
+    ADD COLUMN postal_code TEXT,
+    ADD COLUMN city TEXT,
+    ADD COLUMN country CHAR(2) DEFAULT 'DE',
+    ADD COLUMN credit_limit NUMERIC(12,2),
+    ADD COLUMN default_payment_term_days INTEGER;
+
+C.15 [P3] FREIE ZUSATZFELDER (CUSTOM FIELDS)
+-------------------------------------------------------
+Für Kunden, die individuelle Felder brauchen ohne Schema-Änderung:
+  ALTER TABLE deals ADD COLUMN custom_fields JSONB DEFAULT '{}'::jsonb;
+  ALTER TABLE inventory_items ADD COLUMN custom_fields JSONB DEFAULT '{}'::jsonb;
+
+C.16 [P3] BILD-/DATEIANHÄNGE
+-------------------------------------------------------
+Supabase Storage Bucket "attachments" anlegen.
+  CREATE TABLE attachments (
+    id UUID PK, user_id UUID, entity_type TEXT, entity_id TEXT,
+    storage_path TEXT, mime TEXT, size_bytes INT, created_at TIMESTAMPTZ);
+Storage-Policies: nur Owner darf SELECT/INSERT/DELETE.
+
+
+================================================================================
+TEIL D — DATENMODELL: NEUE TABELLEN & ENTITÄTEN
+================================================================================
+
+D.1 [P2/(opt P1 wenn Mehrbenutzer)] COMPANIES (MANDANTEN)
+-------------------------------------------------------
+Heute: ein Nutzer = eine Firma. Sobald zwei Personen gemeinsam an einem
+Bestand arbeiten sollen, kollabiert das.
+
+  CREATE TABLE companies (
+    id UUID PK DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    owner_id UUID NOT NULL REFERENCES auth.users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE TABLE company_members (
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,    -- owner|manager|staff|viewer
+    PRIMARY KEY (company_id, user_id)
+  );
+
+  -- Für jede Business-Tabelle:
+  ALTER TABLE deals ADD COLUMN company_id UUID REFERENCES companies(id);
+  -- usw. für inventory_items, suppliers, products, …
+
+  -- RLS umstellen: auth.uid() ist Mitglied von company_id?
+
+D.2 [P1] SUPPLIERS
+-------------------------------------------------------
+  CREATE TABLE suppliers (
+    id UUID PK,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    contact_name TEXT,
+    email TEXT,
+    phone TEXT,
+    website TEXT,
+    address_line1 TEXT, postal_code TEXT, city TEXT, country CHAR(2),
+    tax_id TEXT,
+    payment_terms_days INTEGER,
+    lead_time_days INTEGER,
+    min_order_qty INTEGER,
+    currency CHAR(3) DEFAULT 'EUR',
+    notes TEXT,
+    deleted_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  ALTER TABLE inventory_items
+    ADD COLUMN supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
+    ADD COLUMN supplier_sku TEXT;
+  ALTER TABLE deals
+    ADD COLUMN supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL;
+
+D.3 [P2] PRODUCTS (ARTIKELSTAMM)
+-------------------------------------------------------
+Heute: deal.product ist Freitext → "Nike Air Max" vs "Nike AirMax".
+
+  CREATE TABLE products (
+    id UUID PK,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    sku TEXT,
+    gtin TEXT,
+    category TEXT,
+    brand TEXT,
+    description TEXT,
+    weight_grams INTEGER,
+    dimensions_cm TEXT,
+    default_supplier_id UUID REFERENCES suppliers(id),
+    default_tax_rate NUMERIC(5,2),
+    deleted_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  ALTER TABLE deals ADD COLUMN product_id UUID REFERENCES products(id);
+  ALTER TABLE inventory_items ADD COLUMN product_id UUID REFERENCES products(id);
+
+D.4 [P2] WAREHOUSES & ZONES
+-------------------------------------------------------
+  CREATE TABLE warehouses (
+    id UUID PK, user_id UUID, name TEXT NOT NULL,
+    address TEXT, capacity INTEGER,
+    deleted_at TIMESTAMPTZ, created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE TABLE warehouse_zones (
+    id UUID PK,
+    warehouse_id UUID REFERENCES warehouses(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    capacity INTEGER
+  );
+
+  ALTER TABLE inventory_items
+    ADD COLUMN warehouse_id UUID REFERENCES warehouses(id),
+    ADD COLUMN zone_id UUID REFERENCES warehouse_zones(id),
+    ADD COLUMN bin TEXT;
+
+D.5 [P3] PRICE_HISTORY
+-------------------------------------------------------
+  CREATE TABLE price_history (
+    id UUID PK, user_id UUID,
+    product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+    supplier_id UUID REFERENCES suppliers(id),
+    ek_netto NUMERIC(12,2), ek_brutto NUMERIC(12,2), vk NUMERIC(12,2),
+    currency CHAR(3) DEFAULT 'EUR',
+    valid_from DATE, valid_to DATE
+  );
+
+D.6 [P2] AUDIT_LOG (siehe A.6)
+D.7 [P2] AUTH_EVENTS (siehe A.7)
+
+D.8 [P3] CUSTOMER_RETURNS / RMA
+-------------------------------------------------------
+Rücksendungen mit Grund, Erstattungsbetrag, Restocking-Status.
+
+D.9 [P3] STOCK_TAKE / INVENTUR-LÄUFE
+-------------------------------------------------------
+  CREATE TABLE stock_takes (
+    id UUID PK, user_id UUID, started_at TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ, status TEXT, note TEXT
+  );
+  CREATE TABLE stock_take_items (
+    id UUID PK, stock_take_id UUID REFERENCES stock_takes(id) ON DELETE CASCADE,
+    item_id UUID REFERENCES inventory_items(id),
+    counted_qty NUMERIC(14,3), system_qty NUMERIC(14,3), delta NUMERIC(14,3)
+  );
+
+
+================================================================================
+TEIL E — DATENINTEGRITÄT, INDEXE, PERFORMANCE
+================================================================================
+
+E.1 [P1] FEHLENDE INDEXE
+  CREATE INDEX idx_deals_user_status ON deals(user_id, status);
+  CREATE INDEX idx_deals_user_orderdate ON deals(user_id, order_date DESC);
+  CREATE INDEX idx_items_user_qty ON inventory_items(user_id, quantity);
+  CREATE INDEX idx_movements_item_date ON inventory_movements(item_id, date DESC);
+  CREATE INDEX idx_activity_user_date ON activity_log(user_id, date DESC);
+
+E.2 [P2] FOREIGN-KEY-VERHALTEN PRÜFEN
+  - inventory_items.deal_id ON DELETE SET NULL → ok mit Soft-Delete obsolet,
+    weil Deal nie wirklich gelöscht wird → später ON DELETE RESTRICT.
+  - inventory_movements.item_id ON DELETE CASCADE → ok.
+  - suppliers, products: ON DELETE SET NULL für referenzierende Spalten.
+
+E.3 [P2] DATABASE FUNCTIONS / VIEWS FÜR REPORTING
+  - View v_open_deals: alle Deals mit payment_status != 'paid'.
+  - View v_low_stock: items wo quantity <= reorder_point.
+  - View v_expiring_soon: items mit expiry_date < now()+30d.
+  - Function fn_total_profit(period) für Statistiken.
+
+E.4 [P2] ZAHLEN MIT NUMERIC, NICHT DOUBLE
+  Aktuelle Spalten ek_netto/ek_brutto/vk sind DOUBLE PRECISION (Z.16-18 der
+  Migration). Für Geld grundsätzlich:
+    ALTER TABLE deals
+      ALTER COLUMN ek_netto TYPE NUMERIC(12,2),
+      ALTER COLUMN ek_brutto TYPE NUMERIC(12,2),
+      ALTER COLUMN vk TYPE NUMERIC(12,2);
+  → vermeidet Rundungsfehler in Summen.
+
+
+================================================================================
+TEIL F — UMSETZUNGS-REIHENFOLGE (MIGRATIONS-PLAN)
+================================================================================
+
+Sprint 1 (P1, Sicherheit & DB-Hygiene):
+  1. lib/utils/validators.dart anlegen + überall einbinden (A.1)
+  2. Passwortregeln + Strength-Indikator (A.2, B.5)
+  3. Auth-Fehler-Mapping (A.4)
+  4. Migration: updated_at/by/version + Trigger (C.5)
+  5. Migration: Soft-Delete (deleted_at) + RLS-Update (A.5/C.6)
+  6. Migration: CHECK-Constraints (C.7)
+  7. Migration: NOT-NULL/UNIQUE (C.8)
+  8. Migration: NUMERIC für Geldspalten (E.4)
+  9. Migration: Indexe (E.1)
+  10. Session-Manager + Idle-Timeout (A.3)
+  11. Logout-Bestätigung + State-Reset (B.3)
+
+Sprint 2 (P1, Auth & Realwelt-Felder):
+  12. Password-Reset-Screen + Deep-Link (B.1)
+  13. E-Mail-Verify-Screen + Production-Setting (B.2)
+  14. Migration: EAN/GTIN/Barcode (C.1)
+  15. Migration: Charge/MHD/Seriennummer (C.3)
+  16. Migration: Steuer/Währung/Reverse-Charge (C.4)
+  17. Migration: Suppliers-Tabelle (D.2)
+  18. UI: Lieferantenverwaltung in Einstellungen
+  19. UI: Felder in Lager-/Deal-Dialogen einblenden
+
+Sprint 3 (P2, Reichweite):
+  20. Audit-Log + Trigger (A.6)
+  21. Auth-Events-Log (A.7)
+  22. UoM + decimal qty (C.9)
+  23. Reorder-Point + Dashboard-Widget "Nachbestellen" (C.10)
+  24. Rabatte/Promo (C.11)
+  25. Zahlungs-/Rechnungsfelder (C.12)
+  26. Versand-/Tracking-Felder (C.13)
+  27. Buyer-Adressfelder (C.14)
+  28. Products-Tabelle + Verknüpfung (D.3)
+  29. Warehouses/Zones (D.4)
+  30. Reporting-Views (E.3)
+
+Sprint 4 (P2/P3, Enterprise):
+  31. Companies + Memberships + Rollen (D.1, A.9)
+  32. MFA / TOTP (A.8)
+  33. Datenexport DSGVO (B.9), Konto löschen (B.8)
+  34. OAuth-Login (A.10, B.7)
+  35. Stock-Takes (D.9), Returns (D.8), Price-History (D.5)
+  36. Custom Fields (C.15), Attachments (C.16)
+
+
+================================================================================
+TEIL G — DEFINITION OF DONE (PRO TICKET)
+================================================================================
+
+Jede Aufgabe gilt als erledigt, wenn:
+  [ ] Code geschrieben & im UI verfügbar.
+  [ ] Mindestens ein Unit-Test (für Validators/Services) bzw. Smoke-Test
+      (für Screens) existiert.
+  [ ] Migration ist in supabase/migrations/ als neue Datei
+      (Format: YYYYMMDDHHMMSS_<beschreibung>.sql), nicht durch Editieren
+      der Initial-Migration.
+  [ ] RLS-Policies für neue Tabellen vorhanden und getestet
+      (zwei verschiedene Test-Accounts dürfen sich gegenseitig nichts sehen).
+  [ ] Repository-Layer (lib/services/supabase_repository.dart) erweitert.
+  [ ] Provider/State-Layer aktualisiert.
+  [ ] Validator aus A.1 vor jedem Insert/Update aufgerufen.
+  [ ] Soft-Delete respektiert (kein hard DELETE in Repos).
+  [ ] DE-Texte in der UI, keine Mischsprache.
+  [ ] Manuell auf macOS UND Web getestet (mind. zwei Plattformen).
+  [ ] Keine Secrets/Service-Keys ins Repo committet.
+
+
+================================================================================
+ENDE — MASTERPROMPT 3
+================================================================================

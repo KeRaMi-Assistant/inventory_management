@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../utils/validators.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -78,12 +79,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           labelText: 'E-Mail',
                           prefixIcon: Icon(Icons.email_outlined, size: 18),
                         ),
-                        validator: (v) {
-                          final value = v?.trim() ?? '';
-                          if (value.isEmpty) return 'E-Mail erforderlich';
-                          if (!value.contains('@')) return 'Ungültige E-Mail';
-                          return null;
-                        },
+                        validator: Validators.validateEmail,
                       ),
                       const SizedBox(height: 18),
                       ElevatedButton.icon(

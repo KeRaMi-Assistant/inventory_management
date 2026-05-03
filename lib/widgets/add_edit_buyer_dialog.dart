@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/buyer.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/validators.dart';
 
 class AddEditBuyerDialog extends StatefulWidget {
   final Buyer? buyer;
@@ -158,9 +159,9 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                 TextFormField(
                   controller: _nameCtrl,
                   decoration: const InputDecoration(labelText: 'Name *'),
+                  maxLength: Validators.maxBuyerName,
                   onChanged: (_) => setState(() {}),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Pflichtfeld' : null,
+                  validator: Validators.validateBuyerName,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -296,6 +297,8 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                               isDense: true,
                             ),
                             keyboardType: TextInputType.number,
+                            validator: (v) =>
+                                Validators.validateDiscordSnowflake(v),
                           ),
                         ),
                         const SizedBox(width: 4),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/shop.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/validators.dart';
 
 class AddEditShopDialog extends StatefulWidget {
   final Shop? shop;
@@ -82,20 +83,22 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
               TextFormField(
                 controller: _nameCtrl,
                 decoration: const InputDecoration(labelText: 'Name *'),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Pflichtfeld' : null,
+                maxLength: Validators.maxShopName,
+                validator: Validators.validateShopName,
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _regionCtrl,
                 decoration: const InputDecoration(labelText: 'Region *'),
+                maxLength: 40,
                 validator: (v) =>
-                    v == null || v.isEmpty ? 'Pflichtfeld' : null,
+                    Validators.validateRequired(v, label: 'Region'),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _channelCtrl,
                 decoration: const InputDecoration(labelText: 'Kanal'),
+                maxLength: 50,
               ),
               const SizedBox(height: 8),
               TextFormField(
@@ -106,16 +109,7 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
                   prefixIcon: Icon(Icons.link, size: 18),
                 ),
                 keyboardType: TextInputType.url,
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return null;
-                  final url = v.trim().startsWith('http')
-                      ? v.trim()
-                      : 'https://${v.trim()}';
-                  if (Uri.tryParse(url)?.hasAuthority != true) {
-                    return 'Ungültige URL';
-                  }
-                  return null;
-                },
+                validator: (v) => Validators.validateUrl(v),
               ),
               const SizedBox(height: 8),
               SwitchListTile(

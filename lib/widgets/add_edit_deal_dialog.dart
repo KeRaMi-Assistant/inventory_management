@@ -5,6 +5,7 @@ import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/url_helper.dart';
+import '../utils/validators.dart';
 
 class AddEditDealDialog extends StatefulWidget {
   final Deal? deal;
@@ -272,21 +273,15 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             controller: _productCtrl,
                             decoration: const InputDecoration(
                                 labelText: 'Produkt *'),
-                            validator: (v) => v == null || v.isEmpty
-                                ? 'Pflichtfeld'
-                                : null,
+                            maxLength: Validators.maxProductName,
+                            validator: Validators.validateProductName,
                           ),
                           TextFormField(
                             controller: _quantityCtrl,
                             decoration: const InputDecoration(
                                 labelText: 'Anzahl *'),
                             keyboardType: TextInputType.number,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) return 'Pflichtfeld';
-                              final n = int.tryParse(v);
-                              if (n == null || n <= 0) return 'Muss > 0 sein';
-                              return null;
-                            },
+                            validator: Validators.validatePositiveInt,
                           ),
                         ], flex: [3, 1]),
                         const SizedBox(height: 12),
@@ -349,13 +344,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                       keyboardType:
                                           const TextInputType.numberWithOptions(
                                               decimal: true),
-                                      validator: (v) {
-                                        if (v == null || v.isEmpty) return null;
-                                        if (double.tryParse(
-                                                v.replaceAll(',', '.')) ==
-                                            null) { return 'Ungültige Zahl'; }
-                                        return null;
-                                      },
+                                      validator: (v) =>
+                                          Validators.validateMoney(v),
                                     ),
                                   ],
                                 ),
@@ -381,13 +371,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                       keyboardType:
                                           const TextInputType.numberWithOptions(
                                               decimal: true),
-                                      validator: (v) {
-                                        if (v == null || v.isEmpty) return null;
-                                        if (double.tryParse(
-                                                v.replaceAll(',', '.')) ==
-                                            null) { return 'Ungültige Zahl'; }
-                                        return null;
-                                      },
+                                      validator: (v) =>
+                                          Validators.validateMoney(v),
                                     ),
                                   ],
                                 ),
@@ -460,12 +445,15 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             controller: _ticketCtrl,
                             decoration: const InputDecoration(
                                 labelText: 'Ticketnummer'),
+                            maxLength: Validators.maxTicket,
+                            validator: (v) => Validators.validateTicket(v),
                             onChanged: _onTicketChanged,
                           ),
                           TextFormField(
                             controller: _trackingCtrl,
                             decoration:
                                 const InputDecoration(labelText: 'Tracking'),
+                            maxLength: 100,
                           ),
                         ]),
                         // Discord status hint
@@ -507,6 +495,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                           decoration:
                               const InputDecoration(labelText: 'Notiz'),
                           maxLines: 2,
+                          maxLength: Validators.maxNote,
+                          validator: Validators.validateNote,
                         ),
                       ],
                     );

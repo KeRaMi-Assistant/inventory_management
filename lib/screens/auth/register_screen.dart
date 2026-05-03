@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../utils/validators.dart';
+import '../../widgets/password_strength_indicator.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -90,26 +92,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextFormField(
                         controller: _emailCtrl,
                         keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.email],
                         autofocus: true,
                         decoration: const InputDecoration(
                           labelText: 'E-Mail',
                           prefixIcon: Icon(Icons.email_outlined, size: 18),
                         ),
-                        validator: (v) {
-                          final value = v?.trim() ?? '';
-                          if (value.isEmpty) return 'E-Mail erforderlich';
-                          if (!value.contains('@')) return 'Ungültige E-Mail';
-                          return null;
-                        },
+                        validator: Validators.validateEmail,
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _passwordCtrl,
                         obscureText: _obscure,
+                        autofillHints: const [AutofillHints.newPassword],
+                        onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
                           labelText: 'Passwort',
                           prefixIcon:
                               const Icon(Icons.lock_outline, size: 18),
+                          helperText: '8+ Zeichen, Groß/Klein, Zahl, Sonderzeichen',
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscure
@@ -121,18 +122,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 setState(() => _obscure = !_obscure),
                           ),
                         ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) {
-                            return 'Passwort erforderlich';
-                          }
-                          if (v.length < 6) return 'Mindestens 6 Zeichen';
-                          return null;
-                        },
+                        validator: Validators.validatePassword,
                       ),
+                      PasswordStrengthIndicator(password: _passwordCtrl.text),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _confirmCtrl,
                         obscureText: _obscure,
+                        autofillHints: const [AutofillHints.newPassword],
                         onFieldSubmitted: (_) => _submit(),
                         decoration: const InputDecoration(
                           labelText: 'Passwort bestätigen',

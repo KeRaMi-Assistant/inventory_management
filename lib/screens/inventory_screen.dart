@@ -5,6 +5,7 @@ import '../models/deal.dart';
 import '../models/inventory_item.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/url_helper.dart';
+import '../utils/validators.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -520,7 +521,8 @@ class _InventoryDialogState extends State<_InventoryDialog> {
     return TextFormField(
       controller: _name,
       decoration: const InputDecoration(labelText: 'Produkt *'),
-      validator: (v) => v == null || v.isEmpty ? 'Pflichtfeld' : null,
+      maxLength: Validators.maxProductName,
+      validator: Validators.validateProductName,
     );
   }
 
@@ -631,6 +633,8 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                       controller: _quantity,
                       decoration: const InputDecoration(labelText: 'Angekommen (Stk.)'),
                       keyboardType: TextInputType.number,
+                      validator: (v) =>
+                          Validators.validateNonNegativeInt(v),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -638,17 +642,40 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     child: TextFormField(
                       controller: _sku,
                       decoration: const InputDecoration(labelText: 'Produktnummer (optional)'),
+                      maxLength: Validators.maxSku,
+                      validator: (v) => Validators.validateSku(v),
                     ),
                   ),
                 ]),
                 const SizedBox(height: 10),
                 // ── 4. Min stock + cost + location ────────────────────────────
                 Row(children: [
-                  Expanded(child: TextFormField(controller: _min, decoration: const InputDecoration(labelText: 'Mindestbestand'), keyboardType: TextInputType.number)),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _min,
+                      decoration: const InputDecoration(labelText: 'Mindestbestand'),
+                      keyboardType: TextInputType.number,
+                      validator: (v) =>
+                          Validators.validateNonNegativeInt(v),
+                    ),
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: TextFormField(controller: _cost, decoration: const InputDecoration(labelText: 'Ø EK-Preis'), keyboardType: const TextInputType.numberWithOptions(decimal: true))),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _cost,
+                      decoration: const InputDecoration(labelText: 'Ø EK-Preis'),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      validator: (v) => Validators.validateMoney(v),
+                    ),
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: TextFormField(controller: _location, decoration: const InputDecoration(labelText: 'Lagerort'))),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _location,
+                      decoration: const InputDecoration(labelText: 'Lagerort'),
+                      maxLength: 100,
+                    ),
+                  ),
                 ]),
                 const SizedBox(height: 10),
                 TextFormField(
@@ -659,9 +686,16 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     prefixIcon: Icon(Icons.link, size: 18),
                   ),
                   keyboardType: TextInputType.url,
+                  validator: (v) => Validators.validateUrl(v),
                 ),
                 const SizedBox(height: 10),
-                TextFormField(controller: _note, decoration: const InputDecoration(labelText: 'Notiz'), maxLines: 2),
+                TextFormField(
+                  controller: _note,
+                  decoration: const InputDecoration(labelText: 'Notiz'),
+                  maxLines: 2,
+                  maxLength: Validators.maxNote,
+                  validator: Validators.validateNote,
+                ),
               ],
             ),
           ),

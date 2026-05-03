@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../utils/validators.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
@@ -121,12 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           labelText: 'E-Mail',
                           prefixIcon: Icon(Icons.email_outlined, size: 18),
                         ),
-                        validator: (v) {
-                          final value = v?.trim() ?? '';
-                          if (value.isEmpty) return 'E-Mail erforderlich';
-                          if (!value.contains('@')) return 'Ungültige E-Mail';
-                          return null;
-                        },
+                        validator: Validators.validateEmail,
                       ),
                       const SizedBox(height: 12),
                       TextFormField(

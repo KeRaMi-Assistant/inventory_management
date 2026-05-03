@@ -458,7 +458,30 @@ class _AccountMenu extends StatelessWidget {
       ],
       onSelected: (value) async {
         if (value == 'logout') {
-          await context.read<AuthProvider>().signOut();
+          final auth = context.read<AuthProvider>();
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Wirklich abmelden?'),
+              content: const Text(
+                  'Du wirst zurück zum Login geleitet. Nicht synchronisierte Eingaben gehen verloren.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Abbrechen'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.danger),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Abmelden'),
+                ),
+              ],
+            ),
+          );
+          if (confirmed == true) {
+            await auth.signOut();
+          }
         }
       },
     );

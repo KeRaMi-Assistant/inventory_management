@@ -53,13 +53,28 @@ class SupabaseRepository {
   // ── Bulk load ─────────────────────────────────────────────────────────────
 
   Future<CloudSnapshot> loadAll() async {
+    // Soft-Delete-Filter: nur aktive Datensätze laden. Der Papierkorb-View
+    // (separater Ladepfad, später) zeigt deleted_at IS NOT NULL.
     final results = await Future.wait([
-      _client.from('deals').select().order('id', ascending: true),
-      _client.from('buyers').select().order('sort_order', ascending: true),
-      _client.from('shops').select().order('name', ascending: true),
+      _client
+          .from('deals')
+          .select()
+          .filter('deleted_at', 'is', null)
+          .order('id', ascending: true),
+      _client
+          .from('buyers')
+          .select()
+          .filter('deleted_at', 'is', null)
+          .order('sort_order', ascending: true),
+      _client
+          .from('shops')
+          .select()
+          .filter('deleted_at', 'is', null)
+          .order('name', ascending: true),
       _client
           .from('inventory_items')
           .select()
+          .filter('deleted_at', 'is', null)
           .order('created_at', ascending: true),
       _client.from('inventory_movements').select().order('date', ascending: false),
       _client
@@ -158,12 +173,19 @@ class SupabaseRepository {
   }
 
   Future<void> deleteDeal(int id) async {
-    await _client.from('deals').delete().eq('id', id);
+    // Soft-Delete: setzt deleted_at, statt physisch zu löschen.
+    await _client
+        .from('deals')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
   }
 
   Future<void> deleteDeals(Iterable<int> ids) async {
     if (ids.isEmpty) return;
-    await _client.from('deals').delete().inFilter('id', ids.toList());
+    await _client
+        .from('deals')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .inFilter('id', ids.toList());
   }
 
   // ── Buyers ────────────────────────────────────────────────────────────────
@@ -190,7 +212,10 @@ class SupabaseRepository {
   }
 
   Future<void> deleteBuyer(String id) async {
-    await _client.from('buyers').delete().eq('id', id);
+    await _client
+        .from('buyers')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
   }
 
   // ── Shops ─────────────────────────────────────────────────────────────────
@@ -217,7 +242,10 @@ class SupabaseRepository {
   }
 
   Future<void> deleteShop(String id) async {
-    await _client.from('shops').delete().eq('id', id);
+    await _client
+        .from('shops')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
   }
 
   // ── Inventory items ───────────────────────────────────────────────────────
@@ -244,7 +272,10 @@ class SupabaseRepository {
   }
 
   Future<void> deleteInventoryItem(String id) async {
-    await _client.from('inventory_items').delete().eq('id', id);
+    await _client
+        .from('inventory_items')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
   }
 
   // ── Inventory movements ───────────────────────────────────────────────────
