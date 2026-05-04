@@ -671,6 +671,10 @@ class _MobileNavList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final email = auth.userEmail ?? 'Unbekannt';
+    final initial = email.isNotEmpty ? email[0].toUpperCase() : '?';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -693,16 +697,208 @@ class _MobileNavList extends StatelessWidget {
         ),
         Container(height: 1, color: Colors.white.withAlpha(20)),
         const SizedBox(height: 8),
-        for (int i = 0; i < items.length; i++)
-          _NavItem(
-            icon: items[i].$1,
-            activeIcon: items[i].$2,
-            label: items[i].$3,
-            isSelected: selectedIndex == i,
-            extended: true,
-            onTap: () => onSelect(i),
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              for (int i = 0; i < items.length; i++)
+                _NavItem(
+                  icon: items[i].$1,
+                  activeIcon: items[i].$2,
+                  label: items[i].$3,
+                  isSelected: selectedIndex == i,
+                  extended: true,
+                  onTap: () => onSelect(i),
+                ),
+            ],
           ),
+        ),
+        // ── Account-Footer ────────────────────────────────────────────
+        Container(height: 1, color: Colors.white.withAlpha(20)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: AppTheme.accent,
+                child: Text(
+                  initial,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Angemeldet als',
+                      style: TextStyle(
+                          fontSize: 10, color: Color(0xFF94A3B8)),
+                    ),
+                    Text(
+                      email,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        _DrawerActionTile(
+          icon: Icons.logout,
+          label: 'Abmelden',
+          onTap: () => _confirmLogout(context),
+        ),
+        _DrawerActionTile(
+          icon: Icons.delete_forever_outlined,
+          label: 'Konto löschen',
+          danger: true,
+          onTap: () => _confirmDelete(context),
+        ),
+        const SizedBox(height: 12),
       ],
+    );
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Wirklich abmelden?'),
+        content: const Text(
+          'Du wirst zurück zum Login geleitet. Nicht synchronisierte '
+          'Eingaben gehen verloren.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Abbrechen'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Abmelden'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<AuthProvider>().signOut();
+    }
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Konto endgültig löschen?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Dein Konto und alle deine Daten werden unwiderruflich '
+                'gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.',
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Tippe LÖSCHEN zur Bestätigung:',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: confirmCtrl,
+                autofocus: true,
+                onChanged: (_) => setS(() {}),
+                decoration: const InputDecoration(
+                  hintText: 'LÖSCHEN',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Abbrechen'),
+            ),
+            ElevatedButton(
+              onPressed: confirmCtrl.text.trim() == 'LÖSCHEN'
+                  ? () => Navigator.pop(ctx, true)
+                  : null,
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFC0392B)),
+              child: const Text('Konto löschen'),
+            ),
+          ],
+        ),
+      ),
+    );
+    confirmCtrl.dispose();
+    if (confirmed == true && context.mounted) {
+      final error = await context.read<AuthProvider>().deleteAccount();
+      if (error != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error),
+            backgroundColor: const Color(0xFFC0392B),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+}
+
+class _DrawerActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool danger;
+  final VoidCallback onTap;
+  const _DrawerActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.danger = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = danger ? const Color(0xFFEF4444) : Colors.white70;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

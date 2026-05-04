@@ -705,10 +705,89 @@ class _GeneralTab extends StatelessWidget {
             const SizedBox(height: 32),
             const Divider(),
             const SizedBox(height: 16),
+            const _LogoutCard(),
+            const SizedBox(height: 12),
             _DeleteAccountCard(),
           ],
         );
       },
+    );
+  }
+}
+
+class _LogoutCard extends StatelessWidget {
+  const _LogoutCard();
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Wirklich abmelden?'),
+        content: const Text(
+          'Du wirst zurück zum Login geleitet. Nicht synchronisierte '
+          'Eingaben gehen verloren.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Abbrechen'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD97706)),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Abmelden'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    await context.read<AuthProvider>().signOut();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final email = context.watch<AuthProvider>().userEmail ?? '—';
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.logout, color: Color(0xFFD97706)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Abmelden',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFFB45309),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Angemeldet als $email',
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF64748B)),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            OutlinedButton(
+              onPressed: () => _confirmLogout(context),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFD97706),
+                side: const BorderSide(color: Color(0xFFD97706)),
+              ),
+              child: const Text('Abmelden'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

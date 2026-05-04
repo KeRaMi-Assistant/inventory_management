@@ -603,42 +603,71 @@ class _InventoryDialogState extends State<_InventoryDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.read<InventoryProvider>();
+    final provider = context.watch<InventoryProvider>();
     final ticketNumbers = provider.ticketSummaries
         .map((t) => t.ticketNumber)
         .where((t) => t != 'Kein Ticket')
         .toList();
 
-    return AlertDialog(
-      titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-      contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.inventory_2_outlined,
-                color: Color(0xFF2563EB), size: 20),
-          ),
-          const SizedBox(width: 12),
-          Text(widget.item == null
-              ? 'Artikel hinzufügen'
-              : 'Artikel bearbeiten'),
-        ],
-      ),
-      content: ConstrainedBox(
+    return Dialog(
+      insetPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
-        child: Form(
-          key: _form,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Header ────────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+              decoration: const BoxDecoration(
+                border: Border(
+                    bottom: BorderSide(color: Color(0xFFE2E8F0))),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.inventory_2_outlined,
+                        color: Color(0xFF2563EB), size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.item == null
+                          ? 'Artikel hinzufügen'
+                          : 'Artikel bearbeiten',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close,
+                        size: 20, color: Color(0xFF64748B)),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ),
+            // ── Form (scrollable) ─────────────────────────────────────
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Form(
+                  key: _form,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                 _sectionLabel('Allgemein'),
                 const SizedBox(height: 12),
                 // ── 1. Ticket first so product dropdown can populate ──────────
@@ -874,40 +903,72 @@ class _InventoryDialogState extends State<_InventoryDialog> {
           ),
         ),
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
-        ElevatedButton(
-          onPressed: () async {
-            if (!_form.currentState!.validate()) return;
-            final prov = context.read<InventoryProvider>();
-            final item = InventoryItem(
-              id: widget.item?.id ?? '',
-              name: _name.text.trim(),
-              sku: _sku.text.trim().isEmpty ? null : _sku.text.trim(),
-              ean: _ean.text.trim().isEmpty ? null : _ean.text.trim(),
-              quantity: int.tryParse(_quantity.text) ?? 0,
-              minStock: int.tryParse(_min.text) ?? 0,
-              location: _location.text.trim().isEmpty ? null : _location.text.trim(),
-              costPrice: double.tryParse(_cost.text.replaceAll(',', '.')),
-              arrivalDate: widget.item?.arrivalDate ?? DateTime.now(),
-              dealId: widget.item?.dealId,
-              supplierId: _supplierId,
-              ticketNumber: _selectedTicketNumber.trim().isEmpty ? null : _selectedTicketNumber.trim(),
-              ticketUrl: _ticketUrl.text.trim().isEmpty ? null : _ticketUrl.text.trim(),
-              note: _note.text.trim().isEmpty ? null : _note.text.trim(),
-              status: _status,
-              attachmentPaths: _attachmentPaths,
-            );
-            if (widget.item == null) {
-              await prov.addInventoryItem(item);
-            } else {
-              await prov.updateInventoryItem(item);
-            }
-            if (context.mounted) Navigator.pop(context);
-          },
-          child: const Text('Speichern'),
+            // ── Actions ────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              decoration: const BoxDecoration(
+                border: Border(
+                    top: BorderSide(color: Color(0xFFE2E8F0))),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Abbrechen'),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (!_form.currentState!.validate()) return;
+                      final prov = context.read<InventoryProvider>();
+                      final item = InventoryItem(
+                        id: widget.item?.id ?? '',
+                        name: _name.text.trim(),
+                        sku: _sku.text.trim().isEmpty
+                            ? null
+                            : _sku.text.trim(),
+                        ean: _ean.text.trim().isEmpty
+                            ? null
+                            : _ean.text.trim(),
+                        quantity: int.tryParse(_quantity.text) ?? 0,
+                        minStock: int.tryParse(_min.text) ?? 0,
+                        location: _location.text.trim().isEmpty
+                            ? null
+                            : _location.text.trim(),
+                        costPrice: double.tryParse(
+                            _cost.text.replaceAll(',', '.')),
+                        arrivalDate:
+                            widget.item?.arrivalDate ?? DateTime.now(),
+                        dealId: widget.item?.dealId,
+                        supplierId: _supplierId,
+                        ticketNumber: _selectedTicketNumber.trim().isEmpty
+                            ? null
+                            : _selectedTicketNumber.trim(),
+                        ticketUrl: _ticketUrl.text.trim().isEmpty
+                            ? null
+                            : _ticketUrl.text.trim(),
+                        note: _note.text.trim().isEmpty
+                            ? null
+                            : _note.text.trim(),
+                        status: _status,
+                        attachmentPaths: _attachmentPaths,
+                      );
+                      if (widget.item == null) {
+                        await prov.addInventoryItem(item);
+                      } else {
+                        await prov.updateInventoryItem(item);
+                      }
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    child: const Text('Speichern'),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
