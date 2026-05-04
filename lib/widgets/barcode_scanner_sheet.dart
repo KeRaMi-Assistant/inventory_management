@@ -77,7 +77,7 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
           MobileScanner(
             controller: _controller,
             onDetect: _onDetect,
-            errorBuilder: (context, error, _) {
+            errorBuilder: (context, error) {
               _error = error.errorDetails?.message ?? error.toString();
               return _ErrorState(message: _error!);
             },
