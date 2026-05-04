@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
 import '../providers/inventory_provider.dart';
@@ -52,21 +53,22 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
   }
 
   Future<void> _deleteBatch(InventoryBatch b) async {
+    final l10n = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Charge löschen?'),
-        content: Text('Charge "${b.batchNumber}" wirklich löschen?'),
+        title: Text(l10n.actionDelete),
+        content: Text(b.batchNumber),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Abbrechen'),
+            child: Text(l10n.actionCancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFC0392B)),
-            child: const Text('Löschen'),
+            child: Text(l10n.actionDelete),
           ),
         ],
       ),
@@ -80,7 +82,9 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFmt = DateFormat('dd.MM.yyyy', 'de_DE');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final dateFmt = DateFormat.yMd(localeTag);
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -98,8 +102,8 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Chargen / MHD',
-                            style: TextStyle(
+                        Text(l10n.batchesAdd,
+                            style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w800)),
                         Text(widget.item.name,
                             style: const TextStyle(
@@ -110,7 +114,7 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
                   TextButton.icon(
                     onPressed: _addBatch,
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Charge hinzufügen'),
+                    label: Text(l10n.batchesAdd),
                   ),
                 ],
               ),
@@ -129,10 +133,10 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
                     }
                     final batches = snap.data ?? const [];
                     if (batches.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(
-                            child: Text('Noch keine Chargen erfasst.')),
+                      return Padding(
+                        padding: const EdgeInsets.all(24),
+                        child:
+                            Center(child: Text(l10n.dealCommentEmpty)),
                       );
                     }
                     return ListView.separated(
@@ -163,12 +167,12 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
                                   Text(
                                     b.mhd != null
                                         ? 'MHD ${dateFmt.format(b.mhd!)}'
-                                        : 'Ohne MHD',
+                                        : l10n.batchesNoMhd,
                                     style: TextStyle(
                                         fontSize: 12, color: mhdColor),
                                   ),
                                   const SizedBox(width: 12),
-                                  Text('${b.quantity} Stk.',
+                                  Text('${b.quantity}',
                                       style: const TextStyle(fontSize: 12)),
                                 ],
                               ),
@@ -245,9 +249,11 @@ class _BatchFormDialogState extends State<_BatchFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFmt = DateFormat('dd.MM.yyyy', 'de_DE');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final dateFmt = DateFormat.yMd(localeTag);
     return AlertDialog(
-      title: const Text('Neue Charge'),
+      title: Text(l10n.batchesNew),
       content: SizedBox(
         width: 380,
         child: Form(
@@ -257,17 +263,17 @@ class _BatchFormDialogState extends State<_BatchFormDialog> {
             children: [
               TextFormField(
                 controller: _batchCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Chargennummer *'),
+                decoration: InputDecoration(
+                    labelText: '${l10n.batchesNew} *'),
                 maxLength: 100,
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Pflichtfeld' : null,
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? l10n.commonRequired
+                    : null,
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _serialCtrl,
-                decoration: const InputDecoration(
-                    labelText: 'Seriennummer (optional)'),
+                decoration: const InputDecoration(labelText: 'SN'),
                 maxLength: 100,
               ),
               const SizedBox(height: 8),
@@ -276,8 +282,8 @@ class _BatchFormDialogState extends State<_BatchFormDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _qtyCtrl,
-                      decoration:
-                          const InputDecoration(labelText: 'Menge *'),
+                      decoration: InputDecoration(
+                          labelText: '${l10n.inventoryQuantity} *'),
                       keyboardType: TextInputType.number,
                       validator: (v) {
                         final n = int.tryParse((v ?? '').trim());
@@ -291,11 +297,10 @@ class _BatchFormDialogState extends State<_BatchFormDialog> {
                     child: InkWell(
                       onTap: _pickMhd,
                       child: InputDecorator(
-                        decoration:
-                            const InputDecoration(labelText: 'MHD'),
+                        decoration: const InputDecoration(labelText: 'MHD'),
                         child: Text(_mhd != null
                             ? dateFmt.format(_mhd!)
-                            : 'Wählen…'),
+                            : l10n.commonNotSet),
                       ),
                     ),
                   ),
@@ -308,9 +313,9 @@ class _BatchFormDialogState extends State<_BatchFormDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.actionCancel),
         ),
-        ElevatedButton(onPressed: _submit, child: const Text('Speichern')),
+        ElevatedButton(onPressed: _submit, child: Text(l10n.actionSave)),
       ],
     );
   }

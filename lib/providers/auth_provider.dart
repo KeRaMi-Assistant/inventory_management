@@ -55,6 +55,25 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Prüft, ob der aktuell eingeloggte User Mitglied im angegebenen
+  /// Workspace ist. Liefert `true` falls ja. Wird vom Team-Login-Flow
+  /// nach dem normalen `signIn` aufgerufen.
+  Future<bool> isMemberOfWorkspace(String workspaceId) async {
+    final uid = currentUser?.id;
+    if (uid == null) return false;
+    try {
+      final rows = await _client
+          .from('workspace_members')
+          .select('user_id')
+          .eq('workspace_id', workspaceId)
+          .eq('user_id', uid)
+          .limit(1);
+      return (rows as List).isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<String?> signUp({
     required String email,
     required String password,
@@ -159,15 +178,19 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Web nutzt die aktuelle Origin als Callback; Mobile nutzt den eigenen
-  /// Deep-Link, der via Info.plist / AndroidManifest registriert wurde.
+  /// Web nutzt den tatsächlichen Browser-Origin als Callback (egal welcher
+  /// Port `flutter run` zufällig vergibt), Mobile den registrierten Deep-Link.
+  /// **Wichtig:** Im Supabase-Dashboard muss unter
+  /// `Authentication → URL Configuration → Redirect URLs` ein Eintrag wie
+  /// `http://localhost:*` (oder konkrete Ports) auf der Allow-List stehen,
+  /// sonst lehnt Supabase den dynamischen Redirect ab.
   String? get _oauthRedirectUrl {
-    if (kIsWeb) return null;
+    if (kIsWeb) return Uri.base.origin;
     return 'inventorymanagement://auth/callback';
   }
 
   String? get _resetRedirectUrl {
-    if (kIsWeb) return null;
+    if (kIsWeb) return Uri.base.origin;
     return 'inventorymanagement://auth/reset';
   }
 

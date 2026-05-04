@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
 import '../../widgets/password_strength_indicator.dart';
@@ -42,7 +43,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final needsVerification =
         error != null && error.toLowerCase().contains('bestätige');
     if (needsVerification) {
-      // Konto wurde erstellt, Mailbestätigung steht aus → VerifyEmailScreen.
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) =>
@@ -60,21 +60,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Konto erstellt. Du wirst eingeloggt.'),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.all(16),
-        ),
-      );
       Navigator.of(context).pop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Registrieren')),
+      appBar: AppBar(title: Text(l10n.registerTitle)),
       backgroundColor: const Color(0xFFF1F5F9),
       body: Center(
         child: SingleChildScrollView(
@@ -95,11 +89,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Neues Konto erstellen',
+                      Text(
+                        l10n.registerSubtitle,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w800),
+                        style: const TextStyle(
+                            fontSize: 14, color: Color(0xFF64748B)),
                       ),
                       const SizedBox(height: 18),
                       TextFormField(
@@ -107,9 +101,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         keyboardType: TextInputType.emailAddress,
                         autofillHints: const [AutofillHints.email],
                         autofocus: true,
-                        decoration: const InputDecoration(
-                          labelText: 'E-Mail',
-                          prefixIcon: Icon(Icons.email_outlined, size: 18),
+                        decoration: InputDecoration(
+                          labelText: l10n.fieldEmail,
+                          prefixIcon:
+                              const Icon(Icons.email_outlined, size: 18),
                         ),
                         validator: Validators.validateEmail,
                       ),
@@ -120,10 +115,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         autofillHints: const [AutofillHints.newPassword],
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
-                          labelText: 'Passwort',
+                          labelText: l10n.fieldPassword,
                           prefixIcon:
                               const Icon(Icons.lock_outline, size: 18),
-                          helperText: '8+ Zeichen, Groß/Klein, Zahl, Sonderzeichen',
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscure
@@ -144,13 +138,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         obscureText: _obscure,
                         autofillHints: const [AutofillHints.newPassword],
                         onFieldSubmitted: (_) => _submit(),
-                        decoration: const InputDecoration(
-                          labelText: 'Passwort bestätigen',
-                          prefixIcon: Icon(Icons.lock_outline, size: 18),
+                        decoration: InputDecoration(
+                          labelText: l10n.fieldConfirmPassword,
+                          prefixIcon:
+                              const Icon(Icons.lock_outline, size: 18),
                         ),
                         validator: (v) {
                           if (v != _passwordCtrl.text) {
-                            return 'Passwörter stimmen nicht überein';
+                            return l10n.resetMismatch;
                           }
                           return null;
                         },
@@ -171,13 +166,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               )
                             : const Icon(Icons.person_add_outlined,
                                 size: 18),
-                        label: Text(
-                            _busy ? 'Registriere…' : 'Konto erstellen'),
+                        label: Text(_busy
+                            ? l10n.registerInProgress
+                            : l10n.registerSubmit),
                       ),
                       const SizedBox(height: 8),
                       TextButton(
-                        onPressed: _busy ? null : () => Navigator.pop(context),
-                        child: const Text('Zurück zum Login'),
+                        onPressed:
+                            _busy ? null : () => Navigator.pop(context),
+                        child: Text(l10n.forgotBackToLogin),
                       ),
                     ],
                   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
 import '../charts/donut_chart.dart';
 import '../charts/monthly_bar_chart.dart';
@@ -15,8 +16,11 @@ class OverviewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final money = NumberFormat.currency(locale: localeTag, symbol: '€');
     final compare = stats.filter.compareToPrevious;
+    final compareLabel = compare ? l10n.statsCompareToPrevious : null;
 
     final byBuyer = <String, double>{};
     for (final b in stats.buyerStats) {
@@ -33,34 +37,34 @@ class OverviewTab extends StatelessWidget {
         KpiGrid(
           cards: [
             KpiCard(
-              label: 'Umsatz',
+              label: l10n.statsLabelRevenue,
               value: money.format(stats.revenue),
               icon: Icons.payments_outlined,
               accent: const Color(0xFF2563EB),
               deltaPct: compare
                   ? StatisticsService.deltaPct(stats.revenue, stats.prevRevenue)
                   : null,
-              deltaLabel: compare ? 'vs. Vorperiode' : null,
+              deltaLabel: compareLabel,
             ),
             KpiCard(
-              label: 'Profit',
+              label: l10n.statsLabelProfit,
               value: money.format(stats.profit),
               icon: Icons.trending_up,
               accent: const Color(0xFF059669),
               deltaPct: compare
                   ? StatisticsService.deltaPct(stats.profit, stats.prevProfit)
                   : null,
-              deltaLabel: compare ? 'vs. Vorperiode' : null,
+              deltaLabel: compareLabel,
             ),
             KpiCard(
-              label: 'Profit-Marge',
+              label: l10n.statsLabelMargin,
               value: '${stats.margin.toStringAsFixed(1)}%',
               icon: Icons.percent_outlined,
               accent: const Color(0xFF7C3AED),
               deltaPct: compare
                   ? StatisticsService.deltaPct(stats.margin, stats.prevMargin)
                   : null,
-              deltaLabel: compare ? 'vs. Vorperiode' : null,
+              deltaLabel: compareLabel,
             ),
             KpiCard(
               label: 'ROI',
@@ -70,10 +74,10 @@ class OverviewTab extends StatelessWidget {
               deltaPct: compare
                   ? StatisticsService.deltaPct(stats.roi, stats.prevRoi)
                   : null,
-              deltaLabel: compare ? 'vs. Vorperiode' : null,
+              deltaLabel: compareLabel,
             ),
             KpiCard(
-              label: 'Offene Forderungen',
+              label: l10n.statsOpenReceivables,
               value: money.format(stats.openReceivables),
               icon: Icons.hourglass_empty,
               accent: const Color(0xFFDC2626),
@@ -81,11 +85,11 @@ class OverviewTab extends StatelessWidget {
                   ? StatisticsService.deltaPct(
                       stats.openReceivables, stats.prevOpenReceivables)
                   : null,
-              deltaLabel: compare ? 'vs. Vorperiode' : null,
+              deltaLabel: compareLabel,
               deltaInverted: true,
             ),
             KpiCard(
-              label: 'Anzahl Deals',
+              label: l10n.statsDealCount,
               value: '${stats.dealCount}',
               icon: Icons.inventory_2_outlined,
               accent: const Color(0xFF0891B2),
@@ -95,13 +99,13 @@ class OverviewTab extends StatelessWidget {
                       stats.prevDealCount.toDouble(),
                     )
                   : null,
-              deltaLabel: compare ? 'vs. Vorperiode' : null,
+              deltaLabel: compareLabel,
             ),
           ],
         ),
         const SizedBox(height: 16),
         StatPanel(
-          title: 'Profit & Umsatz',
+          title: '${l10n.statsLabelProfit} & ${l10n.statsLabelRevenue}',
           icon: Icons.show_chart,
           trailing: const ProfitChartLegend(),
           child: ProfitLineChart(series: stats.timeSeries),
@@ -111,7 +115,7 @@ class OverviewTab extends StatelessWidget {
           builder: (context, c) {
             final wide = c.maxWidth > 900;
             final left = StatPanel(
-              title: 'Profit pro Bucket',
+              title: l10n.statsProfitPerBucket,
               icon: Icons.bar_chart_outlined,
               child: MonthlyBarChart(
                 series: stats.timeSeries,
@@ -119,7 +123,7 @@ class OverviewTab extends StatelessWidget {
               ),
             );
             final right = StatPanel(
-              title: 'Profit-Marge Trend',
+              title: l10n.statsLabelMargin,
               icon: Icons.timeline,
               child: MarginLineChart(series: stats.timeSeries),
             );
@@ -143,19 +147,19 @@ class OverviewTab extends StatelessWidget {
           builder: (context, c) {
             final wide = c.maxWidth > 900;
             final left = StatPanel(
-              title: 'Profit nach Käufer',
+              title: l10n.statsProfitByBuyer,
               icon: Icons.people_outline,
               child: DonutChart(
                 data: byBuyer,
-                centerLabel: 'GESAMT',
+                centerLabel: l10n.statsTotal,
               ),
             );
             final right = StatPanel(
-              title: 'Umsatz nach Shop',
+              title: l10n.statsRevenueByShop,
               icon: Icons.store_outlined,
               child: DonutChart(
                 data: byShop,
-                centerLabel: 'GESAMT',
+                centerLabel: l10n.statsTotal,
               ),
             );
             if (wide) {

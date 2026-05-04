@@ -6,8 +6,8 @@ class FilterProvider extends ChangeNotifier {
   String? buyer;
   String? status;
   String? shop;
-  String? shippingType;
-  String? beleg;
+  bool? isDropship;
+  bool? hasReceipt;
   DateTime? fromDate;
   DateTime? toDate;
   String sortKey = 'orderDate';
@@ -34,13 +34,13 @@ class FilterProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setShippingType(String? value) {
-    shippingType = _blankToNull(value);
+  void setIsDropship(bool? value) {
+    isDropship = value;
     notifyListeners();
   }
 
-  void setBeleg(String? value) {
-    beleg = _blankToNull(value);
+  void setHasReceipt(bool? value) {
+    hasReceipt = value;
     notifyListeners();
   }
 
@@ -65,8 +65,8 @@ class FilterProvider extends ChangeNotifier {
     buyer = null;
     status = null;
     shop = null;
-    shippingType = null;
-    beleg = null;
+    isDropship = null;
+    hasReceipt = null;
     fromDate = null;
     toDate = null;
     sortKey = 'orderDate';
@@ -104,10 +104,8 @@ class FilterProvider extends ChangeNotifier {
       if (buyer != null && deal.buyer != buyer) return false;
       if (status != null && deal.status != status) return false;
       if (shop != null && deal.shop != shop) return false;
-      if (shippingType != null && deal.shippingType != shippingType) {
-        return false;
-      }
-      if (beleg != null && deal.beleg != beleg) return false;
+      if (isDropship != null && deal.isDropship != isDropship) return false;
+      if (hasReceipt != null && deal.hasReceipt != hasReceipt) return false;
       if (fromDate != null && deal.orderDate.isBefore(_dayStart(fromDate!))) {
         return false;
       }
@@ -136,7 +134,8 @@ class FilterProvider extends ChangeNotifier {
       'id' => a.id.compareTo(b.id),
       'product' => a.product.toLowerCase().compareTo(b.product.toLowerCase()),
       'quantity' => a.quantity.compareTo(b.quantity),
-      'shippingType' => a.shippingType.compareTo(b.shippingType),
+      'isDropship' =>
+        (a.isDropship ? 1 : 0).compareTo(b.isDropship ? 1 : 0),
       'shop' => a.shop.compareTo(b.shop),
       'ekNetto' => cmp(a.ekNetto, b.ekNetto),
       'ekBrutto' => cmp(a.ekBrutto, b.ekBrutto),
@@ -146,7 +145,8 @@ class FilterProvider extends ChangeNotifier {
       'tracking' => cmp(a.tracking, b.tracking),
       'arrivalDate' => cmp(a.arrivalDate, b.arrivalDate),
       'status' => a.status.compareTo(b.status),
-      'beleg' => a.beleg.compareTo(b.beleg),
+      'hasReceipt' =>
+        (a.hasReceipt ? 1 : 0).compareTo(b.hasReceipt ? 1 : 0),
       'profitPerUnit' => cmp(a.profitPerUnit, b.profitPerUnit),
       'totalProfit' => cmp(a.totalProfit, b.totalProfit),
       'zuBekommen' => cmp(a.zuBekommen, b.zuBekommen),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../providers/inventory_provider.dart';
 import '../../providers/statistics_filter_provider.dart';
 
@@ -13,9 +14,11 @@ class StatisticsFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
     final filter = context.watch<StatisticsFilterProvider>();
     final inv = context.watch<InventoryProvider>();
-    final dateFmt = DateFormat('dd.MM.yyyy', 'de_DE');
+    final dateFmt = DateFormat.yMd(localeTag);
     final r = filter.currentRange;
 
     return Container(
@@ -60,10 +63,10 @@ class StatisticsFilterBar extends StatelessWidget {
           final filters = <Widget>[
             _FilterDropdown<String>(
               icon: Icons.person_outline,
-              hint: 'Käufer',
+              hint: l10n.dealBuyer,
               value: filter.buyer,
               items: [
-                const DropdownMenuItem<String>(value: null, child: Text('Alle Käufer')),
+                DropdownMenuItem<String>(value: null, child: Text(l10n.commonAll)),
                 ...inv.buyers.map((b) =>
                     DropdownMenuItem<String>(value: b.name, child: Text(b.name))),
               ],
@@ -71,10 +74,10 @@ class StatisticsFilterBar extends StatelessWidget {
             ),
             _FilterDropdown<String>(
               icon: Icons.store_outlined,
-              hint: 'Shop',
+              hint: l10n.dealShop,
               value: filter.shop,
               items: [
-                const DropdownMenuItem<String>(value: null, child: Text('Alle Shops')),
+                DropdownMenuItem<String>(value: null, child: Text(l10n.commonAll)),
                 ...inv.shops.map((s) =>
                     DropdownMenuItem<String>(value: s.name, child: Text(s.name))),
               ],
@@ -82,10 +85,10 @@ class StatisticsFilterBar extends StatelessWidget {
             ),
             _FilterDropdown<String>(
               icon: Icons.local_shipping_outlined,
-              hint: 'Lieferant',
+              hint: l10n.inventoryColSupplier,
               value: filter.supplierId,
               items: [
-                const DropdownMenuItem<String>(value: null, child: Text('Alle Lieferanten')),
+                DropdownMenuItem<String>(value: null, child: Text(l10n.commonAll)),
                 ...inv.suppliers.map((s) =>
                     DropdownMenuItem<String>(value: s.id, child: Text(s.name))),
               ],
@@ -97,7 +100,7 @@ class StatisticsFilterBar extends StatelessWidget {
                 onChanged: filter.setProductSearch,
                 decoration: InputDecoration(
                   isDense: true,
-                  hintText: 'Produkt suchen…',
+                  hintText: l10n.dealProduct,
                   prefixIcon: const Icon(Icons.search, size: 18),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -115,7 +118,7 @@ class StatisticsFilterBar extends StatelessWidget {
               TextButton.icon(
                 onPressed: filter.reset,
                 icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('Zurücksetzen'),
+                label: Text(l10n.actionReset),
                 style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFF6B7280)),
               ),
@@ -142,7 +145,7 @@ class StatisticsFilterBar extends StatelessWidget {
                     OutlinedButton.icon(
                       onPressed: onExport,
                       icon: const Icon(Icons.file_download_outlined, size: 16),
-                      label: const Text('Report'),
+                      label: Text(l10n.statsExportReport),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Color(0xFFE0E6EF)),
                         padding: const EdgeInsets.symmetric(
@@ -246,7 +249,7 @@ class _CompareToggle extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Text(
-                'vs. Vorperiode',
+                AppLocalizations.of(context).statsCompareToPrevious,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,

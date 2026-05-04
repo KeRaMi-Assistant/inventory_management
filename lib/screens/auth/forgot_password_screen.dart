@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
 
@@ -46,8 +47,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Passwort vergessen')),
+      appBar: AppBar(title: Text(l10n.forgotTitle)),
       backgroundColor: const Color(0xFFF1F5F9),
       body: Center(
         child: SingleChildScrollView(
@@ -62,7 +64,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(28),
-                child: _sent ? _buildSuccess() : _buildForm(),
+                child: _sent ? _buildSuccess(l10n) : _buildForm(l10n),
               ),
             ),
           ),
@@ -71,16 +73,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  Widget _buildForm() => Form(
+  Widget _buildForm(AppLocalizations l10n) => Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Wir senden dir einen Link zum Zurücksetzen.',
+            Text(
+              l10n.forgotSubtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+              style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
             ),
             const SizedBox(height: 18),
             TextFormField(
@@ -88,9 +90,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email],
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'E-Mail',
-                prefixIcon: Icon(Icons.email_outlined, size: 18),
+              decoration: InputDecoration(
+                labelText: l10n.fieldEmail,
+                prefixIcon: const Icon(Icons.email_outlined, size: 18),
               ),
               validator: Validators.validateEmail,
             ),
@@ -108,37 +110,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.send_outlined, size: 18),
-              label: Text(_busy ? 'Sende…' : 'Reset-Link senden'),
+              label: Text(_busy ? l10n.actionLoading : l10n.forgotSubmit),
             ),
           ],
         ),
       );
 
-  Widget _buildSuccess() => Column(
+  Widget _buildSuccess(AppLocalizations l10n) => Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Icon(Icons.mark_email_read_outlined,
               size: 56, color: Color(0xFF059669)),
           const SizedBox(height: 16),
-          const Text(
-            'E-Mail gesendet',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
           Text(
-            'Falls ein Konto mit ${_emailCtrl.text.trim()} existiert, '
-            'wurde ein Link zum Zurücksetzen gesendet. Bitte prüfe auch '
-            'deinen Spam-Ordner.',
+            l10n.forgotSent,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-                fontSize: 13, color: Color(0xFF64748B)),
+            style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
           ),
           const SizedBox(height: 18),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Zurück zum Login'),
+            child: Text(l10n.forgotBackToLogin),
           ),
         ],
       );

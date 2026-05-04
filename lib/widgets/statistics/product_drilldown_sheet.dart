@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/statistics_service.dart';
 import 'stat_panel.dart';
 
@@ -33,9 +34,11 @@ class ProductDrilldownSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
-    final dateFmt = DateFormat('dd.MM.yyyy', 'de_DE');
-    final monthFmt = DateFormat('MMM yy', 'de_DE');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final money = NumberFormat.currency(locale: localeTag, symbol: '€');
+    final dateFmt = DateFormat.yMd(localeTag);
+    final monthFmt = DateFormat.yMMM(localeTag);
 
     final totalRevenue =
         data.deals.fold<double>(0, (s, d) => s + (d.zuBekommen ?? 0));
@@ -72,7 +75,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      '${data.deals.length} Deals · $totalUnits Stück',
+                      '${data.deals.length} · $totalUnits',
                       style: const TextStyle(
                           fontSize: 12, color: Color(0xFF6B7280)),
                     ),
@@ -94,7 +97,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _MiniStat(
-                      label: 'Umsatz',
+                      label: l10n.statsLabelRevenue,
                       value: money.format(totalRevenue),
                       color: const Color(0xFF2563EB),
                     ),
@@ -102,7 +105,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _MiniStat(
-                      label: 'Profit',
+                      label: l10n.statsLabelProfit,
                       value: money.format(totalProfit),
                       color: const Color(0xFF059669),
                     ),
@@ -110,7 +113,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _MiniStat(
-                      label: 'Marge',
+                      label: l10n.statsLabelMargin,
                       value: '${marginPct.toStringAsFixed(1)}%',
                       color: const Color(0xFF7C3AED),
                     ),
@@ -119,14 +122,14 @@ class ProductDrilldownSheet extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               StatPanel(
-                title: 'Profit pro Monat',
+                title: l10n.statsProfitPerMonth,
                 icon: Icons.show_chart,
                 child: SizedBox(
                   height: 180,
                   child: data.monthSeries.isEmpty
-                      ? const Center(
-                          child: Text('Keine Daten.',
-                              style: TextStyle(color: Color(0xFF9CA3AF))),
+                      ? Center(
+                          child: Text(l10n.dealCommentEmpty,
+                              style: const TextStyle(color: Color(0xFF9CA3AF))),
                         )
                       : LineChart(
                           LineChartData(
@@ -149,7 +152,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                                   reservedSize: 50,
                                   getTitlesWidget: (v, _) => Text(
                                     NumberFormat.compactCurrency(
-                                            locale: 'de_DE', symbol: '€')
+                                            locale: localeTag, symbol: '€')
                                         .format(v),
                                     style: const TextStyle(
                                         fontSize: 10,
@@ -208,13 +211,13 @@ class ProductDrilldownSheet extends StatelessWidget {
                 children: [
                   Expanded(
                     child: StatPanel(
-                      title: 'Top-Käufer',
+                      title: '${l10n.dealBuyer} · Top',
                       icon: Icons.people_outline,
                       child: Column(
                         children: data.topBuyers.isEmpty
                             ? [
-                                const Text('Keine Daten.',
-                                    style: TextStyle(
+                                Text(l10n.dealCommentEmpty,
+                                    style: const TextStyle(
                                         color: Color(0xFF9CA3AF), fontSize: 12))
                               ]
                             : data.topBuyers
@@ -240,13 +243,13 @@ class ProductDrilldownSheet extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: StatPanel(
-                      title: 'Top-Shops',
+                      title: '${l10n.dealShop} · Top',
                       icon: Icons.store_outlined,
                       child: Column(
                         children: data.topShops.isEmpty
                             ? [
-                                const Text('Keine Daten.',
-                                    style: TextStyle(
+                                Text(l10n.dealCommentEmpty,
+                                    style: const TextStyle(
                                         color: Color(0xFF9CA3AF), fontSize: 12))
                               ]
                             : data.topShops
@@ -273,7 +276,7 @@ class ProductDrilldownSheet extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               StatPanel(
-                title: 'Alle Deals',
+                title: l10n.statsAllDeals,
                 icon: Icons.list_alt_outlined,
                 padding: EdgeInsets.zero,
                 child: Column(
@@ -307,7 +310,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                                         color: Color(0xFF111827)),
                                   ),
                                   Text(
-                                    '${dateFmt.format(deal.orderDate)} · ${deal.quantity} Stk · ${deal.status}',
+                                    '${dateFmt.format(deal.orderDate)} · ${deal.quantity}',
                                     style: const TextStyle(
                                         fontSize: 11,
                                         color: Color(0xFF6B7280)),

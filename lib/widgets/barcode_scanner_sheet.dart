@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../app_theme.dart';
+import '../l10n/app_localizations.dart';
 
 /// Bottom-Sheet, das die Kamera öffnet, einen Barcode scannt und den
 /// erkannten Wert per `Navigator.pop` zurückliefert. Hauptsächlich für EAN/GTIN
@@ -213,6 +214,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       color: Colors.black,
       padding: const EdgeInsets.all(24),
@@ -222,9 +224,9 @@ class _ErrorState extends StatelessWidget {
           const Icon(Icons.no_photography_outlined,
               color: Colors.white70, size: 48),
           const SizedBox(height: 16),
-          const Text(
-            'Kamera nicht verfügbar',
-            style: TextStyle(
+          Text(
+            l10n.barcodeScannerNoCamera,
+            style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.w700),
@@ -239,7 +241,7 @@ class _ErrorState extends StatelessWidget {
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-            child: const Text('Schließen'),
+            child: Text(l10n.inventoryClose),
           ),
         ],
       ),

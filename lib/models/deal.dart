@@ -2,7 +2,7 @@ class Deal {
   final int id;
   final String product;
   final int quantity;
-  final String shippingType;
+  final bool isDropship;
   final String shop;
   final DateTime orderDate;
   final double? ekNetto;
@@ -15,7 +15,7 @@ class Deal {
   final DateTime? arrivalDate;
   final String status;
   final String? lexware;
-  final String beleg;
+  final bool hasReceipt;
   final String? note;
   final double? taxRate;
   final String currency;
@@ -26,7 +26,7 @@ class Deal {
     required this.id,
     required this.product,
     required this.quantity,
-    required this.shippingType,
+    required this.isDropship,
     required this.shop,
     required this.orderDate,
     this.ekNetto,
@@ -39,7 +39,7 @@ class Deal {
     this.arrivalDate,
     this.status = 'Bestellt',
     this.lexware,
-    this.beleg = 'Nein',
+    this.hasReceipt = false,
     this.note,
     this.taxRate,
     this.currency = 'EUR',
@@ -49,6 +49,12 @@ class Deal {
 
   /// Sentinel id used for deals not yet persisted (server assigns BIGSERIAL).
   static const int unsavedId = 0;
+
+  /// Display label for the German UI.
+  String get shippingType => isDropship ? 'Dropship' : 'Reship';
+
+  /// Display label for the German UI.
+  String get belegLabel => hasReceipt ? 'Ja' : 'Nein';
 
   double? get profitPerUnit =>
       (vk != null && ekBrutto != null) ? vk! - ekBrutto! : null;
@@ -73,7 +79,7 @@ class Deal {
         'id': id,
         'product': product,
         'quantity': quantity,
-        'shippingType': shippingType,
+        'isDropship': isDropship,
         'shop': shop,
         'orderDate': orderDate.toIso8601String(),
         'ekNetto': ekNetto,
@@ -86,7 +92,7 @@ class Deal {
         'arrivalDate': arrivalDate?.toIso8601String(),
         'status': status,
         'lexware': lexware,
-        'beleg': beleg,
+        'hasReceipt': hasReceipt,
         'note': note,
         'taxRate': taxRate,
         'currency': currency,
@@ -98,7 +104,7 @@ class Deal {
         id: json['id'] as int,
         product: json['product'] as String,
         quantity: json['quantity'] as int,
-        shippingType: json['shippingType'] as String,
+        isDropship: _readDropship(json['isDropship'], json['shippingType']),
         shop: json['shop'] as String,
         orderDate: DateTime.parse(json['orderDate'] as String),
         ekNetto: (json['ekNetto'] as num?)?.toDouble(),
@@ -113,7 +119,7 @@ class Deal {
             : null,
         status: json['status'] as String? ?? 'Bestellt',
         lexware: json['lexware'] as String?,
-        beleg: json['beleg'] as String? ?? 'Nein',
+        hasReceipt: _readReceipt(json['hasReceipt'], json['beleg']),
         note: json['note'] as String?,
         taxRate: (json['taxRate'] as num?)?.toDouble(),
         currency: json['currency'] as String? ?? 'EUR',
@@ -132,7 +138,7 @@ class Deal {
   Map<String, dynamic> toSupabaseInsert() => {
         'product': product,
         'quantity': quantity,
-        'shipping_type': shippingType,
+        'is_dropship': isDropship,
         'shop': shop,
         'order_date': orderDate.toIso8601String(),
         'ek_netto': ekNetto,
@@ -145,7 +151,7 @@ class Deal {
         'arrival_date': arrivalDate?.toIso8601String(),
         'status': status,
         'lexware': lexware,
-        'beleg': beleg,
+        'has_receipt': hasReceipt,
         'note': note,
         'tax_rate': taxRate,
         'currency': currency,
@@ -163,7 +169,7 @@ class Deal {
       id: (row['id'] as num).toInt(),
       product: row['product'] as String,
       quantity: (row['quantity'] as num).toInt(),
-      shippingType: row['shipping_type'] as String,
+      isDropship: _readDropship(row['is_dropship'], row['shipping_type']),
       shop: row['shop'] as String,
       orderDate: DateTime.parse(row['order_date'] as String),
       ekNetto: (row['ek_netto'] as num?)?.toDouble(),
@@ -178,7 +184,7 @@ class Deal {
           : null,
       status: row['status'] as String? ?? 'Bestellt',
       lexware: row['lexware'] as String?,
-      beleg: row['beleg'] as String? ?? 'Nein',
+      hasReceipt: _readReceipt(row['has_receipt'], row['beleg']),
       note: row['note'] as String?,
       taxRate: (row['tax_rate'] as num?)?.toDouble(),
       currency: row['currency'] as String? ?? 'EUR',
@@ -187,11 +193,26 @@ class Deal {
     );
   }
 
+  /// Accepts the new boolean OR the legacy "Reship"/"Dropship" string so
+  /// pre-migration JSON backups and rows still hydrate cleanly.
+  static bool _readDropship(dynamic boolValue, dynamic legacyString) {
+    if (boolValue is bool) return boolValue;
+    if (legacyString is String) return legacyString.toLowerCase() == 'dropship';
+    return false;
+  }
+
+  /// Accepts the new boolean OR the legacy "Ja"/"Nein" string.
+  static bool _readReceipt(dynamic boolValue, dynamic legacyString) {
+    if (boolValue is bool) return boolValue;
+    if (legacyString is String) return legacyString.toLowerCase() == 'ja';
+    return false;
+  }
+
   Deal copyWith({
     int? id,
     String? product,
     int? quantity,
-    String? shippingType,
+    bool? isDropship,
     String? shop,
     DateTime? orderDate,
     Object? ekNetto = _sentinel,
@@ -204,7 +225,7 @@ class Deal {
     Object? arrivalDate = _sentinel,
     String? status,
     Object? lexware = _sentinel,
-    String? beleg,
+    bool? hasReceipt,
     Object? note = _sentinel,
     Object? taxRate = _sentinel,
     String? currency,
@@ -215,7 +236,7 @@ class Deal {
         id: id ?? this.id,
         product: product ?? this.product,
         quantity: quantity ?? this.quantity,
-        shippingType: shippingType ?? this.shippingType,
+        isDropship: isDropship ?? this.isDropship,
         shop: shop ?? this.shop,
         orderDate: orderDate ?? this.orderDate,
         ekNetto: ekNetto == _sentinel ? this.ekNetto : ekNetto as double?,
@@ -234,7 +255,7 @@ class Deal {
             : arrivalDate as DateTime?,
         status: status ?? this.status,
         lexware: lexware == _sentinel ? this.lexware : lexware as String?,
-        beleg: beleg ?? this.beleg,
+        hasReceipt: hasReceipt ?? this.hasReceipt,
         note: note == _sentinel ? this.note : note as String?,
         taxRate: taxRate == _sentinel ? this.taxRate : taxRate as double?,
         currency: currency ?? this.currency,

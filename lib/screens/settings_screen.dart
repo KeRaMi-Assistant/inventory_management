@@ -1,15 +1,22 @@
-import 'dart:convert';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
+import '../models/billing_profile.dart';
+import '../models/pricing_plan.dart';
+import '../models/workspace.dart';
+import '../providers/active_workspace_provider.dart';
 import '../providers/app_preferences_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/billing_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/push_service.dart';
+import '../services/workspace_service.dart';
 import '../widgets/add_edit_buyer_dialog.dart';
 import '../widgets/add_edit_shop_dialog.dart';
+import 'billing_profile_screen.dart';
+import 'pricing_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   final bool embedded;
@@ -17,43 +24,42 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final tabs = DefaultTabController(
-      length: 6,
+      length: 5,
       child: Column(
         children: [
           if (!embedded)
             AppBar(
-              title: const Text('Einstellungen'),
-              bottom: const TabBar(
+              title: Text(l10n.settingsTitle),
+              bottom: TabBar(
                 isScrollable: true,
                 indicatorColor: Colors.white,
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white60,
                 tabs: [
-                  Tab(icon: Icon(Icons.people_outline, size: 18), text: 'Käufer'),
-                  Tab(icon: Icon(Icons.store_outlined, size: 18), text: 'Shops'),
-                  Tab(icon: Icon(Icons.discord, size: 18), text: 'Discord'),
-                  Tab(icon: Icon(Icons.notifications_outlined, size: 18), text: 'Push'),
-                  Tab(icon: Icon(Icons.import_export, size: 18), text: 'Export/Import'),
-                  Tab(icon: Icon(Icons.tune, size: 18), text: 'Allgemein'),
+                  Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.settingsTabBuyers),
+                  Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
+                  Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
+                  Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
+                  Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
                 ],
               ),
             )
           else
-            const Material(
+            Material(
               color: Colors.white,
               child: TabBar(
                 isScrollable: true,
-                indicatorColor: Color(0xFF2563EB),
-                labelColor: Color(0xFF2563EB),
-                unselectedLabelColor: Color(0xFF64748B),
+                indicatorColor: const Color(0xFF2563EB),
+                labelColor: const Color(0xFF2563EB),
+                unselectedLabelColor: const Color(0xFF64748B),
                 tabs: [
-                  Tab(icon: Icon(Icons.people_outline, size: 18), text: 'Käufer'),
-                  Tab(icon: Icon(Icons.store_outlined, size: 18), text: 'Shops'),
-                  Tab(icon: Icon(Icons.discord, size: 18), text: 'Discord'),
-                  Tab(icon: Icon(Icons.notifications_outlined, size: 18), text: 'Push'),
-                  Tab(icon: Icon(Icons.import_export, size: 18), text: 'Export/Import'),
-                  Tab(icon: Icon(Icons.tune, size: 18), text: 'Allgemein'),
+                  Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.settingsTabBuyers),
+                  Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
+                  Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
+                  Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
+                  Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
                 ],
               ),
             ),
@@ -62,9 +68,8 @@ class SettingsScreen extends StatelessWidget {
               children: [
                 _BuyersTab(),
                 _ShopsTab(),
-                _DiscordInfoTab(),
+                _TeamTab(),
                 _NotificationsTab(),
-                _ExportImportTab(),
                 _GeneralTab(),
               ],
             ),
@@ -87,6 +92,7 @@ class _BuyersTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final buyers = provider.buyers;
@@ -99,18 +105,18 @@ class _BuyersTab extends StatelessWidget {
               builder: (_) => const AddEditBuyerDialog(),
             ),
             icon: const Icon(Icons.person_add_outlined),
-            label: const Text('Käufer hinzufügen'),
+            label: Text(l10n.buyersAdd),
           ),
           body: buyers.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.people_outline,
+                      const Icon(Icons.people_outline,
                           size: 52, color: Color(0xFFCBD5E1)),
-                      SizedBox(height: 12),
-                      Text('Noch keine Käufer angelegt.',
-                          style: TextStyle(color: Color(0xFF94A3B8))),
+                      const SizedBox(height: 12),
+                      Text(l10n.buyersEmpty,
+                          style: const TextStyle(color: Color(0xFF94A3B8))),
                     ],
                   ),
                 )
@@ -203,15 +209,16 @@ class _BuyersTab extends StatelessWidget {
 
   void _confirmDeleteBuyer(BuildContext context, InventoryProvider provider,
       String id, String name) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Käufer löschen'),
-        content: Text('Käufer "$name" wirklich löschen?'),
+        title: Text(l10n.buyersDeleteTitle),
+        content: Text(l10n.buyersDeleteConfirm(name)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Abbrechen')),
+              child: Text(l10n.actionCancel)),
           ElevatedButton(
             onPressed: () {
               provider.deleteBuyer(id);
@@ -219,8 +226,8 @@ class _BuyersTab extends StatelessWidget {
             },
             style:
                 ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Löschen',
-                style: TextStyle(color: Colors.white)),
+            child: Text(l10n.actionDelete,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -235,6 +242,7 @@ class _ShopsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final shops = provider.shops;
@@ -247,18 +255,18 @@ class _ShopsTab extends StatelessWidget {
               builder: (_) => const AddEditShopDialog(),
             ),
             icon: const Icon(Icons.add_business_outlined),
-            label: const Text('Shop hinzufügen'),
+            label: Text(l10n.shopsAdd),
           ),
           body: shops.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.store_outlined,
+                      const Icon(Icons.store_outlined,
                           size: 52, color: Color(0xFFCBD5E1)),
-                      SizedBox(height: 12),
-                      Text('Noch keine Shops angelegt.',
-                          style: TextStyle(color: Color(0xFF94A3B8))),
+                      const SizedBox(height: 12),
+                      Text(l10n.shopsEmpty,
+                          style: const TextStyle(color: Color(0xFF94A3B8))),
                     ],
                   ),
                 )
@@ -331,15 +339,16 @@ class _ShopsTab extends StatelessWidget {
 
   void _confirmDeleteShop(BuildContext context, InventoryProvider provider,
       String id, String name) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Shop löschen'),
-        content: Text('Shop "$name" wirklich löschen?'),
+        title: Text(l10n.shopsDeleteTitle),
+        content: Text(l10n.shopsDeleteConfirm(name)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Abbrechen')),
+              child: Text(l10n.actionCancel)),
           ElevatedButton(
             onPressed: () {
               provider.deleteShop(id);
@@ -347,313 +356,12 @@ class _ShopsTab extends StatelessWidget {
             },
             style:
                 ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Löschen',
-                style: TextStyle(color: Colors.white)),
+            child: Text(l10n.actionDelete,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
-  }
-}
-
-// ── Discord Info Tab ───────────────────────────────────────────────────────────
-
-class _DiscordInfoTab extends StatelessWidget {
-  const _DiscordInfoTab();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Consumer<InventoryProvider>(
-      builder: (context, provider, _) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Info card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF5865F2).withAlpha(12),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: const Color(0xFF5865F2).withAlpha(60)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF5865F2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.discord,
-                          color: Colors.white, size: 28),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Discord-Integration',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Beim Hinzufügen eines Deals kannst du die Ticketnummer eintragen. '
-                            'Die App zeigt dann Buttons zum direkten Öffnen der konfigurierten Discord-Server. '
-                            'Dort findest du den Kanal, kopierst den Link und trägst ihn in das Ticket-URL-Feld ein.',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // How to find Server ID
-              Text('Server-IDs einrichten',
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 12),
-              _infoStep(
-                context,
-                '1',
-                'Entwicklermodus aktivieren',
-                'Discord → Einstellungen → Erweitert → Entwicklermodus einschalten.',
-              ),
-              const SizedBox(height: 8),
-              _infoStep(
-                context,
-                '2',
-                'Server-ID kopieren',
-                'Rechtsklick auf den Servernamen → „Server-ID kopieren".',
-              ),
-              const SizedBox(height: 8),
-              _infoStep(
-                context,
-                '3',
-                'Server-ID beim Käufer hinterlegen',
-                'Käufer-Tab → Käufer bearbeiten → Discord Server IDs → ID eintragen.',
-              ),
-              const SizedBox(height: 24),
-
-              // Server IDs overview per buyer
-              Text('Konfigurierte Server-IDs',
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 12),
-              ...provider.buyers.map((b) {
-                final ids = b.discordServerIds;
-                return Card(
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    side: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  child: ListTile(
-                    leading: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: b.buyerCellColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(
-                        child: Text(
-                          b.name.isNotEmpty
-                              ? b.name[0].toUpperCase()
-                              : '?',
-                          style: TextStyle(
-                              color: b.fontColor,
-                              fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                    title: Text(b.name,
-                        style:
-                            const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      ids.isEmpty
-                          ? 'Keine Server-IDs konfiguriert'
-                          : ids.join(', '),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: ids.isEmpty
-                            ? theme.colorScheme.outline
-                            : const Color(0xFF5865F2),
-                      ),
-                    ),
-                    trailing: Icon(Icons.discord,
-                        color: ids.isEmpty
-                            ? const Color(0xFFCBD5E1)
-                            : const Color(0xFF5865F2)),
-                  ),
-                );
-              }),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _infoStep(
-      BuildContext context, String number, String title, String desc) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(
-              color: const Color(0xFF5865F2).withAlpha(20),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(number,
-                  style: const TextStyle(
-                      color: Color(0xFF5865F2),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 2),
-                Text(desc,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: theme.colorScheme.outline)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ExportImportTab extends StatelessWidget {
-  const _ExportImportTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<InventoryProvider>(
-      builder: (context, provider, _) {
-        return ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            _SettingsCard(
-              icon: Icons.file_download_outlined,
-              title: 'CSV-Export',
-              subtitle: 'Deals als CSV exportieren kannst du weiterhin über die obere Toolbar.',
-              trailing: const Icon(Icons.table_chart_outlined, color: Color(0xFF64748B)),
-            ),
-            const SizedBox(height: 12),
-            _SettingsCard(
-              icon: Icons.backup_outlined,
-              title: 'JSON-Backup',
-              subtitle: 'Kompletter App-Export: Deals, Käufer, Shops, Lager und Bewegungen.',
-              trailing: ElevatedButton.icon(
-                onPressed: () => _exportJson(context, provider),
-                icon: const Icon(Icons.download_outlined, size: 16),
-                label: const Text('Exportieren'),
-              ),
-            ),
-            const SizedBox(height: 12),
-            _SettingsCard(
-              icon: Icons.restore_outlined,
-              title: 'JSON-Restore',
-              subtitle: 'Vollständige Wiederherstellung aus einem JSON-Backup.',
-              trailing: ElevatedButton.icon(
-                onPressed: () => _restoreJson(context, provider),
-                icon: const Icon(Icons.upload_file_outlined, size: 16),
-                label: const Text('Wiederherstellen'),
-              ),
-            ),
-            const SizedBox(height: 12),
-            _SettingsCard(
-              icon: Icons.picture_as_pdf_outlined,
-              title: 'CSV-Backup',
-              subtitle: 'CSV-Export und -Import sind über die obere Toolbar verfügbar.',
-              trailing: const Icon(Icons.north_east, color: Color(0xFF64748B)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _exportJson(BuildContext context, InventoryProvider provider) async {
-    final json = provider.exportJson();
-    final bytes = Uint8List.fromList(utf8.encode(json));
-    final fileName = 'lagerverwaltung_data_${DateTime.now().toIso8601String().substring(0, 10)}.json';
-    await Clipboard.setData(ClipboardData(text: json));
-    final path = await FilePicker.saveFile(
-      dialogTitle: 'JSON-Backup speichern',
-      fileName: fileName,
-      type: FileType.custom,
-      allowedExtensions: ['json'],
-      bytes: bytes,
-    );
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(path == null ? 'Backup in die Zwischenablage kopiert.' : 'Backup exportiert: $path')),
-    );
-  }
-
-  Future<void> _restoreJson(BuildContext context, InventoryProvider provider) async {
-    final result = await FilePicker.pickFiles(
-      dialogTitle: 'JSON-Backup auswählen',
-      type: FileType.custom,
-      allowedExtensions: ['json'],
-      withData: true,
-    );
-    if (result == null || result.files.isEmpty) return;
-    final bytes = result.files.first.bytes;
-    if (bytes == null) return;
-    final data = jsonDecode(utf8.decode(bytes));
-    if (data is! Map<String, dynamic>) return;
-    if (!context.mounted) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Daten wiederherstellen'),
-        content: const Text('Alle aktuellen Daten werden durch dieses Backup ersetzt.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Wiederherstellen')),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await provider.restoreData(data);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backup wiederhergestellt.')));
-      }
-    }
   }
 }
 
@@ -662,42 +370,53 @@ class _GeneralTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         return ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            const _SettingsCard(
+            const _PlanSection(),
+            const SizedBox(height: 24),
+            _SettingsCard(
               icon: Icons.percent_outlined,
-              title: 'MwSt-Satz',
-              subtitle: 'Standard: 19%. Neue Deals berechnen EK Brutto aktuell mit 1,19.',
-              trailing: Text('19%'),
+              title: l10n.settingsTaxRateTitle,
+              subtitle: l10n.settingsTaxRateSubtitle,
+              trailing: const Text('19%'),
             ),
             const SizedBox(height: 12),
-            const _SettingsCard(
+            _SettingsCard(
               icon: Icons.sort_outlined,
-              title: 'Standard-Sortierung',
-              subtitle: 'Deals werden standardmäßig nach Bestelldatum absteigend angezeigt.',
-              trailing: Text('Datum ↓'),
+              title: l10n.settingsSortTitle,
+              subtitle: l10n.settingsSortSubtitle,
+              trailing: Text(l10n.settingsSortValue),
             ),
             const SizedBox(height: 12),
-            const _SettingsCard(
+            _SettingsCard(
               icon: Icons.cloud_done_outlined,
-              title: 'Cloud-Speicher',
-              subtitle:
-                  'Daten werden in deinem Supabase-Konto gespeichert und über alle Geräte synchronisiert.',
-              trailing: Text('Supabase'),
+              title: l10n.settingsCloudTitle,
+              subtitle: l10n.settingsCloudSubtitle,
+              trailing: const Text('Supabase'),
             ),
             const SizedBox(height: 12),
             _SettingsCard(
               icon: Icons.storage_outlined,
-              title: 'Datenbestand',
-              subtitle:
-                  '${provider.deals.length} Deals · ${provider.buyers.length} Käufer · ${provider.shops.length} Shops · ${provider.inventoryItems.length} Lagerartikel',
-              trailing: Text('${provider.exportJson().length ~/ 1024} KB'),
+              title: l10n.settingsDataTitle,
+              subtitle: l10n.settingsDataSubtitle(
+                provider.deals.length,
+                provider.buyers.length,
+                provider.shops.length,
+                provider.inventoryItems.length,
+              ),
+              trailing: Text(l10n.commonItems(
+                  provider.deals.length + provider.inventoryItems.length)),
             ),
             const SizedBox(height: 24),
-            const _SectionHeader(title: 'Statistik'),
+            _SectionHeader(title: l10n.settingsLanguageSection),
+            const SizedBox(height: 8),
+            const _LanguageCard(),
+            const SizedBox(height: 24),
+            _SectionHeader(title: l10n.settingsStatsSection),
             const SizedBox(height: 8),
             const _MonthlyGoalCard(),
             const SizedBox(height: 12),
@@ -719,24 +438,22 @@ class _LogoutCard extends StatelessWidget {
   const _LogoutCard();
 
   Future<void> _confirmLogout(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Wirklich abmelden?'),
-        content: const Text(
-          'Du wirst zurück zum Login geleitet. Nicht synchronisierte '
-          'Eingaben gehen verloren.',
-        ),
+        title: Text(l10n.logoutConfirmTitle),
+        content: Text(l10n.logoutConfirmText),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Abbrechen'),
+            child: Text(l10n.actionCancel),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFD97706)),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Abmelden'),
+            child: Text(l10n.accountMenuSignOut),
           ),
         ],
       ),
@@ -747,6 +464,7 @@ class _LogoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final email = context.watch<AuthProvider>().userEmail ?? '—';
     return Card(
       child: Padding(
@@ -759,16 +477,16 @@ class _LogoutCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Abmelden',
-                    style: TextStyle(
+                  Text(
+                    l10n.accountMenuSignOut,
+                    style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       color: Color(0xFFB45309),
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'Angemeldet als $email',
+                    '${l10n.accountMenuSignedInAs} $email',
                     style: const TextStyle(
                         fontSize: 12, color: Color(0xFF64748B)),
                     overflow: TextOverflow.ellipsis,
@@ -783,7 +501,7 @@ class _LogoutCard extends StatelessWidget {
                 foregroundColor: const Color(0xFFD97706),
                 side: const BorderSide(color: Color(0xFFD97706)),
               ),
-              child: const Text('Abmelden'),
+              child: Text(l10n.accountMenuSignOut),
             ),
           ],
         ),
@@ -818,14 +536,17 @@ class _MonthlyGoalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Consumer<AppPreferencesProvider>(
       builder: (context, prefs, _) {
-        final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+        final localeTag =
+            Localizations.localeOf(context).toLanguageTag();
+        final money =
+            NumberFormat.currency(locale: localeTag, symbol: '€');
         return _SettingsCard(
           icon: Icons.flag_outlined,
-          title: 'Monatliches Profit-Ziel',
-          subtitle:
-              'Wird in der Statistik als Fortschrittsring + Forecast angezeigt.',
+          title: l10n.settingsMonthlyGoalTitle,
+          subtitle: l10n.settingsMonthlyGoalSubtitle,
           trailing: TextButton(
             onPressed: () async {
               final ctrl = TextEditingController(
@@ -833,7 +554,7 @@ class _MonthlyGoalCard extends StatelessWidget {
               final value = await showDialog<double>(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: const Text('Profit-Ziel pro Monat'),
+                  title: Text(l10n.settingsMonthlyGoalDialogTitle),
                   content: TextField(
                     controller: ctrl,
                     keyboardType: const TextInputType.numberWithOptions(
@@ -847,7 +568,7 @@ class _MonthlyGoalCard extends StatelessWidget {
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Abbrechen'),
+                      child: Text(l10n.actionCancel),
                     ),
                     ElevatedButton(
                       onPressed: () {
@@ -855,7 +576,7 @@ class _MonthlyGoalCard extends StatelessWidget {
                             ctrl.text.replaceAll(',', '.'));
                         if (v != null && v >= 0) Navigator.pop(ctx, v);
                       },
-                      child: const Text('Speichern'),
+                      child: Text(l10n.actionSave),
                     ),
                   ],
                 ),
@@ -878,13 +599,13 @@ class _LowStockThresholdCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Consumer<AppPreferencesProvider>(
       builder: (context, prefs, _) {
         return _SettingsCard(
           icon: Icons.warning_amber_outlined,
-          title: 'Schwellwert "niedriger Bestand"',
-          subtitle:
-              'Lagerartikel unter diesem Wert werden als kritisch markiert.',
+          title: l10n.settingsLowStockTitle,
+          subtitle: l10n.settingsLowStockSubtitle,
           trailing: TextButton(
             onPressed: () async {
               final ctrl = TextEditingController(
@@ -892,27 +613,27 @@ class _LowStockThresholdCard extends StatelessWidget {
               final value = await showDialog<int>(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: const Text('Niedriger Bestand'),
+                  title: Text(l10n.settingsLowStockDialogTitle),
                   content: TextField(
                     controller: ctrl,
                     keyboardType: TextInputType.number,
                     autofocus: true,
-                    decoration: const InputDecoration(
-                      suffixText: 'Stück',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      suffixText: l10n.settingsLowStockUnit,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Abbrechen'),
+                      child: Text(l10n.actionCancel),
                     ),
                     ElevatedButton(
                       onPressed: () {
                         final v = int.tryParse(ctrl.text);
                         if (v != null && v >= 0) Navigator.pop(ctx, v);
                       },
-                      child: const Text('Speichern'),
+                      child: Text(l10n.actionSave),
                     ),
                   ],
                 ),
@@ -922,7 +643,7 @@ class _LowStockThresholdCard extends StatelessWidget {
                 await prefs.setLowStockThreshold(value);
               }
             },
-            child: Text('< ${prefs.lowStockThreshold} Stück'),
+            child: Text(l10n.settingsLowStockTrailing(prefs.lowStockThreshold)),
           ),
         );
       },
@@ -939,33 +660,32 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
   bool _loading = false;
 
   Future<void> _confirmDelete() async {
+    final l10n = AppLocalizations.of(context);
     final confirmCtrl = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
-          title: const Text('Konto endgültig löschen?'),
+          title: Text(l10n.deleteAccountTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Dein Konto und alle deine Daten werden unwiderruflich gelöscht. '
-                'Diese Aktion kann nicht rückgängig gemacht werden.',
-              ),
+              Text(l10n.deleteAccountText),
               const SizedBox(height: 16),
-              const Text(
-                'Tippe LÖSCHEN zur Bestätigung:',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              Text(
+                l10n.deleteAccountConfirmInstruction,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 13),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: confirmCtrl,
                 autofocus: true,
                 onChanged: (_) => setS(() {}),
-                decoration: const InputDecoration(
-                  hintText: 'LÖSCHEN',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: l10n.deleteAccountConfirmKeyword,
+                  border: const OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
@@ -974,15 +694,16 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Abbrechen'),
+              child: Text(l10n.actionCancel),
             ),
             ElevatedButton(
-              onPressed: confirmCtrl.text.trim() == 'LÖSCHEN'
+              onPressed: confirmCtrl.text.trim() ==
+                      l10n.deleteAccountConfirmKeyword
                   ? () => Navigator.pop(ctx, true)
                   : null,
               style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFC0392B)),
-              child: const Text('Konto löschen'),
+              child: Text(l10n.accountMenuDeleteAccount),
             ),
           ],
         ),
@@ -1011,6 +732,7 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1018,21 +740,22 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
           children: [
             const Icon(Icons.delete_forever_outlined, color: Color(0xFFC0392B)),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Konto löschen',
-                    style: TextStyle(
+                    l10n.accountMenuDeleteAccount,
+                    style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       color: Color(0xFFC0392B),
                     ),
                   ),
-                  SizedBox(height: 3),
+                  const SizedBox(height: 3),
                   Text(
-                    'Löscht dein Konto und alle Daten unwiderruflich.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                    l10n.deleteAccountSubtitle,
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF64748B)),
                   ),
                 ],
               ),
@@ -1050,7 +773,7 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
                       foregroundColor: const Color(0xFFC0392B),
                       side: const BorderSide(color: Color(0xFFC0392B)),
                     ),
-                    child: const Text('Löschen'),
+                    child: Text(l10n.actionDelete),
                   ),
           ],
         ),
@@ -1141,7 +864,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Speichern fehlgeschlagen: $e'),
+          content: Text(AppLocalizations.of(context).pushSaveFailed('$e')),
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFFDC2626),
         ),
@@ -1153,6 +876,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final push = context.watch<PushService>();
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -1171,27 +895,27 @@ class _NotificationsTabState extends State<_NotificationsTab> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: const Color(0xFFFDE68A)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.warning_amber_rounded,
+                  const Icon(Icons.warning_amber_rounded,
                       color: Color(0xFFD97706), size: 20),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Firebase ist auf diesem Gerät nicht eingerichtet — Einstellungen werden gespeichert, aber Push-Nachrichten werden erst nach der Firebase-Einrichtung zugestellt.',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                      l10n.pushFirebaseMissing,
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFF92400E)),
                     ),
                   ),
                 ],
               ),
             ),
           _Section(
-            title: 'Benachrichtigungstypen',
+            title: l10n.pushSectionTypes,
             children: [
               SwitchListTile(
-                title: const Text('MHD-Warnungen'),
-                subtitle:
-                    const Text('Charge läuft bald ab (basierend auf MHD)'),
+                title: Text(l10n.pushMhdTitle),
+                subtitle: Text(l10n.pushMhdSubtitle),
                 value: _prefs.mhdWarningEnabled,
                 onChanged: _saving
                     ? null
@@ -1200,8 +924,9 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               ),
               ListTile(
                 enabled: _prefs.mhdWarningEnabled && !_saving,
-                title: const Text('MHD-Vorwarnung'),
-                subtitle: Text('${_prefs.mhdWarningDays} Tage vor Ablauf'),
+                title: Text(l10n.pushMhdLeadTitle),
+                subtitle:
+                    Text(l10n.pushMhdLeadSubtitle(_prefs.mhdWarningDays)),
                 trailing: SizedBox(
                   width: 200,
                   child: Slider(
@@ -1209,7 +934,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
                     min: 1,
                     max: 60,
                     divisions: 59,
-                    label: '${_prefs.mhdWarningDays} Tage',
+                    label:
+                        l10n.pushMhdLeadSliderLabel(_prefs.mhdWarningDays),
                     onChanged: !_prefs.mhdWarningEnabled || _saving
                         ? null
                         : (v) {
@@ -1225,9 +951,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               ),
               const Divider(height: 1),
               SwitchListTile(
-                title: const Text('Lieferungs-Hinweise'),
-                subtitle: const Text(
-                    'Wenn ein Deal heute ankommen sollte (Status Unterwegs)'),
+                title: Text(l10n.pushDeliveryTitle),
+                subtitle: Text(l10n.pushDeliverySubtitle),
                 value: _prefs.deliveryEnabled,
                 onChanged: _saving
                     ? null
@@ -1236,9 +961,9 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               ),
               const Divider(height: 1),
               SwitchListTile(
-                title: const Text('Zahlungs-Erinnerungen'),
-                subtitle: Text(
-                    'Käufer hat nach ${_prefs.paymentOverdueDays} Tagen noch nicht gezahlt'),
+                title: Text(l10n.pushPaymentTitle),
+                subtitle:
+                    Text(l10n.pushPaymentSubtitle(_prefs.paymentOverdueDays)),
                 value: _prefs.paymentEnabled,
                 onChanged: _saving
                     ? null
@@ -1246,8 +971,9 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               ),
               ListTile(
                 enabled: _prefs.paymentEnabled && !_saving,
-                title: const Text('Mahn-Schwelle'),
-                subtitle: Text('${_prefs.paymentOverdueDays} Tage'),
+                title: Text(l10n.pushPaymentLeadTitle),
+                subtitle: Text(
+                    l10n.pushPaymentLeadSubtitle(_prefs.paymentOverdueDays)),
                 trailing: SizedBox(
                   width: 200,
                   child: Slider(
@@ -1255,7 +981,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
                     min: 1,
                     max: 60,
                     divisions: 59,
-                    label: '${_prefs.paymentOverdueDays} Tage',
+                    label: l10n
+                        .pushMhdLeadSliderLabel(_prefs.paymentOverdueDays),
                     onChanged: !_prefs.paymentEnabled || _saving
                         ? null
                         : (v) {
@@ -1273,19 +1000,19 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           ),
           const SizedBox(height: 16),
           _Section(
-            title: 'Hinweise',
+            title: l10n.pushSectionInfo,
             children: [
-              const ListTile(
-                leading: Icon(Icons.schedule, size: 20, color: Color(0xFF64748B)),
-                title: Text('Tägliche Prüfung'),
-                subtitle: Text(
-                    'Server prüft täglich um 09:00 Uhr (Europe/Berlin) und versendet fällige Nachrichten.'),
+              ListTile(
+                leading: const Icon(Icons.schedule,
+                    size: 20, color: Color(0xFF64748B)),
+                title: Text(l10n.pushDailyCheckTitle),
+                subtitle: Text(l10n.pushDailyCheckSubtitle),
               ),
-              const ListTile(
-                leading: Icon(Icons.fingerprint, size: 20, color: Color(0xFF64748B)),
-                title: Text('Dedup'),
-                subtitle: Text(
-                    'Jede Warnung wird pro Charge/Deal nur einmal versendet — auch über mehrere Geräte hinweg.'),
+              ListTile(
+                leading: const Icon(Icons.fingerprint,
+                    size: 20, color: Color(0xFF64748B)),
+                title: Text(l10n.pushDedupTitle),
+                subtitle: Text(l10n.pushDedupSubtitle),
               ),
             ],
           ),
@@ -1328,5 +1055,590 @@ class _Section extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+
+// ── Team Tab ──────────────────────────────────────────────────────────────────
+
+class _TeamTab extends StatefulWidget {
+  const _TeamTab();
+
+  @override
+  State<_TeamTab> createState() => _TeamTabState();
+}
+
+class _TeamTabState extends State<_TeamTab> {
+  Workspace? _workspace;
+  List<WorkspaceMember> _members = [];
+  List<WorkspaceInvite> _invites = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final svc = context.read<WorkspaceService>();
+      final activeId =
+          context.read<ActiveWorkspaceProvider>().active?.id;
+      final all = await svc.listMine();
+      // Bevorzuge den aktuell aktiven Workspace; fällt zurück auf den ersten
+      // Workspace, wenn nichts aktiv ist (z.B. direkt nach Login).
+      final ws = activeId == null
+          ? (all.isEmpty ? null : all.first)
+          : all.where((w) => w.id == activeId).firstOrNull ??
+              (all.isEmpty ? null : all.first);
+      if (ws == null) {
+        if (!mounted) return;
+        setState(() {
+          _workspace = null;
+          _members = [];
+          _invites = [];
+          _loading = false;
+        });
+        return;
+      }
+      final members = await svc.listMembers(ws.id);
+      List<WorkspaceInvite> invites = const [];
+      try {
+        invites = await svc.listInvites(ws.id);
+      } catch (_) {
+        // Mitglieder ohne Owner/Admin-Rolle dürfen Invites nicht lesen — OK.
+      }
+      if (!mounted) return;
+      setState(() {
+        _workspace = ws;
+        _members = members;
+        _invites = invites;
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  Future<void> _renameWorkspace() async {
+    final ws = _workspace;
+    if (ws == null) return;
+    final l10n = AppLocalizations.of(context);
+    final ctrl = TextEditingController(text: ws.name);
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.teamRenameTitle),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: l10n.teamRenameLabel,
+            hintText: l10n.teamRenameHint,
+            border: const OutlineInputBorder(),
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.actionCancel)),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: Text(l10n.actionSave)),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (newName == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final activeWs = context.read<ActiveWorkspaceProvider>();
+    final uid = context.read<AuthProvider>().currentUser?.id;
+    try {
+      await context.read<WorkspaceService>().renameWorkspace(
+            workspaceId: ws.id,
+            name: newName,
+          );
+      if (uid != null) {
+        await activeWs.loadForCurrentUser(uid);
+      }
+      if (!mounted) return;
+      await _load();
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.teamRenameSuccess)));
+    } catch (e) {
+      messenger.showSnackBar(
+          SnackBar(content: Text(l10n.teamRenameFailed('$e'))));
+    }
+  }
+
+  WorkspaceRole? get _myRole {
+    final uid = context.read<AuthProvider>().currentUser?.id;
+    if (uid == null) return null;
+    return _members.where((m) => m.userId == uid).firstOrNull?.role;
+  }
+
+  String _roleLabel(AppLocalizations l10n, WorkspaceRole role) =>
+      switch (role) {
+        WorkspaceRole.owner => l10n.teamRoleOwner,
+        WorkspaceRole.admin => l10n.teamRoleAdmin,
+        WorkspaceRole.member => l10n.teamRoleMember,
+        WorkspaceRole.viewer => l10n.teamRoleViewer,
+      };
+
+  Future<void> _invite() async {
+    final ws = _workspace;
+    if (ws == null) return;
+    final l10n = AppLocalizations.of(context);
+    final emailCtrl = TextEditingController();
+    WorkspaceRole role = WorkspaceRole.member;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text(l10n.teamInviteTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: emailCtrl,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: l10n.teamInviteEmailLabel,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<WorkspaceRole>(
+                initialValue: role,
+                decoration: InputDecoration(
+                  labelText: l10n.teamInviteRoleLabel,
+                  border: const OutlineInputBorder(),
+                ),
+                items: [
+                  DropdownMenuItem(
+                      value: WorkspaceRole.admin,
+                      child: Text(l10n.teamRoleAdmin)),
+                  DropdownMenuItem(
+                      value: WorkspaceRole.member,
+                      child: Text(l10n.teamRoleMember)),
+                  DropdownMenuItem(
+                      value: WorkspaceRole.viewer,
+                      child: Text(l10n.teamRoleViewer)),
+                ],
+                onChanged: (v) =>
+                    setS(() => role = v ?? WorkspaceRole.member),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.actionCancel)),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.teamInvite)),
+          ],
+        ),
+      ),
+    );
+    final email = emailCtrl.text.trim();
+    emailCtrl.dispose();
+    if (ok != true || email.isEmpty || !mounted) return;
+    try {
+      await context.read<WorkspaceService>().createInvite(
+            workspaceId: ws.id,
+            email: email,
+            role: role,
+          );
+      if (mounted) await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.teamInviteFailed('$e'))));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final dateFmt =
+        DateFormat.yMd(Localizations.localeOf(context).toLanguageTag());
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            '${l10n.teamLoadFailed(_error!)}\n\n${l10n.teamMigrationHint}',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    final ws = _workspace;
+    if (ws == null) {
+      return Center(child: Text(l10n.teamNoWorkspace));
+    }
+    final canManage = _myRole?.canManageMembers ?? false;
+    final isOwner = _myRole == WorkspaceRole.owner;
+    final myUid = context.read<AuthProvider>().currentUser?.id;
+    return Container(
+      color: const Color(0xFFF1F4F8),
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          _SettingsCard(
+            icon: Icons.workspaces_outlined,
+            title: ws.displayLabel(myUid),
+            subtitle: l10n.teamWorkspaceSummary(
+                ws.id.substring(0, 8), _members.length),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isOwner)
+                  IconButton(
+                    tooltip: l10n.teamRename,
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    onPressed: _renameWorkspace,
+                  ),
+                IconButton(
+                  tooltip: l10n.teamCopyId,
+                  icon: const Icon(Icons.copy_outlined, size: 18),
+                  onPressed: () async {
+                    await Clipboard.setData(
+                        ClipboardData(text: ws.id));
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.teamCopyIdSnack)),
+                    );
+                  },
+                ),
+                if (canManage) ...[
+                  const SizedBox(width: 4),
+                  ElevatedButton.icon(
+                    onPressed: _invite,
+                    icon: const Icon(Icons.person_add_alt_1, size: 16),
+                    label: Text(l10n.teamInvite),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SectionHeader(title: l10n.teamMembers),
+          const SizedBox(height: 8),
+          ..._members.map(
+            (m) => Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.person_outline,
+                    color: Color(0xFF2563EB)),
+                title: Text(m.email ?? m.userId.substring(0, 8),
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                  l10n.teamMemberSince(_roleLabel(l10n, m.role),
+                      dateFmt.format(m.joinedAt.toLocal())),
+                  style: const TextStyle(
+                      fontSize: 12, color: Color(0xFF64748B)),
+                ),
+                trailing: canManage && m.role != WorkspaceRole.owner
+                    ? IconButton(
+                        tooltip: l10n.teamMemberRemove,
+                        icon: const Icon(Icons.person_remove_outlined,
+                            color: Color(0xFFDC2626), size: 18),
+                        onPressed: () async {
+                          await context
+                              .read<WorkspaceService>()
+                              .removeMember(
+                                workspaceId: ws.id,
+                                userId: m.userId,
+                              );
+                          if (mounted) await _load();
+                        },
+                      )
+                    : null,
+              ),
+            ),
+          ),
+          if (_invites.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _SectionHeader(title: l10n.teamInvites),
+            const SizedBox(height: 8),
+            ..._invites.map(
+              (inv) => Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.mail_outline,
+                      color: Color(0xFF64748B)),
+                  title: Text(inv.email,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(
+                    l10n.teamInviteExpires(_roleLabel(l10n, inv.role),
+                        dateFmt.format(inv.expiresAt.toLocal())),
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                  trailing: canManage
+                      ? IconButton(
+                          tooltip: l10n.teamInviteRevoke,
+                          icon: const Icon(Icons.cancel_outlined,
+                              color: Color(0xFFDC2626), size: 18),
+                          onPressed: () async {
+                            await context
+                                .read<WorkspaceService>()
+                                .revokeInvite(inv.id);
+                            if (mounted) await _load();
+                          },
+                        )
+                      : null,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LanguageCard extends StatelessWidget {
+  const _LanguageCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Consumer<AppPreferencesProvider>(
+      builder: (context, prefs, _) {
+        final code = prefs.locale?.languageCode ?? 'system';
+        return _SettingsCard(
+          icon: Icons.language_outlined,
+          title: l10n.settingsLanguageTitle,
+          subtitle: l10n.settingsLanguageSubtitle,
+          trailing: DropdownButton<String>(
+            value: code,
+            underline: const SizedBox.shrink(),
+            items: [
+              DropdownMenuItem(
+                  value: 'system', child: Text(l10n.settingsLanguageSystem)),
+              DropdownMenuItem(
+                  value: 'de', child: Text(l10n.settingsLanguageDe)),
+              DropdownMenuItem(
+                  value: 'en', child: Text(l10n.settingsLanguageEn)),
+            ],
+            onChanged: (v) {
+              if (v == null) return;
+              prefs.setLocale(v == 'system' ? null : Locale(v));
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Plan & Billing Section ────────────────────────────────────────────────────
+
+class _PlanSection extends StatefulWidget {
+  const _PlanSection();
+
+  @override
+  State<_PlanSection> createState() => _PlanSectionState();
+}
+
+class _PlanSectionState extends State<_PlanSection> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final billing = context.read<BillingProvider>();
+      if (billing.profile == null && !billing.isLoading) {
+        billing.load();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final billing = context.watch<BillingProvider>();
+    final profile = billing.profile;
+    final plan = billing.currentPlan;
+    final pricing = PricingPlan.forBillingPlan(plan);
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
+
+    final priceLabel = plan == BillingPlan.free
+        ? 'kostenlos'
+        : pricing.customPricing
+            ? 'individuell'
+            : '${_fmtEur(pricing.monthlyPriceEur)} / Monat';
+
+    final addressMissing =
+        plan.isPaid && (profile == null || !profile.hasCompleteBillingAddress);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: 'Plan & Abrechnung'),
+        const SizedBox(height: 8),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PricingScreen()),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: accent.withAlpha(30),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.workspace_premium_outlined,
+                        color: accent),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              plan.label,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(width: 8),
+                            if (pricing.mostPopular)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: accent.withAlpha(30),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'Most Popular',
+                                  style: TextStyle(
+                                      color: accent,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          priceLabel,
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    plan == BillingPlan.free ? 'Upgrade' : 'Verwalten',
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const BillingProfileScreen(),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.receipt_long_outlined,
+                      color: Color(0xFF2563EB)),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Rechnungsdaten',
+                            style: TextStyle(fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 3),
+                        Text(
+                          _billingSubtitle(profile, plan, addressMissing),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: addressMissing
+                                ? Colors.red.shade600
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (addressMissing)
+                    const Icon(Icons.warning_amber_rounded,
+                        color: Colors.orange),
+                  const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _billingSubtitle(
+      BillingProfile? p, BillingPlan plan, bool missing) {
+    if (missing) {
+      return 'Pflichtangaben unvollständig — bitte ergänzen';
+    }
+    if (p == null || (p.fullName ?? '').trim().isEmpty) {
+      return plan.isPaid
+          ? 'Adresse hinterlegen'
+          : 'Optional — wird erst beim Upgrade benötigt';
+    }
+    final parts = <String>[
+      p.fullName!.trim(),
+      if ((p.city ?? '').trim().isNotEmpty) p.city!.trim(),
+    ];
+    return parts.join(' · ');
+  }
+
+  static String _fmtEur(double v) {
+    if (v == v.roundToDouble()) return '${v.toStringAsFixed(0)} €';
+    return '${v.toStringAsFixed(2).replaceAll('.', ',')} €';
   }
 }

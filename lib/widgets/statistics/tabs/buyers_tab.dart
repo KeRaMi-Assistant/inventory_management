@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
 import '../sortable_table.dart';
 import '../stat_panel.dart';
@@ -12,14 +13,16 @@ class BuyersTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
-    final dateFmt = DateFormat('dd.MM.yy', 'de_DE');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final money = NumberFormat.currency(locale: localeTag, symbol: '€');
+    final dateFmt = DateFormat.yMd(localeTag);
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         StatPanel(
-          title: 'Käufer-Performance',
+          title: l10n.statsTabBuyers,
           icon: Icons.people_outline,
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: SortableTable<BuyerStat>(
@@ -29,7 +32,7 @@ class BuyersTab extends StatelessWidget {
             rowColor: (b) => b.inactive ? const Color(0xFFFEF2F2) : null,
             columns: [
               SortableColumn(
-                label: 'Käufer',
+                label: l10n.statsBuyerLabel,
                 builder: (b) => Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -50,7 +53,7 @@ class BuyersTab extends StatelessWidget {
                 valueOf: (b) => b.name.toLowerCase(),
               ),
               SortableColumn(
-                label: 'Deals',
+                label: l10n.statsDealsLabel,
                 numeric: true,
                 builder: (b) => Text('${b.count}'),
                 valueOf: (b) => b.count,
@@ -62,13 +65,13 @@ class BuyersTab extends StatelessWidget {
                 valueOf: (b) => b.ek,
               ),
               SortableColumn(
-                label: 'Umsatz',
+                label: l10n.statsLabelRevenue,
                 numeric: true,
                 builder: (b) => Text(money.format(b.revenue)),
                 valueOf: (b) => b.revenue,
               ),
               SortableColumn(
-                label: 'Offen',
+                label: l10n.statsOpenLabel,
                 numeric: true,
                 builder: (b) => Text(money.format(b.openAmount),
                     style: TextStyle(
@@ -80,7 +83,7 @@ class BuyersTab extends StatelessWidget {
                 valueOf: (b) => b.openAmount,
               ),
               SortableColumn(
-                label: 'LTV (Profit)',
+                label: l10n.statsLabelProfit,
                 numeric: true,
                 builder: (b) => Text(
                   money.format(b.profit),
@@ -94,55 +97,33 @@ class BuyersTab extends StatelessWidget {
                 valueOf: (b) => b.profit,
               ),
               SortableColumn(
-                label: 'Ø Order',
+                label: 'Ø',
                 numeric: true,
                 builder: (b) => Text(money.format(b.avgOrderValue)),
                 valueOf: (b) => b.avgOrderValue,
               ),
               SortableColumn(
-                label: 'Frequenz',
+                label: l10n.statsFrequency,
                 numeric: true,
                 builder: (b) =>
-                    Text('${b.frequencyPerMonth.toStringAsFixed(1)}/Mon'),
+                    Text(b.frequencyPerMonth.toStringAsFixed(1)),
                 valueOf: (b) => b.frequencyPerMonth,
               ),
               SortableColumn(
-                label: 'First',
+                label: l10n.statsFirst,
                 builder: (b) => Text(dateFmt.format(b.firstDeal)),
                 valueOf: (b) => b.firstDeal.millisecondsSinceEpoch,
               ),
               SortableColumn(
-                label: 'Last',
+                label: l10n.statsLast,
                 builder: (b) => Text(dateFmt.format(b.lastDeal)),
                 valueOf: (b) => b.lastDeal.millisecondsSinceEpoch,
               ),
               SortableColumn(
-                label: 'Tage aktiv',
+                label: l10n.statsActiveDays,
                 numeric: true,
                 builder: (b) => Text('${b.activeDays}'),
                 valueOf: (b) => b.activeDays,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFEF2F2),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFFCA5A5)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.info_outline,
-                  size: 16, color: Color(0xFF991B1B)),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Käufer mit rotem Punkt waren > 60 Tage inaktiv (kein Deal im aktuellen Filter-Zeitraum).',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF991B1B)),
-                ),
               ),
             ],
           ),

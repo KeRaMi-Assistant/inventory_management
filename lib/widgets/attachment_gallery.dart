@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../app_theme.dart';
+import '../l10n/app_localizations.dart';
 import '../services/attachment_service.dart';
 
 /// Inline-Gallery für Foto-Anhänge an Items/Deals. Hält die `paths`-Liste
@@ -62,7 +63,7 @@ class _AttachmentGalleryState extends State<AttachmentGallery> {
                 size: 16, color: AppTheme.textMuted),
             const SizedBox(width: 6),
             Text(
-              'Bilder',
+              AppLocalizations.of(context).attachmentTitle,
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -97,21 +98,14 @@ class _AttachmentGalleryState extends State<AttachmentGallery> {
               if (widget.paths.isEmpty && !canAdd)
                 Container(
                   alignment: Alignment.centerLeft,
-                  child: const Text(
-                    'Keine Bilder.',
-                    style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                  child: Text(
+                    AppLocalizations.of(context).dealCommentEmpty,
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
                   ),
                 ),
             ],
           ),
         ),
-        if (widget.entityId.isEmpty) ...[
-          const SizedBox(height: 6),
-          const Text(
-            'Bilder können erst nach dem ersten Speichern hinzugefügt werden.',
-            style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
-          ),
-        ],
       ],
     );
   }
@@ -119,9 +113,8 @@ class _AttachmentGalleryState extends State<AttachmentGallery> {
   Future<void> _addImages() async {
     if (widget.entityId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Bitte erst speichern – dann können Bilder hinzugefügt werden.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).actionSave),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -137,6 +130,7 @@ class _AttachmentGalleryState extends State<AttachmentGallery> {
     setState(() => _busy = true);
     final svc = context.read<AttachmentService>();
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
 
     try {
       final List<XFile> picked = source == ImageSource.camera
@@ -175,7 +169,7 @@ class _AttachmentGalleryState extends State<AttachmentGallery> {
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Upload fehlgeschlagen: $e'),
+          content: Text(l10n.errorPrefix('$e')),
           backgroundColor: AppTheme.danger,
           behavior: SnackBarBehavior.floating,
         ),
@@ -186,6 +180,7 @@ class _AttachmentGalleryState extends State<AttachmentGallery> {
   }
 
   Future<ImageSource?> _pickSource() async {
+    final l10n = AppLocalizations.of(context);
     return showModalBottomSheet<ImageSource>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -194,12 +189,12 @@ class _AttachmentGalleryState extends State<AttachmentGallery> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Foto aufnehmen'),
+              title: Text(l10n.attachmentTakePhoto),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Aus Galerie wählen'),
+              title: Text(l10n.attachmentPickGallery),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
           ],
@@ -209,20 +204,21 @@ class _AttachmentGalleryState extends State<AttachmentGallery> {
   }
 
   Future<void> _confirmDelete(int index) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Bild löschen?'),
-        content: const Text('Das Bild wird unwiderruflich entfernt.'),
+        title: Text(l10n.dealCommentDeleteTitle),
+        content: Text(l10n.dealCommentDeleteText),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Abbrechen'),
+            child: Text(l10n.actionCancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-            child: const Text('Löschen'),
+            child: Text(l10n.actionDelete),
           ),
         ],
       ),

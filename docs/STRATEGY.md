@@ -100,17 +100,17 @@ Sortiert nach **Wertsteigerung pro Aufwand**:
 
 **Tier B — Schöne Adds:**
 
-- [ ] **Kommentar-/Notiz-Threads** auf Deals (für Team später)
+- [x] **Kommentar-/Notiz-Threads** auf Deals (für Team später) — Sprint 4 (Tabelle `deal_comments` + UI im Deal-Dialog)
 - [ ] **Recurring-Items** (z.B. monatlich nachbestellen)
 - [ ] **Preis-Tracker** (Vergleich VK vs. aktueller Marktpreis bei StockX/eBay)
 - [ ] **Steuer-Export DATEV-konform** (CSV mit Buchungssätzen, nicht nur Liste)
 - [ ] **Public Profile Page** (Read-only-Bestandsliste auf eigener URL)
-- [ ] **Templates** für wiederkehrende Item-Typen
-- [ ] **Multi-Sprach-Support** (EN als zweite Sprache → 10× Markt)
+- [ ] **Templates** für wiederkehrende Item-Typen — teilweise: Produkt-Vorschläge im Deal-Dialog übernehmen die letzte Konfiguration als Vorlage
+- [x] **Multi-Sprach-Support** (EN als zweite Sprache → 10× Markt) — Foundation in Sprint 4 (flutter_localizations, ARB für DE/EN, Sprachschalter in Settings). Strings müssen sukzessive auf `AppLocalizations` umgestellt werden.
 
 **Tier C — Premium/Enterprise:**
 
-- [ ] **Team-Modus** (mehrere User pro Account, Rollen, Audit-Log)
+- [x] **Team-Modus** (mehrere User pro Account, Rollen, Audit-Log) — Schema-Foundation in Sprint 4 (workspaces, workspace_members, workspace_invites, audit_log, Personal-Workspace-Trigger). UI: Team-Tab in Settings für Mitglieder + Einladungen. Folge-Sprint stellt RLS auf workspace_id um.
 - [ ] **API-Zugang** für eigene Scripts/Integrationen
 - [ ] **Webhook-Support** (Zapier-style: "Wenn Deal Status=Done → poste in Discord")
 - [ ] **White-Label** für Cookgroup-Owner
@@ -118,11 +118,11 @@ Sortiert nach **Wertsteigerung pro Aufwand**:
 ### 2.2 Überflüssig oder vereinfachbar
 
 - **Zwei Status-Sets** (`status` für Deals, separater `status` für InventoryItems) → könnten harmonisiert werden in einer State-Machine
-- **`shippingType` als String** ("Reship"/"Dropship") → reicht 1 Boolean (`isDropship`)
-- **`beleg` als String "Ja"/"Nein"** → klassischer SQL-Code-Smell, sollte ein Boolean sein
+- ~~**`shippingType` als String** ("Reship"/"Dropship") → reicht 1 Boolean (`isDropship`)~~ ✓ erledigt Sprint 4 (Migration `20260504000000_deals_booleans.sql`)
+- ~~**`beleg` als String "Ja"/"Nein"** → klassischer SQL-Code-Smell, sollte ein Boolean sein~~ ✓ erledigt Sprint 4 (`has_receipt`)
 - **`ticketUrl` UND `ticketNumber`** in Deals UND InventoryItems → redundant. Sollte über `ticketNumber` aufgelöst werden, URL nur einmal speichern
-- **JSON-Backup-Restore** (existiert in Settings) → nutzt niemand, da Cloud-Sync läuft. Kann weg
-- **Settings-Tab "Discord-Info"** → ist Hilfetext, gehört in eine richtige Hilfe-/Onboarding-Seite
+- ~~**JSON-Backup-Restore** (existiert in Settings) → nutzt niemand, da Cloud-Sync läuft. Kann weg~~ ✓ entfernt Sprint 4
+- ~~**Settings-Tab "Discord-Info"** → ist Hilfetext, gehört in eine richtige Hilfe-/Onboarding-Seite~~ ✓ verschoben in `/screens/help_screen.dart`, Tab "Hilfe" in der Navigation
 
 ### 2.3 High-Impact-Priorisierung (nächste 90 Tage)
 

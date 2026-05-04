@@ -1,0 +1,390 @@
+================================================================================
+  INVENTORY MANAGEMENT — PREISANALYSE & PLAN-VORSCHLÄGE
+  Stand: 2026-05-04
+================================================================================
+
+INHALT
+  1. Feature-Inventur des Projekts
+  2. Infrastrukturkosten (Was kostet der Betrieb wirklich?)
+  3. Marktanalyse — Was nehmen die Wettbewerber?
+  4. Empfohlene Pricing-Tiers (Free / Starter / Pro / Business / Enterprise)
+  5. Begründung der Limits (warum diese Zahlen?)
+  6. Break-Even & Skalierung
+  7. Empfehlungen zur Markteinführung
+
+
+================================================================================
+  1. FEATURE-INVENTUR
+================================================================================
+
+1.1 KERN-DATENMODELLE
+  - Deals (Bestellungen mit EK/VK, Käufer, Versand, Tickets, MwSt)
+  - Inventory Items (SKU, EAN, Bestand, Kosten, Mindeststock, Lieferant)
+  - Suppliers / Buyers / Shops
+  - Deal Comments (Thread-Notizen pro Deal)
+  - Tickets (Multi-Deal, Status-Workflow Bestellt -> Unterwegs -> Done)
+  - Workspaces (Multi-User mit Rollen Owner/Admin/Member/Viewer)
+  - Workspace-Invites (Token-basiert, mit Ablaufdatum)
+  - Activity Log (Aktivitätsverlauf)
+
+1.2 BACKEND / SERVICES
+  - Supabase: Auth, Postgres, Row-Level-Security, Storage
+  - OAuth: Google, Apple
+  - Firebase Cloud Messaging (Push)
+  - Flutter Local Notifications
+  - Image Picker (Kamera + Galerie)
+  - mobile_scanner (Barcode/QR)
+  - PDF & Excel Export
+  - CSV Multi-Tabellen-Export/Import
+  - Localization (DE/EN)
+
+1.3 ANALYSE-FEATURES (Statistics Screen, 5 Tabs)
+  - Overview: KPIs, Vergleich Vorperiode, Trends
+  - Finance: Profit/Loss, Rentabilität pro Deal
+  - Products & Shops: Drilldown pro Produkt/Kanal
+  - Buyers: Kunden-Performance, Lifetime-Value
+  - Inventory & Suppliers: Lager-Auslastung, Liefer-Analyse
+  - Charts: Balken, Linien, Heatmaps, Donut
+  - Filter: Datum, Produkt, Käufer, Shop, Lieferant
+  - Export der Reports als PDF & Excel
+
+1.4 ATTACHMENTS / BILDER
+  - Bis zu 5 Bilder pro Entity (Deal/Item) — aktuell hardcoded
+  - Cloud-Storage via Supabase (RLS pro User)
+  - Cached Network Images
+
+1.5 USPs (laut STRATEGY.md)
+  - Native Discord-Ticket-Integration (geplant)
+  - Deutsche UI + Steuermodell
+  - 5-Tab-Statistikdashboard out-of-the-box
+  - Reseller-fokussiert, nicht generisch
+
+
+================================================================================
+  2. INFRASTRUKTURKOSTEN — WAS KOSTET DER BETRIEB?
+================================================================================
+
+2.1 FIXKOSTEN (monatlich, unabhaengig von Nutzerzahl)
+  Supabase Pro Plan ........... 25,00 USD  (~ 23 EUR)
+  Apple Developer Account ......  8,25 EUR  (99 EUR/Jahr)
+  Google Play Account ..........  ~0,50 EUR (einmalig 25 USD, vernachlaessigbar)
+  Domain ....................... ~1,00 EUR
+  Transaktional E-Mail (Resend)  ~10,00 EUR  (bis 50k Mails/Mon)
+  Sentry / Error-Tracking ......  0,00 EUR  (Free Tier reicht initial)
+  --------------------------------------------------------
+  GESAMT FIX ................... ~42,75 EUR / Monat
+
+2.2 VARIABLE KOSTEN PRO NUTZER (Schaetzung)
+
+  Im Supabase Pro sind enthalten:
+    - 100.000 MAU
+    - 8 GB Disk
+    - 250 GB Egress
+    - 100 GB File Storage
+
+  Bei UEBERSCHREITUNG fallen an:
+    - MAU:        0,00325 USD pro zus. MAU
+    - Disk:       0,125   USD pro GB
+    - Egress:     0,09    USD pro GB
+    - Storage:    0,021   USD pro GB
+
+  Realistische Belastung pro aktivem Nutzer:
+    Free-User:        DB ~5 MB,  Storage ~10 MB    = quasi 0 EUR
+    Starter-User:     DB ~30 MB, Storage ~500 MB   = ~ 0,01 EUR
+    Pro-User:         DB ~80 MB, Storage ~3 GB     = ~ 0,07 EUR
+    Business-User:    DB ~300 MB, Storage ~15 GB   = ~ 0,32 EUR
+
+  ==> Die Marginal-Kosten pro Nutzer sind sehr niedrig.
+      Hauptkostenblock ist die Pauschale von 25 USD/Monat.
+
+2.3 BIS WANN REICHT DER PRO-PLAN?
+  - Bis ca. 1.500–3.000 aktive Pro-Nutzer ohne nennenswerte Overage
+  - Danach skaliert der Egress (Bilder) am schnellsten
+  - Bei Bedarf Migration auf Team-Plan (599 USD/Mon) oder S3 fuer Bilder
+
+
+================================================================================
+  3. MARKTANALYSE — WAS KOSTEN VERGLEICHBARE TOOLS?
+================================================================================
+
+  TOOL                       FOKUS                    PREIS (Mon)
+  ---------------------------------------------------------------------------
+  Sortly Free                Generic Inventory        0    EUR    (100 Items)
+  Sortly Advanced            Generic Inventory        24   EUR
+  Sortly Ultra               Generic Inventory        74   EUR
+  Sortly Premium             Generic Inventory        149  EUR
+  ---------------------------------------------------------------------------
+  Flipwise                   Reseller (Sneaker)       19–39 EUR
+  Hypemaster Playbook        Reseller (Excel-basiert) ~30  EUR
+  Vendoo                     Reseller Crossposting    9.99–50 EUR
+  List Perfectly             Reseller Crossposting    29–49 EUR
+  ---------------------------------------------------------------------------
+  inFlow Inventory           KMU                      89–439 EUR
+  Zoho Inventory             KMU                      29–249 EUR
+  Lightspeed Retail          POS/Retail               69–169 EUR
+  Cin7 Core                  Wholesale                349+   EUR
+  Lexware Warenwirtschaft    Buchhaltung+WaWi         24.90–69.90 EUR
+  ---------------------------------------------------------------------------
+  Notion-Template            Inventur (manuell)       0–10  EUR
+  Stockpile                  Lagerverwaltung Free     0     EUR
+
+  PRICING-SWEET-SPOT FUER RESELLER-TOOLS:
+    Einsteiger:    9–19 EUR / Monat
+    Pro:           19–39 EUR / Monat
+    Business:      49–99 EUR / Monat
+
+
+================================================================================
+  4. EMPFOHLENE PRICING-TIERS
+================================================================================
+
+   ╔══════════════════════════════════════════════════════════════════════╗
+   ║   FREE     -    Einstieg & Lead-Generierung                          ║
+   ║   0 EUR / Monat                                                      ║
+   ╠══════════════════════════════════════════════════════════════════════╣
+   ║   - 1 Workspace (Personal, kein Team)                                ║
+   ║   - max. 50 Inventory-Produkte                                       ║
+   ║   - max. 25 Deals pro Monat                                          ║
+   ║   - 1 Bild pro Entity (max. 50 MB Cloud-Storage gesamt)              ║
+   ║   - NUR Overview-Tab in Statistik (keine Drilldowns)                 ║
+   ║   - KEIN CSV-Import                                                  ║
+   ║   - KEIN PDF/Excel-Export                                            ║
+   ║   - Basis-Barcode-Scanner (Lookup, kein Bulk)                        ║
+   ║   - Community-Support (Discord/GitHub Issues)                        ║
+   ║   - Branding "Powered by ..." in Exports                             ║
+   ╚══════════════════════════════════════════════════════════════════════╝
+
+   ╔══════════════════════════════════════════════════════════════════════╗
+   ║   STARTER  -    Solo-Reseller                                        ║
+   ║   6,99 EUR / Monat   oder   69 EUR / Jahr  (Ersparnis ~18%)          ║
+   ╠══════════════════════════════════════════════════════════════════════╣
+   ║   - 1 Workspace                                                      ║
+   ║   - max. 500 Produkte                                                ║
+   ║   - UNBEGRENZT Deals                                                 ║
+   ║   - 1 User                                                           ║
+   ║   - 5 Bilder pro Entity (1 GB Cloud-Storage)                         ║
+   ║   - ALLE 5 Statistik-Tabs (Overview/Finance/Products/Buyers/Stock)   ║
+   ║   - CSV-Import & -Export                                             ║
+   ║   - PDF & Excel Reports                                              ║
+   ║   - Voller Barcode-/EAN-Scanner                                      ║
+   ║   - Push Notifications                                               ║
+   ║   - E-Mail-Support (48h)                                             ║
+   ║   - DSGVO-Datenexport                                                ║
+   ╚══════════════════════════════════════════════════════════════════════╝
+
+   ╔══════════════════════════════════════════════════════════════════════╗
+   ║   PRO      -    Most Popular - Aktive Reseller mit Wachstum          ║
+   ║   14,99 EUR / Monat   oder   149 EUR / Jahr  (Ersparnis ~17%)        ║
+   ╠══════════════════════════════════════════════════════════════════════╣
+   ║   - 1 Workspace + Personal                                           ║
+   ║   - max. 5.000 Produkte                                              ║
+   ║   - UNBEGRENZT Deals                                                 ║
+   ║   - bis zu 3 Team-Mitglieder (Owner + 2)                             ║
+   ║   - Rollen: Admin / Member / Viewer                                  ║
+   ║   - 10 Bilder pro Entity (10 GB Cloud-Storage)                       ║
+   ║   - Alle Statistik-Features inkl. Drilldown & Heatmaps               ║
+   ║   - CSV Bulk-Import & -Export                                        ║
+   ║   - PDF/Excel-Export der Reports                                     ║
+   ║   - Activity-Log (Audit-Trail)                                       ║
+   ║   - Push & Lokale Notifications                                      ║
+   ║   - Deal Comments (Team-Notizen)                                     ║
+   ║   - Ticket-Workflow                                                  ║
+   ║   - Priority E-Mail-Support (24h)                                    ║
+   ║   - Discord-Integration (sobald released)                            ║
+   ╚══════════════════════════════════════════════════════════════════════╝
+
+   ╔══════════════════════════════════════════════════════════════════════╗
+   ║   BUSINESS -    Power-Reseller / Kleines Reseller-Team               ║
+   ║   34,99 EUR / Monat   oder   349 EUR / Jahr  (Ersparnis ~17%)        ║
+   ╠══════════════════════════════════════════════════════════════════════╣
+   ║   - Mehrere Workspaces                                               ║
+   ║   - UNBEGRENZT Produkte                                              ║
+   ║   - UNBEGRENZT Deals                                                 ║
+   ║   - bis zu 10 Team-Mitglieder                                        ║
+   ║   - 25 Bilder pro Entity (50 GB Cloud-Storage)                       ║
+   ║   - Alle PRO-Features                                                ║
+   ║   - DATEV-Export (steuerkonform DE)                                  ║
+   ║   - Marketplace-Sync (eBay, Vinted, Kleinanzeigen) [Roadmap]         ║
+   ║   - Public Shop-Profil / Sharing-Link [Roadmap]                      ║
+   ║   - API-Zugriff (read/write)                                         ║
+   ║   - Webhooks (Discord, Slack, Custom)                                ║
+   ║   - Custom Branding fuer PDF-Reports                                 ║
+   ║   - Priority Support (SLA 12h)                                       ║
+   ╚══════════════════════════════════════════════════════════════════════╝
+
+   ╔══════════════════════════════════════════════════════════════════════╗
+   ║   ENTERPRISE -  Wholesale / Multi-Standort                           ║
+   ║   ab 99 EUR / Monat   (individueller Tarif, jaehrliche Abrechnung)   ║
+   ╠══════════════════════════════════════════════════════════════════════╣
+   ║   - UNBEGRENZT alles                                                 ║
+   ║   - UNBEGRENZT Team-Mitglieder                                       ║
+   ║   - Custom Storage-Limits                                            ║
+   ║   - Single Sign-On (SSO via SAML/OIDC)                               ║
+   ║   - White-Label-Option (eigenes Branding)                            ║
+   ║   - On-Premise / Self-Hosted moeglich                                ║
+   ║   - Dedizierter Account Manager                                      ║
+   ║   - SLA mit 99,9% Uptime-Garantie                                    ║
+   ║   - Custom Integrations & Onboarding                                 ║
+   ║   - DSGVO-Auftragsverarbeitungsvertrag (AVV)                         ║
+   ║   - Audit-Reports                                                    ║
+   ╚══════════════════════════════════════════════════════════════════════╝
+
+
+   FEATURE-VERGLEICHSMATRIX
+
+   FEATURE                       FREE    STARTER   PRO    BUSINESS  ENTERPRISE
+   ----------------------------- ------- --------- ------ --------- ----------
+   Inventory-Produkte            50      500       5.000  unlim.    unlim.
+   Deals / Monat                 25      unlim.    unlim. unlim.    unlim.
+   Team-Mitglieder               1       1         3      10        unlim.
+   Bilder pro Entity             1       5         10     25        custom
+   Cloud-Storage                 50 MB   1 GB      10 GB  50 GB     custom
+   Statistik Overview            ✓       ✓         ✓      ✓         ✓
+   Statistik alle 5 Tabs         —       ✓         ✓      ✓         ✓
+   Drilldown / Heatmaps          —       —         ✓      ✓         ✓
+   CSV Import                    —       ✓         ✓      ✓         ✓
+   CSV Export                    —       ✓         ✓      ✓         ✓
+   PDF/Excel Report-Export       —       ✓         ✓      ✓         ✓
+   Barcode-Scanner               basic   ✓         ✓      ✓         ✓
+   Push Notifications            —       ✓         ✓      ✓         ✓
+   Activity-Log                  —       —         ✓      ✓         ✓
+   Deal Comments                 —       —         ✓      ✓         ✓
+   Discord-Integration*          —       —         ✓      ✓         ✓
+   DATEV-Export*                 —       —         —      ✓         ✓
+   Marketplace-Sync*             —       —         —      ✓         ✓
+   API-Zugriff                   —       —         —      ✓         ✓
+   Webhooks                      —       —         —      ✓         ✓
+   Public Shop-Profil*           —       —         —      ✓         ✓
+   SSO                           —       —         —      —         ✓
+   White-Label                   —       —         —      —         ✓
+   Support                       Comm.   E-Mail    Prio   SLA 12h   Dedicated
+
+   * = Roadmap-Feature (siehe STRATEGY.md)
+
+
+================================================================================
+  5. BEGRUENDUNG DER LIMITS — WARUM DIESE ZAHLEN?
+================================================================================
+
+5.1 PRODUKT-LIMITS
+  - 50 / 500 / 5.000 / unlim. spiegelt typische Reseller-Workloads:
+    * Hobby (Free):     einzelne Sammler, Privatverkaeufe
+    * Solo (Starter):   nebenberuflicher Reseller, ein Verkaufskanal
+    * Aktiv (Pro):      Vollzeit-Reseller, mehrere Kanaele
+    * Power (Business): Kleines Team, Wholesale, B2B
+  - Limits sind weich: Bei Erreichen Upgrade-Hint, kein hartes Lock
+
+5.2 DEAL-LIMITS
+  - Free: 25 Deals/Monat = realistische Hobby-Frequenz
+  - Ab Starter unlimitiert, weil Deals der Kern-Wert sind
+  - Schliesst Anti-Pattern aus, dass User auf Spreadsheet ausweichen
+
+5.3 TEAM-MITGLIEDER
+  - 1 / 1 / 3 / 10 / unlim. orientiert sich an Zielgruppe:
+    * Pro mit 3 = Reseller + Partner + Buchhalter
+    * Business mit 10 = kleines Reseller-Team
+  - Workspace-Modell ist bereits implementiert, nur Quota-Check noetig
+
+5.4 BILDER & STORAGE
+  - Aktuell hardcoded auf 5 Bilder/Entity in Code → wird Plan-abhaengig
+  - 1 GB / 10 GB / 50 GB deckt typische Reseller-Bilder ab:
+    * 1 GB ~= 500 Items mit 4 Bildern à 500 KB
+    * 10 GB ~= 5.000 Items mit 4 Bildern à 500 KB
+    * 50 GB ~= 25.000 Items mit 4 Bildern à 500 KB
+
+5.5 ANALYTICS-GATING
+  - Free bekommt nur Overview → Hook fuer Upgrade
+  - Starter bekommt alle 5 Tabs (das ist der "Aha"-Moment)
+  - Drilldown/Heatmaps erst ab Pro → echter Mehrwert fuer Aktive
+
+5.6 SUPPORT-SLAS
+  - Community → 48h E-Mail → 24h Prio → 12h SLA → Dedicated
+  - Realistisch fuer Solo-Founder, skaliert mit Pricing
+
+
+================================================================================
+  6. BREAK-EVEN & SKALIERUNG
+================================================================================
+
+6.1 ANNAHMEN
+  - Fixkosten ............ 43 EUR / Monat
+  - Avg. Marginal-Kosten . 0,15 EUR / zahlender Nutzer
+  - Stripe/Apple-Gebuehr . 15% (Mix aus Web ~3% und App ~30%)
+  - Avg. ARPU (Mix) ...... 13 EUR / Monat (Pro-lastig)
+
+6.2 BREAK-EVEN-SZENARIEN
+  Szenario       Pro-Nutzer  Umsatz/Mon   Kosten/Mon   Profit
+  -------------- ----------- ------------ ------------ -----------
+  Hobby            5         65 EUR       45 EUR        20 EUR
+  Side-Project   25        325 EUR       50 EUR       275 EUR
+  Indie-SaaS    100      1.300 EUR       65 EUR     1.235 EUR
+  Skalierend    500      6.500 EUR      150 EUR     6.350 EUR
+  Cashcow     1.000     13.000 EUR      300 EUR    12.700 EUR
+
+  Bereits ab ~5–10 zahlenden Nutzern profitabel.
+
+6.3 KIPP-PUNKTE
+  - 200 Pro-Nutzer:    eigener Domain + Email-Service noetig
+  - 500 Pro-Nutzer:    Egress-Overage (Bilder) wird sichtbar
+  - 1.500 Pro-Nutzer:  Migration auf Team-Plan oder S3-Storage
+  - 5.000 Pro-Nutzer:  Eigener Backend-Worker, Caching-Layer
+
+
+================================================================================
+  7. EMPFEHLUNGEN ZUR MARKTEINFUEHRUNG
+================================================================================
+
+7.1 LAUNCH-STRATEGIE
+  - Erst nur FREE + PRO anbieten (keine Wahllaehmung)
+  - Lifetime-Deal "Founders Plan" 99 EUR einmalig fuer erste 50 Nutzer
+    (Kapital-Boost + Loyale Fan-Base)
+  - 14-Tage-Trial auf PRO ohne Kreditkarte
+  - STARTER und BUSINESS nach 3 Monaten basierend auf Feedback dazu
+
+7.2 PSYCHOLOGISCHE HEBEL
+  - 14,99 EUR statt 15 EUR (klassischer Preisanker)
+  - "Most Popular"-Badge auf PRO
+  - Jahres-Plan mit ~17% Ersparnis (Cash-Vorteil + Reduzierte Churn)
+  - Free-Plan limitiert genug, dass aktive Nutzer schnell upgraden
+
+7.3 RISIKEN
+  - App-Store-Gebuehr 15–30% verschiebt Sweet-Spot nach oben.
+    → Web-Onboarding pushen, in App nur "Manage Subscription"
+  - DSGVO-Konformitaet kostet Zeit (AVV, Datenschutzerklaerung)
+  - Konkurrent Sortly hat Brand-Power, aber generisch — USP "Reseller DE"
+    klar herausarbeiten
+
+7.4 PRICING-VALIDIERUNG
+  - Vor Launch 5–10 Reseller interviewen: Was wuerden sie zahlen?
+  - A/B-Test 12,99 vs. 14,99 vs. 16,99 EUR
+  - Cohort-Analyse: Bleiben Pro-Nutzer >3 Monate?
+
+7.5 NAECHSTE SCHRITTE
+  [ ] Plan-Quotas in inventory_provider.dart einbauen (Soft-Limits)
+  [ ] Settings-Screen: Plan-Anzeige + Upgrade-CTA
+  [ ] Stripe / Paddle / RevenueCat fuer Subscription-Handling integrieren
+  [ ] Landing-Page mit Pricing-Tabelle
+  [ ] DATEV-Export als Business-Hook entwickeln
+  [ ] Discord-Bot als Pro-Hook
+  [ ] Marketplace-Sync als Business-Hook (laut STRATEGY der Tipping-Point)
+
+
+================================================================================
+  ZUSAMMENFASSUNG
+================================================================================
+
+  Das Projekt hat einen Marktwert (laut STRATEGY) von 25–60 EUR/Monat,
+  liegt aber funktional bereits auf einem Niveau, das ein PRO-Tier von
+  14,99 EUR rechtfertigt — vergleichbar mit Sortly Advanced (24 EUR) und
+  guenstiger als Flipwise (19–39 EUR).
+
+  Dadurch ergibt sich ein klarer Wettbewerbsvorteil in der Einstiegspreislage,
+  waehrend BUSINESS (34,99 EUR) mit deutscher Steuerintegration (DATEV) und
+  Marketplace-Sync ein eindeutiges Hochpreis-Argument bedient, das aktuell
+  KEIN Wettbewerber im DACH-Reseller-Markt vollstaendig abdeckt.
+
+  Kombination aus niedrigen Marginal-Kosten (~0,15 EUR/User) und Pro-ARPU
+  von ~13 EUR ergibt eine Bruttomarge von >95%. Bereits ab 5–10 zahlenden
+  Nutzern ist die Loesung profitabel.
+
+================================================================================

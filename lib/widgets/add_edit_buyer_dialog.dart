@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/buyer.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/validators.dart';
@@ -140,13 +141,26 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
     Navigator.pop(context);
   }
 
+  String _colorLabel(AppLocalizations l10n, String key) => switch (key) {
+        'Blau' => l10n.buyerColorBlue,
+        'Orange' => l10n.buyerColorOrange,
+        'Grün' => l10n.buyerColorGreen,
+        'Lila' => l10n.buyerColorPurple,
+        'Gelb' => l10n.buyerColorYellow,
+        'Rot' => l10n.buyerColorRed,
+        'Teal' => l10n.buyerColorTeal,
+        'Pink' => l10n.buyerColorPink,
+        _ => key,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final selected = _palette[_selectedPalette];
     final theme = Theme.of(context);
     return AlertDialog(
       title: Text(
-          widget.buyer != null ? 'Käufer bearbeiten' : 'Neuer Käufer'),
+          widget.buyer != null ? l10n.buyerEditTitle : l10n.buyerNewTitle),
       content: SizedBox(
         width: 420,
         child: Form(
@@ -158,7 +172,8 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
               children: [
                 TextFormField(
                   controller: _nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Name *'),
+                  decoration:
+                      InputDecoration(labelText: '${l10n.fieldName} *'),
                   maxLength: Validators.maxBuyerName,
                   onChanged: (_) => setState(() {}),
                   validator: Validators.validateBuyerName,
@@ -167,7 +182,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                 TextFormField(
                   initialValue: _sortOrder.toString(),
                   decoration:
-                      const InputDecoration(labelText: 'Sortierreihenfolge'),
+                      InputDecoration(labelText: l10n.buyerSortOrder),
                   keyboardType: TextInputType.number,
                   onChanged: (v) =>
                       _sortOrder = int.tryParse(v) ?? _sortOrder,
@@ -176,13 +191,10 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                 SwitchListTile(
                   value: _active,
                   onChanged: (v) => setState(() => _active = v),
-                  title: const Text('Aktiv'),
+                  title: Text(l10n.buyerActive),
                   contentPadding: EdgeInsets.zero,
                 ),
                 const SizedBox(height: 12),
-                const Text('Farbe wählen:',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -204,7 +216,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                           ),
                         ),
                         child: Text(
-                          p['label'] as String,
+                          _colorLabel(l10n, p['label'] as String),
                           style: TextStyle(
                             color: p['cell'] as Color,
                             fontWeight: FontWeight.bold,
@@ -215,8 +227,8 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                   }),
                 ),
                 const SizedBox(height: 12),
-                const Text('Vorschau:',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                Text(l10n.buyerPreview,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -235,7 +247,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                         ),
                         child: Text(
                           _nameCtrl.text.isEmpty
-                              ? 'Vorschau'
+                              ? l10n.buyerPreview
                               : _nameCtrl.text,
                           style: TextStyle(
                             color: selected['font'] as Color,
@@ -244,7 +256,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text('Beispiel Produkt'),
+                      Text(l10n.buyerSampleProduct),
                     ],
                   ),
                 ),
@@ -254,14 +266,14 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                   children: [
                     const Icon(Icons.discord, size: 18),
                     const SizedBox(width: 6),
-                    Text('Discord Server IDs',
+                    Text(l10n.buyerDiscordIds,
                         style: theme.textTheme.titleSmall
                             ?.copyWith(fontWeight: FontWeight.w700)),
                     const Spacer(),
                     TextButton.icon(
                       onPressed: _addServerId,
                       icon: const Icon(Icons.add, size: 16),
-                      label: const Text('Hinzufügen'),
+                      label: Text(l10n.buyerAddIdLabel),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
@@ -270,16 +282,10 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Der Bot sucht Tickets nur in diesen Servern.',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: theme.colorScheme.outline),
-                ),
                 const SizedBox(height: 8),
                 if (_serverIdCtrls.isEmpty)
                   Text(
-                    'Keine Server-IDs konfiguriert',
+                    l10n.helpDiscordNoServerIds,
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: theme.colorScheme.outline),
                   ),
@@ -293,7 +299,6 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                             controller: _serverIdCtrls[i],
                             decoration: InputDecoration(
                               labelText: 'Server ID ${i + 1}',
-                              hintText: 'z.B. 1234567890123456789',
                               isDense: true,
                             ),
                             keyboardType: TextInputType.number,
@@ -307,7 +312,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                               color: Colors.red, size: 20),
                           onPressed: () => _removeServerId(i),
                           visualDensity: VisualDensity.compact,
-                          tooltip: 'Entfernen',
+                          tooltip: l10n.buyerRemoveTooltip,
                         ),
                       ],
                     ),
@@ -321,9 +326,9 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen')),
+            child: Text(l10n.actionCancel)),
         ElevatedButton(
-            onPressed: _save, child: const Text('Speichern')),
+            onPressed: _save, child: Text(l10n.actionSave)),
       ],
     );
   }

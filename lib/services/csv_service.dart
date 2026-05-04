@@ -141,7 +141,7 @@ class CsvService {
         _q(d.tracking     ?? ''),
         d.arrivalDate != null ? _dateFmt.format(d.arrivalDate!) : '',
         _q(d.status),
-        _q(d.beleg),
+        _q(d.belegLabel),
         _q(d.note ?? ''),
         d.taxRate != null ? (d.taxRate! * 100).toStringAsFixed(2) : '',
         _q(d.currency),
@@ -360,7 +360,8 @@ class CsvService {
         'Bestellt', 'Unterwegs', 'Angekommen', 'Rechnung gestellt', 'Done',
       ];
       final status = validStatuses.contains(statusRaw) ? statusRaw : 'Bestellt';
-      final beleg  = belegRaw == 'Ja' ? 'Ja' : 'Nein';
+      final hasReceipt = belegRaw.toLowerCase() == 'ja';
+      final isDropship = col(3).toLowerCase() == 'dropship';
       const validCurrencies = ['EUR', 'USD', 'GBP', 'CHF'];
       final currency =
           validCurrencies.contains(currencyRaw) ? currencyRaw : 'EUR';
@@ -369,7 +370,7 @@ class CsvService {
         id: currentId++,
         product:      col(1).isEmpty ? 'Unbekannt' : col(1),
         quantity:     int.tryParse(col(2)) ?? 1,
-        shippingType: col(3).isEmpty ? 'Reship' : col(3),
+        isDropship:   isDropship,
         shop:         col(4).isEmpty ? 'Unbekannt' : col(4),
         orderDate:    orderDate,
         ekNetto:      finalNetto,
@@ -381,7 +382,7 @@ class CsvService {
         tracking:     tracking.isEmpty  ? null : tracking,
         arrivalDate:  parseDate(arrivalRaw),
         status: status,
-        beleg:  beleg,
+        hasReceipt: hasReceipt,
         note:   noteRaw.isEmpty ? null : noteRaw,
         taxRate: taxRatePct != null ? taxRatePct / 100 : null,
         currency: currency,

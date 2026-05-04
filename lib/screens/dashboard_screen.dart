@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/inventory_provider.dart';
 import '../widgets/kpi_card.dart';
 
@@ -11,7 +12,8 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fmt = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final fmt = NumberFormat.currency(locale: localeTag, symbol: '€');
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         return SingleChildScrollView(
@@ -60,14 +62,15 @@ class _KpiGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final kpis = [
-      (Icons.shopping_cart_outlined, 'Offene Bestellungen', '${provider.openOrdersCount}', AppTheme.accent),
-      (Icons.local_shipping_outlined, 'Unterwegs', '${provider.openDeliveriesCount}', AppTheme.warning),
-      (Icons.today_outlined, 'Heute angekommen', '${provider.arrivedTodayCount}', AppTheme.info),
-      (Icons.trending_up_rounded, 'Gesamtprofit', fmt.format(provider.totalProfit), AppTheme.success),
-      (Icons.account_balance_wallet_outlined, 'Offener Betrag', fmt.format(provider.openAmount), AppTheme.warning),
-      (Icons.warning_amber_rounded, 'Lager kritisch', '${provider.criticalStockCount}', AppTheme.danger),
-      (Icons.receipt_long_outlined, 'Ausstehende Rechnungen', '${provider.missingInvoiceCount}', const Color(0xFF8B5CF6)),
+      (Icons.shopping_cart_outlined, l10n.dashboardKpiOpenOrders, '${provider.openOrdersCount}', AppTheme.accent),
+      (Icons.local_shipping_outlined, l10n.dashboardKpiShipping, '${provider.openDeliveriesCount}', AppTheme.warning),
+      (Icons.today_outlined, l10n.dashboardKpiArrivedToday, '${provider.arrivedTodayCount}', AppTheme.info),
+      (Icons.trending_up_rounded, l10n.dashboardKpiTotalProfit, fmt.format(provider.totalProfit), AppTheme.success),
+      (Icons.account_balance_wallet_outlined, l10n.dashboardKpiOpenAmount, fmt.format(provider.openAmount), AppTheme.warning),
+      (Icons.warning_amber_rounded, l10n.dashboardKpiCriticalStock, '${provider.criticalStockCount}', AppTheme.danger),
+      (Icons.receipt_long_outlined, l10n.dashboardKpiMissingInvoice, '${provider.missingInvoiceCount}', const Color(0xFF8B5CF6)),
     ];
 
     return LayoutBuilder(
@@ -97,15 +100,16 @@ class _ActivityFeed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final fmt = DateFormat('dd.MM. HH:mm');
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final activities = provider.activities.take(10).toList();
         return _Panel(
-          title: 'Aktivitäts-Feed',
+          title: l10n.dashboardActivityFeed,
           icon: Icons.bolt_outlined,
           child: activities.isEmpty
-              ? const _MutedText('Noch keine Aktionen vorhanden.')
+              ? _MutedText(l10n.dashboardActivityEmpty)
               : Column(
                   children: activities
                       .map((a) => _ActivityItem(
@@ -171,6 +175,7 @@ class _BuyerOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final rows = provider.buyers.map((buyer) {
@@ -183,10 +188,10 @@ class _BuyerOverview extends StatelessWidget {
         }).toList();
 
         return _Panel(
-          title: 'Käufer-Schnellübersicht',
+          title: l10n.dashboardBuyerOverview,
           icon: Icons.people_outline,
           child: rows.isEmpty
-              ? const _MutedText('Käufer in den Einstellungen anlegen.')
+              ? _MutedText(l10n.dashboardBuyerEmpty)
               : Column(
                   children: [
                     // Header row
@@ -195,40 +200,40 @@ class _BuyerOverview extends StatelessWidget {
                       child: Row(
                         children: [
                           const SizedBox(width: 20),
-                          const Expanded(
-                            child: Text('KÄUFER',
-                                style: TextStyle(
+                          Expanded(
+                            child: Text(l10n.dashboardColBuyer,
+                                style: const TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
                                     color: AppTheme.textMuted,
                                     letterSpacing: 0.5)),
                           ),
-                          const SizedBox(
+                          SizedBox(
                             width: 70,
-                            child: Text('DEALS',
+                            child: Text(l10n.dashboardColDeals,
                                 textAlign: TextAlign.right,
-                                style: TextStyle(
+                                style: const TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
                                     color: AppTheme.textMuted,
                                     letterSpacing: 0.5)),
                           ),
-                          const SizedBox(
+                          SizedBox(
                             width: 110,
-                            child: Text('OFFEN',
+                            child: Text(l10n.dashboardColOpen,
                                 textAlign: TextAlign.right,
-                                style: TextStyle(
+                                style: const TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
                                     color: AppTheme.textMuted,
                                     letterSpacing: 0.5)),
                           ),
                           const SizedBox(width: 8),
-                          const Flexible(
-                            child: Text('LETZTER DEAL',
+                          Flexible(
+                            child: Text(l10n.dashboardColLastDeal,
                                 textAlign: TextAlign.right,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
+                                style: const TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
                                     color: AppTheme.textMuted,

@@ -1,21 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../models/shop.dart';
 import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import 'add_edit_deal_dialog.dart';
 import 'deal_card.dart';
 
 class _ColDef {
-  final String label;
+  final String labelKey;
   final String sortKey;
   final double width;
-  const _ColDef(this.label, this.sortKey, this.width);
+  const _ColDef(this.labelKey, this.sortKey, this.width);
 }
+
+String _colLabel(AppLocalizations l10n, String key) => switch (key) {
+      'id' => l10n.dealColId,
+      'product' => l10n.dealProduct,
+      'quantity' => l10n.dealQuantityShort,
+      'isDropship' => l10n.dealShippingType,
+      'shop' => l10n.dealShop,
+      'orderDate' => l10n.dealOrderDate,
+      'ekNetto' => l10n.dealColEkNet,
+      'ekBrutto' => l10n.dealColEkGross,
+      'vk' => l10n.dealColVk,
+      'buyer' => l10n.dealBuyer,
+      'ticketNumber' => l10n.dealColTicket,
+      'tracking' => l10n.dealTracking,
+      'arrivalDate' => l10n.dealColArrival,
+      'status' => l10n.dealStatus,
+      'hasReceipt' => l10n.dealReceipt,
+      'profitPerUnit' => l10n.dealColProfitUnit,
+      'totalProfit' => l10n.dealColProfitTotal,
+      'zuBekommen' => l10n.dealColReceivable,
+      'note' => l10n.dealNote,
+      _ => '',
+    };
 
 class DealTable extends StatefulWidget {
   final ValueChanged<String>? onOpenTicket;
@@ -32,25 +57,25 @@ class _DealTableState extends State<DealTable> {
 
   static const _cols = <_ColDef>[
     _ColDef('', 'selected', 44),
-    _ColDef('ID', 'id', 58),
-    _ColDef('Produkt', 'product', 190),
-    _ColDef('Anz.', 'quantity', 58),
-    _ColDef('Versandtyp', 'shippingType', 110),
-    _ColDef('Shop', 'shop', 120),
-    _ColDef('Bestelldatum', 'orderDate', 118),
-    _ColDef('EK Netto', 'ekNetto', 96),
-    _ColDef('EK Brutto', 'ekBrutto', 96),
-    _ColDef('VK', 'vk', 90),
-    _ColDef('Käufer', 'buyer', 126),
-    _ColDef('Ticket', 'ticketNumber', 130),
-    _ColDef('Tracking', 'tracking', 130),
-    _ColDef('Ankunft', 'arrivalDate', 108),
-    _ColDef('Status', 'status', 148),
-    _ColDef('Beleg', 'beleg', 74),
-    _ColDef('Profit/Stk', 'profitPerUnit', 98),
-    _ColDef('Ges. Profit', 'totalProfit', 104),
-    _ColDef('Zu bekommen', 'zuBekommen', 112),
-    _ColDef('Notiz', 'note', 150),
+    _ColDef('id', 'id', 58),
+    _ColDef('product', 'product', 190),
+    _ColDef('quantity', 'quantity', 58),
+    _ColDef('isDropship', 'isDropship', 110),
+    _ColDef('shop', 'shop', 120),
+    _ColDef('orderDate', 'orderDate', 118),
+    _ColDef('ekNetto', 'ekNetto', 96),
+    _ColDef('ekBrutto', 'ekBrutto', 96),
+    _ColDef('vk', 'vk', 90),
+    _ColDef('buyer', 'buyer', 126),
+    _ColDef('ticketNumber', 'ticketNumber', 130),
+    _ColDef('tracking', 'tracking', 130),
+    _ColDef('arrivalDate', 'arrivalDate', 108),
+    _ColDef('status', 'status', 148),
+    _ColDef('hasReceipt', 'hasReceipt', 74),
+    _ColDef('profitPerUnit', 'profitPerUnit', 98),
+    _ColDef('totalProfit', 'totalProfit', 104),
+    _ColDef('zuBekommen', 'zuBekommen', 112),
+    _ColDef('note', 'note', 150),
     _ColDef('', 'actions', 88),
   ];
 
@@ -156,7 +181,9 @@ class _DealTableState extends State<DealTable> {
                           ),
                           ..._cols.skip(1).map(
                                 (c) => _HeaderCell(
-                                  label: c.label,
+                                  label: _colLabel(
+                                      AppLocalizations.of(context),
+                                      c.labelKey),
                                   sortKey: c.sortKey,
                                   width: c.width,
                                   filters: filters,
@@ -211,6 +238,7 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Material(
       color: Colors.white,
       child: Padding(
@@ -223,55 +251,62 @@ class _FilterBar extends StatelessWidget {
             SizedBox(
               width: 240,
               child: TextField(
-                decoration: const InputDecoration(
-                  hintText: 'Produkt, Ticket, Tracking, Notiz',
-                  prefixIcon: Icon(Icons.search, size: 18),
+                decoration: InputDecoration(
+                  hintText: l10n.dealsSearchHint,
+                  prefixIcon: const Icon(Icons.search, size: 18),
                 ),
                 onChanged: filters.setSearch,
               ),
             ),
             _dropdown(
               width: 140,
-              label: 'Käufer',
+              label: l10n.dealBuyer,
               value: filters.buyer,
               values: provider.buyers.map((b) => b.name).toList(),
+              labels: provider.buyers.map((b) => b.name).toList(),
               onChanged: filters.setBuyer,
             ),
             _dropdown(
               width: 150,
-              label: 'Status',
+              label: l10n.dealStatus,
               value: filters.status,
               values: InventoryProvider.statusOptions,
+              labels: InventoryProvider.statusOptions
+                  .map((s) => localizeDealStatus(context, s))
+                  .toList(),
               onChanged: filters.setStatus,
             ),
             _dropdown(
               width: 140,
-              label: 'Shop',
+              label: l10n.dealShop,
               value: filters.shop,
               values: provider.shops.map((s) => s.name).toList(),
+              labels: provider.shops.map((s) => s.name).toList(),
               onChanged: filters.setShop,
             ),
-            _dropdown(
+            _boolDropdown(
               width: 130,
-              label: 'Versand',
-              value: filters.shippingType,
-              values: InventoryProvider.shippingTypes,
-              onChanged: filters.setShippingType,
+              label: l10n.dealShippingType,
+              value: filters.isDropship,
+              trueLabel: l10n.dealDropship,
+              falseLabel: l10n.dealReship,
+              onChanged: filters.setIsDropship,
             ),
-            _dropdown(
+            _boolDropdown(
               width: 100,
-              label: 'Beleg',
-              value: filters.beleg,
-              values: InventoryProvider.belegOptions,
-              onChanged: filters.setBeleg,
+              label: l10n.dealReceipt,
+              value: filters.hasReceipt,
+              trueLabel: l10n.dealReceiptYes,
+              falseLabel: l10n.dealReceiptNo,
+              onChanged: filters.setHasReceipt,
             ),
             OutlinedButton.icon(
               onPressed: () => _pickRange(context),
               icon: const Icon(Icons.date_range_outlined, size: 16),
-              label: Text(_dateLabel()),
+              label: Text(_dateLabel(l10n)),
             ),
             IconButton(
-              tooltip: 'Filter zurücksetzen',
+              tooltip: l10n.dealsFilterReset,
               onPressed: filters.reset,
               icon: const Icon(Icons.refresh, size: 18),
             ),
@@ -286,27 +321,64 @@ class _FilterBar extends StatelessWidget {
     required String label,
     required String? value,
     required List<String> values,
+    required List<String> labels,
     required ValueChanged<String?> onChanged,
   }) {
     return SizedBox(
       width: width,
-      child: DropdownButtonFormField<String>(
-        isExpanded: true,
-        initialValue: value,
-        decoration: InputDecoration(labelText: label),
-        items: [
-          const DropdownMenuItem(value: null, child: Text('Alle')),
-          ...values.map((v) => DropdownMenuItem(value: v, child: Text(v))),
-        ],
-        onChanged: onChanged,
-      ),
+      child: Builder(builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx);
+        return DropdownButtonFormField<String>(
+          isExpanded: true,
+          initialValue: value,
+          decoration: InputDecoration(labelText: label),
+          items: [
+            DropdownMenuItem(value: null, child: Text(l10n.commonAll)),
+            for (int i = 0; i < values.length; i++)
+              DropdownMenuItem(
+                  value: values[i], child: Text(labels[i])),
+          ],
+          onChanged: onChanged,
+        );
+      }),
     );
   }
 
-  String _dateLabel() {
+  Widget _boolDropdown({
+    required double width,
+    required String label,
+    required bool? value,
+    required String trueLabel,
+    required String falseLabel,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    return SizedBox(
+      width: width,
+      child: Builder(builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx);
+        return DropdownButtonFormField<bool?>(
+          isExpanded: true,
+          initialValue: value,
+          decoration: InputDecoration(labelText: label),
+          items: [
+            DropdownMenuItem<bool?>(
+                value: null, child: Text(l10n.commonAll)),
+            DropdownMenuItem<bool?>(value: true, child: Text(trueLabel)),
+            DropdownMenuItem<bool?>(value: false, child: Text(falseLabel)),
+          ],
+          onChanged: onChanged,
+        );
+      }),
+    );
+  }
+
+  String _dateLabel(AppLocalizations l10n) {
     final fmt = DateFormat('dd.MM.yy');
-    if (filters.fromDate == null && filters.toDate == null) return 'Datum';
-    final from = filters.fromDate != null ? fmt.format(filters.fromDate!) : '...';
+    if (filters.fromDate == null && filters.toDate == null) {
+      return l10n.dealsFilterDate;
+    }
+    final from =
+        filters.fromDate != null ? fmt.format(filters.fromDate!) : '...';
     final to = filters.toDate != null ? fmt.format(filters.toDate!) : '...';
     return '$from - $to';
   }
@@ -331,6 +403,7 @@ class _BulkActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final ids = filters.selectedDealIds.toList();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -341,35 +414,40 @@ class _BulkActionBar extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(
-            '${ids.length} ausgewählt',
+            l10n.commonSelected(ids.length),
             style: const TextStyle(
               fontWeight: FontWeight.w700,
               color: Color(0xFF1D4ED8),
             ),
           ),
           PopupMenuButton<String>(
-            tooltip: 'Status ändern',
+            tooltip: l10n.bulkChangeStatusTooltip,
             onSelected: (status) async {
               await provider.updateDealsStatus(ids, status);
               filters.clearSelection();
             },
             itemBuilder: (_) => InventoryProvider.statusOptions
-                .map((s) => PopupMenuItem(value: s, child: Text(s)))
+                .map((s) => PopupMenuItem(
+                    value: s,
+                    child: Text(localizeDealStatus(context, s))))
                 .toList(),
-            child: const _BulkButton(icon: Icons.flag_outlined, label: 'Status'),
+            child: _BulkButton(
+                icon: Icons.flag_outlined, label: l10n.bulkStatus),
           ),
           PopupMenuButton<String?>(
-            tooltip: 'Käufer zuweisen',
+            tooltip: l10n.bulkAssignBuyerTooltip,
             onSelected: (buyer) async {
               await provider.assignDealsBuyer(ids, buyer);
               filters.clearSelection();
             },
             itemBuilder: (_) => [
-              const PopupMenuItem<String?>(value: null, child: Text('Kein Käufer')),
-              ...provider.buyers
-                  .map((b) => PopupMenuItem<String?>(value: b.name, child: Text(b.name))),
+              PopupMenuItem<String?>(
+                  value: null, child: Text(l10n.bulkBuyerNone)),
+              ...provider.buyers.map((b) =>
+                  PopupMenuItem<String?>(value: b.name, child: Text(b.name))),
             ],
-            child: const _BulkButton(icon: Icons.person_outline, label: 'Käufer'),
+            child: _BulkButton(
+                icon: Icons.person_outline, label: l10n.bulkBuyer),
           ),
           TextButton.icon(
             onPressed: () async {
@@ -377,11 +455,12 @@ class _BulkActionBar extends StatelessWidget {
               filters.clearSelection();
             },
             icon: const Icon(Icons.delete_outline, size: 16),
-            label: const Text('Löschen'),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+            label: Text(l10n.actionDelete),
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
           ),
           IconButton(
-            tooltip: 'Auswahl aufheben',
+            tooltip: l10n.actionDeselect,
             onPressed: filters.clearSelection,
             icon: const Icon(Icons.close, size: 18),
           ),
@@ -548,7 +627,14 @@ class _DealRowState extends State<_DealRow> {
             _c(Text('${deal.id}', style: _muted()), widget.cols[1]),
             _c(Text(deal.product, style: _strong(), overflow: TextOverflow.ellipsis), widget.cols[2]),
             _c(Text('${deal.quantity}', style: _normal()), widget.cols[3]),
-            _c(_tag(deal.shippingType, const Color(0xFFF1F5F9), const Color(0xFF64748B)), widget.cols[4]),
+            _c(
+                _tag(
+                    deal.isDropship
+                        ? AppLocalizations.of(context).dealDropship
+                        : AppLocalizations.of(context).dealReship,
+                    const Color(0xFFF1F5F9),
+                    const Color(0xFF64748B)),
+                widget.cols[4]),
             _c(shop?.url != null ? _LinkCell(text: deal.shop, url: shop!.url!) : Text(deal.shop, style: _normal(), overflow: TextOverflow.ellipsis), widget.cols[5]),
             _c(Text(widget.dateFmt.format(deal.orderDate), style: _normal()), widget.cols[6]),
             _c(_mono(fmtN(deal.ekNetto)), widget.cols[7]),
@@ -563,9 +649,12 @@ class _DealRowState extends State<_DealRow> {
             ),
             GestureDetector(
               onDoubleTapDown: (details) => _editStatus(context, provider, deal, details.globalPosition),
-              child: _c(_statusBadge(deal.status, status), widget.cols[14]),
+              child: _c(
+                  _statusBadge(localizeDealStatus(context, deal.status),
+                      status),
+                  widget.cols[14]),
             ),
-            _c(_belegBadge(deal.beleg), widget.cols[15]),
+            _c(_belegBadge(deal.hasReceipt), widget.cols[15]),
             _c(_profitText(fmtN(deal.profitPerUnit), deal.profitPerUnit), widget.cols[16]),
             _c(_profitText(fmtN(deal.totalProfit), deal.totalProfit), widget.cols[17]),
             _c(Text(fmtN(deal.zuBekommen), style: _money()), widget.cols[18]),
@@ -691,8 +780,8 @@ class _DealRowState extends State<_DealRow> {
     );
   }
 
-  Widget _belegBadge(String beleg) {
-    final ok = beleg == 'Ja';
+  Widget _belegBadge(bool ok) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
@@ -701,7 +790,7 @@ class _DealRowState extends State<_DealRow> {
         border: Border.all(color: ok ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0)),
       ),
       child: Text(
-        beleg,
+        ok ? l10n.dealReceiptYes : l10n.dealReceiptNo,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
@@ -745,7 +834,9 @@ class _DealRowState extends State<_DealRow> {
     return 'https://www.google.com/search?q=${Uri.encodeComponent(value)}';
   }
 
-  Future<void> _editArrivalDate(BuildContext context, InventoryProvider provider, Deal deal) async {
+  Future<void> _editArrivalDate(BuildContext context,
+      InventoryProvider provider, Deal deal) async {
+    final l10n = AppLocalizations.of(context);
     final picked = await showDatePicker(
       context: context,
       initialDate: deal.arrivalDate ?? DateTime.now(),
@@ -753,16 +844,23 @@ class _DealRowState extends State<_DealRow> {
       lastDate: DateTime(2035),
     );
     if (picked == null) return;
-    await provider.updateDeal(deal.copyWith(arrivalDate: picked, status: deal.status == 'Unterwegs' ? 'Angekommen' : deal.status));
+    await provider.updateDeal(deal.copyWith(
+        arrivalDate: picked,
+        status: deal.status == 'Unterwegs' ? 'Angekommen' : deal.status));
     if (!context.mounted) return;
     final shouldCheckIn = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Artikel ins Lager einbuchen?'),
-        content: Text('${deal.quantity}x ${deal.product} als Lagerartikel anlegen.'),
+        title: Text(l10n.checkInDealTitle),
+        content:
+            Text(l10n.checkInDealText(deal.quantity, deal.product)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Nein')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Einbuchen')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l10n.checkInNo)),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l10n.checkInButton)),
         ],
       ),
     );
@@ -779,29 +877,39 @@ class _DealRowState extends State<_DealRow> {
   ) async {
     final status = await showMenu<String>(
       context: context,
-      position: RelativeRect.fromLTRB(position.dx, position.dy, position.dx, position.dy),
+      position: RelativeRect.fromLTRB(
+          position.dx, position.dy, position.dx, position.dy),
       items: InventoryProvider.statusOptions
-          .map((s) => PopupMenuItem(value: s, child: Text(s)))
+          .map((s) => PopupMenuItem(
+              value: s, child: Text(localizeDealStatus(context, s))))
           .toList(),
     );
-    if (status != null) await provider.updateDeal(deal.copyWith(status: status));
+    if (status != null) {
+      await provider.updateDeal(deal.copyWith(status: status));
+    }
   }
 
-  void _confirmDelete(BuildContext context, InventoryProvider provider, Deal deal) {
+  void _confirmDelete(
+      BuildContext context, InventoryProvider provider, Deal deal) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Eintrag löschen'),
-        content: Text('"${deal.product}" (ID: ${deal.id}) wirklich löschen?'),
+        title: Text(l10n.dealDeleteTitle),
+        content: Text(l10n.dealDeleteConfirm(deal.product, deal.id)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.actionCancel)),
           ElevatedButton(
             onPressed: () {
               provider.deleteDeal(deal.id);
               Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
-            child: const Text('Löschen', style: TextStyle(color: Colors.white)),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            child: Text(l10n.actionDelete,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -889,24 +997,26 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final l10n = AppLocalizations.of(context);
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inbox_outlined, size: 48, color: Color(0xFF94A3B8)),
-          SizedBox(height: 16),
+          const Icon(Icons.inbox_outlined,
+              size: 48, color: Color(0xFF94A3B8)),
+          const SizedBox(height: 16),
           Text(
-            'Keine Deals gefunden',
-            style: TextStyle(
+            l10n.dealsEmpty,
+            style: const TextStyle(
               color: Color(0xFF475569),
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
           ),
-          SizedBox(height: 6),
+          const SizedBox(height: 6),
           Text(
-            'Filter anpassen oder einen neuen Deal anlegen.',
-            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+            l10n.dealsEmptyHint,
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
           ),
         ],
       ),

@@ -1,25 +1,32 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app_theme.dart';
 import 'config/supabase_config.dart';
+import 'l10n/app_localizations.dart';
+import 'providers/active_workspace_provider.dart';
 import 'providers/app_preferences_provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/billing_provider.dart';
 import 'providers/filter_provider.dart';
 import 'providers/inventory_provider.dart';
+import 'providers/invites_provider.dart';
 import 'providers/statistics_filter_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/splash_screen.dart';
 import 'screens/main_screen.dart';
 import 'services/attachment_service.dart';
+import 'services/billing_service.dart';
 import 'services/push_service.dart';
 import 'services/session_manager.dart';
 import 'services/supabase_repository.dart';
+import 'services/workspace_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +69,12 @@ class InventoryApp extends StatelessWidget {
         Provider<AttachmentService>(
           create: (_) => AttachmentService(supabase),
         ),
+        Provider<WorkspaceService>(
+          create: (_) => WorkspaceService(supabase),
+        ),
+        Provider<BillingService>(
+          create: (_) => BillingService(supabase),
+        ),
         Provider<PushService>.value(value: pushService),
         Provider<NotificationPreferencesService>(
           create: (_) => NotificationPreferencesService(supabase),
@@ -85,15 +98,41 @@ class InventoryApp extends StatelessWidget {
           update: (_, repository, previous) =>
               previous ?? InventoryProvider(repository: repository),
         ),
-      ],
-      child: MaterialApp(
-        title: 'Lagerverwaltung',
-        theme: AppTheme.light,
-        navigatorKey: _rootNavigator,
-        home: const _ActivityListener(
-          child: _RecoveryListener(child: _AuthGate()),
+        ChangeNotifierProxyProvider<WorkspaceService, ActiveWorkspaceProvider>(
+          create: (ctx) =>
+              ActiveWorkspaceProvider(ctx.read<WorkspaceService>()),
+          update: (_, service, previous) =>
+              previous ?? ActiveWorkspaceProvider(service),
         ),
-        debugShowCheckedModeBanner: false,
+        ChangeNotifierProxyProvider<WorkspaceService, InvitesProvider>(
+          create: (ctx) => InvitesProvider(ctx.read<WorkspaceService>()),
+          update: (_, service, previous) =>
+              previous ?? InvitesProvider(service),
+        ),
+        ChangeNotifierProxyProvider<BillingService, BillingProvider>(
+          create: (ctx) => BillingProvider(ctx.read<BillingService>()),
+          update: (_, service, previous) =>
+              previous ?? BillingProvider(service),
+        ),
+      ],
+      child: Consumer<AppPreferencesProvider>(
+        builder: (ctx, prefs, _) => MaterialApp(
+          onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
+          theme: AppTheme.light,
+          navigatorKey: _rootNavigator,
+          locale: prefs.locale,
+          supportedLocales: AppPreferencesProvider.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: const _ActivityListener(
+            child: _RecoveryListener(child: _AuthGate()),
+          ),
+          debugShowCheckedModeBanner: false,
+        ),
       ),
     );
   }
@@ -112,6 +151,14 @@ class _AuthGate extends StatefulWidget {
 class _AuthGateState extends State<_AuthGate> {
   String? _hydratedFor;
   bool _hydrating = false;
+  ActiveWorkspaceProvider? _wsListening;
+  String? _lastWsId;
+
+  @override
+  void dispose() {
+    _wsListening?.removeListener(_onWorkspaceChanged);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,10 +169,15 @@ class _AuthGateState extends State<_AuthGate> {
       // Drop any stale data from a previous session before showing login.
       if (_hydratedFor != null) {
         _hydratedFor = null;
+        _detachWorkspaceListener();
         final push = context.read<PushService>();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           context.read<InventoryProvider>().clearLocalState();
+          context.read<ActiveWorkspaceProvider>().clear();
+          context.read<InvitesProvider>()
+            ..stopPolling()
+            ..clear();
           push.unregisterCurrentDevice();
         });
       }
@@ -137,7 +189,7 @@ class _AuthGateState extends State<_AuthGate> {
         _hydrating = true;
         WidgetsBinding.instance.addPostFrameCallback((_) => _hydrate(user.id));
       }
-      return const SplashScreen(message: 'Synchronisiere mit Cloud…');
+      return const SplashScreen();
     }
 
     return const MainScreen();
@@ -146,7 +198,19 @@ class _AuthGateState extends State<_AuthGate> {
   Future<void> _hydrate(String userId) async {
     final inventory = context.read<InventoryProvider>();
     final push = context.read<PushService>();
-    await inventory.loadData();
+    final workspaces = context.read<ActiveWorkspaceProvider>();
+    final invites = context.read<InvitesProvider>();
+
+    // Workspaces zuerst laden, damit Inventory den aktiven Scope kennt.
+    await workspaces.loadForCurrentUser(userId);
+    final activeId = workspaces.active?.id;
+    _lastWsId = activeId;
+    await Future.wait([
+      inventory.setActiveWorkspace(activeId),
+      invites.refresh(),
+    ]);
+    _attachWorkspaceListener(workspaces);
+    invites.startPolling();
     // Fire-and-forget: Push-Registrierung darf den Login nicht blockieren.
     unawaited(push.registerCurrentDevice());
     if (!mounted) return;
@@ -154,6 +218,28 @@ class _AuthGateState extends State<_AuthGate> {
       _hydratedFor = userId;
       _hydrating = false;
     });
+  }
+
+  void _attachWorkspaceListener(ActiveWorkspaceProvider ws) {
+    if (identical(_wsListening, ws)) return;
+    _detachWorkspaceListener();
+    ws.addListener(_onWorkspaceChanged);
+    _wsListening = ws;
+  }
+
+  void _detachWorkspaceListener() {
+    _wsListening?.removeListener(_onWorkspaceChanged);
+    _wsListening = null;
+  }
+
+  void _onWorkspaceChanged() {
+    final ws = _wsListening;
+    if (ws == null || !mounted) return;
+    final newId = ws.active?.id;
+    if (newId == _lastWsId) return;
+    _lastWsId = newId;
+    // Reload Inventory + Comments etc. gegen neuen Workspace.
+    context.read<InventoryProvider>().setActiveWorkspace(newId);
   }
 }
 
@@ -256,10 +342,10 @@ class _ActivityListenerState extends State<_ActivityListener> {
                         const Icon(Icons.timer_outlined,
                             size: 18, color: Color(0xFF92400E)),
                         const SizedBox(width: 10),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'Sitzung läuft bald ab.',
-                            style: TextStyle(
+                            AppLocalizations.of(context).sessionExpiringSoon,
+                            style: const TextStyle(
                                 color: Color(0xFF78350F),
                                 fontWeight: FontWeight.w600),
                           ),
@@ -270,18 +356,20 @@ class _ActivityListenerState extends State<_ActivityListener> {
                               final sm = btnCtx.read<SessionManager>();
                               final messenger =
                                   ScaffoldMessenger.of(btnCtx);
+                              final l10n = AppLocalizations.of(btnCtx);
                               final ok = await sm.extendSession();
                               if (!ok) {
                                 messenger.showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        'Sitzung konnte nicht verlängert werden.'),
+                                  SnackBar(
+                                    content:
+                                        Text(l10n.sessionExtendFailed),
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );
                               }
                             },
-                            child: const Text('Verlängern'),
+                            child: Text(AppLocalizations.of(btnCtx)
+                                .sessionExtend),
                           ),
                         ),
                       ],

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/deal.dart';
 import '../models/inventory_item.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../utils/validators.dart';
 import '../widgets/attachment_gallery.dart';
@@ -22,12 +24,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         return LayoutBuilder(
           builder: (context, constraints) {
             final isNarrow = constraints.maxWidth < 700;
-            final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+            final localeTag =
+                Localizations.localeOf(context).toLanguageTag();
+            final money =
+                NumberFormat.currency(locale: localeTag, symbol: '€');
             final query = _search.trim().toLowerCase();
             final items = query.isEmpty
                 ? provider.inventoryItems
@@ -47,7 +53,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ? Center(
                           child: provider.inventoryItems.isEmpty
                               ? _EmptyInventoryState(provider: provider)
-                              : const Text('Keine Artikel gefunden.'),
+                              : Text(l10n.dealsEmpty),
                         )
                       : isNarrow
                           ? _buildCardList(context, provider, money, items)
@@ -62,35 +68,40 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search, size: 18),
-                hintText: 'Artikel suchen (Name, SKU oder EAN)…',
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 10),
+    return Builder(builder: (context) {
+      final l10n = AppLocalizations.of(context);
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search, size: 18),
+                  hintText: l10n.inventorySearchHint,
+                  isDense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 10),
+                ),
+                onChanged: (v) => setState(() => _search = v),
               ),
-              onChanged: (v) => setState(() => _search = v),
             ),
-          ),
-          const SizedBox(width: 8),
-          IconButton.outlined(
-            tooltip: 'Barcode scannen & suchen',
-            icon: const Icon(Icons.qr_code_scanner, size: 18),
-            onPressed: () => _scanAndLookup(context),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(width: 8),
+            IconButton.outlined(
+              tooltip: l10n.inventoryScanBarcode,
+              icon: const Icon(Icons.qr_code_scanner, size: 18),
+              onPressed: () => _scanAndLookup(context),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Future<void> _scanAndLookup(BuildContext context) async {
-    final code = await BarcodeScannerSheet.show(context,
-        title: 'Barcode scannen & suchen');
+    final l10n = AppLocalizations.of(context);
+    final code =
+        await BarcodeScannerSheet.show(context, title: l10n.inventoryScanBarcode);
     if (code == null || code.isEmpty || !context.mounted) return;
     final provider = context.read<InventoryProvider>();
     final hit = provider.inventoryItems.where((i) => i.ean == code).firstOrNull;
@@ -98,7 +109,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       setState(() => _search = code);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gefunden: ${hit.name}'),
+          content: Text(hit.name),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -108,16 +119,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final create = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Kein Artikel mit dieser EAN'),
-        content: Text('Soll ein neuer Artikel mit EAN $code angelegt werden?'),
+        title: Text(l10n.inventoryNoEan),
+        content: Text('EAN: $code'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Abbrechen'),
+            child: Text(l10n.actionCancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Anlegen'),
+            child: Text(l10n.inventoryCreate),
           ),
         ],
       ),
@@ -132,11 +143,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Widget _buildHeader(BuildContext context, InventoryProvider provider, bool isNarrow, NumberFormat money, double width) {
+    final l10n = AppLocalizations.of(context);
     final kpis = [
-      _kpi('Gesamtartikel', '${provider.inventoryItems.length}', Icons.category_outlined, const Color(0xFF2563EB)),
-      _kpi('Gesamtbestand', '${provider.totalStockQuantity}', Icons.inventory_2_outlined, const Color(0xFF059669)),
-      _kpi('Kritische Artikel', '${provider.criticalStockCount}', Icons.warning_amber_rounded, const Color(0xFFDC2626)),
-      _kpi('Lagerwert', money.format(provider.totalStockValue), Icons.euro_outlined, const Color(0xFFD97706)),
+      _kpi(l10n.inventoryKpiTotalItems, '${provider.inventoryItems.length}', Icons.category_outlined, const Color(0xFF2563EB)),
+      _kpi(l10n.inventoryKpiTotalStock, '${provider.totalStockQuantity}', Icons.inventory_2_outlined, const Color(0xFF059669)),
+      _kpi(l10n.inventoryKpiCriticalItems, '${provider.criticalStockCount}', Icons.warning_amber_rounded, const Color(0xFFDC2626)),
+      _kpi(l10n.inventoryKpiStockValue, money.format(provider.totalStockValue), Icons.euro_outlined, const Color(0xFFD97706)),
     ];
     final addButton = ElevatedButton.icon(
       onPressed: () => showDialog(
@@ -145,7 +157,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         builder: (_) => const _InventoryDialog(),
       ),
       icon: const Icon(Icons.add, size: 16),
-      label: const Text('Artikel hinzufügen'),
+      label: Text(l10n.inventoryAddItem),
     );
     if (isNarrow) {
       final cardWidth = (width - 32) / 2;
@@ -258,45 +270,50 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                       ),
                     ),
-                    _statusChip(item.status),
+                    _statusChip(context, item.status),
                   ],
                 ),
                 const Divider(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton.icon(
-                      onPressed: () => _adjust(context, provider, item, true),
-                      icon: const Icon(Icons.add_circle_outline, size: 16, color: Color(0xFF059669)),
-                      label: const Text('Ein', style: TextStyle(color: Color(0xFF059669), fontSize: 12)),
-                      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
-                    ),
-                    TextButton.icon(
-                      onPressed: () => _adjust(context, provider, item, false),
-                      icon: const Icon(Icons.remove_circle_outline, size: 16, color: Color(0xFFD97706)),
-                      label: const Text('Aus', style: TextStyle(color: Color(0xFFD97706), fontSize: 12)),
-                      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
-                    ),
-                    IconButton(
-                      tooltip: 'Chargen / MHD',
-                      onPressed: () =>
-                          InventoryBatchesSheet.show(context, item),
-                      icon: const Icon(Icons.layers_outlined, size: 18),
-                    ),
-                    IconButton(
-                      tooltip: 'Bearbeiten',
-                      onPressed: () => showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (_) => _InventoryDialog(item: item),
-                      ),
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                    ),
-                    IconButton(
-                      tooltip: 'Löschen',
-                      onPressed: () => provider.deleteInventoryItem(item.id),
-                      icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
-                    ),
+                    Builder(builder: (ctx) {
+                      final l10n = AppLocalizations.of(ctx);
+                      return Row(children: [
+                        TextButton.icon(
+                          onPressed: () => _adjust(context, provider, item, true),
+                          icon: const Icon(Icons.add_circle_outline, size: 16, color: Color(0xFF059669)),
+                          label: Text(l10n.inventoryStockIn, style: const TextStyle(color: Color(0xFF059669), fontSize: 12)),
+                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => _adjust(context, provider, item, false),
+                          icon: const Icon(Icons.remove_circle_outline, size: 16, color: Color(0xFFD97706)),
+                          label: Text(l10n.inventoryStockOut, style: const TextStyle(color: Color(0xFFD97706), fontSize: 12)),
+                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
+                        ),
+                        IconButton(
+                          tooltip: l10n.inventoryAddBatch,
+                          onPressed: () =>
+                              InventoryBatchesSheet.show(context, item),
+                          icon: const Icon(Icons.layers_outlined, size: 18),
+                        ),
+                        IconButton(
+                          tooltip: l10n.actionEdit,
+                          onPressed: () => showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => _InventoryDialog(item: item),
+                          ),
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                        ),
+                        IconButton(
+                          tooltip: l10n.actionDelete,
+                          onPressed: () => provider.deleteInventoryItem(item.id),
+                          icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
+                        ),
+                      ]);
+                    }),
                   ],
                 ),
               ],
@@ -307,18 +324,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  Widget _statusChip(String status) {
+  Widget _statusChip(BuildContext context, String status) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: const Color(0xFF2563EB).withAlpha(20),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(status, style: const TextStyle(fontSize: 11, color: Color(0xFF2563EB), fontWeight: FontWeight.w700)),
+      child: Text(localizeInventoryStatus(context, status),
+          style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF2563EB),
+              fontWeight: FontWeight.w700)),
     );
   }
 
   Widget _buildTable(BuildContext context, InventoryProvider provider, NumberFormat money, List<InventoryItem> items) {
+    final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Card(
@@ -326,17 +348,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
           scrollDirection: Axis.horizontal,
           child: DataTable(
             headingRowHeight: 42,
-            columns: const [
-              DataColumn(label: Text('SKU')),
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Lagerort')),
-              DataColumn(label: Text('Bestand')),
-              DataColumn(label: Text('Mindestbestand')),
-              DataColumn(label: Text('Ø EK-Preis')),
-              DataColumn(label: Text('Deal/Ticket')),
-              DataColumn(label: Text('Ankunft')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Aktionen')),
+            columns: [
+              const DataColumn(label: Text('SKU')),
+              DataColumn(label: Text(l10n.inventoryColName)),
+              DataColumn(label: Text(l10n.inventoryColLocationLong)),
+              DataColumn(label: Text(l10n.inventoryColStock)),
+              DataColumn(label: Text(l10n.inventoryColMin)),
+              const DataColumn(label: Text('Ø EK')),
+              const DataColumn(label: Text('Deal / Ticket')),
+              DataColumn(label: Text(l10n.dealColArrival)),
+              DataColumn(label: Text(l10n.dealStatus)),
+              DataColumn(label: Text(l10n.inventoryColActions)),
             ],
             rows: items
                 .map((item) => _row(context, provider, item, money))
@@ -348,7 +370,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   DataRow _row(BuildContext context, InventoryProvider provider, InventoryItem item, NumberFormat money) {
-    final date = DateFormat('dd.MM.yyyy');
+    final l10n = AppLocalizations.of(context);
+    final date = DateFormat.yMd(
+        Localizations.localeOf(context).toLanguageTag());
     final color = item.quantity < item.minStock
         ? const Color(0xFFDC2626)
         : item.quantity == item.minStock
@@ -375,7 +399,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             if (item.ticketUrl != null) ...[
               const SizedBox(width: 4),
               Tooltip(
-                message: 'Discord-Ticket öffnen',
+                message: l10n.dealDiscordTicketOpen,
                 child: InkWell(
                   onTap: () => openUrlWithFallback(context, resolveDiscordUrl(item.ticketUrl!)),
                   child: const Icon(Icons.open_in_new, size: 14, color: Color(0xFF5865F2)),
@@ -385,21 +409,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ],
         )),
         DataCell(Text(item.arrivalDate != null ? date.format(item.arrivalDate!) : '-')),
-        DataCell(Text(item.status)),
+        DataCell(Text(localizeInventoryStatus(context, item.status))),
         DataCell(Row(
           children: [
             IconButton(
-              tooltip: 'Einbuchen',
+              tooltip: l10n.inventoryStockInTooltip,
               onPressed: () => _adjust(context, provider, item, true),
               icon: const Icon(Icons.add_circle_outline, size: 18, color: Color(0xFF059669)),
             ),
             IconButton(
-              tooltip: 'Ausbuchen',
+              tooltip: l10n.inventoryStockOutTooltip,
               onPressed: () => _adjust(context, provider, item, false),
               icon: const Icon(Icons.remove_circle_outline, size: 18, color: Color(0xFFD97706)),
             ),
             IconButton(
-              tooltip: 'Bearbeiten',
+              tooltip: l10n.actionEdit,
               onPressed: () => showDialog(
                 context: context,
                 barrierDismissible: false,
@@ -408,7 +432,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               icon: const Icon(Icons.edit_outlined, size: 18),
             ),
             IconButton(
-              tooltip: 'Löschen',
+              tooltip: l10n.actionDelete,
               onPressed: () => provider.deleteInventoryItem(item.id),
               icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
             ),
@@ -424,23 +448,39 @@ class _InventoryScreenState extends State<InventoryScreen> {
     InventoryItem item,
     bool incoming,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final ctrl = TextEditingController(text: '1');
-    final reason = TextEditingController(text: incoming ? 'Einbuchung' : 'Verkauf');
+    final reason = TextEditingController(
+        text: incoming
+            ? l10n.inventoryReasonStockIn
+            : l10n.inventoryReasonSale);
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(incoming ? 'Einbuchen' : 'Ausbuchen'),
+        title: Text(incoming
+            ? l10n.inventoryStockInTitle
+            : l10n.inventoryStockOutTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: ctrl, decoration: const InputDecoration(labelText: 'Menge'), keyboardType: TextInputType.number),
+            TextField(
+                controller: ctrl,
+                decoration: InputDecoration(labelText: l10n.inventoryQuantity),
+                keyboardType: TextInputType.number),
             const SizedBox(height: 10),
-            TextField(controller: reason, decoration: const InputDecoration(labelText: 'Grund')),
+            TextField(
+                controller: reason,
+                decoration:
+                    InputDecoration(labelText: l10n.inventoryReason)),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Speichern')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l10n.actionCancel)),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l10n.actionSave)),
         ],
       ),
     );
@@ -595,7 +635,8 @@ class _InventoryDialogState extends State<_InventoryDialog> {
 
     return TextFormField(
       controller: _name,
-      decoration: const InputDecoration(labelText: 'Produkt *'),
+      decoration: InputDecoration(
+          labelText: '${AppLocalizations.of(context).dealProduct} *'),
       maxLength: Validators.maxProductName,
       validator: Validators.validateProductName,
     );
@@ -603,6 +644,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final provider = context.watch<InventoryProvider>();
     final ticketNumbers = provider.ticketSummaries
         .map((t) => t.ticketNumber)
@@ -640,8 +682,8 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                   Expanded(
                     child: Text(
                       widget.item == null
-                          ? 'Artikel hinzufügen'
-                          : 'Artikel bearbeiten',
+                          ? l10n.inventoryAddItemTitle
+                          : l10n.inventoryEditItemTitle,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -668,7 +710,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                _sectionLabel('Allgemein'),
+                _sectionLabel(l10n.inventorySectionGeneral),
                 const SizedBox(height: 12),
                 // ── 1. Ticket first so product dropdown can populate ──────────
                 Row(
@@ -699,9 +741,10 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                           return TextFormField(
                             controller: controller,
                             focusNode: focusNode,
-                            decoration: const InputDecoration(
-                              labelText: 'Ticket',
-                              suffixIcon: Icon(Icons.arrow_drop_down, size: 20),
+                            decoration: InputDecoration(
+                              labelText: AppLocalizations.of(ctx).dealColTicket,
+                              suffixIcon: const Icon(Icons.arrow_drop_down,
+                                  size: 20),
                             ),
                             onChanged: (v) => setState(() {
                               _selectedTicketNumber = v;
@@ -739,9 +782,13 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         initialValue: _status,
-                        decoration: const InputDecoration(labelText: 'Status'),
+                        decoration:
+                            InputDecoration(labelText: l10n.dealStatus),
                         items: InventoryProvider.inventoryStatusOptions
-                            .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                            .map((s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(localizeInventoryStatus(
+                                    context, s))))
                             .toList(),
                         onChanged: (v) => setState(() => _status = v!),
                       ),
@@ -751,14 +798,14 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                 const SizedBox(height: 12),
                 _buildProductField(provider),
                 const SizedBox(height: 20),
-                _sectionLabel('Bestand & Preis'),
+                _sectionLabel(l10n.inventoryColStock),
                 const SizedBox(height: 12),
                 Row(children: [
                   Expanded(
                     child: TextFormField(
                       controller: _quantity,
-                      decoration: const InputDecoration(
-                          labelText: 'Angekommen (Stk.)'),
+                      decoration: InputDecoration(
+                          labelText: l10n.inventoryColQuantity),
                       keyboardType: TextInputType.number,
                       validator: (v) =>
                           Validators.validateNonNegativeInt(v),
@@ -769,7 +816,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     child: TextFormField(
                       controller: _min,
                       decoration:
-                          const InputDecoration(labelText: 'Mindestbestand'),
+                          InputDecoration(labelText: l10n.inventoryColMin),
                       keyboardType: TextInputType.number,
                       validator: (v) =>
                           Validators.validateNonNegativeInt(v),
@@ -781,8 +828,8 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _cost,
-                      decoration: const InputDecoration(
-                        labelText: 'Ø EK-Preis',
+                      decoration: InputDecoration(
+                        labelText: l10n.inventoryColCost,
                         prefixText: '€ ',
                       ),
                       keyboardType:
@@ -794,23 +841,23 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _location,
-                      decoration: const InputDecoration(
-                        labelText: 'Lagerort',
-                        prefixIcon: Icon(Icons.place_outlined, size: 18),
+                      decoration: InputDecoration(
+                        labelText: l10n.inventoryColLocationLong,
+                        prefixIcon:
+                            const Icon(Icons.place_outlined, size: 18),
                       ),
                       maxLength: 100,
                     ),
                   ),
                 ]),
                 const SizedBox(height: 20),
-                _sectionLabel('Identifikation'),
+                _sectionLabel(l10n.inventorySectionId),
                 const SizedBox(height: 12),
                 Row(children: [
                   Expanded(
                     child: TextFormField(
                       controller: _sku,
-                      decoration: const InputDecoration(
-                          labelText: 'Produktnummer (optional)'),
+                      decoration: const InputDecoration(labelText: 'SKU'),
                       maxLength: Validators.maxSku,
                       validator: (v) => Validators.validateSku(v),
                     ),
@@ -820,15 +867,15 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     child: TextFormField(
                       controller: _ean,
                       decoration: InputDecoration(
-                        labelText: 'EAN/GTIN (optional)',
+                        labelText: 'EAN / GTIN',
                         prefixIcon: const Icon(Icons.qr_code_2, size: 18),
                         suffixIcon: IconButton(
-                          tooltip: 'Barcode scannen',
+                          tooltip: l10n.inventoryScanBarcode,
                           icon: const Icon(Icons.qr_code_scanner, size: 18),
                           onPressed: () async {
                             final code = await BarcodeScannerSheet.show(
                               context,
-                              title: 'EAN/GTIN scannen',
+                              title: l10n.inventoryScanBarcode,
                             );
                             if (code != null && code.isNotEmpty) {
                               setState(() => _ean.text = code);
@@ -846,15 +893,15 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                 DropdownButtonFormField<String?>(
                   initialValue: _supplierId,
                   isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Lieferant (optional)',
+                  decoration: InputDecoration(
+                    labelText: l10n.inventoryColSupplier,
                     prefixIcon:
-                        Icon(Icons.local_shipping_outlined, size: 18),
+                        const Icon(Icons.local_shipping_outlined, size: 18),
                   ),
                   items: [
-                    const DropdownMenuItem<String?>(
+                    DropdownMenuItem<String?>(
                       value: null,
-                      child: Text('Kein Lieferant'),
+                      child: Text(l10n.inventoryNoSupplier),
                     ),
                     ...provider.activeSuppliers.map(
                       (s) => DropdownMenuItem<String?>(
@@ -867,7 +914,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                   onChanged: (v) => setState(() => _supplierId = v),
                 ),
                 const SizedBox(height: 20),
-                _sectionLabel('Anhänge'),
+                _sectionLabel(l10n.inventorySectionAttachments),
                 const SizedBox(height: 12),
                 AttachmentGallery(
                   paths: _attachmentPaths,
@@ -877,14 +924,14 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                       setState(() => _attachmentPaths = next),
                 ),
                 const SizedBox(height: 20),
-                _sectionLabel('Verknüpfung & Notiz'),
+                _sectionLabel(l10n.dealNote),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _ticketUrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Discord-Ticket Link',
+                  decoration: InputDecoration(
+                    labelText: l10n.dealTicketUrl,
                     hintText: 'https://discord.com/...',
-                    prefixIcon: Icon(Icons.link, size: 18),
+                    prefixIcon: const Icon(Icons.link, size: 18),
                   ),
                   keyboardType: TextInputType.url,
                   validator: (v) => Validators.validateUrl(v),
@@ -892,7 +939,8 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _note,
-                  decoration: const InputDecoration(labelText: 'Notiz'),
+                  decoration:
+                      InputDecoration(labelText: l10n.dealNote),
                   maxLines: 2,
                   maxLength: Validators.maxNote,
                   validator: Validators.validateNote,
@@ -915,7 +963,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Abbrechen'),
+                    child: Text(l10n.actionCancel),
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton(
@@ -961,7 +1009,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                       }
                       if (context.mounted) Navigator.pop(context);
                     },
-                    child: const Text('Speichern'),
+                    child: Text(l10n.actionSave),
                   ),
                 ],
               ),
@@ -1006,19 +1054,20 @@ class _EmptyInventoryState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    final l10n = AppLocalizations.of(context);
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey),
-        SizedBox(height: 12),
+        const Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey),
+        const SizedBox(height: 12),
         Text(
-          'Noch keine Lagerartikel angelegt.',
-          style: TextStyle(fontWeight: FontWeight.w600),
+          l10n.inventoryEmpty,
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Text(
-          'Über den + Button kannst du den ersten Artikel anlegen.',
-          style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+          l10n.suppliersEmptyHint,
+          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
         ),
       ],
     );

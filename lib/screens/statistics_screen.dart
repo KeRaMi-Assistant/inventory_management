@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/inventory_batch.dart';
 import '../providers/app_preferences_provider.dart';
 import '../providers/inventory_provider.dart';
@@ -45,6 +46,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Future<void> _onExport(StatisticsService stats) async {
+    final l10n = AppLocalizations.of(context);
     final svc = StatisticsExportService(stats);
     final choice = await showModalBottomSheet<String>(
       context: context,
@@ -55,29 +57,28 @@ class _StatisticsScreenState extends State<StatisticsScreen>
             ListTile(
               leading: const Icon(Icons.picture_as_pdf_outlined,
                   color: Color(0xFFDC2626)),
-              title: const Text('PDF-Übersicht'),
-              subtitle: const Text(
-                  'Einseitiger Report mit KPIs, Produkten, Käufern, Cashflow'),
+              title: Text(l10n.statsExportPdfTitle),
+              subtitle: Text(l10n.statsExportPdfDesc),
               onTap: () => Navigator.pop(context, 'pdf'),
             ),
             ListTile(
               leading: const Icon(Icons.table_chart_outlined,
                   color: Color(0xFF059669)),
-              title: const Text('Excel (XLSX)'),
-              subtitle: const Text('Roh-Daten der gefilterten Deals'),
+              title: Text(l10n.statsExportXlsxTitle),
+              subtitle: Text(l10n.statsExportXlsxDesc),
               onTap: () => Navigator.pop(context, 'xlsx'),
             ),
             ListTile(
               leading: const Icon(Icons.description_outlined,
                   color: Color(0xFF2563EB)),
-              title: const Text('CSV'),
-              subtitle: const Text('Roh-Daten der gefilterten Deals'),
+              title: Text(l10n.statsExportCsvTitle),
+              subtitle: Text(l10n.statsExportCsvDesc),
               onTap: () => Navigator.pop(context, 'csv'),
             ),
             ListTile(
               leading:
                   const Icon(Icons.print_outlined, color: Color(0xFF6B7280)),
-              title: const Text('Drucken / Vorschau'),
+              title: Text(l10n.statsExportPrintTitle),
               onTap: () => Navigator.pop(context, 'print'),
             ),
           ],
@@ -105,13 +106,13 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       }
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Report exportiert.')),
+          SnackBar(content: Text(l10n.statsReportExported)),
         );
       }
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Export fehlgeschlagen: $e')),
+          SnackBar(content: Text(l10n.statsExportFailed('$e'))),
         );
       }
     }
@@ -159,12 +160,12 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                           fontSize: 13, fontWeight: FontWeight.w700),
                       unselectedLabelStyle: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w500),
-                      tabs: const [
-                        Tab(icon: Icon(Icons.dashboard_outlined, size: 16), text: 'Übersicht'),
-                        Tab(icon: Icon(Icons.people_outline, size: 16), text: 'Käufer'),
-                        Tab(icon: Icon(Icons.shopping_bag_outlined, size: 16), text: 'Produkte & Shops'),
-                        Tab(icon: Icon(Icons.inventory_2_outlined, size: 16), text: 'Lager & Lieferanten'),
-                        Tab(icon: Icon(Icons.account_balance_outlined, size: 16), text: 'Finanzen'),
+                      tabs: [
+                        Tab(icon: const Icon(Icons.dashboard_outlined, size: 16), text: AppLocalizations.of(context).statsTabOverview),
+                        Tab(icon: const Icon(Icons.people_outline, size: 16), text: AppLocalizations.of(context).statsTabBuyers),
+                        Tab(icon: const Icon(Icons.shopping_bag_outlined, size: 16), text: AppLocalizations.of(context).statsTabProductsShops),
+                        Tab(icon: const Icon(Icons.inventory_2_outlined, size: 16), text: AppLocalizations.of(context).statsTabInventorySuppliers),
+                        Tab(icon: const Icon(Icons.account_balance_outlined, size: 16), text: AppLocalizations.of(context).statsTabFinance),
                       ],
                     ),
                   ),
@@ -180,17 +181,18 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                           stats: stats,
                           onExportTax: () async {
                             final svc = StatisticsExportService(stats);
+                            final l10n = AppLocalizations.of(context);
                             try {
                               await svc.saveTaxCsv();
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('MwSt-Export gespeichert.')),
+                                SnackBar(
+                                    content: Text(l10n.statsTaxExportSaved)),
                               );
                             } catch (e) {
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Fehler: $e')),
+                                SnackBar(content: Text(l10n.errorPrefix('$e'))),
                               );
                             }
                           },

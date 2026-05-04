@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/shop.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/validators.dart';
@@ -71,8 +72,9 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(widget.shop != null ? 'Shop bearbeiten' : 'Neuer Shop'),
+      title: Text(widget.shop != null ? l10n.shopEditTitle : l10n.shopNewTitle),
       content: SizedBox(
         width: 380,
         child: Form(
@@ -82,31 +84,31 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
             children: [
               TextFormField(
                 controller: _nameCtrl,
-                decoration: const InputDecoration(labelText: 'Name *'),
+                decoration: InputDecoration(labelText: '${l10n.fieldName} *'),
                 maxLength: Validators.maxShopName,
                 validator: Validators.validateShopName,
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _regionCtrl,
-                decoration: const InputDecoration(labelText: 'Region *'),
+                decoration: InputDecoration(labelText: '${l10n.shopRegion} *'),
                 maxLength: 40,
                 validator: (v) =>
-                    Validators.validateRequired(v, label: 'Region'),
+                    Validators.validateRequired(v, label: l10n.shopRegion),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _channelCtrl,
-                decoration: const InputDecoration(labelText: 'Kanal'),
+                decoration: InputDecoration(labelText: l10n.shopChannel),
                 maxLength: 50,
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _urlCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Website-URL',
+                decoration: InputDecoration(
+                  labelText: l10n.supplierWebsite,
                   hintText: 'https://www.amazon.de',
-                  prefixIcon: Icon(Icons.link, size: 18),
+                  prefixIcon: const Icon(Icons.link, size: 18),
                 ),
                 keyboardType: TextInputType.url,
                 validator: (v) => Validators.validateUrl(v),
@@ -115,7 +117,7 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
               SwitchListTile(
                 value: _active,
                 onChanged: (v) => setState(() => _active = v),
-                title: const Text('Aktiv'),
+                title: Text(l10n.shopActive),
                 contentPadding: EdgeInsets.zero,
               ),
             ],
@@ -125,9 +127,9 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen')),
+            child: Text(l10n.actionCancel)),
         ElevatedButton(
-            onPressed: _save, child: const Text('Speichern')),
+            onPressed: _save, child: Text(l10n.actionSave)),
       ],
     );
   }

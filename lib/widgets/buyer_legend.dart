@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/inventory_provider.dart';
 import 'add_edit_buyer_dialog.dart';
 
@@ -8,6 +9,7 @@ class BuyerLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final buyers = provider.buyers.where((b) => b.active).toList();
@@ -21,10 +23,10 @@ class BuyerLegend extends StatelessWidget {
                   children: [
                     const Icon(Icons.people_outline, size: 16, color: Color(0xFF64748B)),
                     const SizedBox(width: 6),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Käufer',
-                        style: TextStyle(
+                        l10n.buyerLegendTitle,
+                        style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
                           color: Color(0xFF1E293B),
@@ -44,14 +46,14 @@ class BuyerLegend extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(color: const Color(0xFFBFDBFE)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.add, size: 13, color: Color(0xFF2563EB)),
-                            SizedBox(width: 3),
+                            const Icon(Icons.add, size: 13, color: Color(0xFF2563EB)),
+                            const SizedBox(width: 3),
                             Text(
-                              'Neu',
-                              style: TextStyle(
+                              l10n.actionAdd,
+                              style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFF2563EB),
@@ -64,11 +66,11 @@ class BuyerLegend extends StatelessWidget {
                   ],
                 ),
                 if (buyers.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Text(
-                      'Noch keine Käufer angelegt.',
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                      l10n.buyersEmpty,
+                      style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
                     ),
                   )
                 else ...[

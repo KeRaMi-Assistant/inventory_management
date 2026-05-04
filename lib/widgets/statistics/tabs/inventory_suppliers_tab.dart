@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/statistics_filter_provider.dart';
 import '../../../services/statistics_service.dart';
 import '../sortable_table.dart';
@@ -13,14 +14,16 @@ class InventorySuppliersTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final money = NumberFormat.currency(locale: localeTag, symbol: '€');
     final h = stats.inventoryHealth;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         StatPanel(
-          title: 'Lager-Gesundheit',
+          title: l10n.statsHealthHeading,
           icon: Icons.health_and_safety_outlined,
           child: LayoutBuilder(
             builder: (context, c) {
@@ -33,31 +36,31 @@ class InventorySuppliersTab extends StatelessWidget {
               final cardW = (c.maxWidth - gap * (cols - 1)) / cols;
               final cards = <Widget>[
                 _HealthCard(
-                  label: 'Lagerwert (EK)',
+                  label: l10n.statsStockValueEk,
                   value: money.format(h.stockValueEk),
                   icon: Icons.inventory_2_outlined,
                   color: const Color(0xFF2563EB),
                 ),
                 _HealthCard(
-                  label: 'Niedriger Bestand',
+                  label: l10n.statsLowStock,
                   value: '${h.lowStock}',
                   icon: Icons.warning_amber_outlined,
                   color: h.lowStock > 0
                       ? const Color(0xFFD97706)
                       : const Color(0xFF6B7280),
-                  hint: 'Items < ${stats.lowStockThreshold} Stück',
+                  hint: '< ${stats.lowStockThreshold}',
                 ),
                 _HealthCard(
-                  label: 'Bald ablaufend',
+                  label: l10n.statsExpiringSoon,
                   value: '${h.expiringSoon}',
                   icon: Icons.schedule_outlined,
                   color: h.expiringSoon > 0
                       ? const Color(0xFFD97706)
                       : const Color(0xFF6B7280),
-                  hint: 'Chargen mit MHD < 30 Tage',
+                  hint: l10n.statsExpiringSoonHint,
                 ),
                 _HealthCard(
-                  label: 'Abgelaufen',
+                  label: l10n.statsExpired,
                   value: '${h.expired}',
                   icon: Icons.error_outline,
                   color: h.expired > 0
@@ -66,13 +69,13 @@ class InventorySuppliersTab extends StatelessWidget {
                   pulsing: h.expired > 0,
                 ),
                 _HealthCard(
-                  label: 'Tote Bestände',
+                  label: l10n.statsDeadStock,
                   value: '${h.deadStock}',
                   icon: Icons.do_not_disturb_alt,
                   color: h.deadStock > 0
                       ? const Color(0xFFDC2626)
                       : const Color(0xFF6B7280),
-                  hint: 'Kein Verkauf seit > 90 Tagen',
+                  hint: l10n.statsDeadStockHint,
                 ),
               ];
               return Wrap(
@@ -87,13 +90,9 @@ class InventorySuppliersTab extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         StatPanel(
-          title: 'Lieferanten-Performance',
+          title: l10n.statsSupplierPerformance,
           icon: Icons.local_shipping_outlined,
           padding: const EdgeInsets.symmetric(vertical: 4),
-          trailing: const Text(
-            'Klick filtert nach Lieferant',
-            style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
-          ),
           child: SortableTable<SupplierStat>(
             rows: stats.supplierStats,
             defaultSortIndex: 3,
@@ -103,7 +102,7 @@ class InventorySuppliersTab extends StatelessWidget {
             },
             columns: [
               SortableColumn(
-                label: 'Lieferant',
+                label: l10n.inventoryColSupplier,
                 builder: (s) => Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -126,25 +125,25 @@ class InventorySuppliersTab extends StatelessWidget {
                 valueOf: (s) => s.name.toLowerCase(),
               ),
               SortableColumn(
-                label: 'Items',
+                label: l10n.statsItems,
                 numeric: true,
                 builder: (s) => Text('${s.itemCount}'),
                 valueOf: (s) => s.itemCount,
               ),
               SortableColumn(
-                label: 'Lagerwert',
+                label: l10n.statsStockValueShort,
                 numeric: true,
                 builder: (s) => Text(money.format(s.stockValue)),
                 valueOf: (s) => s.stockValue,
               ),
               SortableColumn(
-                label: 'Ø EK',
+                label: l10n.statsAvgEk,
                 numeric: true,
                 builder: (s) => Text(money.format(s.avgEk)),
                 valueOf: (s) => s.avgEk,
               ),
               SortableColumn(
-                label: 'Profit',
+                label: l10n.statsLabelProfit,
                 numeric: true,
                 builder: (s) => Text(
                   money.format(s.profit),
@@ -158,7 +157,7 @@ class InventorySuppliersTab extends StatelessWidget {
                 valueOf: (s) => s.profit,
               ),
               SortableColumn(
-                label: 'Marge',
+                label: l10n.statsLabelMargin,
                 numeric: true,
                 builder: (s) => Text('${s.marginPct.toStringAsFixed(1)}%'),
                 valueOf: (s) => s.marginPct,

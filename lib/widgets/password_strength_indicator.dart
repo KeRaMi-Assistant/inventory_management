@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../utils/validators.dart';
 
 /// Vier-stufige Stärke-Anzeige für Passwortfelder.
@@ -10,13 +11,14 @@ class PasswordStrengthIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final score = Validators.passwordStrength(password);
     final label = switch (score) {
       0 => '',
-      1 => 'Schwach',
-      2 => 'Mittel',
-      3 => 'Stark',
-      _ => 'Sehr stark',
+      1 => l10n.passwordStrengthWeak,
+      2 => l10n.passwordStrengthMedium,
+      3 => l10n.passwordStrengthStrong,
+      _ => l10n.passwordStrengthVeryStrong,
     };
     final color = switch (score) {
       0 => const Color(0xFFE2E8F0),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/supplier.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/validators.dart';
@@ -71,6 +72,7 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
       active: _active,
     );
 
+    final l10n = AppLocalizations.of(context);
     try {
       if (widget.supplier != null) {
         await provider.updateSupplier(supplier.copyWith(id: widget.supplier!.id));
@@ -81,7 +83,7 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Speichern fehlgeschlagen: $e'),
+          content: Text(l10n.pushSaveFailed('$e')),
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFFC0392B),
         ),
@@ -91,10 +93,11 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
       title: Text(widget.supplier != null
-          ? 'Lieferant bearbeiten'
-          : 'Neuer Lieferant'),
+          ? l10n.supplierEditTitle
+          : l10n.supplierAddTitle),
       content: SizedBox(
         width: 420,
         child: Form(
@@ -105,25 +108,26 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
               children: [
                 TextFormField(
                   controller: _nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Name *'),
+                  decoration:
+                      InputDecoration(labelText: '${l10n.fieldName} *'),
                   maxLength: 100,
                   validator: (v) =>
-                      Validators.validateRequired(v, label: 'Name'),
+                      Validators.validateRequired(v, label: l10n.fieldName),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _contactCtrl,
                   decoration:
-                      const InputDecoration(labelText: 'Ansprechpartner'),
+                      InputDecoration(labelText: l10n.supplierContactName),
                   maxLength: 100,
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'E-Mail',
-                    prefixIcon: Icon(Icons.email_outlined, size: 18),
+                  decoration: InputDecoration(
+                    labelText: l10n.fieldEmail,
+                    prefixIcon: const Icon(Icons.email_outlined, size: 18),
                   ),
                   validator: (v) {
                     final s = Validators.sanitize(v);
@@ -135,9 +139,9 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
                 TextFormField(
                   controller: _phoneCtrl,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Telefon',
-                    prefixIcon: Icon(Icons.phone_outlined, size: 18),
+                  decoration: InputDecoration(
+                    labelText: l10n.supplierPhone,
+                    prefixIcon: const Icon(Icons.phone_outlined, size: 18),
                   ),
                   maxLength: 40,
                 ),
@@ -145,16 +149,17 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
                 TextFormField(
                   controller: _websiteCtrl,
                   keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: 'Website',
-                    prefixIcon: Icon(Icons.link, size: 18),
+                  decoration: InputDecoration(
+                    labelText: l10n.supplierWebsite,
+                    prefixIcon: const Icon(Icons.link, size: 18),
                   ),
                   validator: (v) => Validators.validateUrl(v),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _noteCtrl,
-                  decoration: const InputDecoration(labelText: 'Notiz'),
+                  decoration:
+                      InputDecoration(labelText: l10n.dealNote),
                   maxLength: Validators.maxNote,
                   maxLines: 3,
                   validator: Validators.validateNote,
@@ -162,7 +167,7 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
                 SwitchListTile(
                   value: _active,
                   onChanged: (v) => setState(() => _active = v),
-                  title: const Text('Aktiv'),
+                  title: Text(l10n.supplierActive),
                   contentPadding: EdgeInsets.zero,
                 ),
               ],
@@ -173,9 +178,9 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.actionCancel),
         ),
-        ElevatedButton(onPressed: _save, child: const Text('Speichern')),
+        ElevatedButton(onPressed: _save, child: Text(l10n.actionSave)),
       ],
     );
   }

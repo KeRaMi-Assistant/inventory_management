@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
 import '../product_drilldown_sheet.dart';
 import '../sortable_table.dart';
@@ -12,19 +13,17 @@ class ProductsShopsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final money = NumberFormat.currency(locale: localeTag, symbol: '€');
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         StatPanel(
-          title: 'Top-Produkte',
+          title: l10n.dealProduct,
           icon: Icons.star_outline,
           padding: const EdgeInsets.symmetric(vertical: 4),
-          trailing: const Text(
-            'Klick öffnet Drilldown',
-            style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
-          ),
           child: SortableTable<ProductStat>(
             rows: stats.topProducts,
             defaultSortIndex: 2,
@@ -35,19 +34,19 @@ class ProductsShopsTab extends StatelessWidget {
             ),
             columns: [
               SortableColumn(
-                label: 'Produkt',
+                label: l10n.dealProduct,
                 builder: (p) => Text(p.name,
                     style: const TextStyle(fontWeight: FontWeight.w600)),
                 valueOf: (p) => p.name.toLowerCase(),
               ),
               SortableColumn(
-                label: 'Deals',
+                label: l10n.statsDealsLabel,
                 numeric: true,
                 builder: (p) => Text('${p.count}'),
                 valueOf: (p) => p.count,
               ),
               SortableColumn(
-                label: 'Profit',
+                label: l10n.statsLabelProfit,
                 numeric: true,
                 builder: (p) => Text(
                   money.format(p.profit),
@@ -61,19 +60,19 @@ class ProductsShopsTab extends StatelessWidget {
                 valueOf: (p) => p.profit,
               ),
               SortableColumn(
-                label: 'Umsatz',
+                label: l10n.statsLabelRevenue,
                 numeric: true,
                 builder: (p) => Text(money.format(p.revenue)),
                 valueOf: (p) => p.revenue,
               ),
               SortableColumn(
-                label: 'Marge',
+                label: l10n.statsLabelMargin,
                 numeric: true,
                 builder: (p) => Text('${p.marginPct.toStringAsFixed(1)}%'),
                 valueOf: (p) => p.marginPct,
               ),
               SortableColumn(
-                label: 'Stück',
+                label: l10n.dealQuantityShort,
                 numeric: true,
                 builder: (p) => Text('${p.units}'),
                 valueOf: (p) => p.units,
@@ -83,7 +82,7 @@ class ProductsShopsTab extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         StatPanel(
-          title: 'Shop-Performance',
+          title: l10n.dealShop,
           icon: Icons.store_outlined,
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: SortableTable<ShopStat>(
@@ -92,25 +91,25 @@ class ProductsShopsTab extends StatelessWidget {
             defaultAscending: false,
             columns: [
               SortableColumn(
-                label: 'Shop',
+                label: l10n.dealShop,
                 builder: (s) => Text(s.name,
                     style: const TextStyle(fontWeight: FontWeight.w600)),
                 valueOf: (s) => s.name.toLowerCase(),
               ),
               SortableColumn(
-                label: 'Deals',
+                label: l10n.statsDealsLabel,
                 numeric: true,
                 builder: (s) => Text('${s.count}'),
                 valueOf: (s) => s.count,
               ),
               SortableColumn(
-                label: 'Volumen',
+                label: l10n.statsLabelRevenue,
                 numeric: true,
                 builder: (s) => Text(money.format(s.volume)),
                 valueOf: (s) => s.volume,
               ),
               SortableColumn(
-                label: 'Profit',
+                label: l10n.statsLabelProfit,
                 numeric: true,
                 builder: (s) => Text(
                   money.format(s.profit),
@@ -124,13 +123,13 @@ class ProductsShopsTab extends StatelessWidget {
                 valueOf: (s) => s.profit,
               ),
               SortableColumn(
-                label: 'Marge',
+                label: l10n.statsLabelMargin,
                 numeric: true,
                 builder: (s) => Text('${s.marginPct.toStringAsFixed(1)}%'),
                 valueOf: (s) => s.marginPct,
               ),
               SortableColumn(
-                label: 'Ø Profit/Deal',
+                label: 'Ø',
                 numeric: true,
                 builder: (s) => Text(money.format(s.avgProfit)),
                 valueOf: (s) => s.avgProfit,

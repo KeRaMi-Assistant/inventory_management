@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
+import '../../providers/active_workspace_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
 enum _Provider { google, apple }
+
+enum _LoginMode { personal, team }
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,29 +23,59 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _teamIdCtrl = TextEditingController();
   bool _busy = false;
   bool _obscure = true;
+  _LoginMode _mode = _LoginMode.personal;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _teamIdCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _busy) return;
     setState(() => _busy = true);
+    final l10n = AppLocalizations.of(context);
     final auth = context.read<AuthProvider>();
+    final workspaces = context.read<ActiveWorkspaceProvider>();
+
+    String? teamId;
+    if (_mode == _LoginMode.team) {
+      teamId = _teamIdCtrl.text.trim();
+      // Pin the requested workspace before auth so the post-login hydrator
+      // jumps straight into the right team context.
+      await workspaces.presetActiveId(teamId);
+    }
+
     final error = await auth.signIn(
       email: _emailCtrl.text,
       password: _passwordCtrl.text,
     );
     if (!mounted) return;
-    setState(() => _busy = false);
+
     if (error != null) {
+      setState(() => _busy = false);
       _showSnack(error, isError: true);
+      return;
     }
+
+    if (teamId != null) {
+      final ok = await auth.isMemberOfWorkspace(teamId);
+      if (!mounted) return;
+      if (!ok) {
+        await auth.signOut();
+        if (!mounted) return;
+        setState(() => _busy = false);
+        _showSnack(l10n.loginTeamNotMember, isError: true);
+        return;
+      }
+    }
+
+    setState(() => _busy = false);
     // On success: AuthGate listens to authState and swaps to MainScreen.
   }
 
@@ -71,6 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       body: Center(
@@ -110,31 +145,75 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Lagerverwaltung',
+                      Text(
+                        l10n.appTitle,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF0F172A),
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
-                        'Mit deinem Konto anmelden',
+                      Text(
+                        l10n.loginSubtitle,
                         textAlign: TextAlign.center,
-                        style:
-                            TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                        style: const TextStyle(
+                            fontSize: 13, color: Color(0xFF64748B)),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
+                      // ── Mode toggle ────────────────────────────────────
+                      SegmentedButton<_LoginMode>(
+                        segments: [
+                          ButtonSegment(
+                            value: _LoginMode.personal,
+                            label: Text(l10n.loginModePersonal),
+                            icon: const Icon(Icons.person_outline, size: 16),
+                          ),
+                          ButtonSegment(
+                            value: _LoginMode.team,
+                            label: Text(l10n.loginModeTeam),
+                            icon: const Icon(Icons.group_outlined, size: 16),
+                          ),
+                        ],
+                        selected: {_mode},
+                        onSelectionChanged: (s) =>
+                            setState(() => _mode = s.first),
+                        showSelectedIcon: false,
+                      ),
+                      const SizedBox(height: 16),
+                      if (_mode == _LoginMode.team) ...[
+                        TextFormField(
+                          controller: _teamIdCtrl,
+                          decoration: InputDecoration(
+                            labelText: l10n.loginTeamIdLabel,
+                            helperText: l10n.loginTeamIdHelp,
+                            prefixIcon:
+                                const Icon(Icons.group_outlined, size: 18),
+                          ),
+                          validator: (v) {
+                            final t = (v ?? '').trim();
+                            if (t.isEmpty) return l10n.loginTeamIdRequired;
+                            // Workspace IDs sind UUIDs (36 Zeichen mit Bindestrichen).
+                            final uuidPattern = RegExp(
+                                r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+                            if (!uuidPattern.hasMatch(t)) {
+                              return l10n.loginTeamIdInvalid;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       TextFormField(
                         controller: _emailCtrl,
                         keyboardType: TextInputType.emailAddress,
                         autofillHints: const [AutofillHints.email],
                         autofocus: true,
-                        decoration: const InputDecoration(
-                          labelText: 'E-Mail',
-                          prefixIcon: Icon(Icons.email_outlined, size: 18),
+                        decoration: InputDecoration(
+                          labelText: l10n.fieldEmail,
+                          prefixIcon:
+                              const Icon(Icons.email_outlined, size: 18),
                         ),
                         validator: Validators.validateEmail,
                       ),
@@ -145,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         autofillHints: const [AutofillHints.password],
                         onFieldSubmitted: (_) => _submit(),
                         decoration: InputDecoration(
-                          labelText: 'Passwort',
+                          labelText: l10n.fieldPassword,
                           prefixIcon:
                               const Icon(Icons.lock_outline, size: 18),
                           suffixIcon: IconButton(
@@ -160,7 +239,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         validator: (v) =>
-                            v == null || v.isEmpty ? 'Passwort erforderlich' : null,
+                            v == null || v.isEmpty ? l10n.passwordRequired : null,
                       ),
                       const SizedBox(height: 8),
                       Align(
@@ -174,7 +253,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           const ForgotPasswordScreen(),
                                     ),
                                   ),
-                          child: const Text('Passwort vergessen?'),
+                          child: Text(l10n.loginForgotPassword),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -192,34 +271,37 @@ class _LoginScreenState extends State<LoginScreen> {
                                     strokeWidth: 2, color: Colors.white),
                               )
                             : const Icon(Icons.login, size: 18),
-                        label: Text(_busy ? 'Anmelden…' : 'Anmelden'),
+                        label: Text(_busy ? l10n.loginInProgress : l10n.loginSubmit),
                       ),
                       const SizedBox(height: 16),
                       Row(
-                        children: const [
-                          Expanded(
+                        children: [
+                          const Expanded(
                               child: Divider(color: Color(0xFFE2E8F0))),
                           Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
-                              'oder weiter mit',
-                              style: TextStyle(
+                              l10n.loginContinueWith,
+                              style: const TextStyle(
                                   fontSize: 12, color: Color(0xFF64748B)),
                             ),
                           ),
-                          Expanded(
+                          const Expanded(
                               child: Divider(color: Color(0xFFE2E8F0))),
                         ],
                       ),
                       const SizedBox(height: 12),
                       _GoogleSignInButton(
                         busy: _busy,
+                        label: l10n.loginWithGoogle,
                         onPressed: () => _socialSignIn(_Provider.google),
                       ),
                       if (context.read<AuthProvider>().appleSignInAvailable) ...[
                         const SizedBox(height: 8),
                         _AppleSignInButton(
                           busy: _busy,
+                          label: l10n.loginWithApple,
                           onPressed: () => _socialSignIn(_Provider.apple),
                         ),
                       ],
@@ -227,8 +309,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text('Noch kein Konto?',
-                              style: TextStyle(color: Color(0xFF64748B))),
+                          Text(l10n.loginNoAccount,
+                              style: const TextStyle(color: Color(0xFF64748B))),
                           TextButton(
                             onPressed: _busy
                                 ? null
@@ -238,7 +320,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             const RegisterScreen(),
                                       ),
                                     ),
-                            child: const Text('Registrieren'),
+                            child: Text(l10n.loginRegister),
                           ),
                         ],
                       ),
@@ -256,8 +338,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
 class _GoogleSignInButton extends StatelessWidget {
   final bool busy;
+  final String label;
   final VoidCallback onPressed;
-  const _GoogleSignInButton({required this.busy, required this.onPressed});
+  const _GoogleSignInButton({
+    required this.busy,
+    required this.label,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -270,8 +357,8 @@ class _GoogleSignInButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
       icon: const _GoogleLogo(),
-      label: const Text('Mit Google anmelden',
-          style: TextStyle(fontWeight: FontWeight.w600)),
+      label: Text(label,
+          style: const TextStyle(fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -302,8 +389,13 @@ class _GoogleLogo extends StatelessWidget {
 
 class _AppleSignInButton extends StatelessWidget {
   final bool busy;
+  final String label;
   final VoidCallback onPressed;
-  const _AppleSignInButton({required this.busy, required this.onPressed});
+  const _AppleSignInButton({
+    required this.busy,
+    required this.label,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -315,8 +407,8 @@ class _AppleSignInButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
       icon: const Icon(Icons.apple, size: 20),
-      label: const Text('Mit Apple anmelden',
-          style: TextStyle(fontWeight: FontWeight.w600)),
+      label: Text(label,
+          style: const TextStyle(fontWeight: FontWeight.w600)),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
 import '../charts/heatmap.dart';
 import '../sortable_table.dart';
@@ -15,8 +16,10 @@ class FinanceTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
-    final dateFmt = DateFormat('dd.MM.yyyy', 'de_DE');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final money = NumberFormat.currency(locale: localeTag, symbol: '€');
+    final dateFmt = DateFormat.yMd(localeTag);
     final cf = stats.cashflow;
     final goals = stats.goals;
 
@@ -27,7 +30,7 @@ class FinanceTab extends StatelessWidget {
           builder: (context, c) {
             final wide = c.maxWidth > 800;
             final cashflowPanel = StatPanel(
-              title: 'Cashflow',
+              title: l10n.statsCashflow,
               icon: Icons.account_balance_outlined,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -36,7 +39,7 @@ class FinanceTab extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _CashStat(
-                          label: 'Eingegangen',
+                          label: l10n.statsReceived,
                           value: money.format(cf.received),
                           color: const Color(0xFF059669),
                           icon: Icons.arrow_downward,
@@ -45,7 +48,7 @@ class FinanceTab extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: _CashStat(
-                          label: 'Ausstehend',
+                          label: l10n.statsOutstanding,
                           value: money.format(cf.totalOpen),
                           color: const Color(0xFFD97706),
                           icon: Icons.hourglass_empty,
@@ -54,9 +57,9 @@ class FinanceTab extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Forderungen nach Alter',
-                    style: TextStyle(
+                  Text(
+                    l10n.statsAgingHeading,
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF374151),
@@ -69,8 +72,8 @@ class FinanceTab extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _CashStat(
-                          label: 'Ø Zahlungsdauer',
-                          value: '${cf.avgPaymentDays.toStringAsFixed(1)} T.',
+                          label: 'Ø',
+                          value: cf.avgPaymentDays.toStringAsFixed(1),
                           color: const Color(0xFF2563EB),
                           icon: Icons.timer_outlined,
                         ),
@@ -79,15 +82,15 @@ class FinanceTab extends StatelessWidget {
                       Expanded(
                         child: cf.oldestDeal == null
                             ? _CashStat(
-                                label: 'Älteste offene',
+                                label: l10n.statsOldestOpen,
                                 value: '—',
                                 color: const Color(0xFF6B7280),
                                 icon: Icons.event_outlined,
                               )
                             : _CashStat(
-                                label: 'Älteste offene',
+                                label: l10n.statsOldestOpen,
                                 value:
-                                    '${cf.oldestDaysOpen} T. · ${money.format(cf.oldestDeal!.zuBekommen ?? 0)}',
+                                    '${cf.oldestDaysOpen} · ${money.format(cf.oldestDeal!.zuBekommen ?? 0)}',
                                 color: const Color(0xFFDC2626),
                                 icon: Icons.event_outlined,
                                 subtitle:
@@ -100,7 +103,7 @@ class FinanceTab extends StatelessWidget {
               ),
             );
             final goalsPanel = StatPanel(
-              title: 'Ziele & Forecast',
+              title: l10n.statsForecast,
               icon: Icons.flag_outlined,
               child: _GoalsContent(goals: goals),
             );
@@ -123,19 +126,19 @@ class FinanceTab extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         StatPanel(
-          title: 'Heatmap (12 Monate)',
+          title: '12 ${l10n.statsCurrentMonth}',
           icon: Icons.calendar_view_month_outlined,
           child: ProfitHeatmap(data: stats.heatmap),
         ),
         const SizedBox(height: 16),
         StatPanel(
-          title: 'Steuer/MwSt-Report',
+          title: '${l10n.statsTax} · ${l10n.statsTabFinance}',
           icon: Icons.receipt_long_outlined,
           padding: const EdgeInsets.symmetric(vertical: 4),
           trailing: TextButton.icon(
             onPressed: onExportTax,
             icon: const Icon(Icons.file_download_outlined, size: 16),
-            label: const Text('CSV-Export'),
+            label: Text(l10n.statsExportCsvTitle),
             style: TextButton.styleFrom(
                 foregroundColor: const Color(0xFF2563EB)),
           ),
@@ -145,42 +148,42 @@ class FinanceTab extends StatelessWidget {
             defaultAscending: false,
             columns: [
               SortableColumn(
-                label: 'Quartal',
+                label: l10n.statsQuarter,
                 builder: (r) => Text(r.label,
                     style: const TextStyle(fontWeight: FontWeight.w700)),
                 valueOf: (r) => r.year * 10 + r.quarter,
               ),
               SortableColumn(
-                label: 'Währung',
+                label: l10n.statsCurrency,
                 builder: (r) => Text(r.currency,
                     style: const TextStyle(fontWeight: FontWeight.w600)),
                 valueOf: (r) => r.currency,
               ),
               SortableColumn(
-                label: 'Deals',
+                label: l10n.statsDealsLabel,
                 numeric: true,
                 builder: (r) => Text('${r.dealCount}'),
                 valueOf: (r) => r.dealCount,
               ),
               SortableColumn(
-                label: 'Netto',
+                label: l10n.statsNet,
                 numeric: true,
-                builder: (r) => Text(_format(r.netto, r.currency)),
+                builder: (r) => Text(_format(localeTag, r.netto, r.currency)),
                 valueOf: (r) => r.netto,
               ),
               SortableColumn(
-                label: 'MwSt',
+                label: l10n.statsTax,
                 numeric: true,
-                builder: (r) => Text(_format(r.tax, r.currency),
+                builder: (r) => Text(_format(localeTag, r.tax, r.currency),
                     style: const TextStyle(
                         color: Color(0xFFD97706),
                         fontWeight: FontWeight.w700)),
                 valueOf: (r) => r.tax,
               ),
               SortableColumn(
-                label: 'Brutto',
+                label: l10n.statsGross,
                 numeric: true,
-                builder: (r) => Text(_format(r.brutto, r.currency)),
+                builder: (r) => Text(_format(localeTag, r.brutto, r.currency)),
                 valueOf: (r) => r.brutto,
               ),
             ],
@@ -190,7 +193,7 @@ class FinanceTab extends StatelessWidget {
     );
   }
 
-  String _format(double v, String currency) {
+  String _format(String localeTag, double v, String currency) {
     final symbol = switch (currency) {
       'EUR' => '€',
       'USD' => r'$',
@@ -198,7 +201,7 @@ class FinanceTab extends StatelessWidget {
       'CHF' => 'CHF',
       _ => currency,
     };
-    return NumberFormat.currency(locale: 'de_DE', symbol: symbol).format(v);
+    return NumberFormat.currency(locale: localeTag, symbol: symbol).format(v);
   }
 }
 
@@ -268,20 +271,22 @@ class _AgingBars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final money = NumberFormat.currency(locale: localeTag, symbol: '€');
     final total = cf.totalOpen;
     if (total == 0) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: Text('Keine offenen Forderungen.',
-            style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(l10n.dealCommentEmpty,
+            style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
       );
     }
     final segments = [
-      ('0–7 T', cf.bucket0_7, const Color(0xFF059669)),
-      ('8–30 T', cf.bucket8_30, const Color(0xFFD97706)),
-      ('31–60 T', cf.bucket31_60, const Color(0xFFEA580C)),
-      ('> 60 T', cf.bucket60p, const Color(0xFFDC2626)),
+      ('0–7', cf.bucket0_7, const Color(0xFF059669)),
+      ('8–30', cf.bucket8_30, const Color(0xFFD97706)),
+      ('31–60', cf.bucket31_60, const Color(0xFFEA580C)),
+      ('> 60', cf.bucket60p, const Color(0xFFDC2626)),
     ];
     return Column(
       children: [
@@ -340,7 +345,9 @@ class _GoalsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final money = NumberFormat.currency(locale: localeTag, symbol: '€');
     final progress = (goals.progressPct / 100).clamp(0.0, 1.5);
 
     return Column(
@@ -379,9 +386,9 @@ class _GoalsContent extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF111827)),
                     ),
-                    const Text(
-                      'Aktueller Monat',
-                      style: TextStyle(
+                    Text(
+                      l10n.statsCurrentMonth,
+                      style: const TextStyle(
                           fontSize: 11, color: Color(0xFF6B7280)),
                     ),
                   ],
@@ -391,10 +398,10 @@ class _GoalsContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _GoalRow(label: 'Aktuell', value: money.format(goals.currentProfit)),
-        _GoalRow(label: 'Ziel', value: money.format(goals.target)),
+        _GoalRow(label: l10n.statsCurrent, value: money.format(goals.currentProfit)),
+        _GoalRow(label: l10n.statsTarget, value: money.format(goals.target)),
         _GoalRow(
-          label: 'Forecast',
+          label: l10n.statsForecast,
           value: money.format(goals.forecast),
           highlight: goals.forecast >= goals.target,
         ),
@@ -412,7 +419,7 @@ class _GoalsContent extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Text(
-              '${goals.streak} Monate Streak',
+              '${goals.streak}',
               style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -421,8 +428,8 @@ class _GoalsContent extends StatelessWidget {
             const Spacer(),
             Text(
               goals.streak == 0
-                  ? 'Noch nicht erreicht'
-                  : 'Ziele in Folge erreicht',
+                  ? l10n.statsGoalNotMet
+                  : l10n.statsGoalsInRow,
               style: const TextStyle(
                   fontSize: 11, color: Color(0xFF9CA3AF)),
             ),

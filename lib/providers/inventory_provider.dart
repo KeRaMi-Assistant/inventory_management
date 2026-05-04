@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
@@ -7,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../models/activity_entry.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
+import '../models/deal_comment.dart';
 import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
 import '../models/shop.dart';
@@ -64,8 +64,6 @@ class InventoryProvider extends ChangeNotifier {
     'Versandt',
     'Verkauft',
   ];
-  static const List<String> shippingTypes = ['Reship', 'Dropship'];
-  static const List<String> belegOptions = ['Ja', 'Nein'];
 
   // ── Derived KPIs ──────────────────────────────────────────────────────────
 
@@ -97,7 +95,7 @@ class InventoryProvider extends ChangeNotifier {
       _inventoryItems.where((item) => item.isCritical).length;
 
   int get missingInvoiceCount =>
-      _deals.where((d) => d.beleg == 'Nein' && d.status != 'Done').length;
+      _deals.where((d) => !d.hasReceipt && d.status != 'Done').length;
 
   int get totalStockQuantity =>
       _inventoryItems.fold(0, (sum, item) => sum + item.quantity);
@@ -142,6 +140,24 @@ class InventoryProvider extends ChangeNotifier {
 
   // ── Load / clear ──────────────────────────────────────────────────────────
 
+  String? _activeWorkspaceId;
+
+  /// Wechselt den Workspace, gegen den geladen + geschrieben wird. Wird vom
+  /// ActiveWorkspaceProvider-Listener im AuthGate aufgerufen. Setzt die
+  /// neue Workspace-ID am Repository, leert die lokalen Caches und lädt
+  /// frisch — damit nach einem Switch nicht kurz die alten Deals stehen
+  /// bleiben.
+  Future<void> setActiveWorkspace(String? workspaceId) async {
+    if (_activeWorkspaceId == workspaceId) return;
+    _activeWorkspaceId = workspaceId;
+    _repository.setActiveWorkspace(workspaceId);
+    if (workspaceId == null) {
+      clearLocalState();
+      return;
+    }
+    await loadData();
+  }
+
   Future<void> loadData() async {
     _loading = true;
     _lastError = null;
@@ -168,6 +184,8 @@ class InventoryProvider extends ChangeNotifier {
     _movements = [];
     _activities = [];
     _lastError = null;
+    _activeWorkspaceId = null;
+    _repository.setActiveWorkspace(null);
     notifyListeners();
   }
 
@@ -640,6 +658,31 @@ class InventoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── DEAL COMMENTS ────────────────────────────────────────────────────────
+
+  Future<List<DealComment>> loadCommentsForDeal(int dealId) =>
+      _repository.loadCommentsForDeal(dealId);
+
+  Future<DealComment> addComment({
+    required int dealId,
+    required String author,
+    required String body,
+  }) async {
+    final entry = DealComment(
+      id: _uuid.v4(),
+      dealId: dealId,
+      author: author,
+      body: body,
+      createdAt: DateTime.now().toUtc(),
+    );
+    final saved = await _repository.insertComment(entry);
+    _log('Kommentar zu Deal #$dealId', 'comment');
+    return saved;
+  }
+
+  Future<void> deleteComment(String id) =>
+      _repository.deleteComment(id);
+
   // ── BATCHES ───────────────────────────────────────────────────────────────
 
   Future<List<InventoryBatch>> loadBatchesForItem(String itemId) =>
@@ -665,60 +708,6 @@ class InventoryProvider extends ChangeNotifier {
 
   Future<void> deleteBatch(String id) async {
     await _repository.deleteBatch(id);
-    notifyListeners();
-  }
-
-  // ── JSON backup / restore (across the whole user-scoped dataset) ──────────
-
-  Map<String, dynamic> exportData() => {
-        'deals': _deals.map((d) => d.toJson()).toList(),
-        'buyers': _buyers.map((b) => b.toJson()).toList(),
-        'shops': _shops.map((s) => s.toJson()).toList(),
-        'suppliers': _suppliers.map((s) => s.toJson()).toList(),
-        'inventoryItems': _inventoryItems.map((i) => i.toJson()).toList(),
-        'movements': _movements.map((m) => m.toJson()).toList(),
-        'activities': _activities.map((a) => a.toJson()).toList(),
-      };
-
-  String exportJson() =>
-      const JsonEncoder.withIndent('  ').convert(exportData());
-
-  /// Replaces the user's cloud dataset with the contents of [data]. Used by
-  /// the JSON-Restore flow in Settings.
-  Future<void> restoreData(Map<String, dynamic> data) async {
-    final deals = (data['deals'] as List<dynamic>? ?? [])
-        .map((e) => Deal.fromJson(e as Map<String, dynamic>))
-        .toList();
-    final buyers = (data['buyers'] as List<dynamic>? ?? [])
-        .map((e) => Buyer.fromJson(e as Map<String, dynamic>))
-        .toList();
-    final shops = (data['shops'] as List<dynamic>? ?? [])
-        .map((e) => Shop.fromJson(e as Map<String, dynamic>))
-        .toList();
-    final suppliers = (data['suppliers'] as List<dynamic>? ?? [])
-        .map((e) => Supplier.fromJson(e as Map<String, dynamic>))
-        .toList();
-    final items = (data['inventoryItems'] as List<dynamic>? ?? [])
-        .map((e) => InventoryItem.fromJson(e as Map<String, dynamic>))
-        .toList();
-    final movements = (data['movements'] as List<dynamic>? ?? [])
-        .map((e) => InventoryMovement.fromJson(e as Map<String, dynamic>))
-        .toList();
-    final activities = (data['activities'] as List<dynamic>? ?? [])
-        .map((e) => ActivityEntry.fromJson(e as Map<String, dynamic>))
-        .toList();
-
-    await _repository.deleteAllForCurrentUser();
-    final snapshot = await _repository.bulkImport(
-      buyers: buyers,
-      shops: shops,
-      suppliers: suppliers,
-      deals: deals,
-      items: items,
-      movements: movements,
-      activities: activities,
-    );
-    _hydrateFrom(snapshot);
     notifyListeners();
   }
 

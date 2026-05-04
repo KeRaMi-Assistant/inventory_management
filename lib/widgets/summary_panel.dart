@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/status_l10n.dart';
 
 class SummaryPanel extends StatelessWidget {
   const SummaryPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final fmt = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final fmt = NumberFormat.currency(locale: localeTag, symbol: '€');
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final deals = provider.deals;
@@ -53,13 +57,13 @@ class SummaryPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.bar_chart_rounded, size: 16, color: Color(0xFF64748B)),
-                    SizedBox(width: 6),
+                    const Icon(Icons.bar_chart_rounded, size: 16, color: Color(0xFF64748B)),
+                    const SizedBox(width: 6),
                     Text(
-                      'Übersicht',
-                      style: TextStyle(
+                      l10n.summaryHeading,
+                      style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
                         color: Color(0xFF1E293B),
@@ -68,7 +72,7 @@ class SummaryPanel extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                _SectionLabel('Nach Käufer'),
+                _SectionLabel(l10n.summaryByBuyer),
                 const SizedBox(height: 6),
                 if (buyerStats.isEmpty)
                   const Text('–', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)))
@@ -79,10 +83,10 @@ class SummaryPanel extends StatelessWidget {
                         fmt: fmt,
                       )),
                 const SizedBox(height: 12),
-                _SectionLabel('Nach Status'),
+                _SectionLabel(l10n.summaryByStatus),
                 const SizedBox(height: 6),
                 ...statusStats.entries.map((e) => _StatusRow(
-                      name: e.key,
+                      name: localizeDealStatus(context, e.key),
                       stat: e.value,
                       fmt: fmt,
                     )),

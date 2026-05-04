@@ -3,11 +3,13 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../app_theme.dart';
+import '../l10n/app_localizations.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../models/shop.dart';
 import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import 'add_edit_deal_dialog.dart';
 
@@ -27,8 +29,10 @@ class DealCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFmt = DateFormat('dd.MM.yyyy');
-    final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final dateFmt = DateFormat.yMd(localeTag);
+    final money = NumberFormat.currency(locale: localeTag, symbol: '€');
     final status = _statusStyle(deal.status);
     final selected = filters.selectedDealIds.contains(deal.id);
 
@@ -143,7 +147,9 @@ class DealCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  _StatusPill(label: deal.status, style: status),
+                  _StatusPill(
+                      label: localizeDealStatus(context, deal.status),
+                      style: status),
                 ],
               ),
               const SizedBox(height: 10),
@@ -224,10 +230,10 @@ class DealCard extends StatelessWidget {
                       onTap: () => openUrlWithFallback(
                           context, _trackingUrl(deal.tracking!)),
                     ),
-                  if (deal.beleg == 'Ja')
-                    const _MetaChip(
+                  if (deal.hasReceipt)
+                    _MetaChip(
                       icon: Icons.receipt_long_outlined,
-                      label: 'Beleg',
+                      label: l10n.dealReceipt,
                       color: AppTheme.success,
                     ),
                 ],
@@ -256,7 +262,7 @@ class DealCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   IconButton(
-                    tooltip: 'Bearbeiten',
+                    tooltip: l10n.actionEdit,
                     visualDensity: VisualDensity.compact,
                     onPressed: () => showDialog(
                       context: context,
@@ -267,7 +273,7 @@ class DealCard extends StatelessWidget {
                         size: 18, color: AppTheme.accent),
                   ),
                   IconButton(
-                    tooltip: 'Löschen',
+                    tooltip: l10n.actionDelete,
                     visualDensity: VisualDensity.compact,
                     onPressed: () => _confirmDelete(context),
                     icon: const Icon(Icons.delete_outline,
@@ -308,22 +314,24 @@ class DealCard extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Eintrag löschen'),
-        content: Text('"${deal.product}" (ID: ${deal.id}) wirklich löschen?'),
+        title: Text(l10n.dealDeleteTitle),
+        content: Text(l10n.dealDeleteConfirm(deal.product, deal.id)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Abbrechen')),
+              child: Text(l10n.actionCancel)),
           ElevatedButton(
             onPressed: () {
               provider.deleteDeal(deal.id);
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-            child: const Text('Löschen', style: TextStyle(color: Colors.white)),
+            child: Text(l10n.actionDelete,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),

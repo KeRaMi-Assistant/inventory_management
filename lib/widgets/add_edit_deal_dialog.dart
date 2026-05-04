@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../utils/validators.dart';
 import 'attachment_gallery.dart';
+import 'deal_comments_section.dart';
 
 class AddEditDealDialog extends StatefulWidget {
   final Deal? deal;
@@ -28,12 +31,12 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
   final _trackingCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
 
-  String _shippingType = 'Reship';
+  bool _isDropship = false;
   String? _shop;
   DateTime _orderDate = DateTime.now();
   DateTime? _arrivalDate;
   String _status = 'Bestellt';
-  String _beleg = 'Nein';
+  bool _hasReceipt = false;
   String? _buyer;
   String _priceType = 'Netto';
   String _currency = 'EUR';
@@ -59,12 +62,12 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     if (d != null) {
       _productCtrl.text = d.product;
       _quantityCtrl.text = d.quantity.toString();
-      _shippingType = d.shippingType;
+      _isDropship = d.isDropship;
       _shop = d.shop;
       _orderDate = d.orderDate;
       _arrivalDate = d.arrivalDate;
       _status = d.status;
-      _beleg = d.beleg;
+      _hasReceipt = d.hasReceipt;
       _buyer = d.buyer;
       _vkCtrl.text = d.vk?.toString() ?? '';
       _ticketCtrl.text = d.ticketNumber ?? '';
@@ -108,6 +111,34 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
 
   void _refreshPreview() {
     if (mounted) setState(() {});
+  }
+
+  /// Übernimmt Werte aus einem zuvor angelegten Deal als Vorlage. Wird beim
+  /// Tippen auf einen Vorschlag im Produkt-Autocomplete aufgerufen — nur Felder
+  /// die der User noch nicht überschrieben hat, werden befüllt.
+  void _applyTemplate(Deal template) {
+    setState(() {
+      _productCtrl.text = template.product;
+      _isDropship = template.isDropship;
+      _shop = template.shop;
+      _buyer = template.buyer;
+      _currency = template.currency;
+      if (template.taxRate != null) {
+        final pct = template.taxRate! * 100;
+        _taxRateCtrl.text =
+            pct % 1 == 0 ? pct.toStringAsFixed(0) : pct.toStringAsFixed(2);
+      }
+      if (template.ekNetto != null) {
+        _priceType = 'Netto';
+        _priceCtrl.text = template.ekNetto!.toStringAsFixed(2);
+      } else if (template.ekBrutto != null) {
+        _priceType = 'Brutto';
+        _priceCtrl.text = template.ekBrutto!.toStringAsFixed(2);
+      }
+      if (template.vk != null) {
+        _vkCtrl.text = template.vk!.toStringAsFixed(2);
+      }
+    });
   }
 
   void _onTicketChanged(String value) {
@@ -171,7 +202,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       id: widget.deal?.id ?? provider.nextDealId,
       product: _productCtrl.text.trim(),
       quantity: int.parse(_quantityCtrl.text),
-      shippingType: _shippingType,
+      isDropship: _isDropship,
       shop: shop,
       orderDate: _orderDate,
       ekNetto: ekNetto,
@@ -196,7 +227,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
           _trackingCtrl.text.isEmpty ? null : _trackingCtrl.text.trim(),
       arrivalDate: _arrivalDate,
       status: _status,
-      beleg: _beleg,
+      hasReceipt: _hasReceipt,
       note: _noteCtrl.text.isEmpty ? null : _noteCtrl.text.trim(),
       taxRate: taxRate,
       currency: _currency,
@@ -219,10 +250,12 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final provider = context.watch<InventoryProvider>();
     final shops = provider.shops.where((s) => s.active).toList();
     final buyers = provider.buyers.where((b) => b.active).toList();
-    final dateFmt = DateFormat('dd.MM.yyyy');
+    final dateFmt = DateFormat.yMd(
+        Localizations.localeOf(context).toLanguageTag());
 
     return Dialog(
       insetPadding:
@@ -260,9 +293,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      widget.deal != null
-                          ? 'Deal bearbeiten'
-                          : 'Neuer Deal',
+                      widget.deal != null ? l10n.dealEdit : l10n.dealNew,
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
@@ -292,65 +323,67 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // ── Produkt & Versand ───────────────────────────
-                        _sectionLabel('Produkt & Versand'),
+                        _sectionLabel(l10n.dealSectionProduct),
                         const SizedBox(height: 10),
                         _row(narrow, [
-                          TextFormField(
+                          _ProductAutocomplete(
                             controller: _productCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Produkt *'),
-                            maxLength: Validators.maxProductName,
-                            validator: Validators.validateProductName,
+                            pastDeals: provider.deals,
+                            onPickPast: _applyTemplate,
                           ),
                           TextFormField(
                             controller: _quantityCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Anzahl *'),
+                            decoration: InputDecoration(
+                                labelText: '${l10n.dealQuantity} *'),
                             keyboardType: TextInputType.number,
                             validator: Validators.validatePositiveInt,
                           ),
                         ], flex: [3, 1]),
                         const SizedBox(height: 12),
                         _row(narrow, [
-                          DropdownButtonFormField<String>(
-                            initialValue: _shippingType,
-                            decoration: const InputDecoration(
-                                labelText: 'Versandtyp *'),
-                            items: InventoryProvider.shippingTypes
-                                .map((t) => DropdownMenuItem(
-                                    value: t, child: Text(t)))
-                                .toList(),
+                          DropdownButtonFormField<bool>(
+                            initialValue: _isDropship,
+                            decoration: InputDecoration(
+                                labelText: '${l10n.dealShippingType} *'),
+                            items: [
+                              DropdownMenuItem(
+                                  value: false, child: Text(l10n.dealReship)),
+                              DropdownMenuItem(
+                                  value: true,
+                                  child: Text(l10n.dealDropship)),
+                            ],
                             onChanged: (v) =>
-                                setState(() => _shippingType = v!),
+                                setState(() => _isDropship = v ?? false),
                           ),
                           DropdownButtonFormField<String>(
                             initialValue: _shop,
                             decoration:
-                                const InputDecoration(labelText: 'Shop *'),
+                                InputDecoration(labelText: '${l10n.dealShop} *'),
                             items: shops
                                 .map((s) => DropdownMenuItem(
                                     value: s.name, child: Text(s.name)))
                                 .toList(),
                             onChanged: (v) => setState(() => _shop = v),
-                            validator: (v) =>
-                                v == null || v.isEmpty ? 'Pflichtfeld' : null,
+                            validator: (v) => v == null || v.isEmpty
+                                ? l10n.commonRequired
+                                : null,
                           ),
                         ]),
                         const SizedBox(height: 20),
                         // ── Preise ──────────────────────────────────────
-                        _sectionLabel('Preise'),
+                        _sectionLabel(l10n.dealSectionPrices),
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            const Text('EK Preis als:',
-                                style: TextStyle(
+                            Text(l10n.dealEkPriceLabel,
+                                style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF475569))),
                             const SizedBox(width: 12),
-                            _radioOption('Netto', 'Netto'),
+                            _radioOption('Netto', l10n.dealPriceTypeNet),
                             const SizedBox(width: 12),
-                            _radioOption('Brutto', 'Brutto'),
+                            _radioOption('Brutto', l10n.dealPriceTypeGross),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -360,8 +393,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             Expanded(
                               child: TextFormField(
                                 controller: _priceCtrl,
-                                decoration: const InputDecoration(
-                                  labelText: 'EK-Betrag',
+                                decoration: InputDecoration(
+                                  labelText: l10n.dealEkAmount,
                                   prefixText: '€ ',
                                 ),
                                 keyboardType:
@@ -374,8 +407,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             Expanded(
                               child: TextFormField(
                                 controller: _vkCtrl,
-                                decoration: const InputDecoration(
-                                  labelText: 'VK-Betrag',
+                                decoration: InputDecoration(
+                                  labelText: l10n.dealVkAmount,
                                   prefixText: '€ ',
                                 ),
                                 keyboardType:
@@ -392,10 +425,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             Expanded(
                               child: DropdownButtonFormField<String>(
                                 initialValue: _currency,
-                                decoration: const InputDecoration(
-                                  labelText: 'Währung',
+                                decoration: InputDecoration(
+                                  labelText: l10n.dealCurrency,
                                   prefixIcon:
-                                      Icon(Icons.euro_symbol, size: 18),
+                                      const Icon(Icons.euro_symbol, size: 18),
                                 ),
                                 items: _currencyOptions
                                     .map((c) => DropdownMenuItem(
@@ -411,9 +444,9 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             Expanded(
                               child: TextFormField(
                                 controller: _taxRateCtrl,
-                                decoration: const InputDecoration(
-                                  labelText: 'MwSt-Satz %',
-                                  hintText: 'z.B. 19',
+                                decoration: InputDecoration(
+                                  labelText: l10n.dealTaxRate,
+                                  hintText: l10n.dealTaxRateHint,
                                   suffixText: '%',
                                 ),
                                 keyboardType:
@@ -425,9 +458,9 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                   if (s.isEmpty) return null;
                                   final n =
                                       double.tryParse(s.replaceAll(',', '.'));
-                                  if (n == null) return 'Ungültige Zahl';
+                                  if (n == null) return l10n.dealTaxRateInvalid;
                                   if (n < 0 || n > 100) {
-                                    return '0 – 100';
+                                    return l10n.dealTaxRateRange;
                                   }
                                   return null;
                                 },
@@ -437,16 +470,17 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                         ),
                         const SizedBox(height: 20),
                         // ── Käufer & Status ─────────────────────────────
-                        _sectionLabel('Käufer & Status'),
+                        _sectionLabel(l10n.dealSectionBuyer),
                         const SizedBox(height: 10),
                         _row(narrow, [
                           DropdownButtonFormField<String>(
                             initialValue: _buyer,
-                            decoration:
-                                const InputDecoration(labelText: 'Käufer'),
+                            decoration: InputDecoration(
+                                labelText: l10n.dealBuyer),
                             items: [
-                              const DropdownMenuItem<String>(
-                                  value: null, child: Text('— Kein —')),
+                              DropdownMenuItem<String>(
+                                  value: null,
+                                  child: Text(l10n.dealBuyerNone)),
                               ...buyers.map((b) => DropdownMenuItem(
                                   value: b.name, child: Text(b.name))),
                             ],
@@ -456,58 +490,65 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                           ),
                           DropdownButtonFormField<String>(
                             initialValue: _status,
-                            decoration:
-                                const InputDecoration(labelText: 'Status'),
+                            decoration: InputDecoration(
+                                labelText: l10n.dealStatus),
                             items: InventoryProvider.statusOptions
                                 .map((s) => DropdownMenuItem(
-                                    value: s, child: Text(s)))
+                                    value: s,
+                                    child: Text(
+                                        localizeDealStatus(context, s))))
                                 .toList(),
                             onChanged: (v) => setState(() => _status = v!),
                           ),
-                          DropdownButtonFormField<String>(
-                            initialValue: _beleg,
-                            decoration:
-                                const InputDecoration(labelText: 'Beleg'),
-                            items: InventoryProvider.belegOptions
-                                .map((s) => DropdownMenuItem(
-                                    value: s, child: Text(s)))
-                                .toList(),
-                            onChanged: (v) => setState(() => _beleg = v!),
+                          DropdownButtonFormField<bool>(
+                            initialValue: _hasReceipt,
+                            decoration: InputDecoration(
+                                labelText: l10n.dealReceipt),
+                            items: [
+                              DropdownMenuItem(
+                                  value: false,
+                                  child: Text(l10n.dealReceiptNo)),
+                              DropdownMenuItem(
+                                  value: true,
+                                  child: Text(l10n.dealReceiptYes)),
+                            ],
+                            onChanged: (v) =>
+                                setState(() => _hasReceipt = v ?? false),
                           ),
                         ]),
                         const SizedBox(height: 20),
                         // ── Datum & Tracking ────────────────────────────
-                        _sectionLabel('Datum & Tracking'),
+                        _sectionLabel(l10n.dealSectionDateTracking),
                         const SizedBox(height: 10),
                         _row(narrow, [
                           _DatePickerField(
-                            label: 'Bestelldatum *',
+                            label: '${l10n.dealOrderDate} *',
                             date: _orderDate,
                             onTap: () => _pickDate(ctx, false),
                             dateFmt: dateFmt,
                           ),
                           _DatePickerField(
-                            label: 'Ankunftsdatum',
+                            label: l10n.dealArrivalDate,
                             date: _arrivalDate,
                             onTap: () => _pickDate(ctx, true),
                             dateFmt: dateFmt,
-                            placeholder: 'Nicht gesetzt',
+                            placeholder: l10n.commonNotSet,
                           ),
                         ]),
                         const SizedBox(height: 12),
                         _row(narrow, [
                           TextFormField(
                             controller: _ticketCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Ticketnummer'),
+                            decoration: InputDecoration(
+                                labelText: l10n.dealTicketNumber),
                             maxLength: Validators.maxTicket,
                             validator: (v) => Validators.validateTicket(v),
                             onChanged: _onTicketChanged,
                           ),
                           TextFormField(
                             controller: _trackingCtrl,
-                            decoration:
-                                const InputDecoration(labelText: 'Tracking'),
+                            decoration: InputDecoration(
+                                labelText: l10n.dealTracking),
                             maxLength: 100,
                           ),
                         ]),
@@ -524,10 +565,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                            const SizedBox(height: 8),
                            TextFormField(
                              controller: _ticketUrlCtrl,
-                             decoration: const InputDecoration(
-                               labelText: 'Ticket-URL (optional)',
-                               hintText: 'Link aus Discord einfügen…',
-                               prefixIcon: Icon(Icons.link, size: 18),
+                             decoration: InputDecoration(
+                               labelText: l10n.dealTicketUrl,
+                               hintText: l10n.dealTicketUrlHint,
+                               prefixIcon: const Icon(Icons.link, size: 18),
                              ),
                              keyboardType: TextInputType.url,
                            ),
@@ -543,7 +584,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                           ),
                           const SizedBox(height: 20),
                         ],
-                        _sectionLabel('Anhänge'),
+                        _sectionLabel(l10n.dealSectionAttachments),
                         const SizedBox(height: 10),
                         AttachmentGallery(
                           paths: _attachmentPaths,
@@ -555,16 +596,22 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                               setState(() => _attachmentPaths = next),
                         ),
                         const SizedBox(height: 20),
-                        _sectionLabel('Notiz'),
+                        _sectionLabel(l10n.dealNote),
                         const SizedBox(height: 10),
                         TextFormField(
                           controller: _noteCtrl,
-                          decoration:
-                              const InputDecoration(labelText: 'Notiz'),
+                          decoration: InputDecoration(
+                              labelText: l10n.dealNote),
                           maxLines: 2,
                           maxLength: Validators.maxNote,
                           validator: Validators.validateNote,
                         ),
+                        if (widget.deal != null) ...[
+                          const SizedBox(height: 20),
+                          _sectionLabel(l10n.dealComments),
+                          const SizedBox(height: 10),
+                          DealCommentsSection(dealId: widget.deal!.id),
+                        ],
                       ],
                     );
                   }),
@@ -584,7 +631,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Abbrechen'),
+                    child: Text(l10n.actionCancel),
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton.icon(
@@ -597,7 +644,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                 strokeWidth: 2, color: Colors.white),
                           )
                         : const Icon(Icons.check, size: 16),
-                    label: Text(_saving ? 'Speichert…' : 'Speichern'),
+                    label: Text(
+                        _saving ? l10n.actionSaving : l10n.actionSave),
                   ),
                 ],
               ),
@@ -734,6 +782,8 @@ class _ProfitPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
     final price = double.tryParse(priceText.replaceAll(',', '.'));
     final vk = double.tryParse(vkText.replaceAll(',', '.'));
     final quantity = int.tryParse(quantityText) ?? 1;
@@ -744,7 +794,7 @@ class _ProfitPreview extends StatelessWidget {
             : price;
     final profit = vk != null && ekBrutto != null ? vk - ekBrutto : null;
     final total = profit != null ? profit * quantity : null;
-    final fmt = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+    final fmt = NumberFormat.currency(locale: localeTag, symbol: '€');
 
     return Container(
       width: double.infinity,
@@ -756,13 +806,15 @@ class _ProfitPreview extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.calculate_outlined, size: 18, color: Color(0xFF64748B)),
+          const Icon(Icons.calculate_outlined,
+              size: 18, color: Color(0xFF64748B)),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               profit == null
-                  ? 'Profit-Vorschau: EK und VK eintragen'
-                  : 'Profit/Stück ${fmt.format(profit)} · Gesamt ${fmt.format(total)}',
+                  ? l10n.dealProfitPreviewMissing
+                  : l10n.dealProfitPreviewLine(
+                      fmt.format(profit), fmt.format(total)),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -805,6 +857,7 @@ class _DiscordServerButtons extends StatelessWidget {
         for (int i = 0; i < serverIds.length; i++)
           Builder(
             builder: (ctx) {
+              final l10n = AppLocalizations.of(ctx);
               final serverId = serverIds[i];
               final resolved = resolveDiscordUrl(ticketUrl, serverIds: [serverId]);
               final hasChannel = resolved.contains('discord.com/channels/');
@@ -822,8 +875,8 @@ class _DiscordServerButtons extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.discord, size: 14),
                 label: Text(hasChannel
-                    ? 'Ticket in Discord öffnen'
-                    : 'Server ${i + 1} in Discord öffnen'),
+                    ? l10n.dealDiscordTicketOpen
+                    : l10n.dealDiscordServerOpen(i + 1)),
               );
             },
           ),
@@ -840,10 +893,10 @@ class _DiscordServerButtons extends StatelessWidget {
               children: [
                 const Icon(Icons.info_outline, size: 12, color: Color(0xFF0369A1)),
                 const SizedBox(width: 5),
-                const Flexible(
+                Flexible(
                   child: Text(
-                    'Kanal finden → Rechtsklick → „Link kopieren" → hier einfügen',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF0369A1)),
+                    AppLocalizations.of(context).dealDiscordChannelHint,
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF0369A1)),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 2,
                   ),
@@ -852,6 +905,130 @@ class _DiscordServerButtons extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Produkt-Eingabefeld mit Vorschlägen aus vergangenen Deals.
+///
+/// Zeigt für jedes vorgeschlagene Produkt den jüngsten Deal mit den
+/// häufigsten Begleitwerten (Shop, EK, Käufer) — Tippen übernimmt diesen Deal
+/// als Vorlage via [onPickPast]. Bleibt der Text frei eingegeben, wird nur
+/// das Produktfeld gesetzt.
+class _ProductAutocomplete extends StatelessWidget {
+  final TextEditingController controller;
+  final List<Deal> pastDeals;
+  final ValueChanged<Deal> onPickPast;
+
+  const _ProductAutocomplete({
+    required this.controller,
+    required this.pastDeals,
+    required this.onPickPast,
+  });
+
+  /// Pro eindeutigem Produktnamen den jüngsten Deal — sortiert nach Datum
+  /// absteigend, damit die letzte Konfiguration als Vorschlag oben steht.
+  List<Deal> _latestPerProduct() {
+    final byName = <String, Deal>{};
+    for (final d in pastDeals) {
+      final key = d.product.trim().toLowerCase();
+      if (key.isEmpty) continue;
+      final existing = byName[key];
+      if (existing == null || d.orderDate.isAfter(existing.orderDate)) {
+        byName[key] = d;
+      }
+    }
+    final list = byName.values.toList()
+      ..sort((a, b) => b.orderDate.compareTo(a.orderDate));
+    return list;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final latest = _latestPerProduct();
+    return Autocomplete<Deal>(
+      displayStringForOption: (d) => d.product,
+      optionsBuilder: (value) {
+        final q = value.text.trim().toLowerCase();
+        if (q.isEmpty) return latest.take(8);
+        return latest
+            .where((d) => d.product.toLowerCase().contains(q))
+            .take(8);
+      },
+      onSelected: (deal) {
+        controller.text = deal.product;
+        onPickPast(deal);
+      },
+      fieldViewBuilder: (ctx, textCtrl, focusNode, onSubmit) {
+        // Halte den extern gepflegten Controller mit dem Autocomplete-Feld in
+        // sync — wir wollen den Wert von außen lesen können (im _save-Flow).
+        if (textCtrl.text != controller.text) {
+          textCtrl.text = controller.text;
+          textCtrl.selection =
+              TextSelection.collapsed(offset: textCtrl.text.length);
+        }
+        textCtrl.addListener(() {
+          if (controller.text != textCtrl.text) {
+            controller.text = textCtrl.text;
+          }
+        });
+        return TextFormField(
+          controller: textCtrl,
+          focusNode: focusNode,
+          onFieldSubmitted: (_) => onSubmit(),
+          decoration: InputDecoration(
+              labelText: '${AppLocalizations.of(ctx).dealProduct} *'),
+          maxLength: Validators.maxProductName,
+          validator: Validators.validateProductName,
+        );
+      },
+      optionsViewBuilder: (ctx, onSelected, options) {
+        final list = options.toList();
+        final localeTag = Localizations.localeOf(ctx).toLanguageTag();
+        final money = NumberFormat.currency(locale: localeTag, symbol: '€');
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280, maxWidth: 480),
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: list.length,
+                separatorBuilder: (_, _) =>
+                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                itemBuilder: (_, i) {
+                  final d = list[i];
+                  final ek = d.ekBrutto ?? d.ekNetto;
+                  final summary = [
+                    d.shop,
+                    if (ek != null) 'EK ${money.format(ek)}',
+                    if (d.vk != null) 'VK ${money.format(d.vk)}',
+                    if (d.buyer != null) d.buyer,
+                  ].join(' · ');
+                  return ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.history,
+                        size: 18, color: Color(0xFF64748B)),
+                    title: Text(d.product,
+                        style:
+                            const TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      summary,
+                      style: const TextStyle(
+                          fontSize: 11, color: Color(0xFF64748B)),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () => onSelected(d),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/supplier.dart';
 import '../providers/inventory_provider.dart';
 import '../widgets/add_edit_supplier_dialog.dart';
@@ -13,23 +14,22 @@ class SuppliersScreen extends StatelessWidget {
     InventoryProvider provider,
     Supplier supplier,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Lieferant löschen?'),
-        content: Text(
-            '"${supplier.name}" wird in den Papierkorb verschoben. Du kannst '
-            'ihn später wiederherstellen.'),
+        title: Text(l10n.suppliersDeleteTitle),
+        content: Text(l10n.suppliersDeletePrompt(supplier.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Abbrechen'),
+            child: Text(l10n.actionCancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFC0392B)),
-            child: const Text('Löschen'),
+            child: Text(l10n.actionDelete),
           ),
         ],
       ),
@@ -41,6 +41,7 @@ class SuppliersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final suppliers = provider.suppliers;
@@ -51,7 +52,7 @@ class SuppliersScreen extends StatelessWidget {
               builder: (_) => const AddEditSupplierDialog(),
             ),
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('Neuer Lieferant'),
+            label: Text(l10n.suppliersNew),
           ),
           body: suppliers.isEmpty
               ? const _EmptyState()
@@ -98,10 +99,10 @@ class SuppliersScreen extends StatelessWidget {
                                       fontSize: 12,
                                       color: Color(0xFF64748B))),
                             if (!s.active)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 4),
-                                child: Text('Inaktiv',
-                                    style: TextStyle(
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(l10n.suppliersInactive,
+                                    style: const TextStyle(
                                         fontSize: 11,
                                         color: Color(0xFFC0392B),
                                         fontWeight: FontWeight.w600)),
@@ -113,7 +114,7 @@ class SuppliersScreen extends StatelessWidget {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.edit_outlined, size: 20),
-                              tooltip: 'Bearbeiten',
+                              tooltip: l10n.actionEdit,
                               onPressed: () => showDialog(
                                 context: context,
                                 builder: (_) =>
@@ -125,7 +126,7 @@ class SuppliersScreen extends StatelessWidget {
                                   Icons.delete_outline,
                                   size: 20,
                                   color: Color(0xFFC0392B)),
-                              tooltip: 'Löschen',
+                              tooltip: l10n.actionDelete,
                               onPressed: () =>
                                   _confirmDelete(context, provider, s),
                             ),
@@ -146,6 +147,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -153,14 +155,14 @@ class _EmptyState extends StatelessWidget {
           const Icon(Icons.local_shipping_outlined,
               size: 48, color: Color(0xFF94A3B8)),
           const SizedBox(height: 12),
-          const Text(
-            'Noch keine Lieferanten angelegt',
-            style: TextStyle(fontWeight: FontWeight.w600),
+          Text(
+            l10n.suppliersEmpty,
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Über den + Button kannst du den ersten Lieferanten hinzufügen.',
-            style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+          Text(
+            l10n.suppliersEmptyHint,
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
           ),
         ],
       ),

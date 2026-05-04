@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
@@ -22,7 +23,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     setState(() => _busy = false);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(error ?? 'Bestätigungsmail wurde erneut gesendet.'),
+        content: Text(error ?? AppLocalizations.of(context).verifyResend),
         behavior: SnackBarBehavior.floating,
         backgroundColor: error != null ? const Color(0xFFC0392B) : null,
         margin: const EdgeInsets.all(16),
@@ -32,8 +33,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('E-Mail bestätigen')),
+      appBar: AppBar(title: Text(l10n.verifyTitle)),
       backgroundColor: const Color(0xFFF1F5F9),
       body: Center(
         child: SingleChildScrollView(
@@ -55,18 +57,20 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     const Icon(Icons.mark_email_unread_outlined,
                         size: 56, color: Color(0xFF2563EB)),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Bitte bestätige deine E-Mail',
+                    Text(
+                      l10n.verifySubtitle,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w800),
+                      style: const TextStyle(
+                          fontSize: 14, color: Color(0xFF64748B)),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Wir haben einen Bestätigungslink an\n${widget.email}\ngesendet. Klicke auf den Link in der Mail, um dein Konto zu aktivieren.',
+                      widget.email,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                          fontSize: 13, color: Color(0xFF64748B)),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A)),
                     ),
                     const SizedBox(height: 20),
                     OutlinedButton.icon(
@@ -80,7 +84,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                             )
                           : const Icon(Icons.send_outlined, size: 18),
                       label: Text(
-                          _busy ? 'Sende…' : 'Bestätigungsmail erneut senden'),
+                          _busy ? l10n.actionLoading : l10n.verifyResend),
                       style: OutlinedButton.styleFrom(
                         padding:
                             const EdgeInsets.symmetric(vertical: 14),
@@ -89,7 +93,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     const SizedBox(height: 8),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Zurück zum Login'),
+                      child: Text(l10n.forgotBackToLogin),
                     ),
                   ],
                 ),

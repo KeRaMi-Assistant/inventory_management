@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/activity_entry.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
+import '../models/deal_comment.dart';
 import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
 import '../models/shop.dart';
@@ -42,10 +43,34 @@ class CloudSnapshot {
 /// Single point of contact with the Supabase backend. All RLS-scoped tables
 /// expose typed CRUD methods returning domain models so the rest of the app
 /// stays unaware of `supabase_flutter`.
+///
+/// Daten sind seit Migration `20260504000500_data_workspace_scope` per
+/// Workspace gescoped. Vor jedem Load/Insert muss [setActiveWorkspace] mit
+/// der ID des aktiven Workspaces aufgerufen worden sein. RLS würde die
+/// Inserts ohnehin auf Mitgliedschaft prüfen, der explizite eq()-Filter
+/// hier ist Performance-Optimierung + macht den Scope explizit.
 class SupabaseRepository {
   SupabaseRepository(this._client);
 
   final SupabaseClient _client;
+
+  String? _workspaceId;
+
+  /// Setzt den aktiven Workspace, an den Inserts/Loads gehen. `null` deaktiviert
+  /// alle Operationen (loadAll liefert leeren Snapshot, Inserts werfen).
+  void setActiveWorkspace(String? workspaceId) {
+    _workspaceId = workspaceId;
+  }
+
+  String get _wsId {
+    final id = _workspaceId;
+    if (id == null) {
+      throw StateError(
+          'SupabaseRepository: kein aktiver Workspace gesetzt. '
+          'Vor Datenoperationen setActiveWorkspace(...) aufrufen.');
+    }
+    return id;
+  }
 
   String get _userId {
     final id = _client.auth.currentUser?.id;
@@ -58,36 +83,58 @@ class SupabaseRepository {
   // ── Bulk load ─────────────────────────────────────────────────────────────
 
   Future<CloudSnapshot> loadAll() async {
+    final ws = _workspaceId;
+    if (ws == null) {
+      return const CloudSnapshot(
+        deals: [],
+        buyers: [],
+        shops: [],
+        suppliers: [],
+        inventoryItems: [],
+        movements: [],
+        activities: [],
+      );
+    }
     final results = await Future.wait([
       _client
           .from('deals')
           .select()
+          .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
           .order('id', ascending: true),
       _client
           .from('buyers')
           .select()
+          .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
           .order('sort_order', ascending: true),
       _client
           .from('shops')
           .select()
+          .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
           .order('name', ascending: true),
       _client
           .from('suppliers')
           .select()
+          .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
           .order('name', ascending: true),
       _client
           .from('inventory_items')
           .select()
+          .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
           .order('created_at', ascending: true),
-      _client.from('inventory_movements').select().order('date', ascending: false),
+      _client
+          .from('inventory_movements')
+          .select()
+          .eq('workspace_id', ws)
+          .order('date', ascending: false),
       _client
           .from('activity_log')
           .select()
+          .eq('workspace_id', ws)
           .order('date', ascending: false)
           .limit(50),
     ]);
@@ -133,7 +180,9 @@ class SupabaseRepository {
   // ── Deals ─────────────────────────────────────────────────────────────────
 
   Future<Deal> insertDeal(Deal deal) async {
-    final payload = deal.toSupabaseInsert()..['user_id'] = _userId;
+    final payload = deal.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
     final row = await _client
         .from('deals')
         .insert(payload)
@@ -144,8 +193,11 @@ class SupabaseRepository {
 
   Future<List<Deal>> insertDeals(List<Deal> deals) async {
     if (deals.isEmpty) return const [];
+    final ws = _wsId;
     final payload = deals
-        .map((d) => d.toSupabaseInsert()..['user_id'] = _userId)
+        .map((d) => d.toSupabaseInsert()
+          ..['user_id'] = _userId
+          ..['workspace_id'] = ws)
         .toList();
     final rows = await _client.from('deals').insert(payload).select();
     return (rows as List)
@@ -223,7 +275,9 @@ class SupabaseRepository {
   // ── Buyers ────────────────────────────────────────────────────────────────
 
   Future<Buyer> insertBuyer(Buyer buyer) async {
-    final payload = buyer.toSupabaseInsert()..['user_id'] = _userId;
+    final payload = buyer.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
     final row = await _client
         .from('buyers')
         .insert(payload)
@@ -253,7 +307,9 @@ class SupabaseRepository {
   // ── Shops ─────────────────────────────────────────────────────────────────
 
   Future<Shop> insertShop(Shop shop) async {
-    final payload = shop.toSupabaseInsert()..['user_id'] = _userId;
+    final payload = shop.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
     final row = await _client
         .from('shops')
         .insert(payload)
@@ -283,7 +339,9 @@ class SupabaseRepository {
   // ── Suppliers ─────────────────────────────────────────────────────────────
 
   Future<Supplier> insertSupplier(Supplier supplier) async {
-    final payload = supplier.toSupabaseInsert()..['user_id'] = _userId;
+    final payload = supplier.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
     final row = await _client
         .from('suppliers')
         .insert(payload)
@@ -313,7 +371,9 @@ class SupabaseRepository {
   // ── Inventory items ───────────────────────────────────────────────────────
 
   Future<InventoryItem> insertInventoryItem(InventoryItem item) async {
-    final payload = item.toSupabaseInsert()..['user_id'] = _userId;
+    final payload = item.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
     final row = await _client
         .from('inventory_items')
         .insert(payload)
@@ -343,7 +403,9 @@ class SupabaseRepository {
   // ── Inventory movements ───────────────────────────────────────────────────
 
   Future<InventoryMovement> insertMovement(InventoryMovement movement) async {
-    final payload = movement.toSupabaseInsert()..['user_id'] = _userId;
+    final payload = movement.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
     final row = await _client
         .from('inventory_movements')
         .insert(payload)
@@ -368,9 +430,12 @@ class SupabaseRepository {
   }
 
   Future<List<InventoryBatch>> loadAllBatches() async {
+    final ws = _workspaceId;
+    if (ws == null) return const [];
     final rows = await _client
         .from('inventory_batches')
         .select()
+        .eq('workspace_id', ws)
         .filter('deleted_at', 'is', null)
         .order('mhd', ascending: true);
     return (rows as List)
@@ -380,7 +445,9 @@ class SupabaseRepository {
   }
 
   Future<InventoryBatch> insertBatch(InventoryBatch batch) async {
-    final payload = batch.toSupabaseInsert()..['user_id'] = _userId;
+    final payload = batch.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
     final row = await _client
         .from('inventory_batches')
         .insert(payload)
@@ -410,13 +477,49 @@ class SupabaseRepository {
   // ── Activity log ──────────────────────────────────────────────────────────
 
   Future<ActivityEntry> insertActivity(ActivityEntry entry) async {
-    final payload = entry.toSupabaseInsert()..['user_id'] = _userId;
+    final payload = entry.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
     final row = await _client
         .from('activity_log')
         .insert(payload)
         .select()
         .single();
     return ActivityEntry.fromSupabase(row);
+  }
+
+  // ── Deal comments ────────────────────────────────────────────────────────
+
+  Future<List<DealComment>> loadCommentsForDeal(int dealId) async {
+    final rows = await _client
+        .from('deal_comments')
+        .select()
+        .eq('deal_id', dealId)
+        .filter('deleted_at', 'is', null)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(DealComment.fromSupabase)
+        .toList();
+  }
+
+  Future<DealComment> insertComment(DealComment comment) async {
+    final payload = comment.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('deal_comments')
+        .insert(payload)
+        .select()
+        .single();
+    return DealComment.fromSupabase(row);
+  }
+
+  Future<void> deleteComment(String id) async {
+    await _client
+        .from('deal_comments')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
   }
 
   Future<void> trimActivityLog({int keep = 50}) async {
@@ -433,93 +536,4 @@ class SupabaseRepository {
     await _client.from('activity_log').delete().inFilter('id', ids);
   }
 
-  // ── Bulk wipe (used before restoring a JSON backup) ───────────────────────
-
-  Future<void> deleteAllForCurrentUser() async {
-    final uid = _userId;
-    await _client.from('inventory_batches').delete().eq('user_id', uid);
-    await _client.from('inventory_movements').delete().eq('user_id', uid);
-    await _client.from('inventory_items').delete().eq('user_id', uid);
-    await _client.from('activity_log').delete().eq('user_id', uid);
-    await _client.from('deals').delete().eq('user_id', uid);
-    await _client.from('buyers').delete().eq('user_id', uid);
-    await _client.from('shops').delete().eq('user_id', uid);
-    await _client.from('suppliers').delete().eq('user_id', uid);
-  }
-
-  // ── Bulk import (used by JSON restore + legacy migration) ─────────────────
-
-  Future<CloudSnapshot> bulkImport({
-    required List<Buyer> buyers,
-    required List<Shop> shops,
-    required List<Supplier> suppliers,
-    required List<Deal> deals,
-    required List<InventoryItem> items,
-    required List<InventoryMovement> movements,
-    required List<ActivityEntry> activities,
-  }) async {
-    final uid = _userId;
-    final dealIdMap = <int, int>{};
-
-    if (buyers.isNotEmpty) {
-      await _client.from('buyers').insert(
-        buyers.map((b) => b.toSupabaseInsert()..['user_id'] = uid).toList(),
-      );
-    }
-    if (shops.isNotEmpty) {
-      await _client.from('shops').insert(
-        shops.map((s) => s.toSupabaseInsert()..['user_id'] = uid).toList(),
-      );
-    }
-    if (suppliers.isNotEmpty) {
-      await _client.from('suppliers').insert(
-        suppliers
-            .map((s) => s.toSupabaseInsert()..['user_id'] = uid)
-            .toList(),
-      );
-    }
-
-    if (deals.isNotEmpty) {
-      for (final deal in deals) {
-        final payload = deal.toSupabaseInsert()..['user_id'] = uid;
-        final row = await _client
-            .from('deals')
-            .insert(payload)
-            .select('id')
-            .single();
-        dealIdMap[deal.id] = (row['id'] as num).toInt();
-      }
-    }
-
-    if (items.isNotEmpty) {
-      final payload = items.map((item) {
-        final mappedDealId =
-            item.dealId != null ? dealIdMap[item.dealId!] : null;
-        return (item.toSupabaseInsert()
-          ..['user_id'] = uid
-          ..['deal_id'] = mappedDealId);
-      }).toList();
-      await _client.from('inventory_items').insert(payload);
-    }
-
-    if (movements.isNotEmpty) {
-      final payload = movements.map((m) {
-        final mappedDealId = m.dealId != null ? dealIdMap[m.dealId!] : null;
-        return (m.toSupabaseInsert()
-          ..['user_id'] = uid
-          ..['deal_id'] = mappedDealId);
-      }).toList();
-      await _client.from('inventory_movements').insert(payload);
-    }
-
-    if (activities.isNotEmpty) {
-      await _client.from('activity_log').insert(
-            activities
-                .map((a) => a.toSupabaseInsert()..['user_id'] = uid)
-                .toList(),
-          );
-    }
-
-    return loadAll();
-  }
 }

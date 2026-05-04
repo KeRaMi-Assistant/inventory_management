@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/ticket_summary.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../widgets/add_edit_deal_dialog.dart';
 
@@ -37,7 +39,8 @@ class _TicketsScreenState extends State<TicketsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final money = NumberFormat.currency(locale: localeTag, symbol: '€');
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final tickets = _filtered(provider.ticketSummaries);
@@ -82,7 +85,10 @@ class _TicketsScreenState extends State<TicketsScreen> {
                       ),
                       Expanded(
                         child: tickets.isEmpty
-                            ? const Center(child: Text('Keine Tickets gefunden.'))
+                            ? Center(
+                                child: Text(AppLocalizations.of(context)
+                                    .ticketsEmpty),
+                              )
                             : ListView.separated(
                                 padding: const EdgeInsets.all(12),
                                 itemCount: tickets.length,
@@ -104,7 +110,10 @@ class _TicketsScreenState extends State<TicketsScreen> {
                 const VerticalDivider(width: 1),
                 Expanded(
                   child: selected == null
-                      ? const Center(child: Text('Ticket auswählen'))
+                      ? Center(
+                          child: Text(AppLocalizations.of(context)
+                              .ticketsSelect),
+                        )
                       : _TicketDetail(ticket: selected, money: money),
                 ),
               ],
@@ -190,13 +199,14 @@ class _TicketsMobileLayoutState extends State<_TicketsMobileLayout>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       children: [
         TabBar(
           controller: _tab,
-          tabs: const [
-            Tab(text: 'Tickets'),
-            Tab(text: 'Detail'),
+          tabs: [
+            Tab(text: l10n.ticketsTabList),
+            Tab(text: l10n.ticketsTabDetail),
           ],
         ),
         Expanded(
@@ -219,7 +229,7 @@ class _TicketsMobileLayoutState extends State<_TicketsMobileLayout>
                   ),
                   Expanded(
                     child: widget.tickets.isEmpty
-                        ? const Center(child: Text('Keine Tickets gefunden.'))
+                        ? Center(child: Text(l10n.ticketsEmpty))
                         : ListView.separated(
                             padding: const EdgeInsets.all(12),
                             itemCount: widget.tickets.length,
@@ -242,7 +252,7 @@ class _TicketsMobileLayoutState extends State<_TicketsMobileLayout>
               ),
               // ── Tab 1: detail ────────────────────────────────────────────
               widget.selected == null
-                  ? const Center(child: Text('Ticket auswählen'))
+                  ? Center(child: Text(l10n.ticketsSelect))
                   : _TicketDetail(ticket: widget.selected!, money: widget.money),
             ],
           ),
@@ -277,6 +287,7 @@ class _TicketFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Material(
       color: Colors.white,
       child: Padding(
@@ -284,24 +295,49 @@ class _TicketFilters extends StatelessWidget {
         child: Column(
           children: [
             TextField(
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search, size: 18), hintText: 'Ticket suchen'),
+              decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search, size: 18),
+                  hintText: l10n.ticketsSearchHintShort),
               onChanged: onSearch,
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(child: _dd('Käufer', buyer, provider.buyers.map((b) => b.name), onBuyer)),
+                Expanded(
+                    child: _dd(
+                        context,
+                        l10n.dealBuyer,
+                        buyer,
+                        provider.buyers.map((b) => b.name).toList(),
+                        provider.buyers.map((b) => b.name).toList(),
+                        onBuyer)),
                 const SizedBox(width: 8),
-                Expanded(child: _dd('Status', status, InventoryProvider.statusOptions, onStatus)),
+                Expanded(
+                    child: _dd(
+                        context,
+                        l10n.dealStatus,
+                        status,
+                        InventoryProvider.statusOptions,
+                        InventoryProvider.statusOptions
+                            .map((s) => localizeDealStatus(context, s))
+                            .toList(),
+                        onStatus)),
               ],
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               initialValue: sort,
-              decoration: const InputDecoration(labelText: 'Sortierung'),
-              items: ['Datum', 'Profit', 'Anzahl Deals']
-                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                  .toList(),
+              decoration:
+                  InputDecoration(labelText: l10n.ticketsSortLabel),
+              items: [
+                DropdownMenuItem(
+                    value: 'Datum', child: Text(l10n.ticketsSortDate)),
+                DropdownMenuItem(
+                    value: 'Profit', child: Text(l10n.ticketsSortProfit)),
+                DropdownMenuItem(
+                    value: 'Anzahl Deals',
+                    child: Text(l10n.ticketsSortDealCount)),
+              ],
               onChanged: onSort,
             ),
           ],
@@ -310,14 +346,17 @@ class _TicketFilters extends StatelessWidget {
     );
   }
 
-  Widget _dd(String label, String? value, Iterable<String> values, ValueChanged<String?> onChanged) {
+  Widget _dd(BuildContext context, String label, String? value,
+      List<String> values, List<String> labels, ValueChanged<String?> onChanged) {
+    final l10n = AppLocalizations.of(context);
     return DropdownButtonFormField<String>(
       isExpanded: true,
       initialValue: value,
       decoration: InputDecoration(labelText: label),
       items: [
-        const DropdownMenuItem(value: null, child: Text('Alle')),
-        ...values.map((v) => DropdownMenuItem(value: v, child: Text(v))),
+        DropdownMenuItem(value: null, child: Text(l10n.commonAll)),
+        for (int i = 0; i < values.length; i++)
+          DropdownMenuItem(value: values[i], child: Text(labels[i])),
       ],
       onChanged: onChanged,
     );
@@ -359,7 +398,7 @@ class _TicketCard extends StatelessWidget {
                 ),
                 if (ticket.url != null)
                   IconButton(
-                    tooltip: 'Ticket öffnen',
+                    tooltip: AppLocalizations.of(context).ticketsOpenTooltip,
                     icon: const Icon(Icons.open_in_new, size: 16),
                     onPressed: () {
                       final prov = context.read<InventoryProvider>();
@@ -375,9 +414,15 @@ class _TicketCard extends StatelessWidget {
               spacing: 6,
               runSpacing: 6,
               children: [
-                _badge(ticket.buyer ?? 'Kein Käufer', const Color(0xFF64748B)),
-                _badge('${ticket.totalQuantity} Produkte · ${ticket.dealCount} Deals', const Color(0xFF2563EB)),
-                _badge(ticket.worstStatus, status),
+                _badge(
+                    ticket.buyer ??
+                        AppLocalizations.of(context).ticketsNoBuyer,
+                    const Color(0xFF64748B)),
+                _badge(
+                    '${ticket.totalQuantity} · ${ticket.dealCount}',
+                    const Color(0xFF2563EB)),
+                _badge(localizeDealStatus(context, ticket.worstStatus),
+                    status),
                 _badge(ticket.arrivalSummary, const Color(0xFF0D9488)),
               ],
             ),
@@ -425,7 +470,9 @@ class _TicketDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = DateFormat('dd.MM.yyyy');
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final date = DateFormat.yMd(localeTag);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         return SingleChildScrollView(
@@ -440,7 +487,7 @@ class _TicketDetail extends StatelessWidget {
                   ),
                   if (ticket.url != null)
                     IconButton(
-                      tooltip: 'Ticket öffnen',
+                      tooltip: l10n.ticketsOpenTooltip,
                       onPressed: () {
                         final buyer = provider.buyers.where((b) => b.name == ticket.buyer).firstOrNull;
                         final serverIds = buyer?.discordServerIds ?? [];
@@ -452,7 +499,7 @@ class _TicketDetail extends StatelessWidget {
                     OutlinedButton.icon(
                       onPressed: () => _editTicket(context, provider, ticket),
                       icon: const Icon(Icons.edit_outlined, size: 16),
-                      label: const Text('Bearbeiten'),
+                      label: Text(l10n.actionEdit),
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -463,12 +510,13 @@ class _TicketDetail extends StatelessWidget {
                       builder: (_) => AddEditDealDialog(initialTicketNumber: ticket.hasTicket ? ticket.ticketNumber : null),
                     ),
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Deal hinzufügen'),
+                    label: Text(l10n.ticketsAddDealTooltip),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(ticket.buyer ?? 'Kein Käufer zugeordnet', style: const TextStyle(color: Color(0xFF64748B))),
+              Text(ticket.buyer ?? l10n.ticketsNoBuyerAssigned,
+                  style: const TextStyle(color: Color(0xFF64748B))),
               const SizedBox(height: 16),
               Card(
                 child: SingleChildScrollView(
@@ -477,16 +525,16 @@ class _TicketDetail extends StatelessWidget {
                     headingRowHeight: 38,
                     dataRowMinHeight: 44,
                     dataRowMaxHeight: 48,
-                    columns: const [
-                      DataColumn(label: Text('Produkt')),
-                      DataColumn(label: Text('Anzahl')),
-                      DataColumn(label: Text('EK')),
-                      DataColumn(label: Text('VK')),
-                      DataColumn(label: Text('Profit')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Ankunft')),
-                      DataColumn(label: Text('Tracking')),
-                      DataColumn(label: Text('')),
+                    columns: [
+                      DataColumn(label: Text(l10n.ticketsColProduct)),
+                      DataColumn(label: Text(l10n.ticketsColQuantity)),
+                      const DataColumn(label: Text('EK')),
+                      const DataColumn(label: Text('VK')),
+                      DataColumn(label: Text(l10n.ticketsBoxProfit)),
+                      DataColumn(label: Text(l10n.dealStatus)),
+                      DataColumn(label: Text(l10n.dealColArrival)),
+                      DataColumn(label: Text(l10n.ticketsColTracking)),
+                      const DataColumn(label: Text('')),
                     ],
                     rows: ticket.deals.map((deal) {
                       return DataRow(cells: [
@@ -500,7 +548,10 @@ class _TicketDetail extends StatelessWidget {
                             value: deal.status,
                             underline: const SizedBox.shrink(),
                             items: InventoryProvider.statusOptions
-                                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                                .map((s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(localizeDealStatus(
+                                        context, s))))
                                 .toList(),
                             onChanged: (v) {
                               if (v != null) provider.updateDeal(deal.copyWith(status: v));
@@ -511,7 +562,7 @@ class _TicketDetail extends StatelessWidget {
                         DataCell(Text(deal.tracking ?? '-')),
                         DataCell(
                           IconButton(
-                            tooltip: 'Deal bearbeiten',
+                            tooltip: l10n.dealEdit,
                             icon: const Icon(Icons.edit_outlined, size: 18),
                             onPressed: () => showDialog(
                               context: context,
@@ -534,16 +585,22 @@ class _TicketDetail extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Zugehörige Lagerartikel', style: TextStyle(fontWeight: FontWeight.w800)),
+                      Text(l10n.ticketsRelatedItems,
+                          style:
+                              const TextStyle(fontWeight: FontWeight.w800)),
                       const SizedBox(height: 8),
                       if (ticket.items.isEmpty)
-                        const Text('Keine Lagerartikel verknüpft.', style: TextStyle(color: Color(0xFF94A3B8)))
+                        Text(l10n.dealCommentEmpty,
+                            style:
+                                const TextStyle(color: Color(0xFF94A3B8)))
                       else
                         ...ticket.items.map((item) => ListTile(
                               contentPadding: EdgeInsets.zero,
                               title: Text(item.name),
-                              subtitle: Text('${item.quantity} Stück · ${item.location ?? "Kein Lagerort"}'),
-                              trailing: Text(item.status),
+                              subtitle: Text(
+                                  '${item.quantity} · ${item.location ?? l10n.inventoryNoLocation}'),
+                              trailing: Text(localizeInventoryStatus(
+                                  context, item.status)),
                             )),
                     ],
                   ),
@@ -580,7 +637,7 @@ class _TicketDetail extends StatelessWidget {
                     color: Color(0xFF2563EB), size: 20),
               ),
               const SizedBox(width: 12),
-              const Text('Ticket bearbeiten'),
+              Text(AppLocalizations.of(context).ticketsEditTitle),
             ],
           ),
           content: ConstrainedBox(
@@ -589,46 +646,42 @@ class _TicketDetail extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Änderungen werden auf alle ${ticket.deals.length} Deals dieses Tickets angewendet.',
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFF64748B)),
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 TextField(
                   controller: numberCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Ticketnummer',
-                    prefixIcon:
-                        Icon(Icons.confirmation_number_outlined, size: 18),
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).ticketsTicketNumber,
+                    prefixIcon: const Icon(
+                        Icons.confirmation_number_outlined, size: 18),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: urlCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Discord-Ticket Link',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).dealTicketUrl,
                     hintText: 'https://discord.com/...',
-                    prefixIcon: Icon(Icons.link, size: 18),
+                    prefixIcon: const Icon(Icons.link, size: 18),
                   ),
                   keyboardType: TextInputType.url,
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String?>(
                   initialValue: bulkStatus,
-                  decoration: const InputDecoration(
-                    labelText: 'Status für alle Deals (optional)',
-                    prefixIcon: Icon(Icons.flag_outlined, size: 18),
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).dealStatus,
+                    prefixIcon: const Icon(Icons.flag_outlined, size: 18),
                   ),
                   items: [
-                    const DropdownMenuItem<String?>(
+                    DropdownMenuItem<String?>(
                       value: null,
-                      child: Text('— Status nicht ändern —'),
+                      child:
+                          Text(AppLocalizations.of(context).commonAll),
                     ),
                     ...InventoryProvider.statusOptions.map(
                       (s) => DropdownMenuItem<String?>(
                         value: s,
-                        child: Text(s),
+                        child: Text(localizeDealStatus(context, s)),
                       ),
                     ),
                   ],
@@ -640,7 +693,7 @@ class _TicketDetail extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Abbrechen'),
+              child: Text(AppLocalizations.of(context).actionCancel),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(
@@ -651,7 +704,7 @@ class _TicketDetail extends StatelessWidget {
                   status: bulkStatus,
                 ),
               ),
-              child: const Text('Speichern'),
+              child: Text(AppLocalizations.of(context).actionSave),
             ),
           ],
         ),
@@ -663,6 +716,7 @@ class _TicketDetail extends StatelessWidget {
 
     final ids = ticket.deals.map((d) => d.id);
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
     try {
       await provider.updateDealsTicket(
         ids,
@@ -677,14 +731,11 @@ class _TicketDetail extends StatelessWidget {
         await provider.updateDealsStatus(ids, result.status!);
       }
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Ticket aktualisiert.')),
-      );
+      messenger.showSnackBar(SnackBar(
+          content: Text('${l10n.actionSave} · ${ticket.ticketNumber}')));
     } catch (e) {
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Fehler: $e')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorPrefix('$e'))));
     }
   }
 }
@@ -707,15 +758,17 @@ class _Totals extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Row(
       children: [
-        _box('EK gesamt', money.format(ticket.totalEk)),
+        _box(l10n.ticketsBoxEkTotal, money.format(ticket.totalEk)),
         const SizedBox(width: 10),
-        _box('VK gesamt', money.format(ticket.totalVk)),
+        _box(l10n.ticketsBoxVkTotal, money.format(ticket.totalVk)),
         const SizedBox(width: 10),
-        _box('Profit', money.format(ticket.totalProfit), good: ticket.totalProfit >= 0),
+        _box(l10n.ticketsBoxProfit, money.format(ticket.totalProfit),
+            good: ticket.totalProfit >= 0),
         const SizedBox(width: 10),
-        _box('Stückzahl', '${ticket.totalQuantity}'),
+        _box(l10n.ticketsBoxQuantity, '${ticket.totalQuantity}'),
       ],
     );
   }

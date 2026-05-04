@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../app_theme.dart';
+import '../l10n/app_localizations.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../models/inventory_item.dart';
@@ -176,30 +177,31 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
         .take(_maxPerGroup)
         .toList();
 
+    final l10n = AppLocalizations.of(context);
     return [
       if (dealHits.isNotEmpty)
         _ResultGroup(
-          'Deals',
+          l10n.navDeals,
           [for (final d in dealHits) _resultForDeal(d)],
         ),
       if (itemHits.isNotEmpty)
         _ResultGroup(
-          'Lager',
+          l10n.navInventory,
           [for (final i in itemHits) _resultForItem(i)],
         ),
       if (ticketHits.isNotEmpty)
         _ResultGroup(
-          'Tickets',
+          l10n.navTickets,
           [for (final t in ticketHits) _resultForTicket(t)],
         ),
       if (buyerHits.isNotEmpty)
         _ResultGroup(
-          'Käufer',
+          l10n.dealBuyer,
           [for (final b in buyerHits) _resultForBuyer(b)],
         ),
       if (supplierHits.isNotEmpty)
         _ResultGroup(
-          'Lieferanten',
+          l10n.navSuppliers,
           [for (final s in supplierHits) _resultForSupplier(s)],
         ),
     ];
@@ -544,22 +546,23 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       color: AppTheme.bgSubtle,
-      child: const Row(
+      child: Row(
         children: [
-          _Kbd('↑↓'),
-          SizedBox(width: 6),
-          Text('Navigieren', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
-          SizedBox(width: 14),
-          _Kbd('↵'),
-          SizedBox(width: 6),
-          Text('Öffnen', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
-          SizedBox(width: 14),
-          _Kbd('esc'),
-          SizedBox(width: 6),
-          Text('Schließen', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          const _Kbd('↑↓'),
+          const SizedBox(width: 6),
+          Text(l10n.globalSearchKeyNav, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          const SizedBox(width: 14),
+          const _Kbd('↵'),
+          const SizedBox(width: 6),
+          Text(l10n.globalSearchKeyOpen, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          const SizedBox(width: 14),
+          const _Kbd('esc'),
+          const SizedBox(width: 6),
+          Text(l10n.globalSearchKeyClose, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
         ],
       ),
     );

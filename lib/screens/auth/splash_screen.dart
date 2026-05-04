@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key, this.message});
 
@@ -7,6 +9,7 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       body: Center(
@@ -30,7 +33,7 @@ class SplashScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              message ?? 'Lade Daten…',
+              message ?? l10n.splashSyncing,
               style: const TextStyle(color: Color(0xFF64748B)),
             ),
           ],

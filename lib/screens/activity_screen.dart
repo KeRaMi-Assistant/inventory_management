@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../app_theme.dart';
+import '../l10n/app_localizations.dart';
 import '../models/activity_entry.dart';
 import '../providers/inventory_provider.dart';
 
@@ -18,22 +19,40 @@ class _ActivityScreenState extends State<ActivityScreen> {
   final Set<String> _activeTypes = {};
   String _query = '';
 
-  static const _typeMeta = <String, ({IconData icon, Color color, String label})>{
-    'deal':     (icon: Icons.list_alt_rounded,         color: AppTheme.accent,    label: 'Deal'),
-    'status':   (icon: Icons.flag_rounded,             color: AppTheme.info,      label: 'Status'),
-    'stock':    (icon: Icons.inventory_2_rounded,      color: AppTheme.success,   label: 'Lager'),
-    'supplier': (icon: Icons.local_shipping_rounded,   color: AppTheme.warning,   label: 'Lieferant'),
-    'batch':    (icon: Icons.layers_rounded,           color: AppTheme.warning,   label: 'Charge'),
-    'bulk':     (icon: Icons.dynamic_feed_rounded,     color: AppTheme.accentDark,label: 'Bulk'),
-    'import':   (icon: Icons.upload_file_rounded,      color: AppTheme.accentDark,label: 'Import'),
-    'info':     (icon: Icons.info_outline_rounded,     color: AppTheme.textMuted, label: 'Info'),
+  static const _typeMeta = <String, ({IconData icon, Color color})>{
+    'deal':     (icon: Icons.list_alt_rounded,         color: AppTheme.accent),
+    'status':   (icon: Icons.flag_rounded,             color: AppTheme.info),
+    'stock':    (icon: Icons.inventory_2_rounded,      color: AppTheme.success),
+    'supplier': (icon: Icons.local_shipping_rounded,   color: AppTheme.warning),
+    'batch':    (icon: Icons.layers_rounded,           color: AppTheme.warning),
+    'bulk':     (icon: Icons.dynamic_feed_rounded,     color: AppTheme.accentDark),
+    'import':   (icon: Icons.upload_file_rounded,      color: AppTheme.accentDark),
+    'comment':  (icon: Icons.chat_bubble_outline,      color: AppTheme.info),
+    'info':     (icon: Icons.info_outline_rounded,     color: AppTheme.textMuted),
   };
 
-  ({IconData icon, Color color, String label}) _metaFor(String type) =>
-      _typeMeta[type] ?? _typeMeta['info']!;
+  String _typeLabel(AppLocalizations l10n, String type) => switch (type) {
+        'deal' => l10n.activityTypeDeal,
+        'status' => l10n.activityTypeStatus,
+        'stock' => l10n.activityTypeStock,
+        'supplier' => l10n.activityTypeSupplier,
+        'batch' => l10n.activityTypeBatch,
+        'bulk' => l10n.activityTypeBulk,
+        'import' => l10n.activityTypeImport,
+        'comment' => l10n.activityTypeComment,
+        _ => l10n.activityTypeInfo,
+      };
+
+  ({IconData icon, Color color, String label}) _metaFor(
+      AppLocalizations l10n, String type) {
+    final meta = _typeMeta[type] ?? _typeMeta['info']!;
+    return (icon: meta.icon, color: meta.color, label: _typeLabel(l10n, type));
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    metaFor(String type) => _metaFor(l10n, type);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final all = provider.activities;
@@ -49,7 +68,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               query: _query,
               activeTypes: _activeTypes,
               availableTypes: all.map((a) => a.type).toSet(),
-              metaFor: _metaFor,
+              metaFor: metaFor,
               onQueryChanged: (v) => setState(() => _query = v),
               onTypeToggled: (t) => setState(() {
                 if (!_activeTypes.add(t)) _activeTypes.remove(t);
@@ -63,7 +82,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   ? _Empty(hasActivities: all.isNotEmpty)
                   : _ActivityList(
                       entries: filtered,
-                      metaFor: _metaFor,
+                      metaFor: metaFor,
                     ),
             ),
           ],
@@ -95,6 +114,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final showFiltered = total != filtered;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -115,7 +135,7 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Aktivitätsverlauf',
+                  l10n.activityHeading,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -125,8 +145,8 @@ class _Header extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   showFiltered
-                      ? '$filtered von $total Einträgen'
-                      : '$total Einträge (max. 50)',
+                      ? l10n.activityCountFiltered(filtered, total)
+                      : l10n.activityCountTotal(total),
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppTheme.textMuted,
@@ -164,8 +184,10 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final ordered = [
-      'deal', 'status', 'stock', 'supplier', 'batch', 'bulk', 'import', 'info',
+      'deal', 'status', 'stock', 'supplier', 'batch', 'bulk', 'import',
+      'comment', 'info',
     ].where(availableTypes.contains).toList();
 
     return Padding(
@@ -173,9 +195,9 @@ class _FilterBar extends StatelessWidget {
       child: Column(
         children: [
           TextField(
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search, size: 18),
-              hintText: 'Aktivitäten durchsuchen…',
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search, size: 18),
+              hintText: l10n.activitySearchHint,
               isDense: true,
             ),
             onChanged: onQueryChanged,
@@ -200,7 +222,7 @@ class _FilterBar extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onClearTypes,
                     icon: const Icon(Icons.close, size: 14),
-                    label: const Text('Filter zurücksetzen'),
+                    label: Text(l10n.activityFilterReset),
                     style: TextButton.styleFrom(
                       foregroundColor: AppTheme.textMuted,
                       textStyle: const TextStyle(fontSize: 12),
@@ -276,7 +298,14 @@ class _ActivityList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final groups = _groupByDay(entries);
+    final l10n = AppLocalizations.of(context);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final groups = _groupByDay(
+      entries,
+      todayLabel: l10n.activityToday,
+      yesterdayLabel: l10n.activityYesterday,
+      localeTag: localeTag,
+    );
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -307,14 +336,17 @@ class _ActivityList extends StatelessWidget {
   }
 
   List<({String label, List<ActivityEntry> entries})> _groupByDay(
-      List<ActivityEntry> all) {
+      List<ActivityEntry> all,
+      {required String todayLabel,
+      required String yesterdayLabel,
+      required String localeTag}) {
     final byDay = <String, List<ActivityEntry>>{};
     final order = <String>[];
     final today = DateTime.now();
     final todayKey = DateFormat('yyyy-MM-dd').format(today);
     final yesterdayKey =
         DateFormat('yyyy-MM-dd').format(today.subtract(const Duration(days: 1)));
-    final fmt = DateFormat('EEEE, d. MMMM yyyy', 'de_DE');
+    final fmt = DateFormat.yMMMMEEEEd(localeTag);
 
     for (final entry in all) {
       final key = DateFormat('yyyy-MM-dd').format(entry.date);
@@ -329,8 +361,8 @@ class _ActivityList extends StatelessWidget {
       for (final key in order)
         (
           label: switch (key) {
-            _ when key == todayKey => 'HEUTE',
-            _ when key == yesterdayKey => 'GESTERN',
+            _ when key == todayKey => todayLabel,
+            _ when key == yesterdayKey => yesterdayLabel,
             _ => fmt.format(byDay[key]!.first.date).toUpperCase(),
           },
           entries: byDay[key]!,
@@ -428,6 +460,7 @@ class _Empty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -441,7 +474,9 @@ class _Empty extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            hasActivities ? 'Keine Treffer.' : 'Noch keine Aktivitäten.',
+            hasActivities
+                ? l10n.activityNoMatches
+                : l10n.activityNoActivitiesYet,
             style: const TextStyle(
               fontWeight: FontWeight.w600,
               color: AppTheme.textSecondary,
@@ -450,8 +485,8 @@ class _Empty extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             hasActivities
-                ? 'Filter anpassen oder zurücksetzen.'
-                : 'Aktionen wie Deal-Anlage erscheinen hier automatisch.',
+                ? l10n.activityAdjustFilters
+                : l10n.activityAutoAppears,
             style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
           ),
         ],

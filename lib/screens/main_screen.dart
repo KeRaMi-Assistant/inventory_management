@@ -3,14 +3,18 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
+import '../l10n/app_localizations.dart';
+import '../providers/active_workspace_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/csv_service.dart';
 import '../widgets/add_edit_deal_dialog.dart';
 import '../widgets/global_search_dialog.dart';
+import '../widgets/invites_bell.dart';
 import 'activity_screen.dart';
 import 'dashboard_screen.dart';
 import 'deals_screen.dart';
+import 'help_screen.dart';
 import 'inventory_screen.dart';
 import 'settings_screen.dart';
 import 'statistics_screen.dart';
@@ -28,18 +32,32 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   String? _selectedTicket;
 
-  static const _navItems = [
-    (Icons.dashboard_outlined, Icons.dashboard_rounded, 'Dashboard'),
-    (Icons.list_alt_outlined, Icons.list_alt_rounded, 'Deals'),
-    (Icons.confirmation_number_outlined, Icons.confirmation_number_rounded, 'Tickets'),
-    (Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Lager'),
-    (Icons.local_shipping_outlined, Icons.local_shipping, 'Lieferanten'),
-    (Icons.bar_chart_outlined, Icons.bar_chart_rounded, 'Statistiken'),
-    (Icons.history_outlined, Icons.history_rounded, 'Aktivität'),
-    (Icons.settings_outlined, Icons.settings_rounded, 'Einstellungen'),
+  static const _navIcons = [
+    (Icons.dashboard_outlined, Icons.dashboard_rounded),
+    (Icons.list_alt_outlined, Icons.list_alt_rounded),
+    (Icons.confirmation_number_outlined, Icons.confirmation_number_rounded),
+    (Icons.inventory_2_outlined, Icons.inventory_2_rounded),
+    (Icons.local_shipping_outlined, Icons.local_shipping),
+    (Icons.bar_chart_outlined, Icons.bar_chart_rounded),
+    (Icons.history_outlined, Icons.history_rounded),
+    (Icons.help_outline_rounded, Icons.help_rounded),
+    (Icons.settings_outlined, Icons.settings_rounded),
   ];
 
+  List<String> _navLabels(AppLocalizations l10n) => [
+        l10n.navDashboard,
+        l10n.navDeals,
+        l10n.navTickets,
+        l10n.navInventory,
+        l10n.navSuppliers,
+        l10n.navStatistics,
+        l10n.navActivity,
+        l10n.navHelp,
+        l10n.navSettings,
+      ];
+
   Future<void> _export(BuildContext context, InventoryProvider provider) async {
+    final l10n = AppLocalizations.of(context);
     final (path, err) = await CsvService.exportAll(
       List.from(provider.deals),
       List.from(provider.shops),
@@ -49,24 +67,26 @@ class _MainScreenState extends State<MainScreen> {
     );
     if (!context.mounted) return;
     if (err != null) {
-      _showSnack(context, 'Fehler: $err', isError: true);
+      _showSnack(context, l10n.errorPrefix(err), isError: true);
     } else if (path != null) {
-      _showSnack(context, 'Exportiert: $path');
+      _showSnack(context, l10n.csvExportSuccess(path));
     }
   }
 
   Future<void> _import(BuildContext context, InventoryProvider provider) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('CSV importieren'),
-        content: const Text(
-          'Deals werden hinzugefügt. Shops, Käufer und Lagerbestand werden nur '
-          'importiert, wenn noch kein Eintrag mit demselben Namen existiert.',
-        ),
+        title: Text(l10n.csvImportConfirmTitle),
+        content: Text(l10n.csvImportConfirmText),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Datei auswählen')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l10n.actionCancel)),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l10n.csvImportPickFile)),
         ],
       ),
     );
@@ -74,13 +94,14 @@ class _MainScreenState extends State<MainScreen> {
     final (result, err) = await CsvService.importAll(provider.nextDealId);
     if (!context.mounted) return;
     if (err != null) {
-      _showSnack(context, 'Fehler: $err', isError: true);
+      _showSnack(context, l10n.errorPrefix(err), isError: true);
     } else if (result != null) {
       final (deals, shops, buyers, suppliers, items) =
           await provider.importCsvAll(result);
       if (context.mounted) {
-        _showSnack(context,
-            '$deals Deals, $shops Shops, $buyers Käufer, $suppliers Lieferanten, $items Lagerartikel importiert.');
+        _showSnack(
+            context,
+            l10n.csvImportSummary(deals, shops, buyers, suppliers, items));
       }
     }
   }
@@ -125,12 +146,15 @@ class _MainScreenState extends State<MainScreen> {
       4 => const SuppliersScreen(),
       5 => const StatisticsScreen(),
       6 => const ActivityScreen(),
+      7 => const HelpScreen(embedded: true),
       _ => const SettingsScreen(embedded: true),
     };
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final labels = _navLabels(l10n);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final width = MediaQuery.of(context).size.width;
@@ -144,21 +168,23 @@ class _MainScreenState extends State<MainScreen> {
                   context: context,
                   barrierDismissible: false,
                   builder: (_) => AddEditDealDialog(
-                    initialTicketNumber: _selectedIndex == 2 ? _selectedTicket : null,
+                    initialTicketNumber:
+                        _selectedIndex == 2 ? _selectedTicket : null,
                   ),
                 ),
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text('Neuer Deal'),
+                label: Text(l10n.dealNew),
               )
             : null;
 
         final scaffold = narrow
             ? Scaffold(
                 appBar: AppBar(
-                  title: Text(_navItems[_selectedIndex].$3),
+                  title: Text(labels[_selectedIndex]),
                   actions: [
+                    const InvitesBell(),
                     IconButton(
-                      tooltip: 'Suchen',
+                      tooltip: l10n.actionSearch,
                       icon: const Icon(Icons.search),
                       onPressed: _openSearch,
                     ),
@@ -169,7 +195,8 @@ class _MainScreenState extends State<MainScreen> {
                   child: SafeArea(
                     child: _MobileNavList(
                       selectedIndex: _selectedIndex,
-                      items: _navItems,
+                      icons: _navIcons,
+                      labels: labels,
                       onSelect: _select,
                     ),
                   ),
@@ -183,7 +210,8 @@ class _MainScreenState extends State<MainScreen> {
                   children: [
                     _Sidebar(
                       selectedIndex: _selectedIndex,
-                      items: _navItems,
+                      icons: _navIcons,
+                      labels: labels,
                       extended: extended,
                       onSelect: _select,
                     ),
@@ -192,7 +220,7 @@ class _MainScreenState extends State<MainScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _ContentHeader(
-                            title: _navItems[_selectedIndex].$3,
+                            title: labels[_selectedIndex],
                             provider: provider,
                             onImport: () => _import(context, provider),
                             onExport: () => _export(context, provider),
@@ -224,19 +252,22 @@ class _MainScreenState extends State<MainScreen> {
 
 class _Sidebar extends StatelessWidget {
   final int selectedIndex;
-  final List<(IconData, IconData, String)> items;
+  final List<(IconData, IconData)> icons;
+  final List<String> labels;
   final bool extended;
   final ValueChanged<int> onSelect;
 
   const _Sidebar({
     required this.selectedIndex,
-    required this.items,
+    required this.icons,
+    required this.labels,
     required this.extended,
     required this.onSelect,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final width = extended ? 220.0 : 64.0;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -252,11 +283,12 @@ class _Sidebar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  const Icon(Icons.inventory_2_rounded, color: Colors.white, size: 18),
+                  const Icon(Icons.inventory_2_rounded,
+                      color: Colors.white, size: 18),
                   if (extended) ...[
                     const SizedBox(width: 10),
                     Text(
-                      'InventoryOS',
+                      l10n.appTitle,
                       style: GoogleFonts.inter(
                         color: Colors.white,
                         fontSize: 14,
@@ -275,11 +307,11 @@ class _Sidebar extends StatelessWidget {
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.zero,
-              itemCount: items.length,
+              itemCount: icons.length,
               itemBuilder: (context, i) => _NavItem(
-                icon: items[i].$1,
-                activeIcon: items[i].$2,
-                label: items[i].$3,
+                icon: icons[i].$1,
+                activeIcon: icons[i].$2,
+                label: labels[i],
                 isSelected: selectedIndex == i,
                 extended: extended,
                 onTap: () => onSelect(i),
@@ -343,7 +375,8 @@ class _NavItemState extends State<_NavItem> {
               color: bgColor,
               border: Border(
                 left: BorderSide(
-                  color: widget.isSelected ? AppTheme.accent : Colors.transparent,
+                  color:
+                      widget.isSelected ? AppTheme.accent : Colors.transparent,
                   width: 3,
                 ),
               ),
@@ -367,7 +400,9 @@ class _NavItemState extends State<_NavItem> {
                       style: TextStyle(
                         color: labelColor,
                         fontSize: 13,
-                        fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight: widget.isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w400,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -400,6 +435,7 @@ class _ContentHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       height: 56,
       decoration: const BoxDecoration(
@@ -421,17 +457,21 @@ class _ContentHeader extends StatelessWidget {
           _SearchHint(onTap: onSearch),
           const SizedBox(width: 8),
           IconButton(
-            tooltip: 'CSV importieren',
-            icon: const Icon(Icons.upload_file_outlined, size: 18, color: AppTheme.textMuted),
+            tooltip: l10n.headerImportCsv,
+            icon: const Icon(Icons.upload_file_outlined,
+                size: 18, color: AppTheme.textMuted),
             onPressed: onImport,
           ),
           const SizedBox(width: 4),
           IconButton(
-            tooltip: 'CSV exportieren',
-            icon: const Icon(Icons.download_outlined, size: 18, color: AppTheme.textMuted),
+            tooltip: l10n.headerExportCsv,
+            icon: const Icon(Icons.download_outlined,
+                size: 18, color: AppTheme.textMuted),
             onPressed: onExport,
           ),
           const SizedBox(width: 8),
+          const InvitesBell(),
+          const SizedBox(width: 4),
           const _AccountMenu(),
           const SizedBox(width: 4),
         ],
@@ -446,10 +486,11 @@ class _SearchHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isMac = Theme.of(context).platform == TargetPlatform.macOS ||
         Theme.of(context).platform == TargetPlatform.iOS;
     return Tooltip(
-      message: 'Globale Suche',
+      message: l10n.actionSearch,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(7),
@@ -465,9 +506,10 @@ class _SearchHint extends StatelessWidget {
             children: [
               const Icon(Icons.search, size: 14, color: AppTheme.textMuted),
               const SizedBox(width: 6),
-              const Text(
-                'Suchen',
-                style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              Text(
+                l10n.actionSearch,
+                style:
+                    const TextStyle(fontSize: 12, color: AppTheme.textMuted),
               ),
               const SizedBox(width: 10),
               Container(
@@ -503,12 +545,14 @@ class _AccountMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final auth = context.watch<AuthProvider>();
-    final email = auth.userEmail ?? 'Unbekannt';
+    final workspaces = context.watch<ActiveWorkspaceProvider>();
+    final email = auth.userEmail ?? l10n.commonUnknown;
     final initial = email.isNotEmpty ? email[0].toUpperCase() : '?';
 
     return PopupMenuButton<String>(
-      tooltip: 'Konto',
+      tooltip: email,
       offset: const Offset(0, 40),
       icon: CircleAvatar(
         radius: 14,
@@ -528,58 +572,112 @@ class _AccountMenu extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Angemeldet als',
-                  style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+              Text(l10n.accountMenuSignedInAs,
+                  style: const TextStyle(
+                      fontSize: 11, color: AppTheme.textMuted)),
               const SizedBox(height: 2),
               Text(email,
                   style: const TextStyle(
-                      fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary)),
             ],
           ),
         ),
+        if (workspaces.workspaces.isNotEmpty) ...[
+          const PopupMenuDivider(),
+          PopupMenuItem<String>(
+            enabled: false,
+            child: Text(
+              l10n.accountMenuActiveWorkspace,
+              style: const TextStyle(
+                  fontSize: 11, color: AppTheme.textMuted),
+            ),
+          ),
+          for (final ws in workspaces.workspaces)
+            PopupMenuItem<String>(
+              value: 'ws:${ws.id}',
+              child: Row(
+                children: [
+                  Icon(
+                    workspaces.active?.id == ws.id
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    size: 16,
+                    color: workspaces.active?.id == ws.id
+                        ? AppTheme.accent
+                        : AppTheme.textMuted,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      ws.displayLabel(auth.currentUser?.id),
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: workspaces.active?.id == ws.id
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
         const PopupMenuDivider(),
-        const PopupMenuItem<String>(
+        PopupMenuItem<String>(
           value: 'logout',
           child: Row(
             children: [
-              Icon(Icons.logout, size: 16, color: AppTheme.danger),
-              SizedBox(width: 10),
-              Text('Abmelden'),
+              const Icon(Icons.logout, size: 16, color: AppTheme.danger),
+              const SizedBox(width: 10),
+              Text(l10n.accountMenuSignOut),
             ],
           ),
         ),
         const PopupMenuDivider(),
-        const PopupMenuItem<String>(
+        PopupMenuItem<String>(
           value: 'delete',
           child: Row(
             children: [
-              Icon(Icons.delete_forever_outlined, size: 16, color: Color(0xFFC0392B)),
-              SizedBox(width: 10),
-              Text('Konto löschen',
-                  style: TextStyle(color: Color(0xFFC0392B))),
+              const Icon(Icons.delete_forever_outlined,
+                  size: 16, color: Color(0xFFC0392B)),
+              const SizedBox(width: 10),
+              Text(l10n.accountMenuDeleteAccount,
+                  style: const TextStyle(color: Color(0xFFC0392B))),
             ],
           ),
         ),
       ],
       onSelected: (value) async {
         final auth = context.read<AuthProvider>();
+        final activeWs = context.read<ActiveWorkspaceProvider>();
+        final l10n = AppLocalizations.of(context);
+        if (value.startsWith('ws:')) {
+          final id = value.substring(3);
+          final ws =
+              activeWs.workspaces.where((w) => w.id == id).firstOrNull;
+          final uid = auth.currentUser?.id;
+          if (ws != null && uid != null) {
+            await activeWs.setActive(ws, uid);
+          }
+          return;
+        }
         if (value == 'logout') {
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
-              title: const Text('Wirklich abmelden?'),
-              content: const Text(
-                  'Du wirst zurück zum Login geleitet. Nicht synchronisierte Eingaben gehen verloren.'),
+              title: Text(l10n.logoutConfirmTitle),
+              content: Text(l10n.logoutConfirmText),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Abbrechen'),
+                  child: Text(l10n.actionCancel),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.danger),
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Abmelden'),
+                  child: Text(l10n.accountMenuSignOut),
                 ),
               ],
             ),
@@ -593,28 +691,26 @@ class _AccountMenu extends StatelessWidget {
             context: context,
             builder: (ctx) => StatefulBuilder(
               builder: (ctx, setS) => AlertDialog(
-                title: const Text('Konto endgültig löschen?'),
+                title: Text(l10n.deleteAccountTitle),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Dein Konto und alle deine Daten werden unwiderruflich gelöscht. '
-                      'Diese Aktion kann nicht rückgängig gemacht werden.',
-                    ),
+                    Text(l10n.deleteAccountText),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Tippe LÖSCHEN zur Bestätigung:',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    Text(
+                      l10n.deleteAccountConfirmInstruction,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: confirmCtrl,
                       autofocus: true,
                       onChanged: (_) => setS(() {}),
-                      decoration: const InputDecoration(
-                        hintText: 'LÖSCHEN',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        hintText: l10n.deleteAccountConfirmKeyword,
+                        border: const OutlineInputBorder(),
                         isDense: true,
                       ),
                     ),
@@ -623,15 +719,16 @@ class _AccountMenu extends StatelessWidget {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Abbrechen'),
+                    child: Text(l10n.actionCancel),
                   ),
                   ElevatedButton(
-                    onPressed: confirmCtrl.text.trim() == 'LÖSCHEN'
+                    onPressed: confirmCtrl.text.trim() ==
+                            l10n.deleteAccountConfirmKeyword
                         ? () => Navigator.pop(ctx, true)
                         : null,
                     style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFC0392B)),
-                    child: const Text('Konto löschen'),
+                    child: Text(l10n.accountMenuDeleteAccount),
                   ),
                 ],
               ),
@@ -660,19 +757,22 @@ class _AccountMenu extends StatelessWidget {
 
 class _MobileNavList extends StatelessWidget {
   final int selectedIndex;
-  final List<(IconData, IconData, String)> items;
+  final List<(IconData, IconData)> icons;
+  final List<String> labels;
   final ValueChanged<int> onSelect;
 
   const _MobileNavList({
     required this.selectedIndex,
-    required this.items,
+    required this.icons,
+    required this.labels,
     required this.onSelect,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final auth = context.watch<AuthProvider>();
-    final email = auth.userEmail ?? 'Unbekannt';
+    final email = auth.userEmail ?? l10n.commonUnknown;
     final initial = email.isNotEmpty ? email[0].toUpperCase() : '?';
 
     return Column(
@@ -682,10 +782,11 @@ class _MobileNavList extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
           child: Row(
             children: [
-              const Icon(Icons.inventory_2_rounded, color: Colors.white, size: 18),
+              const Icon(Icons.inventory_2_rounded,
+                  color: Colors.white, size: 18),
               const SizedBox(width: 10),
               Text(
-                'InventoryOS',
+                l10n.appTitle,
                 style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 15,
@@ -701,11 +802,11 @@ class _MobileNavList extends StatelessWidget {
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              for (int i = 0; i < items.length; i++)
+              for (int i = 0; i < icons.length; i++)
                 _NavItem(
-                  icon: items[i].$1,
-                  activeIcon: items[i].$2,
-                  label: items[i].$3,
+                  icon: icons[i].$1,
+                  activeIcon: icons[i].$2,
+                  label: labels[i],
                   isSelected: selectedIndex == i,
                   extended: true,
                   onTap: () => onSelect(i),
@@ -736,9 +837,9 @@ class _MobileNavList extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Angemeldet als',
-                      style: TextStyle(
+                    Text(
+                      l10n.accountMenuSignedInAs,
+                      style: const TextStyle(
                           fontSize: 10, color: Color(0xFF94A3B8)),
                     ),
                     Text(
@@ -758,12 +859,12 @@ class _MobileNavList extends StatelessWidget {
         ),
         _DrawerActionTile(
           icon: Icons.logout,
-          label: 'Abmelden',
+          label: l10n.accountMenuSignOut,
           onTap: () => _confirmLogout(context),
         ),
         _DrawerActionTile(
           icon: Icons.delete_forever_outlined,
-          label: 'Konto löschen',
+          label: l10n.accountMenuDeleteAccount,
           danger: true,
           onTap: () => _confirmDelete(context),
         ),
@@ -773,23 +874,21 @@ class _MobileNavList extends StatelessWidget {
   }
 
   Future<void> _confirmLogout(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Wirklich abmelden?'),
-        content: const Text(
-          'Du wirst zurück zum Login geleitet. Nicht synchronisierte '
-          'Eingaben gehen verloren.',
-        ),
+        title: Text(l10n.logoutConfirmTitle),
+        content: Text(l10n.logoutConfirmText),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Abbrechen'),
+            child: Text(l10n.actionCancel),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Abmelden'),
+            child: Text(l10n.accountMenuSignOut),
           ),
         ],
       ),
@@ -800,33 +899,32 @@ class _MobileNavList extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final confirmCtrl = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
-          title: const Text('Konto endgültig löschen?'),
+          title: Text(l10n.deleteAccountTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Dein Konto und alle deine Daten werden unwiderruflich '
-                'gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.',
-              ),
+              Text(l10n.deleteAccountText),
               const SizedBox(height: 16),
-              const Text(
-                'Tippe LÖSCHEN zur Bestätigung:',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              Text(
+                l10n.deleteAccountConfirmInstruction,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 13),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: confirmCtrl,
                 autofocus: true,
                 onChanged: (_) => setS(() {}),
-                decoration: const InputDecoration(
-                  hintText: 'LÖSCHEN',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: l10n.deleteAccountConfirmKeyword,
+                  border: const OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
@@ -835,15 +933,16 @@ class _MobileNavList extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Abbrechen'),
+              child: Text(l10n.actionCancel),
             ),
             ElevatedButton(
-              onPressed: confirmCtrl.text.trim() == 'LÖSCHEN'
+              onPressed: confirmCtrl.text.trim() ==
+                      l10n.deleteAccountConfirmKeyword
                   ? () => Navigator.pop(ctx, true)
                   : null,
               style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFC0392B)),
-              child: const Text('Konto löschen'),
+              child: Text(l10n.accountMenuDeleteAccount),
             ),
           ],
         ),
@@ -902,4 +1001,3 @@ class _DrawerActionTile extends StatelessWidget {
     );
   }
 }
-

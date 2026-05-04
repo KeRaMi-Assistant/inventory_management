@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
 import '../../widgets/password_strength_indicator.dart';
 
-/// Wird angezeigt, wenn Supabase einen `passwordRecovery`-Auth-Event sendet
-/// (Klick auf den Reset-Link in der E-Mail). Setzt das neue Passwort über
-/// `AuthProvider.updatePassword`.
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
 
@@ -32,6 +30,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _busy) return;
     setState(() => _busy = true);
+    final l10n = AppLocalizations.of(context);
     final auth = context.read<AuthProvider>();
     final error = await auth.updatePassword(_passwordCtrl.text);
     if (!mounted) return;
@@ -48,10 +47,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Passwort erfolgreich geändert.'),
+      SnackBar(
+        content: Text(l10n.resetSuccess),
         behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.all(16),
+        margin: const EdgeInsets.all(16),
       ),
     );
     Navigator.of(context).pop();
@@ -59,8 +58,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Neues Passwort')),
+      appBar: AppBar(title: Text(l10n.resetTitle)),
       backgroundColor: const Color(0xFFF1F5F9),
       body: Center(
         child: SingleChildScrollView(
@@ -81,11 +81,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Lege ein neues Passwort fest.',
+                      Text(
+                        l10n.resetSubtitle,
                         textAlign: TextAlign.center,
-                        style:
-                            TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                        style: const TextStyle(
+                            fontSize: 13, color: Color(0xFF64748B)),
                       ),
                       const SizedBox(height: 18),
                       TextFormField(
@@ -95,11 +95,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         autofocus: true,
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
-                          labelText: 'Neues Passwort',
+                          labelText: l10n.fieldNewPassword,
                           prefixIcon:
                               const Icon(Icons.lock_outline, size: 18),
-                          helperText:
-                              '8+ Zeichen, Groß/Klein, Zahl, Sonderzeichen',
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscure
@@ -120,13 +118,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         obscureText: _obscure,
                         autofillHints: const [AutofillHints.newPassword],
                         onFieldSubmitted: (_) => _submit(),
-                        decoration: const InputDecoration(
-                          labelText: 'Passwort bestätigen',
-                          prefixIcon: Icon(Icons.lock_outline, size: 18),
+                        decoration: InputDecoration(
+                          labelText: l10n.fieldConfirmPassword,
+                          prefixIcon:
+                              const Icon(Icons.lock_outline, size: 18),
                         ),
                         validator: (v) {
                           if (v != _passwordCtrl.text) {
-                            return 'Passwörter stimmen nicht überein';
+                            return l10n.resetMismatch;
                           }
                           return null;
                         },
@@ -147,7 +146,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                               )
                             : const Icon(Icons.check, size: 18),
                         label: Text(
-                            _busy ? 'Speichere…' : 'Passwort speichern'),
+                            _busy ? l10n.actionSaving : l10n.resetSubmit),
                       ),
                     ],
                   ),
