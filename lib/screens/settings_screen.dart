@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_preferences_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../services/push_service.dart';
 import '../widgets/add_edit_buyer_dialog.dart';
 import '../widgets/add_edit_shop_dialog.dart';
 
@@ -17,13 +18,14 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tabs = DefaultTabController(
-      length: 5,
+      length: 6,
       child: Column(
         children: [
           if (!embedded)
             AppBar(
               title: const Text('Einstellungen'),
               bottom: const TabBar(
+                isScrollable: true,
                 indicatorColor: Colors.white,
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white60,
@@ -31,6 +33,7 @@ class SettingsScreen extends StatelessWidget {
                   Tab(icon: Icon(Icons.people_outline, size: 18), text: 'Käufer'),
                   Tab(icon: Icon(Icons.store_outlined, size: 18), text: 'Shops'),
                   Tab(icon: Icon(Icons.discord, size: 18), text: 'Discord'),
+                  Tab(icon: Icon(Icons.notifications_outlined, size: 18), text: 'Push'),
                   Tab(icon: Icon(Icons.import_export, size: 18), text: 'Export/Import'),
                   Tab(icon: Icon(Icons.tune, size: 18), text: 'Allgemein'),
                 ],
@@ -40,6 +43,7 @@ class SettingsScreen extends StatelessWidget {
             const Material(
               color: Colors.white,
               child: TabBar(
+                isScrollable: true,
                 indicatorColor: Color(0xFF2563EB),
                 labelColor: Color(0xFF2563EB),
                 unselectedLabelColor: Color(0xFF64748B),
@@ -47,6 +51,7 @@ class SettingsScreen extends StatelessWidget {
                   Tab(icon: Icon(Icons.people_outline, size: 18), text: 'Käufer'),
                   Tab(icon: Icon(Icons.store_outlined, size: 18), text: 'Shops'),
                   Tab(icon: Icon(Icons.discord, size: 18), text: 'Discord'),
+                  Tab(icon: Icon(Icons.notifications_outlined, size: 18), text: 'Push'),
                   Tab(icon: Icon(Icons.import_export, size: 18), text: 'Export/Import'),
                   Tab(icon: Icon(Icons.tune, size: 18), text: 'Allgemein'),
                 ],
@@ -58,6 +63,7 @@ class SettingsScreen extends StatelessWidget {
                 _BuyersTab(),
                 _ShopsTab(),
                 _DiscordInfoTab(),
+                _NotificationsTab(),
                 _ExportImportTab(),
                 _GeneralTab(),
               ],
@@ -1010,6 +1016,237 @@ class _SettingsCard extends StatelessWidget {
             trailing,
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Notifications Tab ─────────────────────────────────────────────────────────
+
+class _NotificationsTab extends StatefulWidget {
+  const _NotificationsTab();
+
+  @override
+  State<_NotificationsTab> createState() => _NotificationsTabState();
+}
+
+class _NotificationsTabState extends State<_NotificationsTab> {
+  NotificationPreferences _prefs = const NotificationPreferences();
+  bool _loading = true;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final svc = context.read<NotificationPreferencesService>();
+    final loaded = await svc.load();
+    if (!mounted) return;
+    setState(() {
+      _prefs = loaded;
+      _loading = false;
+    });
+  }
+
+  Future<void> _persist(NotificationPreferences next) async {
+    setState(() {
+      _prefs = next;
+      _saving = true;
+    });
+    try {
+      await context.read<NotificationPreferencesService>().save(next);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Speichern fehlgeschlagen: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final push = context.watch<PushService>();
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Container(
+      color: const Color(0xFFF1F4F8),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (!push.isAvailable)
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      color: Color(0xFFD97706), size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Firebase ist auf diesem Gerät nicht eingerichtet — Einstellungen werden gespeichert, aber Push-Nachrichten werden erst nach der Firebase-Einrichtung zugestellt.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          _Section(
+            title: 'Benachrichtigungstypen',
+            children: [
+              SwitchListTile(
+                title: const Text('MHD-Warnungen'),
+                subtitle:
+                    const Text('Charge läuft bald ab (basierend auf MHD)'),
+                value: _prefs.mhdWarningEnabled,
+                onChanged: _saving
+                    ? null
+                    : (v) =>
+                        _persist(_prefs.copyWith(mhdWarningEnabled: v)),
+              ),
+              ListTile(
+                enabled: _prefs.mhdWarningEnabled && !_saving,
+                title: const Text('MHD-Vorwarnung'),
+                subtitle: Text('${_prefs.mhdWarningDays} Tage vor Ablauf'),
+                trailing: SizedBox(
+                  width: 200,
+                  child: Slider(
+                    value: _prefs.mhdWarningDays.toDouble(),
+                    min: 1,
+                    max: 60,
+                    divisions: 59,
+                    label: '${_prefs.mhdWarningDays} Tage',
+                    onChanged: !_prefs.mhdWarningEnabled || _saving
+                        ? null
+                        : (v) {
+                            setState(() => _prefs = _prefs.copyWith(
+                                mhdWarningDays: v.round()));
+                          },
+                    onChangeEnd: !_prefs.mhdWarningEnabled || _saving
+                        ? null
+                        : (v) => _persist(_prefs.copyWith(
+                            mhdWarningDays: v.round())),
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                title: const Text('Lieferungs-Hinweise'),
+                subtitle: const Text(
+                    'Wenn ein Deal heute ankommen sollte (Status Unterwegs)'),
+                value: _prefs.deliveryEnabled,
+                onChanged: _saving
+                    ? null
+                    : (v) =>
+                        _persist(_prefs.copyWith(deliveryEnabled: v)),
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                title: const Text('Zahlungs-Erinnerungen'),
+                subtitle: Text(
+                    'Käufer hat nach ${_prefs.paymentOverdueDays} Tagen noch nicht gezahlt'),
+                value: _prefs.paymentEnabled,
+                onChanged: _saving
+                    ? null
+                    : (v) => _persist(_prefs.copyWith(paymentEnabled: v)),
+              ),
+              ListTile(
+                enabled: _prefs.paymentEnabled && !_saving,
+                title: const Text('Mahn-Schwelle'),
+                subtitle: Text('${_prefs.paymentOverdueDays} Tage'),
+                trailing: SizedBox(
+                  width: 200,
+                  child: Slider(
+                    value: _prefs.paymentOverdueDays.toDouble(),
+                    min: 1,
+                    max: 60,
+                    divisions: 59,
+                    label: '${_prefs.paymentOverdueDays} Tage',
+                    onChanged: !_prefs.paymentEnabled || _saving
+                        ? null
+                        : (v) {
+                            setState(() => _prefs = _prefs.copyWith(
+                                paymentOverdueDays: v.round()));
+                          },
+                    onChangeEnd: !_prefs.paymentEnabled || _saving
+                        ? null
+                        : (v) => _persist(_prefs.copyWith(
+                            paymentOverdueDays: v.round())),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _Section(
+            title: 'Hinweise',
+            children: [
+              const ListTile(
+                leading: Icon(Icons.schedule, size: 20, color: Color(0xFF64748B)),
+                title: Text('Tägliche Prüfung'),
+                subtitle: Text(
+                    'Server prüft täglich um 09:00 Uhr (Europe/Berlin) und versendet fällige Nachrichten.'),
+              ),
+              const ListTile(
+                leading: Icon(Icons.fingerprint, size: 20, color: Color(0xFF64748B)),
+                title: Text('Dedup'),
+                subtitle: Text(
+                    'Jede Warnung wird pro Charge/Deal nur einmal versendet — auch über mehrere Geräte hinweg.'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+  const _Section({required this.title, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE0E6EF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+            child: Text(
+              title.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF64748B),
+                letterSpacing: 0.7,
+              ),
+            ),
+          ),
+          ...children,
+          const SizedBox(height: 6),
+        ],
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../models/deal.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/url_helper.dart';
 import '../utils/validators.dart';
+import 'attachment_gallery.dart';
 
 class AddEditDealDialog extends StatefulWidget {
   final Deal? deal;
@@ -37,6 +38,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
   String _priceType = 'Netto';
   String _currency = 'EUR';
   final _taxRateCtrl = TextEditingController(text: '19');
+  List<String> _attachmentPaths = const [];
 
   bool _saving = false;
 
@@ -81,6 +83,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
         _taxRateCtrl.text = (d.taxRate! * 100).toStringAsFixed(
             d.taxRate! * 100 % 1 == 0 ? 0 : 2);
       }
+      _attachmentPaths = List.of(d.attachmentPaths);
     } else if (widget.initialTicketNumber != null) {
       _ticketCtrl.text = widget.initialTicketNumber!;
     }
@@ -197,6 +200,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       note: _noteCtrl.text.isEmpty ? null : _noteCtrl.text.trim(),
       taxRate: taxRate,
       currency: _currency,
+      attachmentPaths: _attachmentPaths,
     );
 
     try {
@@ -336,71 +340,51 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                         // ── Preise ──────────────────────────────────────
                         _sectionLabel('Preise'),
                         const SizedBox(height: 10),
-                        IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    const Text('EK Preis',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            color: Color(0xFF475569))),
-                                    const SizedBox(height: 6),
-                                    Row(children: [
-                                      _radioOption('Netto', 'Netto'),
-                                      const SizedBox(width: 12),
-                                      _radioOption('Brutto', 'Brutto'),
-                                    ]),
-                                    const SizedBox(height: 6),
-                                    TextFormField(
-                                      controller: _priceCtrl,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Betrag (€)',
-                                        prefixText: '€ ',
-                                      ),
-                                      keyboardType:
-                                          const TextInputType.numberWithOptions(
-                                              decimal: true),
-                                      validator: (v) =>
-                                          Validators.validateMoney(v),
-                                    ),
-                                  ],
+                        Row(
+                          children: [
+                            const Text('EK Preis als:',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF475569))),
+                            const SizedBox(width: 12),
+                            _radioOption('Netto', 'Netto'),
+                            const SizedBox(width: 12),
+                            _radioOption('Brutto', 'Brutto'),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _priceCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'EK-Betrag',
+                                  prefixText: '€ ',
                                 ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                validator: (v) => Validators.validateMoney(v),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    const Text('VK (Verkaufspreis)',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            color: Color(0xFF475569))),
-                                    const SizedBox(height: 6),
-                                    TextFormField(
-                                      controller: _vkCtrl,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Betrag (€)',
-                                        prefixText: '€ ',
-                                      ),
-                                      keyboardType:
-                                          const TextInputType.numberWithOptions(
-                                              decimal: true),
-                                      validator: (v) =>
-                                          Validators.validateMoney(v),
-                                    ),
-                                  ],
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _vkCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'VK-Betrag',
+                                  prefixText: '€ ',
                                 ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                validator: (v) => Validators.validateMoney(v),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         Row(
@@ -559,6 +543,18 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                           ),
                           const SizedBox(height: 20),
                         ],
+                        _sectionLabel('Anhänge'),
+                        const SizedBox(height: 10),
+                        AttachmentGallery(
+                          paths: _attachmentPaths,
+                          entityKind: 'deal',
+                          entityId: widget.deal != null
+                              ? widget.deal!.id.toString()
+                              : '',
+                          onChanged: (next) =>
+                              setState(() => _attachmentPaths = next),
+                        ),
+                        const SizedBox(height: 20),
                         _sectionLabel('Notiz'),
                         const SizedBox(height: 10),
                         TextFormField(

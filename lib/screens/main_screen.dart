@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
@@ -6,6 +7,8 @@ import '../providers/auth_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/csv_service.dart';
 import '../widgets/add_edit_deal_dialog.dart';
+import '../widgets/global_search_dialog.dart';
+import 'activity_screen.dart';
 import 'dashboard_screen.dart';
 import 'deals_screen.dart';
 import 'inventory_screen.dart';
@@ -32,6 +35,7 @@ class _MainScreenState extends State<MainScreen> {
     (Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Lager'),
     (Icons.local_shipping_outlined, Icons.local_shipping, 'Lieferanten'),
     (Icons.bar_chart_outlined, Icons.bar_chart_rounded, 'Statistiken'),
+    (Icons.history_outlined, Icons.history_rounded, 'Aktivität'),
     (Icons.settings_outlined, Icons.settings_rounded, 'Einstellungen'),
   ];
 
@@ -41,6 +45,7 @@ class _MainScreenState extends State<MainScreen> {
       List.from(provider.shops),
       List.from(provider.buyers),
       List.from(provider.inventoryItems),
+      suppliers: List.from(provider.suppliers),
     );
     if (!context.mounted) return;
     if (err != null) {
@@ -71,9 +76,11 @@ class _MainScreenState extends State<MainScreen> {
     if (err != null) {
       _showSnack(context, 'Fehler: $err', isError: true);
     } else if (result != null) {
-      final (deals, shops, buyers, items) = await provider.importCsvAll(result);
+      final (deals, shops, buyers, suppliers, items) =
+          await provider.importCsvAll(result);
       if (context.mounted) {
-        _showSnack(context, '$deals Deals, $shops Shops, $buyers Käufer, $items Lagerartikel importiert.');
+        _showSnack(context,
+            '$deals Deals, $shops Shops, $buyers Käufer, $suppliers Lieferanten, $items Lagerartikel importiert.');
       }
     }
   }
@@ -101,6 +108,14 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
+  void _openSearch() {
+    GlobalSearchDialog.show(
+      context,
+      selectTab: (i) => setState(() => _selectedIndex = i),
+      openTicket: _openTicket,
+    );
+  }
+
   Widget _buildBody() {
     return switch (_selectedIndex) {
       0 => const DashboardScreen(),
@@ -109,6 +124,7 @@ class _MainScreenState extends State<MainScreen> {
       3 => const InventoryScreen(),
       4 => const SuppliersScreen(),
       5 => const StatisticsScreen(),
+      6 => const ActivityScreen(),
       _ => const SettingsScreen(embedded: true),
     };
   }
@@ -136,54 +152,68 @@ class _MainScreenState extends State<MainScreen> {
               )
             : null;
 
-        if (narrow) {
-          // Mobile: klassische AppBar + Drawer
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(_navItems[_selectedIndex].$3),
-            ),
-            drawer: Drawer(
-              backgroundColor: AppTheme.navBg,
-              child: SafeArea(
-                child: _MobileNavList(
-                  selectedIndex: _selectedIndex,
-                  items: _navItems,
-                  onSelect: _select,
-                ),
-              ),
-            ),
-            floatingActionButton: fab,
-            body: body,
-          );
-        }
-
-        // Desktop: Sidebar + Content-Header
-        return Scaffold(
-          floatingActionButton: fab,
-          body: Row(
-            children: [
-              _Sidebar(
-                selectedIndex: _selectedIndex,
-                items: _navItems,
-                extended: extended,
-                onSelect: _select,
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _ContentHeader(
-                      title: _navItems[_selectedIndex].$3,
-                      provider: provider,
-                      onImport: () => _import(context, provider),
-                      onExport: () => _export(context, provider),
+        final scaffold = narrow
+            ? Scaffold(
+                appBar: AppBar(
+                  title: Text(_navItems[_selectedIndex].$3),
+                  actions: [
+                    IconButton(
+                      tooltip: 'Suchen',
+                      icon: const Icon(Icons.search),
+                      onPressed: _openSearch,
                     ),
-                    Expanded(child: body),
                   ],
                 ),
-              ),
-            ],
-          ),
+                drawer: Drawer(
+                  backgroundColor: AppTheme.navBg,
+                  child: SafeArea(
+                    child: _MobileNavList(
+                      selectedIndex: _selectedIndex,
+                      items: _navItems,
+                      onSelect: _select,
+                    ),
+                  ),
+                ),
+                floatingActionButton: fab,
+                body: body,
+              )
+            : Scaffold(
+                floatingActionButton: fab,
+                body: Row(
+                  children: [
+                    _Sidebar(
+                      selectedIndex: _selectedIndex,
+                      items: _navItems,
+                      extended: extended,
+                      onSelect: _select,
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _ContentHeader(
+                            title: _navItems[_selectedIndex].$3,
+                            provider: provider,
+                            onImport: () => _import(context, provider),
+                            onExport: () => _export(context, provider),
+                            onSearch: _openSearch,
+                          ),
+                          Expanded(child: body),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+        return CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+                _openSearch,
+            const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+                _openSearch,
+          },
+          child: Focus(autofocus: true, child: scaffold),
         );
       },
     );
@@ -358,12 +388,14 @@ class _ContentHeader extends StatelessWidget {
   final InventoryProvider provider;
   final VoidCallback onImport;
   final VoidCallback onExport;
+  final VoidCallback onSearch;
 
   const _ContentHeader({
     required this.title,
     required this.provider,
     required this.onImport,
     required this.onExport,
+    required this.onSearch,
   });
 
   @override
@@ -386,6 +418,8 @@ class _ContentHeader extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          _SearchHint(onTap: onSearch),
+          const SizedBox(width: 8),
           IconButton(
             tooltip: 'CSV importieren',
             icon: const Icon(Icons.upload_file_outlined, size: 18, color: AppTheme.textMuted),
@@ -401,6 +435,62 @@ class _ContentHeader extends StatelessWidget {
           const _AccountMenu(),
           const SizedBox(width: 4),
         ],
+      ),
+    );
+  }
+}
+
+class _SearchHint extends StatelessWidget {
+  final VoidCallback onTap;
+  const _SearchHint({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isMac = Theme.of(context).platform == TargetPlatform.macOS ||
+        Theme.of(context).platform == TargetPlatform.iOS;
+    return Tooltip(
+      message: 'Globale Suche',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(7),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: AppTheme.bgSubtle,
+            borderRadius: BorderRadius.circular(7),
+            border: Border.all(color: AppTheme.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.search, size: 14, color: AppTheme.textMuted),
+              const SizedBox(width: 6),
+              const Text(
+                'Suchen',
+                style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: AppTheme.bgSurface,
+                  border: Border.all(color: AppTheme.border),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  isMac ? '⌘K' : 'Ctrl+K',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textSecondary,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

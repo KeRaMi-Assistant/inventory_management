@@ -16,6 +16,8 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/splash_screen.dart';
 import 'screens/main_screen.dart';
+import 'services/attachment_service.dart';
+import 'services/push_service.dart';
 import 'services/session_manager.dart';
 import 'services/supabase_repository.dart';
 
@@ -30,7 +32,11 @@ Future<void> main() async {
   final prefs = AppPreferencesProvider();
   await prefs.load();
 
-  runApp(InventoryApp(preferences: prefs));
+  final pushService = PushService(Supabase.instance.client);
+  // Best-effort: läuft auch ohne Firebase-Config still durch.
+  await pushService.init();
+
+  runApp(InventoryApp(preferences: prefs, pushService: pushService));
 }
 
 final GlobalKey<NavigatorState> _rootNavigator =
@@ -38,7 +44,12 @@ final GlobalKey<NavigatorState> _rootNavigator =
 
 class InventoryApp extends StatelessWidget {
   final AppPreferencesProvider preferences;
-  const InventoryApp({super.key, required this.preferences});
+  final PushService pushService;
+  const InventoryApp({
+    super.key,
+    required this.preferences,
+    required this.pushService,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +58,13 @@ class InventoryApp extends StatelessWidget {
       providers: [
         Provider<SupabaseRepository>(
           create: (_) => SupabaseRepository(supabase),
+        ),
+        Provider<AttachmentService>(
+          create: (_) => AttachmentService(supabase),
+        ),
+        Provider<PushService>.value(value: pushService),
+        Provider<NotificationPreferencesService>(
+          create: (_) => NotificationPreferencesService(supabase),
         ),
         ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
         ChangeNotifierProvider<FilterProvider>(create: (_) => FilterProvider()),
@@ -104,8 +122,11 @@ class _AuthGateState extends State<_AuthGate> {
       // Drop any stale data from a previous session before showing login.
       if (_hydratedFor != null) {
         _hydratedFor = null;
+        final push = context.read<PushService>();
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) context.read<InventoryProvider>().clearLocalState();
+          if (!mounted) return;
+          context.read<InventoryProvider>().clearLocalState();
+          push.unregisterCurrentDevice();
         });
       }
       return const LoginScreen();
@@ -124,7 +145,10 @@ class _AuthGateState extends State<_AuthGate> {
 
   Future<void> _hydrate(String userId) async {
     final inventory = context.read<InventoryProvider>();
+    final push = context.read<PushService>();
     await inventory.loadData();
+    // Fire-and-forget: Push-Registrierung darf den Login nicht blockieren.
+    unawaited(push.registerCurrentDevice());
     if (!mounted) return;
     setState(() {
       _hydratedFor = userId;

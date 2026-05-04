@@ -14,6 +14,7 @@ class InventoryItem {
   final String? ticketUrl;
   final String? note;
   final String status;
+  final List<String> attachmentPaths;
 
   const InventoryItem({
     required this.id,
@@ -31,6 +32,7 @@ class InventoryItem {
     this.ticketUrl,
     this.note,
     this.status = 'Im Lager',
+    this.attachmentPaths = const [],
   });
 
   bool get isCritical => quantity < minStock;
@@ -54,6 +56,7 @@ class InventoryItem {
         'ticketUrl': ticketUrl,
         'note': note,
         'status': status,
+        'attachmentPaths': attachmentPaths,
       };
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) => InventoryItem(
@@ -74,6 +77,10 @@ class InventoryItem {
         ticketUrl: json['ticketUrl'] as String?,
         note: json['note'] as String?,
         status: json['status'] as String? ?? 'Im Lager',
+        attachmentPaths: (json['attachmentPaths'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            const [],
       );
 
   // ── Supabase (snake_case) ─────────────────────────────────────────────────
@@ -94,27 +101,33 @@ class InventoryItem {
         'ticket_url': ticketUrl,
         'note': note,
         'status': status,
+        'attachment_paths': attachmentPaths,
       };
 
-  factory InventoryItem.fromSupabase(Map<String, dynamic> row) => InventoryItem(
-        id: row['id'] as String,
-        name: row['name'] as String,
-        sku: row['sku'] as String?,
-        ean: row['ean'] as String?,
-        quantity: (row['quantity'] as num?)?.toInt() ?? 0,
-        minStock: (row['min_stock'] as num?)?.toInt() ?? 0,
-        location: row['location'] as String?,
-        costPrice: (row['cost_price'] as num?)?.toDouble(),
-        arrivalDate: row['arrival_date'] != null
-            ? DateTime.parse(row['arrival_date'] as String)
-            : null,
-        dealId: (row['deal_id'] as num?)?.toInt(),
-        supplierId: row['supplier_id'] as String?,
-        ticketNumber: row['ticket_number'] as String?,
-        ticketUrl: row['ticket_url'] as String?,
-        note: row['note'] as String?,
-        status: row['status'] as String? ?? 'Im Lager',
-      );
+  factory InventoryItem.fromSupabase(Map<String, dynamic> row) {
+    final raw = row['attachment_paths'];
+    final paths = raw is List ? raw.map((e) => e.toString()).toList() : <String>[];
+    return InventoryItem(
+      id: row['id'] as String,
+      name: row['name'] as String,
+      sku: row['sku'] as String?,
+      ean: row['ean'] as String?,
+      quantity: (row['quantity'] as num?)?.toInt() ?? 0,
+      minStock: (row['min_stock'] as num?)?.toInt() ?? 0,
+      location: row['location'] as String?,
+      costPrice: (row['cost_price'] as num?)?.toDouble(),
+      arrivalDate: row['arrival_date'] != null
+          ? DateTime.parse(row['arrival_date'] as String)
+          : null,
+      dealId: (row['deal_id'] as num?)?.toInt(),
+      supplierId: row['supplier_id'] as String?,
+      ticketNumber: row['ticket_number'] as String?,
+      ticketUrl: row['ticket_url'] as String?,
+      note: row['note'] as String?,
+      status: row['status'] as String? ?? 'Im Lager',
+      attachmentPaths: paths,
+    );
+  }
 
   InventoryItem copyWith({
     String? id,
@@ -132,6 +145,7 @@ class InventoryItem {
     Object? ticketUrl = _sentinel,
     Object? note = _sentinel,
     String? status,
+    List<String>? attachmentPaths,
   }) =>
       InventoryItem(
         id: id ?? this.id,
@@ -158,6 +172,7 @@ class InventoryItem {
             ticketUrl == _sentinel ? this.ticketUrl : ticketUrl as String?,
         note: note == _sentinel ? this.note : note as String?,
         status: status ?? this.status,
+        attachmentPaths: attachmentPaths ?? this.attachmentPaths,
       );
 }
 

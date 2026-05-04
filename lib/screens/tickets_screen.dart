@@ -448,6 +448,14 @@ class _TicketDetail extends StatelessWidget {
                       },
                       icon: const Icon(Icons.open_in_new),
                     ),
+                  if (ticket.hasTicket) ...[
+                    OutlinedButton.icon(
+                      onPressed: () => _editTicket(context, provider, ticket),
+                      icon: const Icon(Icons.edit_outlined, size: 16),
+                      label: const Text('Bearbeiten'),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   ElevatedButton.icon(
                     onPressed: () => showDialog(
                       context: context,
@@ -478,6 +486,7 @@ class _TicketDetail extends StatelessWidget {
                       DataColumn(label: Text('Status')),
                       DataColumn(label: Text('Ankunft')),
                       DataColumn(label: Text('Tracking')),
+                      DataColumn(label: Text('')),
                     ],
                     rows: ticket.deals.map((deal) {
                       return DataRow(cells: [
@@ -500,6 +509,17 @@ class _TicketDetail extends StatelessWidget {
                         ),
                         DataCell(Text(deal.arrivalDate != null ? date.format(deal.arrivalDate!) : '-')),
                         DataCell(Text(deal.tracking ?? '-')),
+                        DataCell(
+                          IconButton(
+                            tooltip: 'Deal bearbeiten',
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            onPressed: () => showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => AddEditDealDialog(deal: deal),
+                            ),
+                          ),
+                        ),
                       ]);
                     }).toList(),
                   ),
@@ -535,6 +555,149 @@ class _TicketDetail extends StatelessWidget {
       },
     );
   }
+
+  Future<void> _editTicket(
+    BuildContext context,
+    InventoryProvider provider,
+    TicketSummary ticket,
+  ) async {
+    final numberCtrl = TextEditingController(text: ticket.ticketNumber);
+    final urlCtrl = TextEditingController(text: ticket.url ?? '');
+    String? bulkStatus;
+    final result = await showDialog<_TicketEditResult>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.edit_outlined,
+                    color: Color(0xFF2563EB), size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text('Ticket bearbeiten'),
+            ],
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Änderungen werden auf alle ${ticket.deals.length} Deals dieses Tickets angewendet.',
+                  style: const TextStyle(
+                      fontSize: 12, color: Color(0xFF64748B)),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: numberCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Ticketnummer',
+                    prefixIcon:
+                        Icon(Icons.confirmation_number_outlined, size: 18),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: urlCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Discord-Ticket Link',
+                    hintText: 'https://discord.com/...',
+                    prefixIcon: Icon(Icons.link, size: 18),
+                  ),
+                  keyboardType: TextInputType.url,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String?>(
+                  initialValue: bulkStatus,
+                  decoration: const InputDecoration(
+                    labelText: 'Status für alle Deals (optional)',
+                    prefixIcon: Icon(Icons.flag_outlined, size: 18),
+                  ),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('— Status nicht ändern —'),
+                    ),
+                    ...InventoryProvider.statusOptions.map(
+                      (s) => DropdownMenuItem<String?>(
+                        value: s,
+                        child: Text(s),
+                      ),
+                    ),
+                  ],
+                  onChanged: (v) => setS(() => bulkStatus = v),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Abbrechen'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(
+                ctx,
+                _TicketEditResult(
+                  ticketNumber: numberCtrl.text,
+                  ticketUrl: urlCtrl.text,
+                  status: bulkStatus,
+                ),
+              ),
+              child: const Text('Speichern'),
+            ),
+          ],
+        ),
+      ),
+    );
+    numberCtrl.dispose();
+    urlCtrl.dispose();
+    if (result == null || !context.mounted) return;
+
+    final ids = ticket.deals.map((d) => d.id);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await provider.updateDealsTicket(
+        ids,
+        ticketNumber: result.ticketNumber.trim() == ticket.ticketNumber
+            ? null
+            : result.ticketNumber,
+        ticketUrl: result.ticketUrl.trim() == (ticket.url ?? '')
+            ? null
+            : result.ticketUrl,
+      );
+      if (result.status != null) {
+        await provider.updateDealsStatus(ids, result.status!);
+      }
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Ticket aktualisiert.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Fehler: $e')),
+      );
+    }
+  }
+}
+
+class _TicketEditResult {
+  final String ticketNumber;
+  final String ticketUrl;
+  final String? status;
+  _TicketEditResult({
+    required this.ticketNumber,
+    required this.ticketUrl,
+    required this.status,
+  });
 }
 
 class _Totals extends StatelessWidget {

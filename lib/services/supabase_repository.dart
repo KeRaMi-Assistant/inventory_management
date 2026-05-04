@@ -181,6 +181,30 @@ class SupabaseRepository {
         .inFilter('id', ids.toList());
   }
 
+  /// Bulk-Update: setzt Ticketnummer und/oder URL auf allen [ids]. Werte
+  /// sind optional, `null` bedeutet "nicht ändern", Leerstring bedeutet "leeren".
+  Future<void> updateDealsTicket(
+    Iterable<int> ids, {
+    String? ticketNumber,
+    String? ticketUrl,
+  }) async {
+    if (ids.isEmpty) return;
+    final payload = <String, dynamic>{};
+    if (ticketNumber != null) {
+      payload['ticket_number'] =
+          ticketNumber.trim().isEmpty ? null : ticketNumber.trim();
+    }
+    if (ticketUrl != null) {
+      payload['ticket_url'] =
+          ticketUrl.trim().isEmpty ? null : ticketUrl.trim();
+    }
+    if (payload.isEmpty) return;
+    await _client
+        .from('deals')
+        .update(payload)
+        .inFilter('id', ids.toList());
+  }
+
   Future<void> deleteDeal(int id) async {
     await _client
         .from('deals')

@@ -6,6 +6,8 @@ import '../models/inventory_item.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/url_helper.dart';
 import '../utils/validators.dart';
+import '../widgets/attachment_gallery.dart';
+import '../widgets/barcode_scanner_sheet.dart';
 import '../widgets/inventory_batches_sheet.dart';
 
 class InventoryScreen extends StatefulWidget {
@@ -62,16 +64,71 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: TextField(
-        decoration: const InputDecoration(
-          prefixIcon: Icon(Icons.search, size: 18),
-          hintText: 'Artikel suchen (Name oder SKU)…',
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(vertical: 10),
-        ),
-        onChanged: (v) => setState(() => _search = v),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search, size: 18),
+                hintText: 'Artikel suchen (Name, SKU oder EAN)…',
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(vertical: 10),
+              ),
+              onChanged: (v) => setState(() => _search = v),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton.outlined(
+            tooltip: 'Barcode scannen & suchen',
+            icon: const Icon(Icons.qr_code_scanner, size: 18),
+            onPressed: () => _scanAndLookup(context),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _scanAndLookup(BuildContext context) async {
+    final code = await BarcodeScannerSheet.show(context,
+        title: 'Barcode scannen & suchen');
+    if (code == null || code.isEmpty || !context.mounted) return;
+    final provider = context.read<InventoryProvider>();
+    final hit = provider.inventoryItems.where((i) => i.ean == code).firstOrNull;
+    if (hit != null) {
+      setState(() => _search = code);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gefunden: ${hit.name}'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    if (!context.mounted) return;
+    final create = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Kein Artikel mit dieser EAN'),
+        content: Text('Soll ein neuer Artikel mit EAN $code angelegt werden?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Abbrechen'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Anlegen'),
+          ),
+        ],
+      ),
+    );
+    if (create == true && context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => _InventoryDialog(prefilledEan: code),
+      );
+    }
   }
 
   Widget _buildHeader(BuildContext context, InventoryProvider provider, bool isNarrow, NumberFormat money, double width) {
@@ -396,7 +453,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
 class _InventoryDialog extends StatefulWidget {
   final InventoryItem? item;
-  const _InventoryDialog({this.item});
+  final String? prefilledEan;
+  const _InventoryDialog({this.item, this.prefilledEan});
 
   @override
   State<_InventoryDialog> createState() => _InventoryDialogState();
@@ -416,6 +474,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
   String _status = 'Im Lager';
   String _selectedTicketNumber = '';
   String? _supplierId;
+  List<String> _attachmentPaths = const [];
 
   @override
   void initState() {
@@ -434,6 +493,10 @@ class _InventoryDialogState extends State<_InventoryDialog> {
       _ticketUrl.text = item.ticketUrl ?? '';
       _note.text = item.note ?? '';
       _status = item.status;
+      _attachmentPaths = List.of(item.attachmentPaths);
+    }
+    if (widget.prefilledEan != null && widget.prefilledEan!.isNotEmpty) {
+      _ean.text = widget.prefilledEan!;
     }
   }
 
@@ -547,15 +610,37 @@ class _InventoryDialogState extends State<_InventoryDialog> {
         .toList();
 
     return AlertDialog(
-      title: Text(widget.item == null ? 'Artikel hinzufügen' : 'Artikel bearbeiten'),
+      titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.inventory_2_outlined,
+                color: Color(0xFF2563EB), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Text(widget.item == null
+              ? 'Artikel hinzufügen'
+              : 'Artikel bearbeiten'),
+        ],
+      ),
       content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 620),
+        constraints: const BoxConstraints(maxWidth: 640),
         child: Form(
           key: _form,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _sectionLabel('Allgemein'),
+                const SizedBox(height: 12),
                 // ── 1. Ticket first so product dropdown can populate ──────────
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -634,103 +719,137 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                // ── 2. Product – dropdown if ticket has deals ─────────────────
+                const SizedBox(height: 12),
                 _buildProductField(provider),
-                const SizedBox(height: 10),
-                // ── 3. Quantity + SKU ─────────────────────────────────────────
+                const SizedBox(height: 20),
+                _sectionLabel('Bestand & Preis'),
+                const SizedBox(height: 12),
                 Row(children: [
                   Expanded(
                     child: TextFormField(
                       controller: _quantity,
-                      decoration: const InputDecoration(labelText: 'Angekommen (Stk.)'),
+                      decoration: const InputDecoration(
+                          labelText: 'Angekommen (Stk.)'),
                       keyboardType: TextInputType.number,
                       validator: (v) =>
                           Validators.validateNonNegativeInt(v),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _min,
+                      decoration:
+                          const InputDecoration(labelText: 'Mindestbestand'),
+                      keyboardType: TextInputType.number,
+                      validator: (v) =>
+                          Validators.validateNonNegativeInt(v),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _cost,
+                      decoration: const InputDecoration(
+                        labelText: 'Ø EK-Preis',
+                        prefixText: '€ ',
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      validator: (v) => Validators.validateMoney(v),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _location,
+                      decoration: const InputDecoration(
+                        labelText: 'Lagerort',
+                        prefixIcon: Icon(Icons.place_outlined, size: 18),
+                      ),
+                      maxLength: 100,
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 20),
+                _sectionLabel('Identifikation'),
+                const SizedBox(height: 12),
+                Row(children: [
                   Expanded(
                     child: TextFormField(
                       controller: _sku,
-                      decoration: const InputDecoration(labelText: 'Produktnummer (optional)'),
+                      decoration: const InputDecoration(
+                          labelText: 'Produktnummer (optional)'),
                       maxLength: Validators.maxSku,
                       validator: (v) => Validators.validateSku(v),
                     ),
                   ),
-                ]),
-                const SizedBox(height: 10),
-                Row(children: [
+                  const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
                       controller: _ean,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'EAN/GTIN (optional)',
-                        prefixIcon: Icon(Icons.qr_code_2, size: 18),
+                        prefixIcon: const Icon(Icons.qr_code_2, size: 18),
+                        suffixIcon: IconButton(
+                          tooltip: 'Barcode scannen',
+                          icon: const Icon(Icons.qr_code_scanner, size: 18),
+                          onPressed: () async {
+                            final code = await BarcodeScannerSheet.show(
+                              context,
+                              title: 'EAN/GTIN scannen',
+                            );
+                            if (code != null && code.isNotEmpty) {
+                              setState(() => _ean.text = code);
+                            }
+                          },
+                        ),
                       ),
                       keyboardType: TextInputType.number,
                       maxLength: 14,
                       validator: (v) => Validators.validateGtin(v),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: DropdownButtonFormField<String?>(
-                      initialValue: _supplierId,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Lieferant (optional)',
-                        prefixIcon:
-                            Icon(Icons.local_shipping_outlined, size: 18),
+                ]),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String?>(
+                  initialValue: _supplierId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Lieferant (optional)',
+                    prefixIcon:
+                        Icon(Icons.local_shipping_outlined, size: 18),
+                  ),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Kein Lieferant'),
+                    ),
+                    ...provider.activeSuppliers.map(
+                      (s) => DropdownMenuItem<String?>(
+                        value: s.id,
+                        child:
+                            Text(s.name, overflow: TextOverflow.ellipsis),
                       ),
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('Kein Lieferant'),
-                        ),
-                        ...provider.activeSuppliers.map(
-                          (s) => DropdownMenuItem<String?>(
-                            value: s.id,
-                            child: Text(s.name,
-                                overflow: TextOverflow.ellipsis),
-                          ),
-                        ),
-                      ],
-                      onChanged: (v) => setState(() => _supplierId = v),
                     ),
-                  ),
-                ]),
-                const SizedBox(height: 10),
-                // ── 4. Min stock + cost + location ────────────────────────────
-                Row(children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _min,
-                      decoration: const InputDecoration(labelText: 'Mindestbestand'),
-                      keyboardType: TextInputType.number,
-                      validator: (v) =>
-                          Validators.validateNonNegativeInt(v),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _cost,
-                      decoration: const InputDecoration(labelText: 'Ø EK-Preis'),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (v) => Validators.validateMoney(v),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _location,
-                      decoration: const InputDecoration(labelText: 'Lagerort'),
-                      maxLength: 100,
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 10),
+                  ],
+                  onChanged: (v) => setState(() => _supplierId = v),
+                ),
+                const SizedBox(height: 20),
+                _sectionLabel('Anhänge'),
+                const SizedBox(height: 12),
+                AttachmentGallery(
+                  paths: _attachmentPaths,
+                  entityKind: 'item',
+                  entityId: widget.item?.id ?? '',
+                  onChanged: (next) =>
+                      setState(() => _attachmentPaths = next),
+                ),
+                const SizedBox(height: 20),
+                _sectionLabel('Verknüpfung & Notiz'),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _ticketUrl,
                   decoration: const InputDecoration(
@@ -741,7 +860,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                   keyboardType: TextInputType.url,
                   validator: (v) => Validators.validateUrl(v),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _note,
                   decoration: const InputDecoration(labelText: 'Notiz'),
@@ -749,6 +868,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                   maxLength: Validators.maxNote,
                   validator: Validators.validateNote,
                 ),
+                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -776,6 +896,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
               ticketUrl: _ticketUrl.text.trim().isEmpty ? null : _ticketUrl.text.trim(),
               note: _note.text.trim().isEmpty ? null : _note.text.trim(),
               status: _status,
+              attachmentPaths: _attachmentPaths,
             );
             if (widget.item == null) {
               await prov.addInventoryItem(item);
@@ -786,6 +907,24 @@ class _InventoryDialogState extends State<_InventoryDialog> {
           },
           child: const Text('Speichern'),
         ),
+      ],
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Row(
+      children: [
+        Text(
+          text.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF64748B),
+            letterSpacing: 0.7,
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Expanded(child: Divider(height: 1)),
       ],
     );
   }

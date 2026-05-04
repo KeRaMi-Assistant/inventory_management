@@ -260,6 +260,35 @@ class InventoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Bulk-Update Ticketnummer/URL für mehrere Deals — z.B. wenn der User ein
+  /// Ticket im Tickets-Tab umbenennt oder die Ticket-URL ändert.
+  Future<void> updateDealsTicket(
+    Iterable<int> ids, {
+    String? ticketNumber,
+    String? ticketUrl,
+  }) async {
+    final idSet = ids.toSet();
+    if (idSet.isEmpty) return;
+    await _repository.updateDealsTicket(
+      idSet,
+      ticketNumber: ticketNumber,
+      ticketUrl: ticketUrl,
+    );
+    _deals = _deals.map((d) {
+      if (!idSet.contains(d.id)) return d;
+      return d.copyWith(
+        ticketNumber: ticketNumber == null
+            ? d.ticketNumber
+            : (ticketNumber.trim().isEmpty ? null : ticketNumber.trim()),
+        ticketUrl: ticketUrl == null
+            ? d.ticketUrl
+            : (ticketUrl.trim().isEmpty ? null : ticketUrl.trim()),
+      );
+    }).toList();
+    _log('${idSet.length} Deals: Ticket aktualisiert', 'bulk');
+    notifyListeners();
+  }
+
   Future<void> deleteDeals(Iterable<int> ids) async {
     final idSet = ids.toSet();
     if (idSet.isEmpty) return;
@@ -279,10 +308,11 @@ class InventoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Imports all four tables from a [CsvImportResult].
-  /// Deals are always appended. Shops, buyers and inventory items are only
-  /// added when no existing entry with the same name exists (avoids duplicates).
-  Future<(int, int, int, int)> importCsvAll(CsvImportResult result) async {
+  /// Imports all five tables from a [CsvImportResult].
+  /// Deals are always appended. Shops, buyers, suppliers and inventory items
+  /// are only added when no existing entry with the same name exists.
+  /// Returns counts in order: (deals, shops, buyers, suppliers, items).
+  Future<(int, int, int, int, int)> importCsvAll(CsvImportResult result) async {
     // Deals
     int dealCount = 0;
     if (result.deals.isNotEmpty) {
@@ -316,12 +346,44 @@ class InventoryProvider extends ChangeNotifier {
     }
     _buyers.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
+    // Suppliers – skip names that already exist; build name→id map for inventory remap
+    int supplierCount = 0;
+    final existingSupplierByName = <String, String>{
+      for (final s in _suppliers) s.name.toLowerCase(): s.id,
+    };
+    for (final supplier in result.suppliers) {
+      final key = supplier.name.toLowerCase();
+      if (existingSupplierByName.containsKey(key)) continue;
+      final withId =
+          supplier.id.isEmpty ? supplier.copyWith(id: _uuid.v4()) : supplier;
+      final saved = await _repository.insertSupplier(withId);
+      _suppliers.add(saved);
+      existingSupplierByName[key] = saved.id;
+      supplierCount++;
+    }
+    _suppliers.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    // Map import-supplier-id → existing supplier-id by name (so items
+    // referencing an import-time supplier-id resolve to the canonical row).
+    final importSupplierIdRemap = <String, String>{};
+    for (final s in result.suppliers) {
+      final canonical = existingSupplierByName[s.name.toLowerCase()];
+      if (canonical != null) importSupplierIdRemap[s.id] = canonical;
+    }
+
     // Inventory items – skip names that already exist; skip items that fail to insert
     int itemCount = 0;
     final existingItemNames = _inventoryItems.map((i) => i.name.toLowerCase()).toSet();
     for (final item in result.inventoryItems) {
       if (existingItemNames.contains(item.name.toLowerCase())) continue;
-      final withId = item.id.isEmpty ? item.copyWith(id: _uuid.v4()) : item;
+      final remappedSupplier = item.supplierId == null
+          ? null
+          : (importSupplierIdRemap[item.supplierId!] ?? item.supplierId);
+      final withId = item.copyWith(
+        id: item.id.isEmpty ? _uuid.v4() : item.id,
+        supplierId: remappedSupplier,
+      );
       try {
         final saved = await _repository.insertInventoryItem(withId);
         _inventoryItems.add(saved);
@@ -333,11 +395,17 @@ class InventoryProvider extends ChangeNotifier {
     }
     _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
 
-    if (dealCount > 0 || shopCount > 0 || buyerCount > 0 || itemCount > 0) {
-      _log('CSV-Import: $dealCount Deals, $shopCount Shops, $buyerCount Käufer, $itemCount Lagerartikel', 'import');
+    if (dealCount > 0 ||
+        shopCount > 0 ||
+        buyerCount > 0 ||
+        supplierCount > 0 ||
+        itemCount > 0) {
+      _log(
+          'CSV-Import: $dealCount Deals, $shopCount Shops, $buyerCount Käufer, $supplierCount Lieferanten, $itemCount Lagerartikel',
+          'import');
       notifyListeners();
     }
-    return (dealCount, shopCount, buyerCount, itemCount);
+    return (dealCount, shopCount, buyerCount, supplierCount, itemCount);
   }
 
   // ── BUYERS ────────────────────────────────────────────────────────────────

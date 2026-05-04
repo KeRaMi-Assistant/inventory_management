@@ -79,5 +79,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Kamera wird genutzt, um Barcodes (EAN/GTIN) zu scannen und Fotos zu Lagerartikeln und Deals aufzunehmen.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Foto-Galerie wird genutzt, um Bilder zu Lagerartikeln und Deals hochzuladen.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Speichert aufgenommene Fotos zu Lagerartikeln und Deals.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Wird vom Kamera-Modul angefordert, jedoch nicht aktiv genutzt.</string>
 </dict>
 </plist>

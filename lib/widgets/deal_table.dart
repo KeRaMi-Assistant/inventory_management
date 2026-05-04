@@ -8,6 +8,7 @@ import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/url_helper.dart';
 import 'add_edit_deal_dialog.dart';
+import 'deal_card.dart';
 
 class _ColDef {
   final String label;
@@ -91,85 +92,112 @@ class _DealTableState extends State<DealTable> {
         final allVisibleSelected = deals.isNotEmpty &&
             deals.every((d) => filters.selectedDealIds.contains(d.id));
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _FilterBar(provider: provider, filters: filters),
-            if (filters.selectedDealIds.isNotEmpty)
-              _BulkActionBar(provider: provider, filters: filters),
-            Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F5F9),
-                border: Border(
-                  bottom: BorderSide(color: Color(0xFFDDE3ED), width: 1.5),
-                ),
-              ),
-              child: SingleChildScrollView(
-                controller: _headerScroll,
-                scrollDirection: Axis.horizontal,
-                physics: const ClampingScrollPhysics(),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: _cols.first.width,
-                      height: 40,
-                      child: Center(
-                        child: Checkbox(
-                          value: allVisibleSelected,
-                          tristate: true,
-                          onChanged: deals.isEmpty
-                              ? null
-                              : (_) {
-                                  if (allVisibleSelected) {
-                                    filters.clearSelection();
-                                  } else {
-                                    filters.selectAll(deals.map((d) => d.id));
-                                  }
-                                },
-                        ),
-                      ),
-                    ),
-                    ..._cols.skip(1).map(
-                          (c) => _HeaderCell(
-                            label: c.label,
-                            sortKey: c.sortKey,
-                            width: c.width,
-                            filters: filters,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 700;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _FilterBar(provider: provider, filters: filters),
+                if (filters.selectedDealIds.isNotEmpty)
+                  _BulkActionBar(provider: provider, filters: filters),
+                if (isNarrow)
+                  Expanded(
+                    child: deals.isEmpty
+                        ? const _EmptyState()
+                        : ListView.separated(
+                            padding:
+                                const EdgeInsets.fromLTRB(12, 8, 12, 100),
+                            itemCount: deals.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, i) => DealCard(
+                              deal: deals[i],
+                              provider: provider,
+                              filters: filters,
+                              onOpenTicket: widget.onOpenTicket,
+                            ),
                           ),
-                        ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: deals.isEmpty
-                  ? const _EmptyState()
-                  : SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: SingleChildScrollView(
-                        controller: _bodyScroll,
-                        scrollDirection: Axis.horizontal,
-                        physics: const ClampingScrollPhysics(),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            for (int i = 0; i < deals.length; i++)
-                              _DealRow(
-                                deal: deals[i],
-                                isEven: i.isEven,
-                                provider: provider,
-                                filters: filters,
-                                dateFmt: dateFmt,
-                                numFmt: numFmt,
-                                cols: _cols,
-                                onOpenTicket: widget.onOpenTicket,
-                              ),
-                          ],
-                        ),
+                  )
+                else ...[
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF1F5F9),
+                      border: Border(
+                        bottom: BorderSide(
+                            color: Color(0xFFDDE3ED), width: 1.5),
                       ),
                     ),
-            ),
-          ],
+                    child: SingleChildScrollView(
+                      controller: _headerScroll,
+                      scrollDirection: Axis.horizontal,
+                      physics: const ClampingScrollPhysics(),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: _cols.first.width,
+                            height: 40,
+                            child: Center(
+                              child: Checkbox(
+                                value: allVisibleSelected,
+                                tristate: true,
+                                onChanged: deals.isEmpty
+                                    ? null
+                                    : (_) {
+                                        if (allVisibleSelected) {
+                                          filters.clearSelection();
+                                        } else {
+                                          filters.selectAll(
+                                              deals.map((d) => d.id));
+                                        }
+                                      },
+                              ),
+                            ),
+                          ),
+                          ..._cols.skip(1).map(
+                                (c) => _HeaderCell(
+                                  label: c.label,
+                                  sortKey: c.sortKey,
+                                  width: c.width,
+                                  filters: filters,
+                                ),
+                              ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: deals.isEmpty
+                        ? const _EmptyState()
+                        : SingleChildScrollView(
+                            scrollDirection: Axis.vertical,
+                            child: SingleChildScrollView(
+                              controller: _bodyScroll,
+                              scrollDirection: Axis.horizontal,
+                              physics: const ClampingScrollPhysics(),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  for (int i = 0; i < deals.length; i++)
+                                    _DealRow(
+                                      deal: deals[i],
+                                      isEven: i.isEven,
+                                      provider: provider,
+                                      filters: filters,
+                                      dateFmt: dateFmt,
+                                      numFmt: numFmt,
+                                      cols: _cols,
+                                      onOpenTicket: widget.onOpenTicket,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
+              ],
+            );
+          },
         );
       },
     );

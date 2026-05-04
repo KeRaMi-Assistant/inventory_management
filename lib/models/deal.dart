@@ -20,6 +20,7 @@ class Deal {
   final double? taxRate;
   final String currency;
   final List<String> inventoryItemIds;
+  final List<String> attachmentPaths;
 
   const Deal({
     required this.id,
@@ -43,6 +44,7 @@ class Deal {
     this.taxRate,
     this.currency = 'EUR',
     this.inventoryItemIds = const [],
+    this.attachmentPaths = const [],
   });
 
   /// Sentinel id used for deals not yet persisted (server assigns BIGSERIAL).
@@ -89,6 +91,7 @@ class Deal {
         'taxRate': taxRate,
         'currency': currency,
         'inventoryItemIds': inventoryItemIds,
+        'attachmentPaths': attachmentPaths,
       };
 
   factory Deal.fromJson(Map<String, dynamic> json) => Deal(
@@ -118,6 +121,10 @@ class Deal {
                 ?.map((e) => e as String)
                 .toList() ??
             [],
+        attachmentPaths: (json['attachmentPaths'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            const [],
       );
 
   // ── Supabase (PostgreSQL, snake_case) ─────────────────────────────────────
@@ -142,37 +149,43 @@ class Deal {
         'note': note,
         'tax_rate': taxRate,
         'currency': currency,
+        'attachment_paths': attachmentPaths,
       };
 
   factory Deal.fromSupabase(
     Map<String, dynamic> row, {
     List<String> inventoryItemIds = const [],
-  }) =>
-      Deal(
-        id: (row['id'] as num).toInt(),
-        product: row['product'] as String,
-        quantity: (row['quantity'] as num).toInt(),
-        shippingType: row['shipping_type'] as String,
-        shop: row['shop'] as String,
-        orderDate: DateTime.parse(row['order_date'] as String),
-        ekNetto: (row['ek_netto'] as num?)?.toDouble(),
-        ekBrutto: (row['ek_brutto'] as num?)?.toDouble(),
-        vk: (row['vk'] as num?)?.toDouble(),
-        buyer: row['buyer'] as String?,
-        ticketNumber: row['ticket_number'] as String?,
-        ticketUrl: row['ticket_url'] as String?,
-        tracking: row['tracking'] as String?,
-        arrivalDate: row['arrival_date'] != null
-            ? DateTime.parse(row['arrival_date'] as String)
-            : null,
-        status: row['status'] as String? ?? 'Bestellt',
-        lexware: row['lexware'] as String?,
-        beleg: row['beleg'] as String? ?? 'Nein',
-        note: row['note'] as String?,
-        taxRate: (row['tax_rate'] as num?)?.toDouble(),
-        currency: row['currency'] as String? ?? 'EUR',
-        inventoryItemIds: inventoryItemIds,
-      );
+  }) {
+    final raw = row['attachment_paths'];
+    final paths =
+        raw is List ? raw.map((e) => e.toString()).toList() : <String>[];
+    return Deal(
+      id: (row['id'] as num).toInt(),
+      product: row['product'] as String,
+      quantity: (row['quantity'] as num).toInt(),
+      shippingType: row['shipping_type'] as String,
+      shop: row['shop'] as String,
+      orderDate: DateTime.parse(row['order_date'] as String),
+      ekNetto: (row['ek_netto'] as num?)?.toDouble(),
+      ekBrutto: (row['ek_brutto'] as num?)?.toDouble(),
+      vk: (row['vk'] as num?)?.toDouble(),
+      buyer: row['buyer'] as String?,
+      ticketNumber: row['ticket_number'] as String?,
+      ticketUrl: row['ticket_url'] as String?,
+      tracking: row['tracking'] as String?,
+      arrivalDate: row['arrival_date'] != null
+          ? DateTime.parse(row['arrival_date'] as String)
+          : null,
+      status: row['status'] as String? ?? 'Bestellt',
+      lexware: row['lexware'] as String?,
+      beleg: row['beleg'] as String? ?? 'Nein',
+      note: row['note'] as String?,
+      taxRate: (row['tax_rate'] as num?)?.toDouble(),
+      currency: row['currency'] as String? ?? 'EUR',
+      inventoryItemIds: inventoryItemIds,
+      attachmentPaths: paths,
+    );
+  }
 
   Deal copyWith({
     int? id,
@@ -196,6 +209,7 @@ class Deal {
     Object? taxRate = _sentinel,
     String? currency,
     List<String>? inventoryItemIds,
+    List<String>? attachmentPaths,
   }) =>
       Deal(
         id: id ?? this.id,
@@ -225,6 +239,7 @@ class Deal {
         taxRate: taxRate == _sentinel ? this.taxRate : taxRate as double?,
         currency: currency ?? this.currency,
         inventoryItemIds: inventoryItemIds ?? this.inventoryItemIds,
+        attachmentPaths: attachmentPaths ?? this.attachmentPaths,
       );
 }
 
