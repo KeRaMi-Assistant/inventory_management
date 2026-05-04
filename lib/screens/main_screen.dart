@@ -4,8 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
+import '../models/billing_profile.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/billing_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/csv_service.dart';
 import '../widgets/add_edit_deal_dialog.dart';
@@ -16,6 +18,7 @@ import 'dashboard_screen.dart';
 import 'deals_screen.dart';
 import 'help_screen.dart';
 import 'inventory_screen.dart';
+import 'pricing_screen.dart';
 import 'settings_screen.dart';
 import 'statistics_screen.dart';
 import 'suppliers_screen.dart';
@@ -548,8 +551,10 @@ class _AccountMenu extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final auth = context.watch<AuthProvider>();
     final workspaces = context.watch<ActiveWorkspaceProvider>();
+    final billing = context.watch<BillingProvider>();
     final email = auth.userEmail ?? l10n.commonUnknown;
     final initial = email.isNotEmpty ? email[0].toUpperCase() : '?';
+    final plan = billing.currentPlan;
 
     return PopupMenuButton<String>(
       tooltip: email,
@@ -580,6 +585,57 @@ class _AccountMenu extends StatelessWidget {
                   style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary)),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: 'plan',
+          child: Row(
+            children: [
+              const Icon(Icons.workspace_premium_outlined,
+                  size: 16, color: AppTheme.accent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      plan == BillingPlan.free
+                          ? 'Plan auswählen'
+                          : 'Plan verwalten',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Aktuell: ${plan.label}',
+                      style: const TextStyle(
+                          fontSize: 11, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: plan == BillingPlan.free
+                      ? AppTheme.accent.withAlpha(30)
+                      : Colors.green.withAlpha(40),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  plan == BillingPlan.free ? 'Upgrade' : plan.label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: plan == BillingPlan.free
+                        ? AppTheme.accent
+                        : Colors.green.shade800,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -651,7 +707,14 @@ class _AccountMenu extends StatelessWidget {
       onSelected: (value) async {
         final auth = context.read<AuthProvider>();
         final activeWs = context.read<ActiveWorkspaceProvider>();
+        final navigator = Navigator.of(context);
         final l10n = AppLocalizations.of(context);
+        if (value == 'plan') {
+          await navigator.push(
+            MaterialPageRoute(builder: (_) => const PricingScreen()),
+          );
+          return;
+        }
         if (value.startsWith('ws:')) {
           final id = value.substring(3);
           final ws =
