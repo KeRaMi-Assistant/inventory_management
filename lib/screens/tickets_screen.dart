@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
+import '../models/shop.dart';
 import '../models/ticket_summary.dart';
 import '../providers/inventory_provider.dart';
+import '../services/carrier_service.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../widgets/add_edit_deal_dialog.dart';
+import '../widgets/tracking_chip.dart';
 
 class TicketsScreen extends StatefulWidget {
   final String? initialTicket;
@@ -559,7 +562,12 @@ class _TicketDetail extends StatelessWidget {
                           ),
                         ),
                         DataCell(Text(deal.arrivalDate != null ? date.format(deal.arrivalDate!) : '-')),
-                        DataCell(Text(deal.tracking ?? '-')),
+                        DataCell(_TrackingCell(
+                          tracking: deal.tracking,
+                          shop: provider.shops
+                              .where((s) => s.name == deal.shop)
+                              .firstOrNull,
+                        )),
                         DataCell(
                           IconButton(
                             tooltip: l10n.dealEdit,
@@ -801,6 +809,36 @@ class _Totals extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tracking-Cell innerhalb der DataTable. Wir kapseln das in einem eigenen
+/// Widget, damit der Chip in einer SizedBox mit fester Maximalbreite sitzt
+/// — `DataTable` rechnet sonst Intrinsic-Widths über die Children, was mit
+/// einem unbegrenzten Chip in einem ScrollView-DataCell zu Layout-Fehlern
+/// führt (sichtbare Regression nach dem letzten Edit).
+class _TrackingCell extends StatelessWidget {
+  const _TrackingCell({required this.tracking, required this.shop});
+
+  final String? tracking;
+  final Shop? shop;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tracking == null) {
+      return const Text('-');
+    }
+    return SizedBox(
+      width: 180,
+      child: TrackingChip(
+        tracking: tracking!,
+        compact: true,
+        shopAmazonCountry: amazonCountryFromShop(
+          shopName: shop?.name,
+          region: shop?.region,
         ),
       ),
     );

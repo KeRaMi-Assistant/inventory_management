@@ -12,6 +12,7 @@ import '../models/inventory_item.dart';
 import '../models/shop.dart';
 import '../models/supplier.dart';
 import '../models/ticket_summary.dart';
+import '../services/carrier_service.dart';
 import '../services/csv_service.dart';
 import '../services/supabase_repository.dart';
 
@@ -227,11 +228,12 @@ class InventoryProvider extends ChangeNotifier {
 
   // ── DEALS ─────────────────────────────────────────────────────────────────
 
-  Future<void> addDeal(Deal deal) async {
+  Future<Deal> addDeal(Deal deal) async {
     final saved = await _repository.insertDeal(deal);
     _deals.insert(0, saved);
     _log('Deal hinzugefügt: ${saved.product}', 'deal');
     notifyListeners();
+    return saved;
   }
 
   Future<void> updateDeal(Deal deal) async {
@@ -475,6 +477,36 @@ class InventoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Fügt die Amazon-Country-Shops (`Amazon-DE`, `Amazon-FR`, …) idempotent
+  /// in die Shop-Liste ein. Bestehende Shops mit demselben Namen (case-
+  /// insensitive) werden übersprungen.
+  Future<({int added, int skipped})> seedAmazonShops() async {
+    final existing =
+        _shops.map((s) => s.name.trim().toLowerCase()).toSet();
+    var added = 0;
+    var skipped = 0;
+    for (final seed in amazonShopSeeds) {
+      if (existing.contains(seed.name.toLowerCase())) {
+        skipped++;
+        continue;
+      }
+      final shop = Shop(
+        id: _uuid.v4(),
+        name: seed.name,
+        region: seed.region,
+        url: 'https://www.amazon.${seed.region}',
+      );
+      final saved = await _repository.insertShop(shop);
+      _shops.add(saved);
+      added++;
+    }
+    if (added > 0) {
+      _log('$added Amazon-Shops hinzugefügt', 'shop');
+      notifyListeners();
+    }
+    return (added: added, skipped: skipped);
+  }
+
   // ── SUPPLIERS ─────────────────────────────────────────────────────────────
 
   Future<void> addSupplier(Supplier supplier) async {
@@ -505,6 +537,41 @@ class InventoryProvider extends ChangeNotifier {
       _log('Lieferant gelöscht: ${supplier.name}', 'supplier');
     }
     notifyListeners();
+  }
+
+  /// Fügt die Standard-Versanddienste (DHL, UPS, Hermes, etc.) als Supplier
+  /// hinzu. Idempotent: Einträge, deren Name (case-insensitive) bereits
+  /// vorhanden ist, werden übersprungen.
+  ///
+  /// Liefert ein Tupel `(added, skipped)` für die UI-Rückmeldung zurück.
+  Future<({int added, int skipped})> seedCarrierSuppliers() async {
+    final existing = _suppliers
+        .map((s) => s.name.trim().toLowerCase())
+        .toSet();
+    var added = 0;
+    var skipped = 0;
+    for (final seed in carrierSupplierSeeds) {
+      if (existing.contains(seed.name.toLowerCase())) {
+        skipped++;
+        continue;
+      }
+      final supplier = Supplier(
+        id: '',
+        name: seed.name,
+        website: seed.website,
+        note: 'Versanddienstleister',
+      );
+      final saved = await _repository.insertSupplier(supplier);
+      _suppliers.add(saved);
+      added++;
+    }
+    if (added > 0) {
+      _suppliers.sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      _log('$added Versanddienst-Lieferanten hinzugefügt', 'supplier');
+      notifyListeners();
+    }
+    return (added: added, skipped: skipped);
   }
 
   // ── INVENTORY ITEMS ───────────────────────────────────────────────────────

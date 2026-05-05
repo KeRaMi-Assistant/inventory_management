@@ -7,10 +7,12 @@ import '../models/deal.dart';
 import '../models/shop.dart';
 import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../services/carrier_service.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import 'add_edit_deal_dialog.dart';
 import 'deal_card.dart';
+import 'tracking_chip.dart';
 
 class _ColDef {
   final String labelKey;
@@ -642,7 +644,32 @@ class _DealRowState extends State<_DealRow> {
             _c(_mono(fmtN(deal.vk)), widget.cols[9]),
             _c(_buyerBadge(deal, buyer), widget.cols[10]),
             _c(_ticketCell(deal), widget.cols[11]),
-            _c(deal.tracking != null ? _LinkCell(text: deal.tracking!, url: _trackingUrl(deal.tracking!)) : Text('-', style: _muted()), widget.cols[12]),
+            SizedBox(
+              width: widget.cols[12].width,
+              height: 46,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: deal.tracking != null
+                    ? Align(
+                        alignment: Alignment.centerLeft,
+                        child: SizedBox(
+                          width: widget.cols[12].width - 24,
+                          child: TrackingChip(
+                            tracking: deal.tracking!,
+                            compact: true,
+                            shopAmazonCountry: amazonCountryFromShop(
+                              shopName: shop?.name,
+                              region: shop?.region,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('-', style: _muted()),
+                      ),
+              ),
+            ),
             GestureDetector(
               onDoubleTap: () => _editArrivalDate(context, provider, deal),
               child: _c(Text(fmtD(deal.arrivalDate), style: _normal()), widget.cols[13]),
@@ -827,12 +854,6 @@ class _DealRowState extends State<_DealRow> {
         'Done' => (bg: const Color(0xFFF0FDF4), border: const Color(0xFFBBF7D0), text: const Color(0xFF15803D)),
         _ => (bg: const Color(0xFFF8FAFC), border: const Color(0xFFE2E8F0), text: const Color(0xFF64748B)),
       };
-
-  String _trackingUrl(String tracking) {
-    final value = tracking.trim();
-    if (value.startsWith('http')) return value;
-    return 'https://www.google.com/search?q=${Uri.encodeComponent(value)}';
-  }
 
   Future<void> _editArrivalDate(BuildContext context,
       InventoryProvider provider, Deal deal) async {

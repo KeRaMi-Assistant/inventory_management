@@ -17,6 +17,7 @@ import 'activity_screen.dart';
 import 'dashboard_screen.dart';
 import 'deals_screen.dart';
 import 'help_screen.dart';
+import 'inbox_screen.dart';
 import 'inventory_screen.dart';
 import 'pricing_screen.dart';
 import 'settings_screen.dart';
@@ -39,6 +40,7 @@ class _MainScreenState extends State<MainScreen> {
     (Icons.dashboard_outlined, Icons.dashboard_rounded),
     (Icons.list_alt_outlined, Icons.list_alt_rounded),
     (Icons.confirmation_number_outlined, Icons.confirmation_number_rounded),
+    (Icons.mail_outline, Icons.mail_rounded),
     (Icons.inventory_2_outlined, Icons.inventory_2_rounded),
     (Icons.local_shipping_outlined, Icons.local_shipping),
     (Icons.bar_chart_outlined, Icons.bar_chart_rounded),
@@ -51,6 +53,7 @@ class _MainScreenState extends State<MainScreen> {
         l10n.navDashboard,
         l10n.navDeals,
         l10n.navTickets,
+        'Inbox',
         l10n.navInventory,
         l10n.navSuppliers,
         l10n.navStatistics,
@@ -145,11 +148,12 @@ class _MainScreenState extends State<MainScreen> {
       0 => const DashboardScreen(),
       1 => DealsScreen(onOpenTicket: _openTicket),
       2 => TicketsScreen(initialTicket: _selectedTicket),
-      3 => const InventoryScreen(),
-      4 => const SuppliersScreen(),
-      5 => const StatisticsScreen(),
-      6 => const ActivityScreen(),
-      7 => const HelpScreen(embedded: true),
+      3 => InboxScreen(onOpenTicket: _openTicket),
+      4 => const InventoryScreen(),
+      5 => const SuppliersScreen(),
+      6 => const StatisticsScreen(),
+      7 => const ActivityScreen(),
+      8 => const HelpScreen(embedded: true),
       _ => const SettingsScreen(embedded: true),
     };
   }

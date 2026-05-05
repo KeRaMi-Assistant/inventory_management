@@ -14,6 +14,7 @@ import 'providers/app_preferences_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/billing_provider.dart';
 import 'providers/filter_provider.dart';
+import 'providers/inbox_provider.dart';
 import 'providers/inventory_provider.dart';
 import 'providers/invites_provider.dart';
 import 'providers/statistics_filter_provider.dart';
@@ -98,6 +99,13 @@ class InventoryApp extends StatelessWidget {
           update: (_, repository, previous) =>
               previous ?? InventoryProvider(repository: repository),
         ),
+        ChangeNotifierProxyProvider<SupabaseRepository, InboxProvider>(
+          create: (ctx) => InboxProvider(
+            repository: ctx.read<SupabaseRepository>(),
+          ),
+          update: (_, repository, previous) =>
+              previous ?? InboxProvider(repository: repository),
+        ),
         ChangeNotifierProxyProvider<WorkspaceService, ActiveWorkspaceProvider>(
           create: (ctx) =>
               ActiveWorkspaceProvider(ctx.read<WorkspaceService>()),
@@ -174,6 +182,7 @@ class _AuthGateState extends State<_AuthGate> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           context.read<InventoryProvider>().clearLocalState();
+          context.read<InboxProvider>().clear();
           context.read<ActiveWorkspaceProvider>().clear();
           context.read<InvitesProvider>()
             ..stopPolling()

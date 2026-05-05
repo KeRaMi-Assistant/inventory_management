@@ -9,9 +9,11 @@ import '../models/deal.dart';
 import '../models/shop.dart';
 import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../services/carrier_service.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import 'add_edit_deal_dialog.dart';
+import 'tracking_chip.dart';
 
 class DealCard extends StatelessWidget {
   final Deal deal;
@@ -223,12 +225,12 @@ class DealCard extends StatelessWidget {
                       },
                     ),
                   if (deal.tracking != null)
-                    _MetaChip(
-                      icon: Icons.local_post_office_outlined,
-                      label: deal.tracking!,
-                      color: AppTheme.warning,
-                      onTap: () => openUrlWithFallback(
-                          context, _trackingUrl(deal.tracking!)),
+                    TrackingChip(
+                      tracking: deal.tracking!,
+                      shopAmazonCountry: amazonCountryFromShop(
+                        shopName: shop?.name,
+                        region: shop?.region,
+                      ),
                     ),
                   if (deal.hasReceipt)
                     _MetaChip(
@@ -371,12 +373,6 @@ class DealCard extends StatelessWidget {
             text: AppTheme.textMuted
           ),
       };
-
-  String _trackingUrl(String tracking) {
-    final value = tracking.trim();
-    if (value.startsWith('http')) return value;
-    return 'https://www.google.com/search?q=${Uri.encodeComponent(value)}';
-  }
 }
 
 // ─── small parts ─────────────────────────────────────────────────────────────

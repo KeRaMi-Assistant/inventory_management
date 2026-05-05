@@ -39,6 +39,28 @@ class SuppliersScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _seedCarriers(
+    BuildContext context,
+    InventoryProvider provider,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await provider.seedCarrierSuppliers();
+      messenger.showSnackBar(SnackBar(
+        content: Text(result.added == 0
+            ? 'Versanddienste sind bereits vorhanden (${result.skipped} übersprungen).'
+            : '${result.added} Versanddienste hinzugefügt'
+                '${result.skipped > 0 ? ', ${result.skipped} bereits vorhanden' : ''}.'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Fehler beim Hinzufügen: $e'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -54,9 +76,47 @@ class SuppliersScreen extends StatelessWidget {
             icon: const Icon(Icons.add, size: 18),
             label: Text(l10n.suppliersNew),
           ),
-          body: suppliers.isEmpty
-              ? const _EmptyState()
-              : ListView.separated(
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    OutlinedButton.icon(
+                      onPressed: () => _seedCarriers(context, provider),
+                      icon: const Icon(Icons.local_shipping_outlined,
+                          size: 16),
+                      label: const Text('Versanddienste hinzufügen'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        textStyle: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: suppliers.isEmpty
+                    ? const _EmptyState()
+                    : _buildList(context, provider, suppliers, l10n),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildList(
+    BuildContext context,
+    InventoryProvider provider,
+    List<Supplier> suppliers,
+    AppLocalizations l10n,
+  ) {
+    return ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: suppliers.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
@@ -135,10 +195,7 @@ class SuppliersScreen extends StatelessWidget {
                       ),
                     );
                   },
-                ),
-        );
-      },
-    );
+                );
   }
 }
 

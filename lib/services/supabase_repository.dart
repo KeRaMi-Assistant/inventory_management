@@ -4,8 +4,10 @@ import '../models/activity_entry.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../models/deal_comment.dart';
+import '../models/inbox_message.dart';
 import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
+import '../models/mailbox_account.dart';
 import '../models/shop.dart';
 import '../models/supplier.dart';
 
@@ -536,4 +538,218 @@ class SupabaseRepository {
     await _client.from('activity_log').delete().inFilter('id', ids);
   }
 
+  // ── Mailbox accounts (Sprint 6) ──────────────────────────────────────────
+
+  Future<List<MailboxAccount>> loadMailboxAccounts() async {
+    final ws = _workspaceId;
+    if (ws == null) return const [];
+    final rows = await _client
+        .from('mailbox_accounts')
+        .select()
+        .eq('workspace_id', ws)
+        .order('created_at', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(MailboxAccount.fromSupabase)
+        .toList();
+  }
+
+  /// Legt einen IMAP-Account an und setzt das Passwort über die SECURITY-
+  /// DEFINER-RPC. Klartext bleibt nirgends gespeichert.
+  Future<MailboxAccount> insertMailboxAccount(
+    MailboxAccount account, {
+    required String password,
+  }) async {
+    final payload = account.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('mailbox_accounts')
+        .insert(payload)
+        .select()
+        .single();
+    final saved = MailboxAccount.fromSupabase(row);
+    await _client.rpc(
+      'set_mailbox_password',
+      params: {'_account_id': saved.id, '_password': password},
+    );
+    return saved;
+  }
+
+  Future<MailboxAccount> updateMailboxAccount(
+    MailboxAccount account, {
+    String? newPassword,
+  }) async {
+    final payload = account.toSupabaseInsert();
+    final row = await _client
+        .from('mailbox_accounts')
+        .update(payload)
+        .eq('id', account.id)
+        .select()
+        .single();
+    final saved = MailboxAccount.fromSupabase(row);
+    if (newPassword != null && newPassword.isNotEmpty) {
+      await _client.rpc(
+        'set_mailbox_password',
+        params: {'_account_id': saved.id, '_password': newPassword},
+      );
+    }
+    return saved;
+  }
+
+  Future<void> deleteMailboxAccount(String id) async {
+    await _client.from('mailbox_accounts').delete().eq('id', id);
+  }
+
+  // ── Parsed messages / suggestions ────────────────────────────────────────
+
+  Future<List<ParsedMessage>> loadParsedMessages({
+    Set<ParsedMessageStatus>? statuses,
+    int limit = 100,
+  }) async {
+    final ws = _workspaceId;
+    if (ws == null) return const [];
+    final filterValues = (statuses ?? const {})
+        .map((s) => s.name)
+        .toList();
+    var query = _client
+        .from('parsed_messages')
+        .select()
+        .eq('workspace_id', ws);
+    if (filterValues.isNotEmpty) {
+      query = query.inFilter('status', filterValues);
+    }
+    final rows = await query
+        .order('received_at', ascending: false)
+        .limit(limit);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(ParsedMessage.fromSupabase)
+        .toList();
+  }
+
+  Future<List<PendingDealSuggestion>> loadPendingSuggestions({
+    bool unresolvedOnly = true,
+    int limit = 100,
+  }) async {
+    final ws = _workspaceId;
+    if (ws == null) return const [];
+    var query = _client
+        .from('pending_deal_suggestions')
+        .select()
+        .eq('workspace_id', ws);
+    if (unresolvedOnly) {
+      query = query.filter('resolved_at', 'is', null);
+    }
+    final rows = await query
+        .order('created_at', ascending: false)
+        .limit(limit);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(PendingDealSuggestion.fromSupabase)
+        .toList();
+  }
+
+  Future<void> markSuggestionResolved(
+    String suggestionId, {
+    required String action,
+    int? createdDealId,
+  }) async {
+    await _client
+        .from('pending_deal_suggestions')
+        .update({
+          'resolved_at': DateTime.now().toUtc().toIso8601String(),
+          'resolved_action': action,
+          'created_deal_id': ?createdDealId,
+        })
+        .eq('id', suggestionId);
+  }
+
+  /// User-getriggert: Mail "wegwerfen". Bleibt im Audit, taucht im UI nicht
+  /// mehr auf.
+  Future<void> dismissParsedMessage(String id) async {
+    await _client
+        .from('parsed_messages')
+        .update({
+          'status': 'dismissed',
+          'processed_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', id);
+  }
+
+  /// User wendet Tracking + (optional) Carrier + ETA aus einer Mail auf
+  /// einen bestehenden Deal an, ohne neuen Deal anzulegen. Markiert die
+  /// Mail als matched + verlinkt sie mit dem Deal.
+  Future<void> applyTrackingToDeal({
+    required String parsedMessageId,
+    required int dealId,
+    required String tracking,
+    String? carrier,
+    DateTime? eta,
+    String? statusOverride,
+  }) async {
+    final dealUpdate = <String, dynamic>{'tracking': tracking};
+    if (eta != null) {
+      dealUpdate['arrival_date'] = eta.toUtc().toIso8601String();
+    }
+    if (statusOverride != null) {
+      dealUpdate['status'] = statusOverride;
+    } else {
+      dealUpdate['status'] = 'Unterwegs';
+    }
+    await _client.from('deals').update(dealUpdate).eq('id', dealId);
+    await _client
+        .from('parsed_messages')
+        .update({
+          'status': 'matched',
+          'match_deal_id': dealId,
+          'processed_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', parsedMessageId);
+  }
+
+  /// Verlinkt eine offene Suggestion mit einem bestehenden Deal — der
+  /// User sagt: "das gehört zu Deal #X". Suggestion wird resolved (accepted),
+  /// `match_deal_id` auf der zugehörigen parsed_message gesetzt, und falls
+  /// Tracking/ETA in der Suggestion vorhanden waren, werden sie auf den
+  /// Deal übernommen.
+  Future<void> linkSuggestionToExistingDeal({
+    required String suggestionId,
+    required String parsedMessageId,
+    required int dealId,
+    String? tracking,
+    String? orderId,
+    DateTime? eta,
+  }) async {
+    final dealUpdate = <String, dynamic>{};
+    if (tracking != null && tracking.isNotEmpty) {
+      dealUpdate['tracking'] = tracking;
+      dealUpdate['status'] = 'Unterwegs';
+    }
+    if (eta != null) {
+      dealUpdate['arrival_date'] = eta.toUtc().toIso8601String();
+    }
+    if (orderId != null && orderId.isNotEmpty) {
+      dealUpdate['ticket_number'] = orderId;
+    }
+    if (dealUpdate.isNotEmpty) {
+      await _client.from('deals').update(dealUpdate).eq('id', dealId);
+    }
+    await _client
+        .from('pending_deal_suggestions')
+        .update({
+          'resolved_at': DateTime.now().toUtc().toIso8601String(),
+          'resolved_action': 'accepted',
+          'created_deal_id': dealId,
+        })
+        .eq('id', suggestionId);
+    await _client
+        .from('parsed_messages')
+        .update({
+          'status': 'matched',
+          'match_deal_id': dealId,
+          'processed_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', parsedMessageId);
+  }
 }

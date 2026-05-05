@@ -252,7 +252,16 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<InventoryProvider>();
-    final shops = provider.shops.where((s) => s.active).toList();
+    // Shop-Picker: Amazon-Block oben, Trennlinie, sonstige alphabetisch.
+    final activeShops = provider.shops.where((s) => s.active).toList();
+    final amazonShops = activeShops
+        .where((s) => s.name.trim().toLowerCase().startsWith('amazon'))
+        .toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final otherShops = activeShops
+        .where((s) => !s.name.trim().toLowerCase().startsWith('amazon'))
+        .toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final buyers = provider.buyers.where((b) => b.active).toList();
     final dateFmt = DateFormat.yMd(
         Localizations.localeOf(context).toLanguageTag());
@@ -359,10 +368,20 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             initialValue: _shop,
                             decoration:
                                 InputDecoration(labelText: '${l10n.dealShop} *'),
-                            items: shops
-                                .map((s) => DropdownMenuItem(
-                                    value: s.name, child: Text(s.name)))
-                                .toList(),
+                            items: [
+                              for (final s in amazonShops)
+                                DropdownMenuItem(
+                                    value: s.name, child: Text(s.name)),
+                              if (amazonShops.isNotEmpty &&
+                                  otherShops.isNotEmpty)
+                                const DropdownMenuItem<String>(
+                                  enabled: false,
+                                  child: Divider(height: 1),
+                                ),
+                              for (final s in otherShops)
+                                DropdownMenuItem(
+                                    value: s.name, child: Text(s.name)),
+                            ],
                             onChanged: (v) => setState(() => _shop = v),
                             validator: (v) => v == null || v.isEmpty
                                 ? l10n.commonRequired

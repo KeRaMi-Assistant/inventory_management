@@ -1,395 +1,428 @@
-# Strategie & Analyse — InventoryOS
+# STRATEGY — InventoryOS
 
-> Status: Sprint 3 abgeschlossen · letzte Aktualisierung 2026-05-03
-> Kontext: Eine in Flutter geschriebene Lager- und Deal-Verwaltung mit
-> Supabase-Backend, gebaut für Reseller/Flipper. Multi-Plattform
-> (Web, iOS, Android, macOS, Windows), deutschsprachig, Cloud-Sync,
-> Discord-Ticket-Integration.
-
----
-
-## 1. Produkt & Marktwert
-
-### 1.1 Wahrgenommener Marktwert (Status quo)
-
-Die App hat einen geschätzten **Marktwert von 25–60 €/Monat pro Nutzer** in
-ihrem aktuellen Zustand, wenn sie als SaaS angeboten würde. Das ergibt sich
-aus der Summe vergleichbarer Tools:
-
-| Funktion | Vergleichbares Tool | Preis |
-|---|---|---|
-| Reseller-Inventar | Sortly Pro / Flipwise | 19–39 €/Mon |
-| Multi-Plattform mit Cloud-Sync | inFlow Inventory | 89 €/Mon |
-| Statistik-Dashboard | Hypemaster Playbook | ~30 €/Mon |
-| Discord-Ticket-Integration | — | unbepreist (USP) |
-
-**Was den Wert real beweist:**
-- Vollständige Cloud-Sync mit Supabase + Auth + RLS — produktionsreif
-- 5-Tab-Statistikdashboard mit Charts, KPIs, Cashflow, Steuerreport
-- Multi-Currency, Tax-aware, MHD/Chargen-Tracking
-- 5 Plattformen, deutsche UI, OAuth (Google/Apple)
-
-**Was den wahrgenommenen Wert aktuell drückt:**
-- Keine Marke, keine Landing Page, keine Reviews
-- Solo-Tool-Charakter — fühlt sich an wie internes Tool, nicht wie Produkt
-- Keine Demo-Videos, keine Onboarding-Flows
-- Nur deutschsprachig → addressabler Markt klein
-- Kein offizieller App-Store-Eintrag → niemand findet es
-
-### 1.2 Was den Wert signifikant steigern würde
-
-Sortiert nach **Wertsteigerung pro Aufwand**:
-
-1. **Marketplace-Integrationen** (eBay, Vinted, Mercari, Kleinanzeigen, StockX).
-   Auto-Sync von Listings, Verkäufen, Versand. **Das ist der Tipping-Point**
-   vom "Excel-Ersatz" zum "unverzichtbaren Hub" — alleine dadurch kann der
-   Preis verdreifacht werden. Vergleichbare Tools (Vendoo, List Perfectly)
-   nehmen 30–50 €/Monat NUR für Crossposting.
-2. **Discord-Bot** (eigenständig). Der Bot postet Updates direkt in den Ticket-Channel,
-   liest Tracking-Codes automatisch aus, erinnert an MHD/Lieferungen.
-   Das ist der Discord-USP, **multipliziert** mit Automatisierung.
-3. **Foto-Anhänge an Items/Deals.** Nicht-trivialer Mehrwert — niemand will
-   Reseller-Software ohne Bilder. Supabase Storage macht das einfach.
-4. **Mobile-first Onboarding-Flow + Barcode-Scanner.** EAN-Feld existiert
-   bereits, ist aber ohne Scanner-UX wertlos. `mobile_scanner`-Package
-   integrieren → Lager-Workflow drastisch beschleunigt.
-5. **Public Profile / Sharing.** Reseller wollen ihren Shop teilen. Eine
-   öffentliche Read-only-Seite (`/u/<username>`) mit aktuellem Bestand
-   wäre Akquise-Magnet (jeder geteilte Link = Werbung).
-6. **Tax-Export für deutsche Steuerberater (DATEV-Format).** Niemand sonst
-   bietet das im Reseller-Bereich. Hochpreis-Argument für KMU-Reseller.
-
-### 1.3 Differenzierung gegenüber Wettbewerbern
-
-| Wettbewerber | Stärke dort | Lücke = unsere Chance |
-|---|---|---|
-| Vendoo / List Perfectly | Crossposting | Kein Profit-Tracking, kein deutsches Steuermodell |
-| Sortly | UX, Mobile | Generisch, nicht reseller-spezifisch, kein Discord |
-| Hypemaster Playbook | Cookgroup-Reichweite | Excel-basiert, kein Cloud-Sync, USA-Fokus |
-| Lexware Warenwirtschaft | Steuer/Buchhaltung | Klassisch, B2B, nicht für Reseller-Workflow |
-| Notion-Templates | Flexibilität | Kein echtes Datenmodell, manuell, fehleranfällig |
-
-**Eigenes Differenzierungsprofil**, das es so noch nicht gibt:
-
-> *"Reseller-Software für den deutschen Markt, mit nativer Discord-Integration,
-> Multi-Marketplace-Sync und steuerkonformer Buchhaltung — gebaut von einem
-> Reseller, für Reseller."*
+> Stand: 2026-05-05 · Roadmap & To-Do-Liste für die nächsten 6 Monate.
+> Diese Datei ist umsetzungsorientiert: jede Sektion beschreibt **was** gebaut
+> wird, **warum** es zählt und **wie** es technisch aufgesetzt wird. Die
+> bisherige analytische Bestandsaufnahme ist abgeschlossen — jetzt geht's an
+> Auslieferung.
 
 ---
 
-## 2. Funktionale Analyse
+## 0. Aktueller Zustand (Kurzform)
 
-### 2.1 Fehlende Features (User- & Business-Sicht)
+Die App ist heute ein technisch sauberes, deutschsprachiges Reseller-Inventar
+mit Supabase-Cloud-Sync, Workspaces, Push-Notifications, Bilder/Anhängen,
+Barcode-Scanner, Tickets, Billing-Profilen und einer Carrier-Detection mit 8
+Versanddienstleistern. Was fehlt zur echten Produkt-Reife:
 
-**Tier S — Must-have für Produktreife** (Reseller wechseln nicht, solange das fehlt):
+1. **Discord-Bot als eigenständiger Service** (aktuell nur Hilfetext + Buyer-Links).
+2. **Postfach-/E-Mail-Anbindung** zum automatischen Updaten von Bestellungen.
+3. **Echte Archiv-/Verkaufs-Übersicht**, die abgeschlossene Tickets aus dem aktiven Workflow herausnimmt.
+4. **Marktplatz-Sync** (eBay zuerst).
+5. **DATEV-Steuerexport**.
+6. **Marke + Onboarding + Landing-Page**.
 
-- [ ] **Bilder/Anhänge** für Items und Deals (Supabase Storage)
-- [ ] **Barcode-Scanner** (EAN existiert als Feld, aber kein Scanner)
-- [ ] **Push-Benachrichtigungen** (MHD-Warnung, Lieferung angekommen, Käufer-Zahlung)
-- [ ] **Mobile-optimierte Listenansichten** (aktuell sind viele Tabellen am Handy schmerzhaft)
-- [ ] **Activity-Log UI** (existiert im Backend, ist aber nirgends sichtbar)
-- [ ] **Suchfunktion global** (Cmd+K-Style — über Deals, Items, Tickets, Käufer)
+Alle anderen Themen aus früheren Sprints (Workspaces, i18n-Foundation, Bilder,
+Bulk-Edit, Activity-Log) sind im Schema vorhanden und werden hier nur dort
+erwähnt, wo sie ein neues Feature blockieren.
 
-**Tier A — High-Impact, nächster Sprint:**
+---
 
-- [ ] **Discord-Bot** für: Ticket-Sync, MHD-Erinnerungen, neue Deal-Posts
-- [ ] **Marketplace-Sync** (eBay API zuerst — größter Markt, beste Doku)
-- [ ] **Automatisches Tracking-Update** (DHL/UPS/Hermes APIs → Status, Ankunft)
-- [ ] **Bulk-Edit im Deal-Table** (mehrere markieren → Status/Käufer/Tracking ändern)
-- [ ] **Versand-Etiketten erstellen** (Sendcloud / Shipcloud Integration)
+## 1. Sprint 5 — Discord-Bot (eigenständiger Service)
 
-**Tier B — Schöne Adds:**
+**Ziel:** Reseller leben in Discord. Wenn der Bot ihre Tickets, MHDs und
+Lieferungen automatisch in den Server postet, wird die App vom passiven
+Inventar zum aktiven Hub. Das ist unser USP gegenüber Vendoo, Sortly und
+Hypemaster Playbook — keiner davon hat eine native Discord-Integration.
 
-- [x] **Kommentar-/Notiz-Threads** auf Deals (für Team später) — Sprint 4 (Tabelle `deal_comments` + UI im Deal-Dialog)
-- [ ] **Recurring-Items** (z.B. monatlich nachbestellen)
-- [ ] **Preis-Tracker** (Vergleich VK vs. aktueller Marktpreis bei StockX/eBay)
-- [ ] **Steuer-Export DATEV-konform** (CSV mit Buchungssätzen, nicht nur Liste)
-- [ ] **Public Profile Page** (Read-only-Bestandsliste auf eigener URL)
-- [ ] **Templates** für wiederkehrende Item-Typen — teilweise: Produkt-Vorschläge im Deal-Dialog übernehmen die letzte Konfiguration als Vorlage
-- [x] **Multi-Sprach-Support** (EN als zweite Sprache → 10× Markt) — Foundation in Sprint 4 (flutter_localizations, ARB für DE/EN, Sprachschalter in Settings). Strings müssen sukzessive auf `AppLocalizations` umgestellt werden.
-
-**Tier C — Premium/Enterprise:**
-
-- [x] **Team-Modus** (mehrere User pro Account, Rollen, Audit-Log) — Schema-Foundation in Sprint 4 (workspaces, workspace_members, workspace_invites, audit_log, Personal-Workspace-Trigger). UI: Team-Tab in Settings für Mitglieder + Einladungen. Folge-Sprint stellt RLS auf workspace_id um.
-- [ ] **API-Zugang** für eigene Scripts/Integrationen
-- [ ] **Webhook-Support** (Zapier-style: "Wenn Deal Status=Done → poste in Discord")
-- [ ] **White-Label** für Cookgroup-Owner
-
-### 2.2 Überflüssig oder vereinfachbar
-
-- **Zwei Status-Sets** (`status` für Deals, separater `status` für InventoryItems) → könnten harmonisiert werden in einer State-Machine
-- ~~**`shippingType` als String** ("Reship"/"Dropship") → reicht 1 Boolean (`isDropship`)~~ ✓ erledigt Sprint 4 (Migration `20260504000000_deals_booleans.sql`)
-- ~~**`beleg` als String "Ja"/"Nein"** → klassischer SQL-Code-Smell, sollte ein Boolean sein~~ ✓ erledigt Sprint 4 (`has_receipt`)
-- **`ticketUrl` UND `ticketNumber`** in Deals UND InventoryItems → redundant. Sollte über `ticketNumber` aufgelöst werden, URL nur einmal speichern
-- ~~**JSON-Backup-Restore** (existiert in Settings) → nutzt niemand, da Cloud-Sync läuft. Kann weg~~ ✓ entfernt Sprint 4
-- ~~**Settings-Tab "Discord-Info"** → ist Hilfetext, gehört in eine richtige Hilfe-/Onboarding-Seite~~ ✓ verschoben in `/screens/help_screen.dart`, Tab "Hilfe" in der Navigation
-
-### 2.3 High-Impact-Priorisierung (nächste 90 Tage)
+### 1.1 Architektur
 
 ```
-Sprint 4 (2 Wochen):
-  - Bilder/Foto-Upload (Items + Deals)
-  - Barcode-Scanner mobile
-  - Push-Notifications (FCM via Supabase)
-  - Activity-Log-UI
-
-Sprint 5 (3 Wochen):
-  - Discord-Bot v1 (Ticket-Sync + MHD-Reminder)
-  - Bulk-Edit in Deal-Tabelle
-  - Tracking-Auto-Update (DHL API zuerst)
-
-Sprint 6 (4 Wochen):
-  - eBay-Marketplace-Integration (read-only zuerst: Verkäufe importieren)
-  - DATEV-konformer Steuer-Export
-  - Englische Übersetzung
+Supabase (events + workspaces)
+        │
+        ▼ Edge Function "discord-dispatcher" (cron alle 60s)
+        │
+        ▼ Discord Bot (separater Deno/Node-Service auf Fly.io)
+        │
+        ▼ Discord-Channel (per Workspace konfiguriert)
 ```
 
-Das wäre der Pfad von "fertiges Tool" zu "Produkt mit echtem Markt-Fit".
+- **Bot-Service**: schlanker Deno-Prozess auf `fly.io` (kostenlos im Free-Tier
+  bis ~3 Apps), nutzt `discord.js` oder `harmony` (Deno).
+- **Bot-Token + App-Settings** liegen in Supabase Secrets.
+- **Workspace-Konfiguration**: neue Tabelle `workspace_discord_settings`
+  (`workspace_id`, `guild_id`, `channel_ticket_updates`, `channel_mhd_warnings`,
+  `channel_new_deals`, `notify_role_id`, `enabled`).
+- **Event-Bus**: neue Tabelle `outbound_events` (`id`, `workspace_id`, `kind`,
+  `payload jsonb`, `dispatched_at`). Triggers auf `deals`, `inventory_items`,
+  `deal_comments` schreiben Events rein. Edge Function pollt alle 60s,
+  sendet an den Bot, markiert dispatched.
 
----
+### 1.2 Bot-Commands (Slash-Commands)
 
-## 3. Datenmodell & Architektur
-
-### 3.1 Zukunftssicherheit
-
-Das aktuelle Modell (Postgres via Supabase, RLS pro User, Soft-Delete,
-Audit-Spalten `updated_at`/`updated_by`/`version`) ist **solide für den
-Single-User-Fall**.
-
-**Skaliert nicht ohne Anpassung für:**
-- Team-/Workspace-Modell (kein Workspace-Owner-Konzept)
-- Multi-Account pro User (z.B. privat + business)
-- Real-Time-Collab (Supabase Realtime ist da, aber nicht eingebunden)
-- Sehr große Datasets (>50k Deals) — viele Stats werden client-seitig berechnet
-
-### 3.2 Fehlende Entitäten / Relationen
-
-| Entität | Warum sie fehlt |
+| Command | Wirkung |
 |---|---|
-| **`workspace`** / `team` | Aktuell ist `user_id` direkt auf jeder Tabelle. Für Team-Modus brauchst du `workspace_id` + `workspace_members` mit Rollen |
-| **`attachment`** | Bilder, Belege, Versandlabels — gehört eigene Tabelle mit Polymorphic-Reference auf Deal/Item/Batch |
-| **`marketplace_listing`** | Verknüpfung Item ↔ Listing auf eBay/Vinted/etc. Mit Status (aktiv, verkauft, gelistet, gepausit) |
-| **`payment`** | Aktuell ist Zahlung implizit über `status='Done'` — eine `payment`-Tabelle mit Datum, Betrag, Methode wäre sauber für Cashflow |
-| **`shipment`** | Tracking, Versand-Etikett, Carrier, Versandkosten — gehören aus `Deal` raus |
-| **`tag` / `category`** | Items haben aktuell keine Kategorisierung (Sneaker, Kleidung, Elektronik…). Tags wären die einfachste Lösung |
-| **`price_history`** | Wenn man Marktpreis-Tracking will, braucht man eine Zeitreihe pro Item/EAN |
-| **`event`** | Generischer Event-Stream für Analytics, AI, Integrations (siehe 3.4) |
-| **`buyer_address`** | Käufer haben aktuell keine Lieferadressen — braucht es spätestens für Versand-Etiketten |
+| `/ticket <nr>` | Postet Ticket-Summary (Status, Items, Tracking, Käufer) |
+| `/lager <ean\|name>` | Sucht im Lager des Workspaces |
+| `/mhd` | Listet alle Items mit MHD < 14 Tage |
+| `/verkauft today\|week\|month` | Verkaufs-Report mit Profit |
+| `/track <nr>` | Carrier-Detection + Live-Tracking-URL |
+| `/note <ticket> <text>` | Hängt Kommentar an Deal (taucht in App auf) |
 
-### 3.3 Wo entstehen Probleme später?
+### 1.3 Auto-Posts (Bot postet von selbst)
 
-**Performance:**
-- `StatisticsService` rechnet alle Stats jedes Mal client-seitig auf der ganzen Liste. Bei 10k+ Deals merkt man das. → **Lösung**: Postgres-Materialized-Views oder serverseitige RPC-Funktionen mit Caching
-- `loadAll()` lädt alle Tabellen komplett auf jeder Anmeldung → **Lösung**: Inkrementelles Sync via `updated_at > last_sync`
-- `inventoryItemIds`-Array auf Deal (nicht in DB-Schema sichtbar) — wenn das ein PG-Array ist, schlecht für Joins → **Lösung**: Normale Many-to-Many-Tabelle `deal_items`
+- **Neuer Deal** → Channel `new_deals`: Produkt, Menge, Shop, EK, VK.
+- **Status-Änderung** → Channel `ticket_updates`: "Ticket #1234 → Angekommen".
+- **MHD-Warnung** (täglich 09:00) → Channel `mhd_warnings`: Items <14 Tage.
+- **Tracking-Update** (siehe Sprint 6) → Channel `ticket_updates`.
+- **Käufer-Match**: wenn ein Discord-Buyer per `discord_server_id` zugeordnet
+  ist und ein Deal "Done" wird → DM an den Buyer mit Tracking-Link.
 
-**Wartbarkeit:**
-- Drei Datenrepräsentationen pro Entität (`toJson` für Backups, `toSupabaseInsert` snake_case, `fromSupabase`) — DRY-Verletzung. Bei jeder neuen Spalte musst du sie an 4 Stellen pflegen → **Lösung**: Code-Gen mit `freezed` + `json_serializable` ODER eine zentrale Mapping-Schicht
-- `_sentinel`-Object-Trick im `copyWith` von Hand pro Klasse → **Lösung**: `freezed` macht das automatisch
-- 700+ Zeilen `inventory_provider.dart` ist zu viel → split nach Domain (Deals/Items/Suppliers/Batches als separate Provider/Repositories)
+### 1.4 Was zu tun ist
 
-**Konsistenz:**
-- Kein Foreign-Key-Constraint zwischen Deal und InventoryItem (Item-IDs werden nur lokal in `inventoryItemIds` gehalten) → **Bug-Risiko**: gelöschte Items hinterlassen Dangling-References
-- `arrivalDate` auf Deal vs. `arrival_date` auf Item — können auseinanderdriften, kein Sync
-
-### 3.4 Erweiterungs-Vorschläge
-
-**Event-Sourcing-Light für Analytics + AI-Readiness:**
-
-Statt nur den aktuellen Zustand zu speichern, eine `event`-Tabelle ergänzen:
-```
-events:
-  id, user_id, workspace_id,
-  type (deal.created, deal.status_changed, item.scanned, ...),
-  entity_type, entity_id,
-  payload jsonb,
-  created_at
-```
-
-Vorteile:
-- AI/ML-Modelle können auf strukturierten Events trainiert werden ("welcher Käufer kauft wann was zu welchem Preis")
-- Zeitreihen-Analysen ohne Spaltenexplosion
-- Externe Webhook-Integration trivial (Event → fan-out)
-- DSGVO-Audit-Trail kostenlos dazu
-
-**Vector-Search für Produkte:**
-Mit `pgvector` (Supabase unterstützt es nativ) eine Embedding-Spalte auf
-Items/Deals → semantische Suche und "ähnliche Produkte" mit minimalem Aufwand.
-
-**Telemetry-Schicht:**
-Aktuell loggt die App nur intern via `_log` in eine `activity_log`-Tabelle.
-Für echte Produkttelemetrie (Onboarding-Funnel, Feature-Nutzung) ein
-schlankes Tool wie **PostHog** oder **Plausible** ergänzen — frei,
-self-hostbar, sehr DSGVO-freundlich.
+- [ ] Migration `20260506000000_outbound_events.sql`: Tabellen + Trigger
+- [ ] Migration `20260506000100_workspace_discord_settings.sql`
+- [ ] Edge Function `discord-dispatcher` (Polling + Dispatch)
+- [ ] Bot-Service `bot/` als separates Repo oder Subfolder mit eigenem `fly.toml`
+- [ ] Settings-Screen: neuer Tab "Discord" (Guild-ID, Channel-Picker, Enable-Toggle, Test-Button)
+- [ ] Onboarding: "Bot zum Server hinzufügen"-Button (OAuth2-Invite-Link)
+- [ ] Hilfe-Screen: Discord-Sektion erweitern um Bot-Setup-Anleitung
 
 ---
 
-## 4. Skalierbarkeit & Technik
+## 2. Sprint 6 — Postfach-Integration (Order-Inbox)
 
-### 4.1 Wachstumsfähigkeit
+**Ziel:** Reseller bekommen täglich 50+ Bestätigungs-Mails von Shops (Amazon,
+eBay, Zalando, Nike, …). Diese manuell in Deals zu übertragen ist die
+zeitaufwändigste Tätigkeit überhaupt. Wenn die App das Postfach lesen kann,
+neue Bestellungen erkennt, Tracking-Updates parst und automatisch dem
+richtigen Deal zuordnet, **ersetzt das ~30 min/Tag manueller Arbeit pro
+Power-User**.
 
-| Achse | Aktuell tragfähig bis | Bottleneck |
-|---|---|---|
-| **User pro Account** | 1 | Kein Team-Modell |
-| **Deals pro User** | ~5.000 | Client-seitige Stats-Berechnung |
-| **Konkurrente User** | 100–500 | Supabase-Free-Tier-Limits |
-| **Plattformen** | 5 | Aktuell nur deutsche UI, kein i18n |
+### 2.1 Anbindungs-Optionen (gestaffelt nach Aufwand)
 
-### 4.2 Sinnvolle Patterns/Tech-Ergänzungen
+**Stufe 1 — IMAP (universell, datenschutzfreundlich, MVP)**
+- User trägt IMAP-Server, Login, App-Passwort ein.
+- Edge Function `inbox-poll` läuft alle 5 min via `pg_cron`.
+- Server-seitig via `Deno + ImapFlow` (npm via esm.sh) → keine Credentials im Client.
+- **Vorteil**: funktioniert mit jedem Provider (Gmail, GMX, web.de, iCloud).
+- **Nachteil**: User muss App-Passwort generieren.
 
-**Code-Layer:**
-- `freezed` + `json_serializable` → Datenklassen + JSON automatisch generiert
-- `riverpod` (oder zumindest `provider` strenger nutzen) → besseres Dependency-Tracking als die aktuellen ChangeNotifier-Mischungen
-- `go_router` → typsichere Deep-Links + bessere Navigation als der aktuelle Index-State im `MainScreen`
-- `dart_mappable` als modernere Alternative zu `freezed` für Mapping
-- Separate `DealRepository` / `InventoryRepository` / `SupplierRepository`, statt einem Mega-Provider
+**Stufe 2 — OAuth (Google + Microsoft, später)**
+- Gmail API + Microsoft Graph für Outlook.
+- Bequemer, aber jeder Provider braucht eigene App-Verifikation (bei Google: Security-Review nötig, ~3 Wochen).
 
-**Server-Layer:**
-- **Supabase Edge Functions** für: Webhooks empfangen (eBay, DHL), Discord-Bot-Endpoints, schwere Aggregationen, Tax-Export
-- **PostgreSQL RPC-Funktionen** für die Statistik-Aggregationen — verschiebt Last vom Client zum DB-Server
-- **Supabase Realtime** für Live-Updates (Deal-Status ändert sich → andere Geräte aktualisieren ohne Reload)
-- **Supabase Storage** für Bilder
-- **pgvector** + Embeddings für Produkt-Suche
-- **CRON-Jobs in Supabase** (`pg_cron`) für: tägliche MHD-Checks, Tracking-API-Polls, automatische Zahlungs-Reminder
+**Stufe 3 — Webhook-Forwarding (für Self-Hoster + Pro-Tier)**
+- User richtet Mailgun/Postmark-Inbound-Forward ein.
+- Wir empfangen Mails per Webhook → trivial, keine Polls.
 
-**Infrastructure:**
-- **Sentry / GlitchTip** für Error-Tracking (frei, self-hostbar)
-- **GitHub Actions** für CI/CD: Test-Run, `flutter analyze`, Build pro Plattform, Release-Channel
-- **Coverage-Reports** + Integration-Tests (aktuell gibt's keinen `test/`-Folder mit Tests)
+**Empfehlung**: Stufe 1 als MVP, Stufe 2 nach 2 Monaten, Stufe 3 als Pro-Add-on.
 
-### 4.3 Risiken / Tech Debt
+### 2.2 Parser-Pipeline
 
-**Hoch:**
-- **Keine Tests.** Keine einzige Unit- oder Integration-Test-Datei → jede Änderung kann
-  unbemerkt regressieren. Bei 8.000+ LOC ist das ein wachsendes Risiko.
-- **Drei Mapper pro Modell** (toJson, toSupabaseInsert, fromSupabase) → Drift-Risiko zwischen Backup-Format und DB-Format
-- **Stats werden bei jedem Tab-Wechsel neu gemountet** — die Tab-Implementierung
-  in `statistics_screen.dart` zerstört State, wenn man tabbt. Performance-Bug bei großen Datasets.
+```
+Mail → "shop_parser" identifiziert Shop (From-Header + Domain-Map)
+     → schopfspezifischer Adapter extrahiert:
+         · order_id, tracking, items[], total, currency, eta
+     → Matching: existierender Deal mit gleicher order_id?
+         ja  → Update (Status, Tracking, Arrival)
+         nein → neuer "Vorschlag"-Deal in Inbox-Tab
+     → Activity-Log-Eintrag + optional Discord-Post
+```
 
-**Mittel:**
-- **CSV-Service mit `dart:io`** funktioniert auf Web nur wegen Tree-Shaking. Sauber wäre Conditional Imports (`stub_io.dart` / `web_io.dart`)
-- **Hardcoded Farben** überall (`Color(0xFF…)`) → kein Theming, keine Dark-Mode-Vorbereitung
-- **Keine Rate-Limits** auf Auth-Endpoints sichtbar — Brute-Force theoretisch möglich (Supabase macht zwar etwas, aber nicht App-spezifisch)
-- **DSGVO-Compliance** fehlt: keine Datenschutz-Erklärung, kein Consent-Banner, keine Data-Export-Funktion (außer JSON-Backup)
+**Adapter pro Shop** (Start mit den 8 wichtigsten):
+- Amazon (DE/COM/FR/IT/ES/UK) — Bestellbestätigung + Versand-Mail
+- eBay
+- Zalando
+- Nike / SNKRS
+- Adidas / Confirmed
+- StockX
+- Otto
+- About You
 
-**Niedrig (aber nervig):**
-- Inkonsistente Naming-Conventions (`zuBekommen` vs. `vk` vs. `revenue`)
-- `_sentinel`-Trick in jedem Model → mit Code-Gen eliminierbar
-- Mehrere identische `_dateFmt`-Definitionen über die Codebase verstreut
+Jeder Adapter ist eine ~50-Zeilen-TypeScript-Funktion, die HTML/Plaintext der
+Mail in ein normalisiertes `ParsedOrder`-Objekt überführt. Unbekannte Shops
+landen in einem "Unklassifiziert"-Stack mit Roh-Anzeige.
+
+### 2.3 UI
+
+Neuer Tab "Inbox" (zwischen Tickets und Lager):
+- **Vorgeschlagene Deals** (vom Parser erkannt, noch nicht bestätigt) → Swipe-to-accept
+- **Aktualisierte Deals** (Status/Tracking automatisch übernommen) → Toast-Recap
+- **Unklassifizierte Mails** (Parser-Miss) → manueller "Deal anlegen aus Mail"-Button
+
+### 2.4 Was zu tun ist
+
+- [x] Migration `20260507000000_inbox.sql`: `mailbox_accounts`, `mailbox_credentials`, `parsed_messages`, `pending_deal_suggestions` + 30-Tage-Cleanup-Cron
+- [x] Edge Function `inbox-poll` (Deno + ImapFlow)
+- [x] Edge Function `inbox-parse` (Adapter-Registry + Matching, 8 Shops)
+- [x] Settings-Screen: neuer Tab "Postfach" — IMAP-Konfiguration
+- [x] Inbox-Screen (Vorschläge / Aktualisiert / Unklassifiziert, Swipe-to-accept)
+- [x] Verschlüsselung der IMAP-Credentials at-rest (`pgp_sym_encrypt` mit Supabase-Vault-Master-Key, get/set per SECURITY-DEFINER-RPC)
+
+### 2.5 Datenschutz & Compliance
+
+Mail-Inhalte sind sensibel. Regeln:
+- Nur Header + extrahiertes JSON wird gespeichert, **nicht** der volle Mail-Body.
+- Aufbewahrung 30 Tage, danach Auto-Delete des Parses.
+- Klare Datenschutzerklärung + Opt-In im Onboarding.
+- Auf Wunsch lokaler Modus: Polling läuft im Flutter-Client (nur Desktop), nicht in der Edge Function.
 
 ---
 
-## 5. Monetarisierung & Business-Modell
+## 3. Sprint 7 — Archiv "Verkauft" + Lifecycle-Refactor
 
-### 5.1 Passende Strategien
+**Ziel:** Aktive Tickets dürfen den Workflow nicht zumüllen, wenn sie
+abgeschlossen sind. Ein Ticket gehört ins Archiv, sobald
 
-**Empfehlung in absteigender Priorität:**
+1. **alle zugehörigen Deals** verschickt (Tracking gesetzt **und**
+   Versanddatum gesetzt) **oder** auf "Done" sind, **oder**
+2. der zugehörige Inventory-Eintrag den Status **"Verkauft"** oder **"Versandt"**
+   hat (je nach Workflow: Lager-Verkauf vs. Dropship-Verkauf).
 
-#### A) Freemium-SaaS (Standard, sicher, niedriges Risiko)
+### 3.1 Modell-Änderungen
 
-| Tier | Preis | Limits / Features |
-|---|---|---|
-| **Free** | 0 € | 50 Deals/Monat, 1 Plattform, keine Charts, keine Exports |
-| **Reseller** | 14,99 €/Mon | Unlimited Deals, alle Plattformen, alle Charts, CSV/PDF/Excel-Export, eine Marketplace-Integration |
-| **Pro** | 39,99 €/Mon | + Discord-Bot, + alle Marketplace-Integrationen, + Tracking-Auto-Update, + DATEV-Export, + 10GB Bilder |
-| **Team** | 99 €/Mon (3 Seats) | + Workspace, + Rollen, + Audit-Log, + API, + White-Label optional |
+Neue Spalten:
+- `tickets.archived_at` (timestamptz, NULL = aktiv)
+- `tickets.archived_reason` (`'all_shipped'`, `'all_done'`, `'inventory_sold'`, `'manual'`)
+- `deals.shipped_at` (timestamptz) — wir haben aktuell `arrival_date` für Eingang, aber kein dediziertes "verlässt-Lager"-Datum
 
-Erwartete Conversion bei 1000 Free-Usern: ~3–5% → 30–50 zahlend → **~600–2000 €/Monat MRR pro 1000 User**.
+> Aktuell ist "Ticket" eine virtuelle Aggregation aus `deals.ticket_number`
+> ohne eigene Tabelle. Für Archivierung brauchen wir eine echte
+> `tickets`-Tabelle:
+>
+> ```sql
+> create table tickets (
+>   id bigint generated always as identity primary key,
+>   workspace_id uuid not null references workspaces(id),
+>   ticket_number text not null,
+>   archived_at timestamptz,
+>   archived_reason text,
+>   archived_by uuid references auth.users(id),
+>   unique (workspace_id, ticket_number)
+> );
+> ```
+>
+> Migration füllt sie aus existierenden `deals.ticket_number`-Werten.
+> Deals bekommen `ticket_id` als FK; `ticket_number` bleibt als
+> generated-Spalte für Backward-Compat.
 
-#### B) Lifetime-Deal + Add-on-Käufe (für initialen Traction-Boost)
+### 3.2 Auto-Archive-Trigger
 
-- **Lifetime Pro-Lizenz** auf AppSumo / eigener Seite: einmalig **149 €**
-  → typischer AppSumo-Run bringt 500–2000 Käufer = 75–300k € einmalig
-- **Add-Ons** danach kostenpflichtig: Marketplace-Connector je 5 €/Monat, KI-Insights 9 €/Monat
-
-Das funktioniert besonders, wenn man Anfang des Wachstums ist (Reichweite > MRR).
-
-#### C) Pay-per-Marketplace (volumenbasiert, B2B-tauglich)
-
-- App selbst ist kostenlos
-- Pro synchronisiertes Listing/Verkauf: **0,10 € Transaktionsgebühr**
-- Spart sich die Free-vs-Paid-Schwelle, monetarisiert direkt mit Mehrwert
-
-Nachteil: Tracking-Aufwand, Erwartungshaltung "App kostet nichts".
-
-#### D) Reseller-Cookgroup-White-Label (Nische, Premium)
-
-Cookgroup-Owner nehmen monatlich 30–50 €/Monat von ihren Mitgliedern.
-Du bietest:
-- Eigene Domain (cookgroup.com/inventory)
-- Custom-Branding
-- Eingebauter Discord-Bot in IHREN Server
-- **Du nimmst 5 €/Member/Monat oder eine Flat von 199–499 €/Monat pro Cookgroup**
-
-Das ist Hochmargen-Nische — wenn du 20 Cookgroups gewinnst, bist du bei 4–10k €/Monat MRR mit minimalem Marketing.
-
-### 5.2 Features, die Zahlungsbereitschaft erhöhen
-
-Sortiert nach Conversion-Power:
-
-1. **Marketplace-Sync** — der zahlt sich SOFORT durch Zeitersparnis aus
-2. **Discord-Bot mit Auto-Posting** — Reseller leben in Discord, Automatisierung ist Gold
-3. **Tracking-Auto-Update** — niemand will manuell DHL-Codes eingeben
-4. **DATEV/Steuer-Export** — verkauft sich an alle, die einen Steuerberater haben
-5. **Bilder + öffentliches Profil** — Reseller wollen "ihren Shop" zeigen
-6. **Mobile Barcode-Scanner** — schneller Workflow am Wareneingang
-7. **Bulk-Edit + Templates** — Power-User-Feature für Vielnutzer
-8. **API-Zugang** — entwicklerische Reseller zahlen extra dafür
-
-### 5.3 Upsell-/Abo-Möglichkeiten
-
-**Innerhalb der App (Just-in-Time-Upsells):**
-- Free-User exportiert PDF → "Brauchst du mehr als 1 Export pro Monat? Upgrade auf Reseller"
-- Free-User klickt auf "Bilder hinzufügen" → "Bilder sind Pro-Feature"
-- Free-User erreicht 50 Deals → "Unlimited mit Reseller-Tier"
-
-**Plattform-Modell-Optionen:**
-- **App-Store für Integrationen**: Drittanbieter bauen Connectoren (z.B. Vinted, Etsy) → 30% Revenue-Share
-- **Marketplace für Templates**: User verkaufen ihre Item-Templates / Workflow-Setups → 20% Cut
-- **Daten-Insights** anonymisiert verkaufen: "Welche Sneaker-Modelle gehen 2026 am besten?" — Aggregat-Reports an Hersteller/Händler ab 199 €/Monat (DSGVO-Vorsicht!)
-
-**Add-On-Strategie:**
-- **AI-Pricing-Assistant** (zusätzlich 9 €/Monat): "Dieses Produkt verkauft sich aktuell für 84 € auf StockX, du hast 79 € als VK gesetzt. Anpassen?"
-- **Backup-as-a-Service**: tägliche Off-Site-Backups, eigene S3-URL, ab 4,99 €/Monat
-- **Custom-Reports**: Berater-Style PDF-Reports einmalig oder monatlich
-
-### 5.4 Empfohlene 12-Monats-Monetarisierungs-Roadmap
-
+Postgres-Trigger nach jedem `UPDATE` auf `deals`:
 ```
-Monat 0–2:  Sprint 4–5 abschließen (Bilder, Scanner, Bot, Notifications)
-            Keine Monetarisierung, Fokus auf Polish + erste 100 Beta-User
-
-Monat 3–4:  Free-Tier mit Limits live + Reseller-Tier 14,99 €/Mon
-            Erste Marketplace-Integration (eBay)
-            Ziel: 30 zahlende User (~450 €/Monat MRR)
-
-Monat 5–6:  Pro-Tier launch + Discord-Bot + DATEV-Export
-            Lifetime-Deal-Push auf einer Reseller-Plattform/Cookgroup
-            Ziel: 80 zahlende User (~2.000 €/Monat MRR)
-
-Monat 7–9:  Cookgroup-White-Label-Pilot mit 2 Partnern
-            Mehr Marketplace-Connectoren
-            Ziel: 200 zahlende User + 2 Cookgroups (~5.000 €/Monat MRR)
-
-Monat 10–12: API + Team-Tier launch
-             AI-Pricing als Add-on
-             Ziel: 400 zahlende + 5 Cookgroups (~10.000 €/Monat MRR)
+IF jeder Deal des Tickets shipped_at IS NOT NULL OR status = 'Done'
+THEN archive ticket with reason 'all_shipped' / 'all_done'
 ```
+
+Trigger nach `UPDATE` auf `inventory_items`:
+```
+IF item.status IN ('Verkauft', 'Versandt')
+   AND alle Items des Tickets in diesen Status
+THEN archive ticket
+```
+
+### 3.3 UI
+
+- **Tickets-Screen**: bekommt einen Sub-Tab `Aktiv | Archiv`
+- **Archiv** zeigt die Tickets nach Verkaufsmonat gruppiert, mit Profit-Summary
+  pro Gruppe — das ist gleichzeitig ein leichtgewichtiger Verkaufs-Recap
+- **Re-Open**: Long-Press auf archiviertes Ticket → "Wieder öffnen" (setzt
+  `archived_at = NULL`, schreibt ins Activity-Log).
+- **Inventory-Screen**: "Verkauft"-Filter wird zum primären Tab statt zur
+  Filter-Option, mit eigenem Header (Anzahl, Profit, Top-Käufer).
+
+### 3.4 Performance-Effekt
+
+Aktive Listen werden ~70% kleiner für Power-User mit >500 historischen Deals.
+Die Statistik-Aggregation kann optional weiter über alle Tickets laufen — die
+UI-Listen aber nur über die aktiven, was Initial-Render-Zeit auf großen
+Datasets spürbar drückt.
+
+### 3.5 Was zu tun ist
+
+- [ ] Migration `20260508000000_tickets_table.sql` + Backfill
+- [ ] Migration `20260508000100_deals_shipped_at.sql`
+- [ ] Migration `20260508000200_archive_triggers.sql`
+- [ ] `Deal`-Modell + `inventory_provider`: `shippedAt`, `ticketId`
+- [ ] `tickets_screen`: Tab-Switcher Aktiv/Archiv, Monatsgruppierung im Archiv
+- [ ] `inventory_screen`: "Verkauft"-Tab als eigenständige Ansicht
+- [ ] Neue Statistik-Card "Archiv-Quote" (% archiviert vs. aktiv) im Dashboard
 
 ---
 
-## TL;DR
+## 4. Sprint 8 — Marktplatz-Sync (eBay zuerst)
 
-**Was die App heute hat**: ein technisch solides, feature-reiches Reseller-Inventory mit
-seltener Discord-Integration und gutem Statistik-Dashboard.
+**Ziel:** Der größte einzelne Werttreiber. Vendoo nimmt 30 €/Monat allein
+fürs Crossposting — wir machen das Gegenteil und ziehen Verkäufe aus den
+Marktplätzen **rein**, statt zu pushen. Damit decken wir den realen Reseller-
+Workflow (verkaufen über mehrere Plattformen, zentral tracken).
 
-**Was sie bräuchte um Marktwert zu vervielfachen**: Bilder + Marketplace-Sync + Discord-Bot
-+ Mobile-Polish + ein klarer Free/Paid-Schnitt.
+### 4.1 Phase 1 (read-only, MVP)
 
-**Wo das größte Geld liegt**: Cookgroup-White-Label (B2B-Nische, hohe Margen) und
-DACH-spezifischer Steuer-Export (kein Wettbewerber in dem Feld). Beides skaliert mit
-relativ wenig zusätzlicher Engineering-Arbeit, weil das Datenmodell schon stimmt.
+- eBay Trading API: alle abgeschlossenen Verkäufe der letzten 30 Tage importieren.
+- Mapping: eBay-`ItemID` ↔ unser `inventory_item.id` (per EAN oder manuelles Linking).
+- Auto-Match: wenn EAN identisch → automatisch verknüpfen.
+- Bei Verkauf: Inventory-Status auf "Verkauft", Deal mit `shop = "eBay"` anlegen.
 
-**Was du in den nächsten 4 Wochen tun solltest**: Sprint 4 fokussieren auf Bilder +
-Scanner + Notifications, parallel die Free/Paid-Trennung im Code vorbereiten
-(Feature-Flags!), und einen ersten Cookgroup-Owner zum White-Label-Gespräch einladen.
+### 4.2 Phase 2 (write, später)
+
+- Listing-Push aus dem Inventory in eBay (Bilder + Beschreibung + Preis).
+- Status-Sync (Listing pausieren/aktivieren).
+
+### 4.3 Was zu tun ist (Phase 1)
+
+- [ ] eBay-Developer-Account + OAuth-Flow
+- [ ] Edge Function `marketplace-ebay-sync` (cron 4x täglich)
+- [ ] Migration `20260509000000_marketplace_listings.sql`
+- [ ] Settings-Tab "Marktplätze" mit eBay-Connect-Button
+- [ ] Inbox-ähnliche UI für vorgeschlagene Auto-Matches
+
+---
+
+## 5. Sprint 9 — DATEV-Export + i18n EN
+
+### 5.1 DATEV-konformer Steuer-Export
+
+Niemand im Reseller-Bereich bietet das. Direkt monetarisierbar.
+
+- Buchungssätze nach DATEV-CSV-Format mit Pflichtspalten:
+  `Umsatz, Soll/Haben, Gegenkonto, Belegdatum, Belegfeld, Buchungstext, USt`
+- Konten-Mapping pro Workspace (`billing_profile.tax_account_map`):
+  - Standard: 8400 Erlöse 19% / 8300 Erlöse 7% / 3300 Wareneinkauf
+- Export-Range: Quartal/Jahr.
+- PDF-Begleitschreiben für den Steuerberater (auto-generated).
+
+### 5.2 Englische Übersetzung
+
+Foundation steht (ARB-Dateien für DE/EN). Sukzessive alle hardcoded Strings
+auf `AppLocalizations.of(context)` umstellen. Sprint-9-Ziel: Tickets-,
+Inventory-, Deals-Screen + alle Dialoge zu 100% lokalisiert.
+
+---
+
+## 6. Wettbewerbsvergleich (Stand 2026-05)
+
+| Feature | InventoryOS heute | Vendoo | List Perfectly | Sortly Pro | Flipwise | Hypemaster | Lexware |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Multi-Plattform Apps | ✅ 5 | ⚠ Web | ⚠ Web | ✅ | ⚠ Web | ❌ Excel | ✅ |
+| Cloud-Sync | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Profit-Tracking | ✅ | ⚠ basic | ⚠ basic | ❌ | ✅ | ✅ | ⚠ |
+| MHD/Chargen | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Discord-Bot nativ | 🔜 (Sprint 5) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Postfach-Reader | 🔜 (Sprint 6) | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠ |
+| Marktplatz-Sync | 🔜 (Sprint 8) | ✅ | ✅ | ❌ | ⚠ | ❌ | ⚠ |
+| Crossposting | ❌ (Phase 2) | ✅ | ✅ | ❌ | ⚠ | ❌ | ❌ |
+| DATEV-Export | 🔜 (Sprint 9) | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Barcode-Scan | ✅ | ❌ | ❌ | ✅ | ⚠ | ❌ | ⚠ |
+| Deutsche UI | ✅ | ❌ | ❌ | ⚠ | ❌ | ❌ | ✅ |
+| Push-Notifications | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Workspaces / Team | ✅ Schema | ⚠ | ⚠ | ✅ | ❌ | ❌ | ✅ |
+| Preis (€/Mon) | tba | 30 | 35 | 39 | 25 | 30 | 89 |
+
+**Drei Felder**, in denen wir alleine spielen, sobald Sprint 5–9 läuft:
+
+1. **Discord-nativ** — keiner.
+2. **Postfach-Reader** — keiner für Reseller (nur ERPs in Enterprise).
+3. **DATEV + DACH-Steuerlogik im Reseller-Tooling** — keiner.
+
+---
+
+## 7. Querschnitts-Features, die jeden Wert spürbar erhöhen
+
+Diese sind klein bis mittel, aber treffen direkt die User-Erfahrung. Reihenfolge ist Priorität.
+
+### 7.1 Globale Kommando-Palette (Cmd+K)
+Eine Suchleiste, die über Deals, Items, Tickets, Käufer, Lieferanten findet
+**und** Aktionen erlaubt ("Neuer Deal", "Export Quartal Q2 2026"). Foundation
+existiert in [global_search_dialog.dart](lib/widgets/global_search_dialog.dart) — fehlt: Action-Provider und Hotkey-
+Bindung im Web/Desktop.
+
+### 7.2 Bulk-Edit in Deal-Tabelle
+Mehrere Deals markieren → Status, Käufer, Tracking, Tags gemeinsam ändern.
+Power-User-Feature, sehr hoher Wert pro Codezeile.
+
+### 7.3 Versand-Etiketten via Sendcloud
+Ein Klick auf einem Deal → Versandlabel als PDF + Tracking-Nummer wird
+automatisch gesetzt + Carrier erkannt. Sendcloud hat eine ordentliche REST-API
+und deckt alle deutschen Carrier ab.
+
+### 7.4 Tracking-Auto-Update
+Carrier-Detection ist da. Was fehlt: Polling der Carrier-APIs (DHL, UPS, DPD)
+für `arrival_date`-Auto-Update + Discord/Push-Benachrichtigung "Paket
+zugestellt". Carrier-API-Keys in Workspace-Settings, Edge Function `tracking-poll`
+alle 4h.
+
+### 7.5 Public Profile Page
+Eine öffentliche Read-only-Seite (`/u/<workspace-handle>`) mit aktuellem
+Bestand, Bildern, Preisen, "Anfrage senden"-Button. Akquise-Magnet — jeder
+geteilte Link wird Werbung.
+
+### 7.6 AI-Pricing-Assistant (Add-on, 9 €/Mon)
+Vergleicht VK gegen aktuelle StockX/eBay/Vinted-Preise und schlägt Anpassung
+vor. Datenquelle: Marktplatz-Sync (Sprint 8) liefert Verkaufspreise mit;
+Embeddings via `pgvector` machen Item-Matching robust gegen Tippfehler.
+
+### 7.7 Käufer-CRM-Light
+Pro Käufer: gesamter Ticket-Verlauf, Lifetime-Profit, durchschnittliche
+Zahlungsdauer, Zuverlässigkeits-Score. Tabelle `buyers` existiert; UI muss um
+Detail-View erweitert werden.
+
+### 7.8 Templates / Quick-Add
+"Letzte 5 EAN" + "Häufigste Produkte" als One-Tap-Buttons im Deal-Dialog.
+Foundation ist da (Produkt-Vorschläge übernehmen letzte Konfiguration), fehlt:
+expliziter Template-Manager.
+
+### 7.9 Dark-Mode
+Hardcoded `Color(0xFF…)` raus, alles über `Theme.of(context).colorScheme`.
+Aufwand: 1 Sprint, Wirkung: jeder erwartet das in 2026.
+
+### 7.10 Onboarding-Flow + Demo-Daten
+First-Time-User-Flow mit 6 Steps (Workspace, Shops, Lieferanten, erster Deal,
+Discord, Postfach). "Demo-Daten laden"-Button im Empty-State zeigt die App
+sofort mit realistischen Beispiel-Tickets.
+
+---
+
+## 8. Tech-Debt, der sonst Sprint 5–9 blockiert
+
+Diese Punkte sind keine Features, müssen aber **vor oder parallel** zu den
+neuen Features adressiert werden.
+
+- **Tests**: kein einziger Unit-Test in `test/` außer `carrier_service_test.dart`. Vor jedem neuen Service mindestens Happy-Path + 2 Edge-Cases. Ziel: 30% Coverage in Sprint 5, 60% in Sprint 9.
+- **`inventory_provider.dart` (~1000 LOC)**: aufsplitten in `DealRepository` / `InventoryRepository` / `SupplierRepository`. Sprint 7 ist der natürliche Punkt — der Tickets-Refactor sowieso fasst Provider an.
+- **`freezed` + `json_serializable`**: drei Mapper pro Modell (`toJson`, `toSupabaseInsert`, `fromSupabase`) sind ein Drift-Risiko. Migration zu Code-Gen vor dem Postfach-Sprint, weil Adapter-Output sonst chaotisch wird.
+- **CI/CD**: GitHub Actions mit `flutter analyze` + Tests + Build pro Plattform. Aktuell rein lokal — bei jedem PR ein Risiko.
+- **Sentry / GlitchTip**: Crash-Reporting fehlt komplett. Wird mit dem Bot-Service essentiell, weil Bugs dort silent fehlschlagen.
+- **DSGVO**: Datenschutzerklärung, Consent-Banner, Data-Export (`/account/export`), Account-Löschung (existiert in Edge Function `delete-account`, aber kein UI).
+
+---
+
+## 9. Roadmap-Zusammenfassung
+
+```
+Sprint 5  (3 Wochen)  Discord-Bot v1                   USP, Differenzierung
+Sprint 6  (4 Wochen)  Postfach-Inbox (IMAP-MVP)        Killer-Feature, 30 min/Tag Ersparnis
+Sprint 7  (2 Wochen)  Archiv-Refactor + tickets-Tabelle Datenmodell-Reife
+Sprint 8  (4 Wochen)  eBay-Sync (read-only)            Marktanschluss
+Sprint 9  (3 Wochen)  DATEV-Export + i18n EN           Monetarisierung + 10× Markt
+Sprint 10 (3 Wochen)  Public Profile + Bulk-Edit       Akquise + Power-User
+Sprint 11 (4 Wochen)  Tracking-Auto-Update + Sendcloud Workflow-Automation
+Sprint 12 (4 Wochen)  AI-Pricing + Crossposting eBay   Premium-Tier-Anker
+```
+
+Insgesamt **~7 Monate** bis Vollausbau. Nach Sprint 7 ist die App
+**verkaufsbereit als Solo-SaaS**; nach Sprint 9 **DACH-Markt-tauglich für
+Steuerberater-Workflows**; nach Sprint 12 **direkter Vendoo-Konkurrent mit
+einzigartiger Discord/Postfach-Differenzierung**.
+
+---
+
+## 10. Was diese Datei NICHT mehr sein soll
+
+Frühere Versionen der STRATEGY enthielten ausführliche Marktanalyse,
+Preismodell-Tabellen und 12-Monats-MRR-Projektionen. Das war wichtig fürs
+Alignment — gehört aber jetzt in eine separate Datei `docs/BUSINESS.md`,
+falls überhaupt. Dieses Dokument ist der **Engineering-Plan**: was wird
+gebaut, in welcher Reihenfolge, gegen welchen Konkurrenzlücke, mit welchen
+Migrationen und welchen Edge Functions. Alles andere lenkt ab.

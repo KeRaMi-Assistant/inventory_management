@@ -29,8 +29,9 @@ class GlobalSearchDialog extends StatefulWidget {
 
   static const int dealsTab = 1;
   static const int ticketsTab = 2;
-  static const int inventoryTab = 3;
-  static const int suppliersTab = 4;
+  static const int inboxTab = 3;
+  static const int inventoryTab = 4;
+  static const int suppliersTab = 5;
 
   static Future<void> show(
     BuildContext context, {

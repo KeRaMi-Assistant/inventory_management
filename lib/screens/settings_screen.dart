@@ -5,15 +5,19 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
 import '../models/pricing_plan.dart';
+import '../models/shop.dart';
 import '../models/workspace.dart';
+import '../models/mailbox_account.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/app_preferences_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
+import '../providers/inbox_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/push_service.dart';
 import '../services/workspace_service.dart';
 import '../widgets/add_edit_buyer_dialog.dart';
+import '../widgets/add_edit_mailbox_dialog.dart';
 import '../widgets/add_edit_shop_dialog.dart';
 import 'billing_profile_screen.dart';
 import 'pricing_screen.dart';
@@ -26,7 +30,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final tabs = DefaultTabController(
-      length: 5,
+      length: 6,
       child: Column(
         children: [
           if (!embedded)
@@ -42,6 +46,7 @@ class SettingsScreen extends StatelessWidget {
                   Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
                   Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
                   Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
+                  const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
                   Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
                 ],
               ),
@@ -59,6 +64,7 @@ class SettingsScreen extends StatelessWidget {
                   Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
                   Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
                   Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
+                  const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
                   Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
                 ],
               ),
@@ -70,6 +76,7 @@ class SettingsScreen extends StatelessWidget {
                 _ShopsTab(),
                 _TeamTab(),
                 _NotificationsTab(),
+                _MailboxTab(),
                 _GeneralTab(),
               ],
             ),
@@ -240,12 +247,43 @@ class _BuyersTab extends StatelessWidget {
 class _ShopsTab extends StatelessWidget {
   const _ShopsTab();
 
+  bool _isAmazon(Shop s) =>
+      s.name.trim().toLowerCase().startsWith('amazon');
+
+  Future<void> _seedAmazon(
+    BuildContext context,
+    InventoryProvider provider,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await provider.seedAmazonShops();
+      messenger.showSnackBar(SnackBar(
+        content: Text(result.added == 0
+            ? 'Amazon-Shops sind bereits vorhanden (${result.skipped} übersprungen).'
+            : '${result.added} Amazon-Shops hinzugefügt'
+                '${result.skipped > 0 ? ', ${result.skipped} bereits vorhanden' : ''}.'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Fehler beim Hinzufügen: $e'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final shops = provider.shops;
+        final amazonShops = shops.where(_isAmazon).toList()
+          ..sort((a, b) =>
+              a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        final otherShops = shops.where((s) => !_isAmazon(s)).toList()
+          ..sort((a, b) =>
+              a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         return Scaffold(
           backgroundColor: const Color(0xFFF1F4F8),
           floatingActionButton: FloatingActionButton.extended(
@@ -257,81 +295,74 @@ class _ShopsTab extends StatelessWidget {
             icon: const Icon(Icons.add_business_outlined),
             label: Text(l10n.shopsAdd),
           ),
-          body: shops.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.store_outlined,
-                          size: 52, color: Color(0xFFCBD5E1)),
-                      const SizedBox(height: 12),
-                      Text(l10n.shopsEmpty,
-                          style: const TextStyle(color: Color(0xFF94A3B8))),
-                    ],
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: shops.length,
-                  separatorBuilder: (context, i) =>
-                      const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final shop = shops[i];
-                    return Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: Color(0xFFE2E8F0)),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    OutlinedButton.icon(
+                      onPressed: () => _seedAmazon(context, provider),
+                      icon: const Icon(Icons.shopping_bag_outlined, size: 16),
+                      label: const Text('Amazon-Shops hinzufügen'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        textStyle: const TextStyle(fontSize: 12),
                       ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 6),
-                        leading: Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
-                            borderRadius: BorderRadius.circular(10),
-                            border: const Border.fromBorderSide(
-                                BorderSide(color: Color(0xFFBFDBFE))),
-                          ),
-                          child: const Icon(Icons.store_outlined,
-                              color: Color(0xFF2563EB), size: 22),
-                        ),
-                        title: Text(shop.name,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600)),
-                        subtitle: Text(
-                          '${shop.region}${shop.channel.isNotEmpty ? " · ${shop.channel}" : ""}',
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF64748B)),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: shops.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined,
-                                  size: 20),
-                              color: const Color(0xFF64748B),
-                              onPressed: () => showDialog(
-                                context: context,
-                                builder: (_) =>
-                                    AddEditShopDialog(shop: shop),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline,
-                                  size: 20),
-                              color: Colors.red[400],
-                              onPressed: () => _confirmDeleteShop(
-                                  context, provider, shop.id, shop.name),
-                            ),
+                            const Icon(Icons.store_outlined,
+                                size: 52, color: Color(0xFFCBD5E1)),
+                            const SizedBox(height: 12),
+                            Text(l10n.shopsEmpty,
+                                style:
+                                    const TextStyle(color: Color(0xFF94A3B8))),
                           ],
                         ),
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          if (amazonShops.isNotEmpty) ...[
+                            _AmazonShopsGroup(
+                              shops: amazonShops,
+                              onEdit: (shop) => showDialog(
+                                context: context,
+                                builder: (_) => AddEditShopDialog(shop: shop),
+                              ),
+                              onDelete: (shop) => _confirmDeleteShop(
+                                  context, provider, shop.id, shop.name),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                          for (final shop in otherShops) ...[
+                            _ShopTile(
+                              shop: shop,
+                              onEdit: () => showDialog(
+                                context: context,
+                                builder: (_) => AddEditShopDialog(shop: shop),
+                              ),
+                              onDelete: () => _confirmDeleteShop(
+                                  context, provider, shop.id, shop.name),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ],
                       ),
-                    );
-                  },
-                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -359,6 +390,143 @@ class _ShopsTab extends StatelessWidget {
             child: Text(l10n.actionDelete,
                 style: const TextStyle(color: Colors.white)),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShopTile extends StatelessWidget {
+  const _ShopTile({
+    required this.shop,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final Shop shop;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        leading: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(10),
+            border: const Border.fromBorderSide(
+                BorderSide(color: Color(0xFFBFDBFE))),
+          ),
+          child: const Icon(Icons.store_outlined,
+              color: Color(0xFF2563EB), size: 22),
+        ),
+        title: Text(shop.name,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          '${shop.region}${shop.channel.isNotEmpty ? " · ${shop.channel}" : ""}',
+          style:
+              const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              color: const Color(0xFF64748B),
+              onPressed: onEdit,
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, size: 20),
+              color: Colors.red[400],
+              onPressed: onDelete,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AmazonShopsGroup extends StatelessWidget {
+  const _AmazonShopsGroup({
+    required this.shops,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<Shop> shops;
+  final void Function(Shop) onEdit;
+  final void Function(Shop) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        tilePadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF7ED),
+            borderRadius: BorderRadius.circular(10),
+            border: const Border.fromBorderSide(
+                BorderSide(color: Color(0xFFFED7AA))),
+          ),
+          child: const Icon(Icons.shopping_bag_outlined,
+              color: Color(0xFFD97706), size: 22),
+        ),
+        title: const Text('Amazon',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: Text(
+          '${shops.length} ${shops.length == 1 ? "Country-Account" : "Country-Accounts"}',
+          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+        ),
+        children: [
+          for (final shop in shops)
+            ListTile(
+              contentPadding: const EdgeInsets.only(
+                  left: 56, right: 16, top: 0, bottom: 0),
+              dense: true,
+              title: Text(shop.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(
+                '${shop.region}${shop.channel.isNotEmpty ? " · ${shop.channel}" : ""}',
+                style: const TextStyle(
+                    fontSize: 12, color: Color(0xFF64748B)),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    color: const Color(0xFF64748B),
+                    onPressed: () => onEdit(shop),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    color: Colors.red[400],
+                    onPressed: () => onDelete(shop),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -1640,5 +1808,308 @@ class _PlanSectionState extends State<_PlanSection> {
   static String _fmtEur(double v) {
     if (v == v.roundToDouble()) return '${v.toStringAsFixed(0)} €';
     return '${v.toStringAsFixed(2).replaceAll('.', ',')} €';
+  }
+}
+
+// ── Mailbox / Postfach Tab ─────────────────────────────────────────────────────
+
+class _MailboxTab extends StatefulWidget {
+  const _MailboxTab();
+
+  @override
+  State<_MailboxTab> createState() => _MailboxTabState();
+}
+
+class _MailboxTabState extends State<_MailboxTab> {
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<InboxProvider>().refresh();
+      });
+    }
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    InboxProvider provider,
+    MailboxAccount account,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Postfach entfernen'),
+        content: Text(
+            'Soll das IMAP-Konto "${account.label}" wirklich gelöscht werden? '
+            'Bereits importierte Mails bleiben in der Inbox erhalten.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Abbrechen'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Löschen',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await provider.deleteAccount(account.id);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Löschen fehlgeschlagen: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<InboxProvider>(
+      builder: (context, provider, _) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFF1F4F8),
+          floatingActionButton: FloatingActionButton.extended(
+            heroTag: 'addMailbox',
+            onPressed: () => showDialog(
+              context: context,
+              builder: (_) => const AddEditMailboxDialog(),
+            ),
+            icon: const Icon(Icons.add),
+            label: const Text('IMAP-Konto'),
+          ),
+          body: provider.isLoading && provider.accounts.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : provider.accounts.isEmpty
+                  ? const _MailboxEmptyState()
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: provider.accounts.length + 1,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) {
+                        if (i == 0) return const _MailboxIntroCard();
+                        final account = provider.accounts[i - 1];
+                        return _MailboxAccountTile(
+                          account: account,
+                          onEdit: () => showDialog(
+                            context: context,
+                            builder: (_) =>
+                                AddEditMailboxDialog(existing: account),
+                          ),
+                          onDelete: () =>
+                              _confirmDelete(context, provider, account),
+                        );
+                      },
+                    ),
+        );
+      },
+    );
+  }
+}
+
+class _MailboxIntroCard extends StatelessWidget {
+  const _MailboxIntroCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: const Color(0xFFEFF6FF),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFFBFDBFE)),
+      ),
+      child: const Padding(
+        padding: EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline, color: Color(0xFF2563EB)),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Postfach-Integration',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E3A8A),
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    'Hinterlege ein IMAP-Konto, um Bestell- und Versand-Mails '
+                    'automatisch erkennen zu lassen. Polling läuft alle 5 min '
+                    'serverseitig — Passwörter werden mit pgp_sym_encrypt '
+                    'verschlüsselt gespeichert. Im Inbox-Tab kannst du '
+                    'erkannte Deals annehmen.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF1E40AF),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MailboxAccountTile extends StatelessWidget {
+  const _MailboxAccountTile({
+    required this.account,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final MailboxAccount account;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  String _statusLabel() {
+    if (!account.enabled) return 'Pausiert';
+    if (account.lastError != null && account.lastError!.isNotEmpty) {
+      return 'Fehler';
+    }
+    if (account.lastPolledAt == null) return 'Noch nicht gepollt';
+    return 'Zuletzt gepollt: ${_relative(account.lastPolledAt!)}';
+  }
+
+  Color _statusColor() {
+    if (!account.enabled) return const Color(0xFF94A3B8);
+    if (account.lastError != null && account.lastError!.isNotEmpty) {
+      return const Color(0xFFB91C1C);
+    }
+    return const Color(0xFF15803D);
+  }
+
+  static String _relative(DateTime ts) {
+    final delta = DateTime.now().difference(ts);
+    if (delta.inMinutes < 1) return 'gerade eben';
+    if (delta.inMinutes < 60) return 'vor ${delta.inMinutes} min';
+    if (delta.inHours < 24) return 'vor ${delta.inHours} h';
+    return 'vor ${delta.inDays} d';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: account.enabled
+                ? const Color(0xFFEFF6FF)
+                : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            Icons.mail_outline,
+            color: account.enabled
+                ? const Color(0xFF2563EB)
+                : const Color(0xFF94A3B8),
+          ),
+        ),
+        title: Text(
+          account.label,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 2),
+            Text(
+              '${account.username} · ${account.imapHost}:${account.imapPort}',
+              style:
+                  const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              _statusLabel(),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _statusColor(),
+              ),
+            ),
+            if (account.lastError != null && account.lastError!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  account.lastError!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFFB91C1C),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              color: const Color(0xFF64748B),
+              onPressed: onEdit,
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, size: 20),
+              color: Colors.red[400],
+              onPressed: onDelete,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MailboxEmptyState extends StatelessWidget {
+  const _MailboxEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          const _MailboxIntroCard(),
+          const SizedBox(height: 32),
+          const Icon(Icons.mail_outline,
+              size: 52, color: Color(0xFFCBD5E1)),
+          const SizedBox(height: 12),
+          const Text(
+            'Noch kein Postfach hinterlegt.',
+            style: TextStyle(color: Color(0xFF94A3B8)),
+          ),
+        ],
+      ),
+    );
   }
 }
