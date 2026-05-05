@@ -25,6 +25,8 @@ interface PendingMessage {
   workspace_id: string
   from_address: string | null
   subject: string | null
+  message_id: string | null
+  received_at: string
   parsed_payload: { _raw?: { text?: string; html?: string } } | null
 }
 
@@ -53,7 +55,7 @@ Deno.serve(async (req) => {
 
   const { data: pending, error } = await admin
     .from('parsed_messages')
-    .select('id, workspace_id, from_address, subject, parsed_payload')
+    .select('id, workspace_id, from_address, subject, message_id, received_at, parsed_payload')
     .eq('status', 'pending')
     .order('received_at', { ascending: true })
     .limit(200)
@@ -135,6 +137,8 @@ async function processOne(
   const { error: insErr } = await admin.from('pending_deal_suggestions').insert({
     workspace_id: row.workspace_id,
     parsed_message_id: row.id,
+    message_id: row.message_id,
+    received_at: row.received_at,
     shop_key: parsed.shopKey,
     shop_label: parsed.shopLabel,
     order_id: parsed.orderId,
@@ -143,8 +147,12 @@ async function processOne(
     total: parsed.total,
     currency: parsed.currency,
     tracking: parsed.tracking,
+    trackings: parsed.trackings && parsed.trackings.length > 0
+      ? parsed.trackings
+      : null,
     carrier: parsed.carrier,
     eta: parsed.eta,
+    status: parsed.status ?? 'ordered',
     raw: stripBody(parsed),
   })
   if (insErr) console.warn('pending_deal_suggestions insert failed', row.id, insErr)
@@ -203,6 +211,7 @@ function stripBody(parsed: ParsedOrder): Record<string, unknown> {
     total: parsed.total,
     currency: parsed.currency,
     tracking: parsed.tracking,
+    trackings: parsed.trackings,
     carrier: parsed.carrier,
     eta: parsed.eta,
     status: parsed.status,

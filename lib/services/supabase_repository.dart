@@ -603,9 +603,18 @@ class SupabaseRepository {
 
   // ── Parsed messages / suggestions ────────────────────────────────────────
 
+  /// Inbox-Sichtbarkeit: 30 Tage rolling, deckt sich mit dem DB-Cleanup-
+  /// Cron. Server-side Filter spart Bytes, der UI-Countdown sagt dem User
+  /// wie lange ein Eintrag noch sichtbar ist.
+  static const _inboxVisibilityDays = 30;
+
+  static String _isoCutoff(int daysBack) =>
+      DateTime.now().toUtc().subtract(Duration(days: daysBack)).toIso8601String();
+
   Future<List<ParsedMessage>> loadParsedMessages({
     Set<ParsedMessageStatus>? statuses,
     int limit = 100,
+    int daysBack = _inboxVisibilityDays,
   }) async {
     final ws = _workspaceId;
     if (ws == null) return const [];
@@ -615,7 +624,8 @@ class SupabaseRepository {
     var query = _client
         .from('parsed_messages')
         .select()
-        .eq('workspace_id', ws);
+        .eq('workspace_id', ws)
+        .gte('received_at', _isoCutoff(daysBack));
     if (filterValues.isNotEmpty) {
       query = query.inFilter('status', filterValues);
     }
@@ -631,18 +641,23 @@ class SupabaseRepository {
   Future<List<PendingDealSuggestion>> loadPendingSuggestions({
     bool unresolvedOnly = true,
     int limit = 100,
+    int daysBack = _inboxVisibilityDays,
   }) async {
     final ws = _workspaceId;
     if (ws == null) return const [];
+    final cutoff = _isoCutoff(daysBack);
     var query = _client
         .from('pending_deal_suggestions')
         .select()
-        .eq('workspace_id', ws);
+        .eq('workspace_id', ws)
+        // received_at fehlt nur bei Pre-Migration-Daten — mit gte+or
+        // bekommen wir beide Fälle.
+        .or('received_at.gte.$cutoff,and(received_at.is.null,created_at.gte.$cutoff)');
     if (unresolvedOnly) {
       query = query.filter('resolved_at', 'is', null);
     }
     final rows = await query
-        .order('created_at', ascending: false)
+        .order('received_at', ascending: false)
         .limit(limit);
     return (rows as List)
         .cast<Map<String, dynamic>>()

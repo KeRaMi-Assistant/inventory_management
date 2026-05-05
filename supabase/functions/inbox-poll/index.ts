@@ -236,6 +236,7 @@ async function storeMessage(
     account_id: account.id,
     message_uid: msg.uid,
     message_hash: hash,
+    message_id: env.messageId ?? null,
     from_address: fromAddr,
     subject,
     received_at: receivedAt,
@@ -268,6 +269,30 @@ function extractTextAndHtml(raw: string): { text: string; html: string } {
   const cteMatch = /content-transfer-encoding:\s*([^\r\n]+)/i.exec(headers)
   const cte = cteMatch?.[1]?.trim().toLowerCase() ?? '7bit'
 
+  const decodeQP = (chunk: string): string => {
+    const cleaned = chunk.replace(/=\r?\n/g, '')
+    const bytes: number[] = []
+    for (let i = 0; i < cleaned.length; i++) {
+      if (cleaned[i] === '=' && i + 2 < cleaned.length
+          && /[0-9A-Fa-f]/.test(cleaned[i + 1])
+          && /[0-9A-Fa-f]/.test(cleaned[i + 2])) {
+        bytes.push(parseInt(cleaned.substring(i + 1, i + 3), 16))
+        i += 2
+      } else {
+        bytes.push(cleaned.charCodeAt(i) & 0xff)
+      }
+    }
+    return new TextDecoder('utf-8', { fatal: false }).decode(
+      new Uint8Array(bytes),
+    )
+  }
+  // Heuristik: QP-Pattern auch bei fehlendem/falschem CTE-Header anwenden.
+  // Viele reale Mails deklarieren 7bit, schmuggeln aber =HH-Sequenzen für
+  // Umlaute durch. Threshold von 3+ Sequenzen schützt vor False-Positives
+  // bei Code-Snippets oder URLs mit zufälligen "="-Zeichen.
+  const looksLikeQP = (s: string): boolean =>
+    (s.match(/=[0-9A-Fa-f]{2}/g) ?? []).length >= 3
+
   const decode = (chunk: string, enc: string): string => {
     const e = enc.toLowerCase()
     try {
@@ -277,10 +302,8 @@ function extractTextAndHtml(raw: string): { text: string; html: string } {
           Uint8Array.from(atob(cleaned), (c) => c.charCodeAt(0)),
         )
       }
-      if (e === 'quoted-printable') {
-        return chunk
-          .replace(/=\r?\n/g, '')
-          .replace(/=([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+      if (e === 'quoted-printable' || looksLikeQP(chunk)) {
+        return decodeQP(chunk)
       }
     } catch { /* fall through */ }
     return chunk

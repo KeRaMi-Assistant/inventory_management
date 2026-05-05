@@ -13,8 +13,14 @@ import 'deal_comments_section.dart';
 
 class AddEditDealDialog extends StatefulWidget {
   final Deal? deal;
+  final Deal? prefill;
   final String? initialTicketNumber;
-  const AddEditDealDialog({super.key, this.deal, this.initialTicketNumber});
+  const AddEditDealDialog({
+    super.key,
+    this.deal,
+    this.prefill,
+    this.initialTicketNumber,
+  });
 
   @override
   State<AddEditDealDialog> createState() => _AddEditDealDialogState();
@@ -58,7 +64,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     _quantityCtrl.addListener(_refreshPreview);
     _priceCtrl.addListener(_refreshPreview);
     _vkCtrl.addListener(_refreshPreview);
-    final d = widget.deal;
+    // `widget.deal` = bestehender Deal zum Bearbeiten.
+    // `widget.prefill` = neuer Deal mit vorausgefüllten Werten (z.B. aus
+    // einem Inbox-Vorschlag). Save-Logik unten unterscheidet anhand `deal`.
+    final d = widget.deal ?? widget.prefill;
     if (d != null) {
       _productCtrl.text = d.product;
       _quantityCtrl.text = d.quantity.toString();
@@ -234,18 +243,19 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       attachmentPaths: _attachmentPaths,
     );
 
+    Deal saved = deal;
     try {
       if (widget.deal != null) {
         await provider.updateDeal(deal);
       } else {
-        await provider.addDeal(deal);
+        saved = await provider.addDeal(deal);
       }
     } catch (_) {
       // Deal is already in memory; storage errors are non-fatal
     } finally {
       if (mounted) setState(() => _saving = false);
     }
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.pop(context, saved);
   }
 
   @override
@@ -262,6 +272,19 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
         .where((s) => !s.name.trim().toLowerCase().startsWith('amazon'))
         .toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    // Vorausgefüllter Shop ("Amazon" aus Inbox-Suggestion) matcht oft kein
+    // exaktes Item ("Amazon-DE", "Amazon-COM", …). Wenn der Wert nicht in
+    // der Liste ist, würde der DropdownButton mit "exactly one item"
+    // assertionen — daher hier auf den ersten passenden umbiegen oder auf
+    // null fallen.
+    if (_shop != null && !activeShops.any((s) => s.name == _shop)) {
+      final fallback = activeShops
+          .where((s) =>
+              s.name.toLowerCase().startsWith(_shop!.toLowerCase()) ||
+              _shop!.toLowerCase().startsWith(s.name.toLowerCase()))
+          .firstOrNull;
+      _shop = fallback?.name;
+    }
     final buyers = provider.buyers.where((b) => b.active).toList();
     final dateFmt = DateFormat.yMd(
         Localizations.localeOf(context).toLanguageTag());
