@@ -221,7 +221,8 @@ const isOrderishSubject = (subject: string): boolean => {
 }
 
 // Boilerplate-Phrasen, die KEIN echter Produktname sind. Trifft regelmäßig
-// auf Amazon-AGB-Disclaimer in Versandbestätigungs-Mails (Widerrufsrecht etc.).
+// auf Amazon-AGB-Disclaimer in Versandbestätigungs-Mails (Widerrufsrecht etc.)
+// und auf Service-Anrede-Texte ("Sie erhalten…", "Vielen Dank…").
 const PRODUCT_BLACKLIST = [
   /^Waren,?\s+die\b/i,
   /^Gegenstände,?\s+die\b/i,
@@ -235,6 +236,13 @@ const PRODUCT_BLACKLIST = [
   /\bHygienegründen/i,
   /\bRückgabe\s+(?:geeignet|nicht)/i,
   /^(Hallo|Hi|Liebe|Sehr geehrt)/i,
+  /^Sie\s+(erhalten|können|haben|werden|finden|bekommen)/i,
+  /^Wir\s+(haben|melden|senden|werden|freuen|informieren)/i,
+  /^Vielen\s+Dank\b/i,
+  /^Danke\b/i,
+  /^Du\s+(findest|kannst|hast|wirst|bist)/i,
+  /^Ihre\s+(Bestellung|Lieferung|Sendung)\b/i,
+  /^Deine\s+(Bestellung|Lieferung|Sendung)\b/i,
 ]
 
 const sanitizeProduct = (raw?: string): string | undefined => {
@@ -407,21 +415,30 @@ const saturn: Adapter = {
   },
 }
 
-/// PCComponentes-spezifisches Produkt-Layout: Bestelldetails-Block mit
-///   "Produktname    465,00 €
-///    Einheiten: 2
-///    Verkauft von PCCOMPONENTES"
-/// Wir verankern auf dem `Einheiten:`-Label und greifen das Großbuchstaben-
-/// Token mit Preis direkt davor.
+/// PCComponentes-spezifisches Produkt-Layout (HTML-Tabelle linearisiert):
+///   "Bestelldetails Produkt Stk. Preis [PRODUKTNAME] Einheiten: N Verkauft von …"
+/// Der Preis steht WEITER hinten (nach Lieferdatum-Block), deshalb
+/// ankern wir nicht auf "€", sondern auf "Einheiten:" als nächstes
+/// strukturelles Label nach dem Produktnamen.
 const productFromPcComponentesLine = (s: string): string | undefined => {
-  const m = /([A-Z][^\n]{4,160})\s+\d+[.,]\d{2}\s*€[\s\S]{0,120}?Einheiten\s*:/i
-    .exec(s)
-  if (!m || !m[1]) return undefined
-  const cleaned = m[1]
-    .replace(/\s+\d+[.,]\d{2}\s*(?:Euro|€|EUR).*$/i, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-  return sanitizeProduct(cleaned)
+  const patterns: RegExp[] = [
+    // Strikt: ganzer Tabellen-Header.
+    /Bestelldetails\s+Produkt\s+Stk\.?\s+Preis\s+([A-Z][A-Za-z0-9 \-+.,/&®™²³()]{4,200}?)\s+Einheiten\s*:/i,
+    // Fallback: nur "Preis" als Header-Wort vor dem Produkt.
+    /\bPreis\s+([A-Z][A-Za-z0-9 \-+.,/&®™²³()]{4,200}?)\s+Einheiten\s*:/i,
+  ]
+  // Bewusst KEIN dritter "alles vor Einheiten:"-Fallback — der hat zu
+  // oft Service-Boilerplate ("Sie erhalten eine Sendungsverfolgungs-
+  // E-Mail …") als angebliches Produkt durchgewunken.
+  for (const re of patterns) {
+    const m = re.exec(s)
+    if (m && m[1]) {
+      const cleaned = m[1].replace(/\s+/g, ' ').trim()
+      const checked = sanitizeProduct(cleaned)
+      if (checked) return checked
+    }
+  }
+  return undefined
 }
 
 // ── PcComponentes ──────────────────────────────────────────────────────
