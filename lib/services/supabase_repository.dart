@@ -697,6 +697,12 @@ class SupabaseRepository {
   /// Persistente Dismiss-Marke. Wenn (shopKey, orderId) gesetzt sind, werden
   /// auch zukünftige Mails zur selben Bestellung ignoriert. Ohne Order-Schlüssel
   /// wirkt der Dismiss nur auf die einzelne parsed_message_id.
+  ///
+  /// Wir nutzen einen plain INSERT (kein UPSERT), weil unsere Unique-
+  /// Indexes partial sind (nur wo die Schlüssel-Spalten NOT NULL sind) —
+  /// PostgREST findet bei `ON CONFLICT` keinen passenden Constraint.
+  /// Duplikate werden über 23505 abgefangen, das Verhalten ist ohnehin
+  /// idempotent ("schon dismissed → kein Fehler nötig").
   Future<void> insertInboxDismissal({
     String? shopKey,
     String? orderId,
@@ -713,12 +719,12 @@ class SupabaseRepository {
       'parsed_message_id': hasOrder ? null : parsedMessageId,
       'received_at': receivedAt.toUtc().toIso8601String(),
     };
-    final onConflict = hasOrder
-        ? 'workspace_id,shop_key,order_id'
-        : 'workspace_id,parsed_message_id';
-    await _client
-        .from('inbox_dismissals')
-        .upsert(payload, onConflict: onConflict, ignoreDuplicates: true);
+    try {
+      await _client.from('inbox_dismissals').insert(payload);
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') return; // already dismissed
+      rethrow;
+    }
   }
 
   Future<List<InboxDismissal>> loadInboxDismissals() async {

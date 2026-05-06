@@ -156,15 +156,24 @@ class _InboxHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (provider.dismissalCount > 0)
-            IconButton(
-              tooltip: 'Filter zurücksetzen (${provider.dismissalCount} '
-                  '${provider.dismissalCount == 1 ? "Eintrag" : "Einträge"})',
-              icon: const Icon(Icons.filter_alt_off_outlined),
-              onPressed: provider.isLoading
-                  ? null
-                  : () => _confirmClearDismissals(context, provider),
+          IconButton(
+            tooltip: provider.dismissalCount == 0
+                ? 'Verworfen-Filter (0)'
+                : 'Verworfen-Filter zurücksetzen '
+                    '(${provider.dismissalCount} '
+                    '${provider.dismissalCount == 1 ? "Eintrag" : "Einträge"})',
+            icon: Icon(
+              provider.dismissalCount == 0
+                  ? Icons.filter_alt_outlined
+                  : Icons.filter_alt_off_outlined,
+              color: provider.dismissalCount == 0
+                  ? const Color(0xFF94A3B8)
+                  : null,
             ),
+            onPressed: provider.dismissalCount == 0 || provider.isLoading
+                ? null
+                : () => _confirmClearDismissals(context, provider),
+          ),
           IconButton(
             tooltip: 'Aktualisieren',
             icon: provider.isLoading
