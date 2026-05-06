@@ -130,10 +130,66 @@ const findTracking = (s: string): { tracking?: string; carrier?: string } => {
   return { tracking: all.trackings[0], carrier: all.carrier }
 }
 
+/// HTML-spezifische Tracking-Extraktion: liest `href`-Attribute aus dem
+/// Roh-HTML und matcht typische Carrier-URL-Schemes. Wichtig für Amazon
+/// & Co., die Tracking-Nummern oft NUR im Link-Ziel haben (text-Strip
+/// schmeißt die `href`-Werte weg).
+function findTrackingsInHtml(html: string): { trackings: string[]; carrier?: string } {
+  if (!html) return { trackings: [] }
+  const seen = new Set<string>()
+  const out: string[] = []
+  let carrier: string | undefined
+
+  // Common Carrier-URL-Patterns. Reihenfolge: spezifisch → generisch.
+  const URL_PATTERNS: Array<{ re: RegExp; carrier?: string }> = [
+    // Amazon Logistics: track.amazon.de/123ABC oder ?trackingId=...
+    { re: /track\.amazon\.[a-z.]+\/(?:tracking\/)?([A-Z0-9]{10,30})\b/i, carrier: 'Amazon Logistics' },
+    { re: /[?&]trackingId=([A-Z0-9-]{8,30})/i, carrier: 'Amazon Logistics' },
+    { re: /[?&]packageId=([A-Z0-9-]{8,30})/i, carrier: 'Amazon Logistics' },
+    // DHL: nolp.dhl.de/?piececode=... oder /track/123
+    { re: /[?&]piececode=([A-Z0-9]{8,30})/i, carrier: 'DHL' },
+    { re: /nolp\.dhl\.[a-z.]+\/.*?[?&]idc=([A-Z0-9]{10,30})/i, carrier: 'DHL' },
+    { re: /dhl\.[a-z.]+\/.*?\/track[^?]*\?(?:trackingNumber|tracking)=([A-Z0-9]{8,30})/i, carrier: 'DHL' },
+    // UPS
+    { re: /ups\.com\/.*?[?&]tracknum(?:s)?=(1Z[A-Z0-9]{16})/i, carrier: 'UPS' },
+    // DPD
+    { re: /dpd\.[a-z.]+\/.*?[?&]parcelno(?:r)?=(\d{10,20})/i, carrier: 'DPD' },
+    { re: /tracking\.dpd\.[a-z.]+\/.*?\/(\d{10,20})/i, carrier: 'DPD' },
+    // GLS
+    { re: /gls-?(?:pakete|group)\.[a-z.]+\/.*?[?&]match=([A-Z0-9]{8,30})/i, carrier: 'GLS' },
+    // Hermes
+    { re: /hermesworld\.[a-z.]+\/.*?[?&]Barcode=([A-Z0-9]{8,30})/i, carrier: 'Hermes' },
+    // Generic: any tracknum/tracking/trk parameter (last resort)
+    { re: /[?&](?:trk|tracking_number|trackingnumber|tracknum)=([A-Z0-9-]{8,30})/i },
+  ]
+
+  // Erst spezifische URL-Patterns, dann generische tracking-Wörter im Pfad.
+  const hrefRe = /href\s*=\s*["']([^"']{8,400})["']/gi
+  let h: RegExpExecArray | null
+  while ((h = hrefRe.exec(html)) !== null) {
+    const url = h[1]
+    for (const p of URL_PATTERNS) {
+      const m = p.re.exec(url)
+      if (m && m[1]) {
+        const tn = m[1]
+        if (!seen.has(tn)) {
+          seen.add(tn)
+          out.push(tn)
+          carrier ??= p.carrier ?? inferCarrier(tn, url)
+        }
+        break // nur das erste Match pro URL
+      }
+    }
+  }
+  return { trackings: out, carrier }
+}
+
 /// Sucht ALLE Tracking-Nrn in der Mail, dedupliziert. Strong-Patterns
 /// werden global gescannt; Context-Bound-Pattern auch (mehrere
-/// "Sendungsnummer:"-Blöcke in einer Versandbestätigung).
-function findAllTrackings(s: string): { trackings: string[]; carrier?: string } {
+/// "Sendungsnummer:"-Blöcke in einer Versandbestätigung). HTML-href-
+/// Werte werden separat gescannt — viele Shops setzen die Tracking-Nr
+/// nur in den Link, nicht in den sichtbaren Text.
+function findAllTrackings(s: string, html?: string): { trackings: string[]; carrier?: string } {
   const seen = new Set<string>()
   const out: string[] = []
   let carrier: string | undefined
@@ -159,6 +215,19 @@ function findAllTrackings(s: string): { trackings: string[]; carrier?: string } 
     seen.add(tn)
     out.push(tn)
     carrier ??= inferCarrier(tn, s)
+  }
+
+  // HTML-Trackings (href-Attribute) als zusätzliche Quelle. Wird vor
+  // allem für Amazon gebraucht: deren Versand-Mails enthalten die
+  // Tracking-Nr oft nur als URL-Parameter im "Sendung verfolgen"-Button.
+  if (html) {
+    const htmlShip = findTrackingsInHtml(html)
+    for (const tn of htmlShip.trackings) {
+      if (seen.has(tn)) continue
+      seen.add(tn)
+      out.push(tn)
+    }
+    carrier ??= htmlShip.carrier
   }
 
   return { trackings: out, carrier }
@@ -339,7 +408,7 @@ const amazon: Adapter = {
     const qty = Number(/(?:Menge|Anzahl|Quantity|Cantidad)\s*[:\s]+(\d{1,3})/i.exec(s)?.[1] ?? '1')
     const totalSrc = /(?:Gesamtsumme|Order Total|Zwischensumme|Total|Importe)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s)
+    const rawShip = findAllTrackings(s, ctx.html)
     const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
@@ -371,7 +440,7 @@ const mediamarkt: Adapter = {
     ])) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s)
+    const rawShip = findAllTrackings(s, ctx.html)
     const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
@@ -402,7 +471,7 @@ const saturn: Adapter = {
     ) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s)
+    const rawShip = findAllTrackings(s, ctx.html)
     const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
@@ -422,14 +491,19 @@ const saturn: Adapter = {
 /// strukturelles Label nach dem Produktnamen.
 const productFromPcComponentesLine = (s: string): string | undefined => {
   const patterns: RegExp[] = [
-    // Strikt: ganzer Tabellen-Header.
+    // Layout A (ältere Mails): vollständiger Tabellen-Header.
+    //   "Bestelldetails Produkt Stk. Preis Samsung 870 EVO … Einheiten: 4"
     /Bestelldetails\s+Produkt\s+Stk\.?\s+Preis\s+([A-Z][A-Za-z0-9 \-+.,/&®™²³()]{4,200}?)\s+Einheiten\s*:/i,
-    // Fallback: nur "Preis" als Header-Wort vor dem Produkt.
+    // Layout B (neuere Mails): "Bestelldetails" direkt gefolgt vom Produkt,
+    // kein "Produkt Stk. Preis"-Header dazwischen.
+    //   "Bestelldetails Samsung 990 PRO M.2 … Einheiten: 2"
+    /Bestelldetails\s+(?!Produkt\s+Stk)([A-Z][A-Za-z0-9 \-+.,/&®™²³()]{4,200}?)\s+Einheiten\s*:/i,
+    // Fallback: nur "Preis"-Header als Anker.
     /\bPreis\s+([A-Z][A-Za-z0-9 \-+.,/&®™²³()]{4,200}?)\s+Einheiten\s*:/i,
   ]
-  // Bewusst KEIN dritter "alles vor Einheiten:"-Fallback — der hat zu
-  // oft Service-Boilerplate ("Sie erhalten eine Sendungsverfolgungs-
-  // E-Mail …") als angebliches Produkt durchgewunken.
+  // Kein "alles vor Einheiten:"-Catch-all — der schluckt Service-Boilerplate
+  // ("Sie erhalten eine Sendungsverfolgungs-E-Mail …") als angebliches
+  // Produkt. PRODUCT_BLACKLIST in sanitizeProduct fängt Reste ab.
   for (const re of patterns) {
     const m = re.exec(s)
     if (m && m[1]) {
@@ -471,7 +545,7 @@ const pccomponentes: Adapter = {
     const qty = Number(/Einheiten\s*[:=]\s*(\d{1,3})/i.exec(s)?.[1] ?? '1')
     const totalSrc = /(?:Gesamtbetrag|Gesamtsumme|Zwischensumme|Total|Importe)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s)
+    const rawShip = findAllTrackings(s, ctx.html)
     const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
@@ -505,7 +579,7 @@ const xkom: Adapter = {
     ])) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Suma|Razem|Wartość|Total)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s)
+    const rawShip = findAllTrackings(s, ctx.html)
     const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
@@ -555,7 +629,7 @@ const kaufland: Adapter = {
     ])) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Endbetrag|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s)
+    const rawShip = findAllTrackings(s, ctx.html)
     const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
