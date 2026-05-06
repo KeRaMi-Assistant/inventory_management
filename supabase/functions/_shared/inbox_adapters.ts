@@ -254,6 +254,35 @@ const sanitizeProduct = (raw?: string): string | undefined => {
   return cleaned
 }
 
+/// MediaMarkt / Saturn / Kaufland linearisieren ihre Bestellübersicht im
+/// HTML als Tabelle:
+///   Anzahl | Artikelnummer und Beschreibung | Einzelpreis | Summe
+///   1      | 2924946 STARLINK Standard Kit  | 279,00 €    | 279,00 €
+/// Im Plaintext fällt die Spalten-Trennung weg, alles steht in einer Zeile.
+///
+/// Strategie: Suche nach "Artikelnummer", spring zur ersten 6-9 stelligen
+/// Zahl (Artikelnummer hat Format `\d{6,9}` bei diesen Shops), dann nimm
+/// die folgenden Großbuchstaben-Tokens. Multi-Token-Pflicht filtert
+/// False-Positives wie "Cnodate" raus, die in Versand-/Zustell-Mails ohne
+/// Item-Table aus Tracking-Widgets stammen.
+const productFromArticleTable = (s: string): string | undefined => {
+  const m = /Artikelnummer[\s\S]{0,400}?\b\d{6,9}\b[\s\S]{0,60}?([A-Z][A-Za-z0-9 \-+.,/&®™²³()€$£]{4,140})/.exec(s)
+  if (!m || !m[1]) return undefined
+  let cleaned = m[1]
+    // Trailing Geldbetrag abschneiden: "STARLINK Standard Kit 279,00 Euro" → "STARLINK Standard Kit"
+    .replace(/\s+\d+[.,]\d{2}\s*(?:Euro|€|EUR|USD|GBP|PLN|zł).*$/i, '')
+    // MediaMarkt-Versandmails hängen oft "Lieferung bis Montag, …",
+    // "Lieferanschrift …", "Versand durch DPD" hinten dran — alles ab
+    // dem Schlüsselwort wegschneiden.
+    .replace(/\s+(?:Lieferung\b|Lieferanschrift\b|Versand\s+durch\b|Versanddatum\b|Sendungsnummer\b|Tracking\b).*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  // Single-Word-Treffer (z.B. "Cnodate") verwerfen — echte Produktnamen
+  // bestehen aus Marke + Modell + ggf. Spec, also mind. 2 Tokens.
+  if (cleaned.split(/\s+/).length < 2) return undefined
+  return sanitizeProduct(cleaned)
+}
+
 // Versucht, einen Produktnamen aus dem Subject zu ziehen. Funktioniert für
 // "Bestätigung deiner Bestellung von „<Produkt>"", "Versand: <Produkt>" usw.
 const productFromSubject = (subject: string): string | undefined => {
@@ -329,10 +358,10 @@ const mediamarkt: Adapter = {
       /Auftrags?nummer\s*[:#]?\s*(\d{6,15})/i,
     ])
     const product = sanitizeProduct(findFirst(s, [
-      /Artikel\s*[:\s]+([^\n]{4,140})/i,
-      /Produkt\s*[:\s]+([^\n]{4,140})/i,
-    ])) ?? productFromSubject(ctx.subject)
-    const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
+      /Artikel\s*[:=]\s*([^\n]{4,140})/i,
+      /Produkt\s*[:=]\s*([^\n]{4,140})/i,
+    ])) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
+    const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
     const rawShip = findAllTrackings(s)
     const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
@@ -361,9 +390,9 @@ const saturn: Adapter = {
       /Auftrags?nummer\s*[:#]?\s*(\d{6,15})/i,
     ])
     const product = sanitizeProduct(
-      findFirst(s, [/Artikel\s*[:\s]+([^\n]{4,140})/i]),
-    ) ?? productFromSubject(ctx.subject)
-    const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
+      findFirst(s, [/Artikel\s*[:=]\s*([^\n]{4,140})/i]),
+    ) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
+    const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
     const rawShip = findAllTrackings(s)
     const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
@@ -378,25 +407,52 @@ const saturn: Adapter = {
   },
 }
 
+/// PCComponentes-spezifisches Produkt-Layout: Bestelldetails-Block mit
+///   "Produktname    465,00 €
+///    Einheiten: 2
+///    Verkauft von PCCOMPONENTES"
+/// Wir verankern auf dem `Einheiten:`-Label und greifen das Großbuchstaben-
+/// Token mit Preis direkt davor.
+const productFromPcComponentesLine = (s: string): string | undefined => {
+  const m = /([A-Z][^\n]{4,160})\s+\d+[.,]\d{2}\s*€[\s\S]{0,120}?Einheiten\s*:/i
+    .exec(s)
+  if (!m || !m[1]) return undefined
+  const cleaned = m[1]
+    .replace(/\s+\d+[.,]\d{2}\s*(?:Euro|€|EUR).*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return sanitizeProduct(cleaned)
+}
+
 // ── PcComponentes ──────────────────────────────────────────────────────
 const pccomponentes: Adapter = {
   key: 'pccomponentes',
   label: 'PcComponentes',
-  matches: (ctx) => /(@|\.)pccomponentes\.(com|es|fr|it|pt)\b/i.test(ctx.from),
+  matches: (ctx) => /(@|\.)pccomponentes\.(com|es|fr|it|pt|de)\b/i.test(ctx.from),
   looksLikeOrder: (ctx) => isOrderishSubject(ctx.subject),
   parse: (ctx) => {
     const s = haystack(ctx)
     const orderId = findFirst(s, [
+      // Deutsche Bestellbestätigung: "Bestellnummer: 6012026313871"
+      /Bestellnummer\s*[:#=]\s*(\d{8,18})/i,
       /(?:n[uú]mero de )?pedido\s*[:#]?\s*([A-Z0-9-]{6,25})/i,
       /Order\s*number\s*[:#]?\s*([A-Z0-9-]{6,25})/i,
       /\b(PC[A-Z0-9-]{6,20})\b/,
+      // Subject-Form: "wurde bestätigt." mit Order-ID irgendwo im Body —
+      // 13-stellige Zahl nach Komma/Whitespace.
+      /\b(\d{13})\b/,
     ])
+    // Pattern-Hierarchie:
+    //   1. Explizite Labels (Producto:, Artículo:)
+    //   2. PCComponentes-Layout: Produkt + Preis + Einheiten
+    //   3. Subject-Fallback
     const product = sanitizeProduct(findFirst(s, [
-      /Producto\s*[:\s]+([^\n]{4,140})/i,
-      /Artículo\s*[:\s]+([^\n]{4,140})/i,
-      /Item\s*[:\s]+([^\n]{4,140})/i,
-    ])) ?? productFromSubject(ctx.subject)
-    const totalSrc = /(?:Total|Importe)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
+      /Producto\s*[:=]\s*([^\n]{4,140})/i,
+      /Artículo\s*[:=]\s*([^\n]{4,140})/i,
+      /Item\s*[:=]\s*([^\n]{4,140})/i,
+    ])) ?? productFromPcComponentesLine(s) ?? productFromSubject(ctx.subject)
+    const qty = Number(/Einheiten\s*[:=]\s*(\d{1,3})/i.exec(s)?.[1] ?? '1')
+    const totalSrc = /(?:Gesamtbetrag|Gesamtsumme|Zwischensumme|Total|Importe)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
     const rawShip = findAllTrackings(s)
     const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
@@ -405,7 +461,7 @@ const pccomponentes: Adapter = {
     if (!orderId && !tracking) return null
     return {
       shopKey: 'pccomponentes', shopLabel: 'PcComponentes',
-      orderId, product, quantity: 1,
+      orderId, product, quantity: Math.max(1, qty),
       total, currency: currency === 'EUR' ? 'EUR' : currency,
       tracking, trackings, carrier, status,
     }
@@ -479,7 +535,7 @@ const kaufland: Adapter = {
       /Artikel\s*[:=]\s*([^\n]{4,140})/i,
       /Produkt\s*[:=]\s*([^\n]{4,140})/i,
       /Bezeichnung\s*[:=]\s*([^\n]{4,140})/i,
-    ])) ?? productFromSubject(ctx.subject)
+    ])) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Endbetrag|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
     const rawShip = findAllTrackings(s)

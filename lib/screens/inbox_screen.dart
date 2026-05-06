@@ -53,6 +53,7 @@ class _InboxScreenState extends State<InboxScreen> {
             body: Column(
               children: [
                 _InboxHeader(provider: provider, onRefresh: _refresh),
+                _InboxFilterBar(provider: provider),
                 Material(
                   color: Colors.white,
                   child: TabBar(
@@ -186,6 +187,228 @@ class _InboxHeader extends StatelessWidget {
             onPressed: provider.isLoading ? null : onRefresh,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Filter-Leiste über den Tabs. Zwei Pill-Dropdowns: Shop und Status.
+/// Versteckt sich, wenn weder Shops bekannt noch Suggestions vorhanden
+/// sind (z.B. Free-Plan, leere Inbox) — in dem Fall hat der User nichts
+/// zu filtern und die Pills wären nur Lärm.
+class _InboxFilterBar extends StatelessWidget {
+  final InboxProvider provider;
+  const _InboxFilterBar({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    final shopKeys = provider.availableShopKeys;
+    if (shopKeys.isEmpty && !provider.hasActiveFilter) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Row(
+        children: [
+          _FilterPill(
+            icon: Icons.store_outlined,
+            label: provider.shopFilter == null
+                ? 'Alle Shops'
+                : provider.shopLabelFor(provider.shopFilter!),
+            active: provider.shopFilter != null,
+            onTap: () => _pickShop(context, provider, shopKeys),
+            onClear: provider.shopFilter == null
+                ? null
+                : () => provider.setShopFilter(null),
+          ),
+          const SizedBox(width: 8),
+          _FilterPill(
+            icon: Icons.local_shipping_outlined,
+            label: provider.statusFilter == null
+                ? 'Alle Status'
+                : provider.statusFilter!.label(),
+            active: provider.statusFilter != null,
+            onTap: () => _pickStatus(context, provider),
+            onClear: provider.statusFilter == null
+                ? null
+                : () => provider.setStatusFilter(null),
+          ),
+          if (provider.hasActiveFilter) ...[
+            const Spacer(),
+            TextButton.icon(
+              icon: const Icon(Icons.clear_all, size: 16),
+              label: const Text('Filter zurücksetzen'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF2563EB),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              onPressed: provider.clearFilters,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickShop(
+    BuildContext context,
+    InboxProvider provider,
+    List<String> shopKeys,
+  ) async {
+    final picked = await showModalBottomSheet<String?>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.all_inbox),
+              title: const Text('Alle Shops'),
+              trailing: provider.shopFilter == null
+                  ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                  : null,
+              onTap: () => Navigator.pop(context, _kAllShops),
+            ),
+            const Divider(height: 1),
+            for (final key in shopKeys)
+              ListTile(
+                leading: const Icon(Icons.store_outlined),
+                title: Text(provider.shopLabelFor(key)),
+                trailing: provider.shopFilter == key
+                    ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                    : null,
+                onTap: () => Navigator.pop(context, key),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null) return;
+    provider.setShopFilter(picked == _kAllShops ? null : picked);
+  }
+
+  Future<void> _pickStatus(
+    BuildContext context,
+    InboxProvider provider,
+  ) async {
+    // Wrapper, damit wir "Alle Status" vom echten "Bestellt"-Pick und vom
+    // Cancel (null) sauber unterscheiden können.
+    final picked = await showModalBottomSheet<Object?>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.all_inbox),
+              title: const Text('Alle Status'),
+              trailing: provider.statusFilter == null
+                  ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                  : null,
+              onTap: () => Navigator.pop(context, _kAllStatusesSentinel),
+            ),
+            const Divider(height: 1),
+            for (final s in SuggestionShipStatus.values)
+              ListTile(
+                leading: Icon(_statusIcon(s)),
+                title: Text(s.label()),
+                trailing: provider.statusFilter == s
+                    ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                    : null,
+                onTap: () => Navigator.pop(context, s),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null) return;
+    if (picked is SuggestionShipStatus) {
+      provider.setStatusFilter(picked);
+    } else {
+      provider.setStatusFilter(null);
+    }
+  }
+
+  // Sentinel-Wert für die Shop-Sheet ("Alle Shops"). String reicht, weil
+  // echte Shop-Keys nie diesen Wert haben.
+  static const String _kAllShops = '__all__';
+  // Eigene Sentinel-Instanz für die Status-Sheet — type-distinct von
+  // SuggestionShipStatus, damit `is SuggestionShipStatus` zuverlässig
+  // greift.
+  static const Object _kAllStatusesSentinel = Object();
+
+  static IconData _statusIcon(SuggestionShipStatus s) {
+    switch (s) {
+      case SuggestionShipStatus.ordered:
+        return Icons.shopping_cart_outlined;
+      case SuggestionShipStatus.shipped:
+        return Icons.local_shipping_outlined;
+      case SuggestionShipStatus.delivered:
+        return Icons.check_circle_outline;
+      case SuggestionShipStatus.cancelled:
+        return Icons.cancel_outlined;
+      case SuggestionShipStatus.refunded:
+        return Icons.undo_outlined;
+    }
+  }
+}
+
+class _FilterPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+  const _FilterPill({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.onTap,
+    this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = active
+        ? const Color(0xFFEFF6FF)
+        : const Color(0xFFF1F5F9);
+    final fg = active
+        ? const Color(0xFF2563EB)
+        : const Color(0xFF334155);
+    final border =
+        active ? const Color(0xFFBFDBFE) : const Color(0xFFE2E8F0);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: fg),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: fg,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              onClear == null ? Icons.expand_more : Icons.close,
+              size: 14,
+              color: fg,
+            ),
+          ],
+        ),
       ),
     );
   }

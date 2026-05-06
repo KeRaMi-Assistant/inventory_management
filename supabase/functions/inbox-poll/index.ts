@@ -259,16 +259,32 @@ async function storeMessage(
 // zwei Body-Parts mitbringen. Quoted-printable / base64 werden best-effort
 // dekodiert, damit Adapter-Regex anschlägt.
 function extractTextAndHtml(raw: string): { text: string; html: string } {
-  const headerEnd = raw.indexOf('\r\n\r\n')
-  if (headerEnd < 0) return { text: raw, html: '' }
-  const headers = raw.slice(0, headerEnd)
-  const body = raw.slice(headerEnd + 4)
+  // Manche Mailer (oder Gateway-Konvertierungen) liefern bare LFs statt
+  // CRLF. Wir akzeptieren beides als Header/Body-Separator und normalisieren
+  // intern alles auf CRLF, damit die nachfolgenden Splits stabil sind.
+  const normalized = raw.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n')
+  const headerEnd = normalized.indexOf('\r\n\r\n')
+  if (headerEnd < 0) return { text: normalized, html: '' }
+  const rawHeaders = normalized.slice(0, headerEnd)
+  const body = normalized.slice(headerEnd + 4)
 
-  const ctMatch = /content-type:\s*([^;\r\n]+)(.*)/i.exec(headers)
+  // RFC 822 / 5322 erlaubt gefaltete Headers: ein Header kann über
+  // mehrere Zeilen gehen, wenn die Folgezeilen mit Whitespace beginnen.
+  // MediaMarkt + viele andere Mailer bauen so:
+  //   Content-Type: multipart/alternative;
+  //   \tboundary="...."
+  // Vor dem Regex-Match unfolden, sonst verpassen wir den boundary-
+  // Parameter und der ganze Body landet als Plaintext.
+  const headers = rawHeaders.replace(/\r?\n[\t ]+/g, ' ')
+
+  // Multiline-Mode + Anchor auf Zeilenanfang ist wichtig: DKIM-Signaturen
+  // listen Header-Namen wie "Content-Type" in ihrem `h=`-Parameter — ohne
+  // Anchor matcht unser Regex DAS und holt sich Müll als Content-Type.
+  const ctMatch = /^content-type:\s*([^;\r\n]+)(.*)/im.exec(headers)
   const contentType = ctMatch?.[1]?.trim().toLowerCase() ?? 'text/plain'
   const params = ctMatch?.[2] ?? ''
   const boundaryMatch = /boundary="?([^";\r\n]+)"?/i.exec(params)
-  const cteMatch = /content-transfer-encoding:\s*([^\r\n]+)/i.exec(headers)
+  const cteMatch = /^content-transfer-encoding:\s*([^\r\n]+)/im.exec(headers)
   const cte = cteMatch?.[1]?.trim().toLowerCase() ?? '7bit'
 
   const decodeQP = (chunk: string): string => {
@@ -322,17 +338,26 @@ function extractTextAndHtml(raw: string): { text: string; html: string } {
       const partHeaderEnd = trimmed.indexOf('\r\n\r\n')
       if (partHeaderEnd < 0) continue
       const partHeaders = trimmed.slice(0, partHeaderEnd)
+        // Gleiche Header-Unfolding-Regel wie oben — nested parts haben
+        // genauso oft gefaltete Headers.
+        .replace(/\r?\n[\t ]+/g, ' ')
       const partBody = trimmed.slice(partHeaderEnd + 4)
-      const partCt = (/content-type:\s*([^;\r\n]+)/i.exec(partHeaders)?.[1] ?? '')
+      const partCt = (/^content-type:\s*([^;\r\n]+)/im.exec(partHeaders)?.[1] ?? '')
         .trim().toLowerCase()
-      const partCte = (/content-transfer-encoding:\s*([^\r\n]+)/i.exec(partHeaders)?.[1] ?? '7bit')
+      const partCte = (/^content-transfer-encoding:\s*([^\r\n]+)/im.exec(partHeaders)?.[1] ?? '7bit')
         .trim()
       const decoded = decode(partBody, partCte)
       if (partCt === 'text/plain' && !text) text = decoded
       else if (partCt === 'text/html' && !html) html = decoded
       else if (partCt.startsWith('multipart/')) {
-        // Verschachtelt — rekursiv
-        const inner = extractTextAndHtml(`X:Y\r\n\r\n${trimmed}`)
+        // Verschachtelt — rekursiv. `trimmed` enthält bereits die Headers
+        // dieses Parts (Content-Type: multipart/related; boundary=...).
+        // Vorher haben wir hier `X:Y\r\n\r\n${trimmed}` vorne drangehängt,
+        // wodurch der rekursive Call den Content-Type nicht mehr im
+        // Header-Slice fand — Resultat: nested multipart wurde komplett
+        // als Plaintext behandelt und html blieb leer. (MediaMarkt/Saturn
+        // versenden multipart/alternative → multipart/related → text/html.)
+        const inner = extractTextAndHtml(trimmed)
         if (!text && inner.text) text = inner.text
         if (!html && inner.html) html = inner.html
       }

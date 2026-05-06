@@ -48,9 +48,12 @@ class InboxProvider extends ChangeNotifier {
   List<MailboxAccount> _accounts = [];
   List<PendingDealSuggestion> _suggestionsRaw = [];
   List<PendingDealSuggestion> _suggestions = [];
+  List<ParsedMessage> _recentRaw = [];
   List<ParsedMessage> _recent = [];
   Set<String> _dismissalKeys = const {};
   int _dismissalCount = 0;
+  String? _shopFilter;
+  SuggestionShipStatus? _statusFilter;
   DateTime _lastRefreshedAt = DateTime.now();
 
   bool _loading = false;
@@ -85,6 +88,58 @@ class InboxProvider extends ChangeNotifier {
   /// Reset-Button-Label ("Filter zurücksetzen (12)").
   int get dismissalCount => _dismissalCount;
 
+  String? get shopFilter => _shopFilter;
+  SuggestionShipStatus? get statusFilter => _statusFilter;
+
+  /// Distinkte Shop-Keys aus den aktuellen Roh-Daten (Suggestions + Recent
+  /// Messages), sortiert. Liefert dem UI die Optionen für den Shop-Picker —
+  /// so tauchen nur Shops auf, zu denen wirklich Mails da sind.
+  List<String> get availableShopKeys {
+    final keys = <String>{};
+    for (final s in _suggestionsRaw) {
+      keys.add(s.shopKey);
+    }
+    for (final m in _recentRaw) {
+      if (m.shopKey != null && m.shopKey!.isNotEmpty) keys.add(m.shopKey!);
+    }
+    return keys.toList()..sort();
+  }
+
+  /// Lese-freundliches Label für einen Shop-Key. Suggestions tragen ein
+  /// `shopLabel` (z.B. "MediaMarkt"); fallback ist der Key kapitalisiert.
+  String shopLabelFor(String shopKey) {
+    for (final s in _suggestionsRaw) {
+      if (s.shopKey == shopKey && s.shopLabel != null) return s.shopLabel!;
+    }
+    if (shopKey.isEmpty) return shopKey;
+    return shopKey[0].toUpperCase() + shopKey.substring(1);
+  }
+
+  void setShopFilter(String? shopKey) {
+    if (_shopFilter == shopKey) return;
+    _shopFilter = shopKey;
+    _recomputeViews();
+    notifyListeners();
+  }
+
+  void setStatusFilter(SuggestionShipStatus? status) {
+    if (_statusFilter == status) return;
+    _statusFilter = status;
+    _recomputeViews();
+    notifyListeners();
+  }
+
+  void clearFilters() {
+    if (_shopFilter == null && _statusFilter == null) return;
+    _shopFilter = null;
+    _statusFilter = null;
+    _recomputeViews();
+    notifyListeners();
+  }
+
+  bool get hasActiveFilter =>
+      _shopFilter != null || _statusFilter != null;
+
   Future<void> refresh() async {
     _loading = true;
     _lastError = null;
@@ -105,11 +160,11 @@ class InboxProvider extends ChangeNotifier {
       ]);
       _accounts = results[0] as List<MailboxAccount>;
       _suggestionsRaw = results[1] as List<PendingDealSuggestion>;
+      _recentRaw = results[2] as List<ParsedMessage>;
       final dismissals = results[3] as List<InboxDismissal>;
       _dismissalKeys = dismissals.map((d) => d.cacheKey).toSet();
       _dismissalCount = dismissals.length;
-      _suggestions = _applyFilters(_dedupByOrderId(_suggestionsRaw));
-      _recent = _filterMessages(results[2] as List<ParsedMessage>);
+      _recomputeViews();
       _lastRefreshedAt = DateTime.now();
     } catch (e) {
       _lastError = e;
@@ -120,13 +175,28 @@ class InboxProvider extends ChangeNotifier {
     }
   }
 
+  /// Baut `_suggestions` und `_recent` aus den Roh-Listen neu auf, indem
+  /// Dedup, Dismiss-Filter und User-Filter angewendet werden. Wird beim
+  /// Refresh und bei jeder Filter-Änderung aufgerufen — keine erneute
+  /// DB-Query.
+  void _recomputeViews() {
+    _suggestions = _applyFilters(_dedupByOrderId(_suggestionsRaw));
+    _recent = _filterMessages(_recentRaw);
+  }
+
   /// Filtert Suggestions, deren (shopKey, orderId) auf der Dismiss-Liste
-  /// stehen. Gilt auch für Mails mit message-only Dismiss-Schlüssel.
+  /// stehen, und wendet die User-Filter (Shop, Status) an.
   List<PendingDealSuggestion> _applyFilters(
     List<PendingDealSuggestion> suggestions,
   ) {
-    if (_dismissalKeys.isEmpty) return suggestions;
+    if (_dismissalKeys.isEmpty &&
+        _shopFilter == null &&
+        _statusFilter == null) {
+      return suggestions;
+    }
     return suggestions.where((s) {
+      if (_shopFilter != null && s.shopKey != _shopFilter) return false;
+      if (_statusFilter != null && s.status != _statusFilter) return false;
       if (s.orderId != null && s.orderId!.isNotEmpty) {
         if (_dismissalKeys
             .contains(InboxDismissal.orderKey(s.shopKey, s.orderId!))) {
@@ -141,9 +211,13 @@ class InboxProvider extends ChangeNotifier {
     }).toList(growable: false);
   }
 
+  /// Status-Filter gilt nicht für matched/unclassified Mails — die haben
+  /// keinen vergleichbaren Shipment-Status. Shop-Filter + Dismissals dagegen
+  /// schon.
   List<ParsedMessage> _filterMessages(List<ParsedMessage> messages) {
-    if (_dismissalKeys.isEmpty) return messages;
+    if (_dismissalKeys.isEmpty && _shopFilter == null) return messages;
     return messages.where((m) {
+      if (_shopFilter != null && m.shopKey != _shopFilter) return false;
       // Wenn die Mail einen erkannten Shop+OrderId hat, gilt der Order-
       // Dismiss auch hier (z.B. Zustell-Bestätigung von dismissed Order).
       final orderId = m.parsedPayload?['order_id'] as String?;
@@ -489,9 +563,12 @@ class InboxProvider extends ChangeNotifier {
     _accounts = [];
     _suggestionsRaw = [];
     _suggestions = [];
+    _recentRaw = [];
     _recent = [];
     _dismissalKeys = const {};
     _dismissalCount = 0;
+    _shopFilter = null;
+    _statusFilter = null;
     _lastError = null;
     notifyListeners();
   }
