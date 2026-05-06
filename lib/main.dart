@@ -12,6 +12,7 @@ import 'l10n/app_localizations.dart';
 import 'providers/active_workspace_provider.dart';
 import 'providers/app_preferences_provider.dart';
 import 'providers/auth_provider.dart';
+import 'models/pricing_plan.dart';
 import 'providers/billing_provider.dart';
 import 'providers/filter_provider.dart';
 import 'providers/inbox_provider.dart';
@@ -161,10 +162,12 @@ class _AuthGateState extends State<_AuthGate> {
   bool _hydrating = false;
   ActiveWorkspaceProvider? _wsListening;
   String? _lastWsId;
+  BillingProvider? _billingListening;
 
   @override
   void dispose() {
     _wsListening?.removeListener(_onWorkspaceChanged);
+    _billingListening?.removeListener(_onBillingChanged);
     super.dispose();
   }
 
@@ -178,12 +181,14 @@ class _AuthGateState extends State<_AuthGate> {
       if (_hydratedFor != null) {
         _hydratedFor = null;
         _detachWorkspaceListener();
+        _detachBillingListener();
         final push = context.read<PushService>();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           context.read<InventoryProvider>().clearLocalState();
           context.read<InboxProvider>().clear();
           context.read<ActiveWorkspaceProvider>().clear();
+          context.read<BillingProvider>().clear();
           context.read<InvitesProvider>()
             ..stopPolling()
             ..clear();
@@ -209,6 +214,8 @@ class _AuthGateState extends State<_AuthGate> {
     final push = context.read<PushService>();
     final workspaces = context.read<ActiveWorkspaceProvider>();
     final invites = context.read<InvitesProvider>();
+    final billing = context.read<BillingProvider>();
+    final inbox = context.read<InboxProvider>();
 
     // Workspaces zuerst laden, damit Inventory den aktiven Scope kennt.
     await workspaces.loadForCurrentUser(userId);
@@ -217,8 +224,12 @@ class _AuthGateState extends State<_AuthGate> {
     await Future.wait([
       inventory.setActiveWorkspace(activeId),
       invites.refresh(),
+      billing.load(),
     ]);
+    // Plan-Quotas auf Inbox anwenden, bevor das UI rendert.
+    _applyBillingToInbox(billing, inbox);
     _attachWorkspaceListener(workspaces);
+    _attachBillingListener(billing);
     invites.startPolling();
     // Fire-and-forget: Push-Registrierung darf den Login nicht blockieren.
     unawaited(push.registerCurrentDevice());
@@ -249,6 +260,35 @@ class _AuthGateState extends State<_AuthGate> {
     _lastWsId = newId;
     // Reload Inventory + Comments etc. gegen neuen Workspace.
     context.read<InventoryProvider>().setActiveWorkspace(newId);
+  }
+
+  void _attachBillingListener(BillingProvider billing) {
+    if (identical(_billingListening, billing)) return;
+    _detachBillingListener();
+    billing.addListener(_onBillingChanged);
+    _billingListening = billing;
+  }
+
+  void _detachBillingListener() {
+    _billingListening?.removeListener(_onBillingChanged);
+    _billingListening = null;
+  }
+
+  void _onBillingChanged() {
+    final billing = _billingListening;
+    if (billing == null || !mounted) return;
+    _applyBillingToInbox(billing, context.read<InboxProvider>());
+  }
+
+  /// Plan-Quotas auf den InboxProvider übertragen. Free hat 0 Postfächer
+  /// und 0 Sichtbarkeitstage → Inbox-Tab und Postfach-Settings werden
+  /// dadurch im UI ausgeblendet.
+  void _applyBillingToInbox(BillingProvider billing, InboxProvider inbox) {
+    final pricing = PricingPlan.forBillingPlan(billing.currentPlan);
+    inbox.applyPlanQuota(
+      mailboxLimit: pricing.mailboxLimit,
+      visibilityDays: pricing.inboxVisibilityDays,
+    );
   }
 }
 

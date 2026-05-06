@@ -156,6 +156,15 @@ class _InboxHeader extends StatelessWidget {
               ],
             ),
           ),
+          if (provider.dismissalCount > 0)
+            IconButton(
+              tooltip: 'Filter zurücksetzen (${provider.dismissalCount} '
+                  '${provider.dismissalCount == 1 ? "Eintrag" : "Einträge"})',
+              icon: const Icon(Icons.filter_alt_off_outlined),
+              onPressed: provider.isLoading
+                  ? null
+                  : () => _confirmClearDismissals(context, provider),
+            ),
           IconButton(
             tooltip: 'Aktualisieren',
             icon: provider.isLoading
@@ -170,6 +179,47 @@ class _InboxHeader extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+Future<void> _confirmClearDismissals(
+  BuildContext context,
+  InboxProvider provider,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Filter zurücksetzen?'),
+      content: Text(
+        '${provider.dismissalCount} verworfene Einträge werden wieder '
+        'angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut '
+        'gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Abbrechen'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Zurücksetzen'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true) return;
+  try {
+    await provider.clearDismissals();
+    messenger.showSnackBar(const SnackBar(
+      content: Text('Verworfen-Filter geleert.'),
+      behavior: SnackBarBehavior.floating,
+    ));
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(
+      content: Text('Zurücksetzen fehlgeschlagen: $e'),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 }
 
@@ -433,9 +483,11 @@ class _SuggestionCard extends StatelessWidget {
     final shopName = suggestion.shopLabel ?? suggestion.shopKey;
     final productTitle =
         (suggestion.product ?? '').trim().isEmpty ? null : suggestion.product;
-    final referenceNow = context.read<InboxProvider>().lastRefreshedAt;
-    final daysLeft = InboxProvider.visibilityDays -
-        referenceNow.difference(suggestion.receivedAt).inDays;
+    final inbox = context.read<InboxProvider>();
+    final referenceNow = inbox.lastRefreshedAt;
+    final visDays = inbox.visibilityDays;
+    final daysLeft =
+        visDays - referenceNow.difference(suggestion.receivedAt).inDays;
 
     return Card(
       elevation: 0,
@@ -455,7 +507,7 @@ class _SuggestionCard extends StatelessWidget {
                 if (suggestion.status != null)
                   _ShipStatusBadge(status: suggestion.status!),
                 const SizedBox(width: 6),
-                _CountdownPill(daysLeft: daysLeft),
+                _CountdownPill(daysLeft: daysLeft, totalDays: visDays),
                 const Spacer(),
                 Text(
                   dfDateTime.format(suggestion.receivedAt.toLocal()),
@@ -1047,15 +1099,19 @@ class _UnclassifiedRow extends StatelessWidget {
 
 class _CountdownPill extends StatelessWidget {
   /// Anzahl Tage, die diese Suggestion noch in der Inbox sichtbar bleibt.
-  /// Wir nehmen [InboxProvider.lastRefreshedAt] als Referenz, damit der
-  /// Countdown bis zum nächsten Pull der Inbox stabil bleibt — nicht jede
-  /// Sekunde tickend.
+  /// Referenz ist [InboxProvider.lastRefreshedAt], damit der Countdown
+  /// bis zum nächsten Pull stabil bleibt — nicht jede Sekunde tickt.
   final int daysLeft;
-  const _CountdownPill({required this.daysLeft});
+
+  /// Volles Sichtbarkeitsfenster nach aktuellem Plan (Free=0, Starter=7,
+  /// Pro=30, Business=90, Ultimate=365). Wird für Clamping + Tooltip
+  /// genutzt, damit die Pill nicht oberhalb des Plan-Maximums anzeigt.
+  final int totalDays;
+  const _CountdownPill({required this.daysLeft, required this.totalDays});
 
   @override
   Widget build(BuildContext context) {
-    final clamped = daysLeft.clamp(0, InboxProvider.visibilityDays);
+    final clamped = daysLeft.clamp(0, totalDays);
     final (bg, fg) = clamped <= 3
         ? (const Color(0xFFFEE2E2), const Color(0xFFB91C1C))
         : clamped <= 7
@@ -1068,7 +1124,7 @@ class _CountdownPill extends StatelessWidget {
             : 'Noch $clamped Tage';
     return Tooltip(
       message:
-          'Inbox-Sichtbarkeit ${InboxProvider.visibilityDays} Tage. '
+          'Inbox-Sichtbarkeit $totalDays Tage. '
           'Aktualisiert sich beim nächsten Refresh.',
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),

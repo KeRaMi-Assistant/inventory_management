@@ -1,17 +1,21 @@
 /// Plan-Tier des Users. `free` ist Default; alles ab `starter` ist
 /// kostenpflichtig und erfordert eine vollständige Rechnungsadresse.
+/// `ultimate` ersetzt das frühere `enterprise` als höchster regulärer Tier.
 enum BillingPlan {
   free,
   starter,
   pro,
   business,
-  enterprise;
+  ultimate;
 
+  /// Tolerant gegenüber Legacy-Werten in der DB: `enterprise` aus alten
+  /// Profile-Zeilen wird auf `ultimate` gemappt.
   static BillingPlan fromString(String s) => switch (s.toLowerCase()) {
         'starter' => starter,
         'pro' => pro,
         'business' => business,
-        'enterprise' => enterprise,
+        'ultimate' => ultimate,
+        'enterprise' => ultimate,
         _ => free,
       };
 
@@ -24,7 +28,16 @@ enum BillingPlan {
         BillingPlan.starter => 'Starter',
         BillingPlan.pro => 'Pro',
         BillingPlan.business => 'Business',
-        BillingPlan.enterprise => 'Enterprise',
+        BillingPlan.ultimate => 'Ultimate',
+      };
+
+  /// Aufsteigende Sortierung, z.B. für "ist mein Plan ≥ X?"-Checks.
+  int get rank => switch (this) {
+        BillingPlan.free => 0,
+        BillingPlan.starter => 1,
+        BillingPlan.pro => 2,
+        BillingPlan.business => 3,
+        BillingPlan.ultimate => 4,
       };
 }
 

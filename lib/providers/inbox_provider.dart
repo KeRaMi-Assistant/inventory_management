@@ -13,16 +13,44 @@ class InboxProvider extends ChangeNotifier {
 
   final SupabaseRepository _repository;
 
-  /// Sichtbarkeitsfenster der Inbox in Tagen. Der Countdown auf der Card
-  /// zählt von hier runter. Deckt sich aktuell mit dem DB-Cleanup-Job
-  /// (cleanup_inbox_history_daily, 30 Tage), d.h. Karten verschwinden
-  /// aus der UI ungefähr zeitgleich mit dem Datenbank-Delete.
-  static const int visibilityDays = 30;
+  /// Default-Sichtbarkeit, wenn noch kein Plan geladen wurde. Der echte
+  /// Wert kommt aus dem Pricing-Tier (siehe `applyPlanQuota`) und kann
+  /// sich beim Upgrade/Downgrade ändern. DB-Cleanup-Cron läuft mit
+  /// 30 Tagen davon unabhängig.
+  static const int defaultVisibilityDays = 30;
+
+  /// Maximale Anzahl IMAP-Konten, die der User nach aktuellem Plan
+  /// anlegen darf. -1 = unlimited.
+  int _mailboxLimit = -1;
+  int get mailboxLimit => _mailboxLimit;
+
+  int _visibilityDays = defaultVisibilityDays;
+  int get visibilityDays => _visibilityDays;
+
+  /// Setzt die Plan-Quotas. Wird vom AuthGate aufgerufen, wenn der
+  /// BillingProvider seinen Plan lädt oder der User upgraded.
+  void applyPlanQuota({
+    required int mailboxLimit,
+    required int visibilityDays,
+  }) {
+    var changed = false;
+    if (_mailboxLimit != mailboxLimit) {
+      _mailboxLimit = mailboxLimit;
+      changed = true;
+    }
+    if (_visibilityDays != visibilityDays) {
+      _visibilityDays = visibilityDays;
+      changed = true;
+    }
+    if (changed) notifyListeners();
+  }
 
   List<MailboxAccount> _accounts = [];
   List<PendingDealSuggestion> _suggestionsRaw = [];
   List<PendingDealSuggestion> _suggestions = [];
   List<ParsedMessage> _recent = [];
+  Set<String> _dismissalKeys = const {};
+  int _dismissalCount = 0;
   DateTime _lastRefreshedAt = DateTime.now();
 
   bool _loading = false;
@@ -53,6 +81,10 @@ class InboxProvider extends ChangeNotifier {
       .where((s) => s.resolvedAt == null)
       .length;
 
+  /// Wieviele Dismissals der User aktuell aktiv hat. UI benutzt das fürs
+  /// Reset-Button-Label ("Filter zurücksetzen (12)").
+  int get dismissalCount => _dismissalCount;
+
   Future<void> refresh() async {
     _loading = true;
     _lastError = null;
@@ -60,19 +92,24 @@ class InboxProvider extends ChangeNotifier {
     try {
       final results = await Future.wait([
         _repository.loadMailboxAccounts(),
-        _repository.loadPendingSuggestions(),
+        _repository.loadPendingSuggestions(daysBack: _visibilityDays),
         _repository.loadParsedMessages(
           statuses: const {
             ParsedMessageStatus.matched,
             ParsedMessageStatus.unclassified,
           },
           limit: 100,
+          daysBack: _visibilityDays,
         ),
+        _repository.loadInboxDismissals(),
       ]);
       _accounts = results[0] as List<MailboxAccount>;
       _suggestionsRaw = results[1] as List<PendingDealSuggestion>;
-      _suggestions = _dedupByOrderId(_suggestionsRaw);
-      _recent = results[2] as List<ParsedMessage>;
+      final dismissals = results[3] as List<InboxDismissal>;
+      _dismissalKeys = dismissals.map((d) => d.cacheKey).toSet();
+      _dismissalCount = dismissals.length;
+      _suggestions = _applyFilters(_dedupByOrderId(_suggestionsRaw));
+      _recent = _filterMessages(results[2] as List<ParsedMessage>);
       _lastRefreshedAt = DateTime.now();
     } catch (e) {
       _lastError = e;
@@ -81,6 +118,57 @@ class InboxProvider extends ChangeNotifier {
       _loading = false;
       notifyListeners();
     }
+  }
+
+  /// Filtert Suggestions, deren (shopKey, orderId) auf der Dismiss-Liste
+  /// stehen. Gilt auch für Mails mit message-only Dismiss-Schlüssel.
+  List<PendingDealSuggestion> _applyFilters(
+    List<PendingDealSuggestion> suggestions,
+  ) {
+    if (_dismissalKeys.isEmpty) return suggestions;
+    return suggestions.where((s) {
+      if (s.orderId != null && s.orderId!.isNotEmpty) {
+        if (_dismissalKeys
+            .contains(InboxDismissal.orderKey(s.shopKey, s.orderId!))) {
+          return false;
+        }
+      }
+      if (_dismissalKeys
+          .contains(InboxDismissal.messageKey(s.parsedMessageId))) {
+        return false;
+      }
+      return true;
+    }).toList(growable: false);
+  }
+
+  List<ParsedMessage> _filterMessages(List<ParsedMessage> messages) {
+    if (_dismissalKeys.isEmpty) return messages;
+    return messages.where((m) {
+      // Wenn die Mail einen erkannten Shop+OrderId hat, gilt der Order-
+      // Dismiss auch hier (z.B. Zustell-Bestätigung von dismissed Order).
+      final orderId = m.parsedPayload?['order_id'] as String?;
+      if (m.shopKey != null && orderId != null && orderId.isNotEmpty) {
+        if (_dismissalKeys
+            .contains(InboxDismissal.orderKey(m.shopKey!, orderId))) {
+          return false;
+        }
+      }
+      if (_dismissalKeys.contains(InboxDismissal.messageKey(m.id))) {
+        return false;
+      }
+      return true;
+    }).toList(growable: false);
+  }
+
+  /// Leert die Dismiss-Liste komplett — alle bisher verworfenen
+  /// Vorschläge/Mails kommen beim nächsten Refresh zurück. UI ruft das
+  /// vom "Filter zurücksetzen"-Button.
+  Future<void> clearDismissals() async {
+    await _repository.clearInboxDismissals();
+    _dismissalKeys = const {};
+    _dismissalCount = 0;
+    notifyListeners();
+    await refresh();
   }
 
   /// Reduziert mehrere Mails zur selben (shop_key, order_id) auf eine
@@ -254,14 +342,65 @@ class InboxProvider extends ChangeNotifier {
     );
   }
 
+  /// User wirft den Vorschlag weg. Schreibt zusätzlich zur normalen Resolve-
+  /// Logik einen `inbox_dismissals`-Eintrag (Order-basiert wenn möglich,
+  /// sonst per parsed_message_id), damit zukünftige Mails zur selben
+  /// Bestellung NICHT wieder als Vorschlag erscheinen.
   Future<void> markSuggestionRejected(String suggestionId) async {
+    final picked =
+        _suggestionsRaw.where((s) => s.id == suggestionId).firstOrNull;
+    if (picked != null) {
+      await _repository.insertInboxDismissal(
+        shopKey: picked.shopKey,
+        orderId: picked.orderId,
+        parsedMessageId: picked.orderId == null || picked.orderId!.isEmpty
+            ? picked.parsedMessageId
+            : null,
+        receivedAt: picked.receivedAt,
+      );
+      _addLocalDismissal(picked);
+    }
     await _resolveSuggestionGroup(suggestionId, action: 'rejected');
   }
 
+  /// User wirft eine einzelne Mail weg (matched/unclassified). Wenn die
+  /// Mail einer Bestellung zugeordnet ist, wird der Order-Key als Dismiss
+  /// gespeichert — sonst nur die Message-ID.
   Future<void> dismissParsedMessage(String id) async {
+    final picked = _recent.where((m) => m.id == id).firstOrNull;
+    if (picked != null) {
+      final orderId = picked.parsedPayload?['order_id'] as String?;
+      final hasOrder = picked.shopKey != null &&
+          orderId != null &&
+          orderId.isNotEmpty;
+      await _repository.insertInboxDismissal(
+        shopKey: hasOrder ? picked.shopKey : null,
+        orderId: hasOrder ? orderId : null,
+        parsedMessageId: hasOrder ? null : picked.id,
+        receivedAt: picked.receivedAt,
+      );
+      _addLocalDismissalKey(
+        hasOrder
+            ? InboxDismissal.orderKey(picked.shopKey!, orderId)
+            : InboxDismissal.messageKey(picked.id),
+      );
+    }
     await _repository.dismissParsedMessage(id);
     _recent = _recent.where((m) => m.id != id).toList(growable: false);
     notifyListeners();
+  }
+
+  void _addLocalDismissal(PendingDealSuggestion s) {
+    final key = (s.orderId != null && s.orderId!.isNotEmpty)
+        ? InboxDismissal.orderKey(s.shopKey, s.orderId!)
+        : InboxDismissal.messageKey(s.parsedMessageId);
+    _addLocalDismissalKey(key);
+  }
+
+  void _addLocalDismissalKey(String key) {
+    if (_dismissalKeys.contains(key)) return;
+    _dismissalKeys = {..._dismissalKeys, key};
+    _dismissalCount = _dismissalKeys.length;
   }
 
   /// Wendet Tracking aus der Mail/Suggestion auf einen bestehenden Deal an.
@@ -351,6 +490,8 @@ class InboxProvider extends ChangeNotifier {
     _suggestionsRaw = [];
     _suggestions = [];
     _recent = [];
+    _dismissalKeys = const {};
+    _dismissalCount = 0;
     _lastError = null;
     notifyListeners();
   }

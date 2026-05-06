@@ -1655,9 +1655,7 @@ class _PlanSectionState extends State<_PlanSection> {
 
     final priceLabel = plan == BillingPlan.free
         ? 'kostenlos'
-        : pricing.customPricing
-            ? 'individuell'
-            : '${_fmtEur(pricing.monthlyPriceEur)} / Monat';
+        : '${_fmtEur(pricing.monthlyPriceEur)} / Monat';
 
     final addressMissing =
         plan.isPaid && (profile == null || !profile.hasCompleteBillingAddress);
@@ -1875,50 +1873,124 @@ class _MailboxTabState extends State<_MailboxTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<InboxProvider>(
-      builder: (context, provider, _) {
+    return Consumer2<InboxProvider, BillingProvider>(
+      builder: (context, provider, billing, _) {
+        final pricing = PricingPlan.forBillingPlan(billing.currentPlan);
+        final mailboxLimit = pricing.mailboxLimit; // -1 = unlimited
+        final hasInbox = pricing.hasInbox;
+        final atLimit = mailboxLimit > 0 &&
+            provider.accounts.length >= mailboxLimit;
         return Scaffold(
           backgroundColor: const Color(0xFFF1F4F8),
-          floatingActionButton: FloatingActionButton.extended(
-            heroTag: 'addMailbox',
-            onPressed: () => showDialog(
-              context: context,
-              builder: (_) => const AddEditMailboxDialog(),
-            ),
-            icon: const Icon(Icons.add),
-            label: const Text('IMAP-Konto'),
-          ),
-          body: provider.isLoading && provider.accounts.isEmpty
-              ? const Center(child: CircularProgressIndicator())
-              : provider.accounts.isEmpty
-                  ? const _MailboxEmptyState()
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: provider.accounts.length + 1,
-                      separatorBuilder: (_, _) => const SizedBox(height: 8),
-                      itemBuilder: (context, i) {
-                        if (i == 0) return const _MailboxIntroCard();
-                        final account = provider.accounts[i - 1];
-                        return _MailboxAccountTile(
-                          account: account,
-                          onEdit: () => showDialog(
+          floatingActionButton: hasInbox
+              ? FloatingActionButton.extended(
+                  heroTag: 'addMailbox',
+                  onPressed: atLimit
+                      ? () => _showMailboxLimitReached(
+                          context, billing.currentPlan, mailboxLimit)
+                      : () => showDialog(
                             context: context,
-                            builder: (_) =>
-                                AddEditMailboxDialog(existing: account),
+                            builder: (_) => const AddEditMailboxDialog(),
                           ),
-                          onDelete: () =>
-                              _confirmDelete(context, provider, account),
-                        );
-                      },
-                    ),
+                  backgroundColor: atLimit ? Colors.grey : null,
+                  icon: Icon(atLimit ? Icons.lock_outline : Icons.add),
+                  label: Text(atLimit
+                      ? 'Limit erreicht ($mailboxLimit)'
+                      : 'IMAP-Konto'),
+                )
+              : null,
+          body: !hasInbox
+              ? _MailboxFreePlanGate(plan: billing.currentPlan)
+              : provider.isLoading && provider.accounts.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : provider.accounts.isEmpty
+                      ? _MailboxEmptyState(
+                          mailboxLimit: mailboxLimit,
+                          plan: billing.currentPlan,
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: provider.accounts.length + 1,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (context, i) {
+                            if (i == 0) {
+                              return _MailboxIntroCard(
+                                plan: billing.currentPlan,
+                                mailboxLimit: mailboxLimit,
+                                used: provider.accounts.length,
+                                visibilityDays: pricing.inboxVisibilityDays,
+                              );
+                            }
+                            final account = provider.accounts[i - 1];
+                            return _MailboxAccountTile(
+                              account: account,
+                              onEdit: () => showDialog(
+                                context: context,
+                                builder: (_) =>
+                                    AddEditMailboxDialog(existing: account),
+                              ),
+                              onDelete: () =>
+                                  _confirmDelete(context, provider, account),
+                            );
+                          },
+                        ),
         );
       },
     );
   }
 }
 
+void _showMailboxLimitReached(
+    BuildContext context, BillingPlan plan, int limit) {
+  showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Postfach-Limit erreicht'),
+      content: Text(
+        'Dein ${plan.label}-Plan erlaubt $limit '
+        '${limit == 1 ? "Postfach" : "Postfächer"}. '
+        'Upgrade auf einen höheren Plan, um weitere zu verbinden.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Abbrechen'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(ctx);
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PricingScreen()),
+            );
+          },
+          child: const Text('Plan upgraden'),
+        ),
+      ],
+    ),
+  );
+}
+
 class _MailboxIntroCard extends StatelessWidget {
-  const _MailboxIntroCard();
+  final BillingPlan plan;
+  final int mailboxLimit;
+  final int used;
+  final int visibilityDays;
+  const _MailboxIntroCard({
+    required this.plan,
+    required this.mailboxLimit,
+    required this.used,
+    required this.visibilityDays,
+  });
+
+  String _quotaLine() {
+    final limitLabel = mailboxLimit < 0
+        ? 'unbegrenzt'
+        : '$used / $mailboxLimit';
+    return '${plan.label}-Plan: $limitLabel '
+        'Postf${(mailboxLimit == 1) ? "ach" : "ächer"} · '
+        '$visibilityDays Tage Inbox-Verlauf';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1929,26 +2001,26 @@ class _MailboxIntroCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: Color(0xFFBFDBFE)),
       ),
-      child: const Padding(
-        padding: EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.info_outline, color: Color(0xFF2563EB)),
-            SizedBox(width: 12),
+            const Icon(Icons.info_outline, color: Color(0xFF2563EB)),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Postfach-Integration',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF1E3A8A),
                     ),
                   ),
-                  SizedBox(height: 6),
-                  Text(
+                  const SizedBox(height: 6),
+                  const Text(
                     'Hinterlege ein IMAP-Konto, um Bestell- und Versand-Mails '
                     'automatisch erkennen zu lassen. Polling läuft alle 5 min '
                     'serverseitig — Passwörter werden mit pgp_sym_encrypt '
@@ -1958,6 +2030,15 @@ class _MailboxIntroCard extends StatelessWidget {
                       fontSize: 12,
                       color: Color(0xFF1E40AF),
                       height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _quotaLine(),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E3A8A),
                     ),
                   ),
                 ],
@@ -2091,7 +2172,12 @@ class _MailboxAccountTile extends StatelessWidget {
 }
 
 class _MailboxEmptyState extends StatelessWidget {
-  const _MailboxEmptyState();
+  final BillingPlan plan;
+  final int mailboxLimit;
+  const _MailboxEmptyState({
+    required this.plan,
+    required this.mailboxLimit,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2099,7 +2185,13 @@ class _MailboxEmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          const _MailboxIntroCard(),
+          _MailboxIntroCard(
+            plan: plan,
+            mailboxLimit: mailboxLimit,
+            used: 0,
+            visibilityDays:
+                PricingPlan.forBillingPlan(plan).inboxVisibilityDays,
+          ),
           const SizedBox(height: 32),
           const Icon(Icons.mail_outline,
               size: 52, color: Color(0xFFCBD5E1)),
@@ -2107,6 +2199,145 @@ class _MailboxEmptyState extends StatelessWidget {
           const Text(
             'Noch kein Postfach hinterlegt.',
             style: TextStyle(color: Color(0xFF94A3B8)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Free-User sehen keine IMAP-Einstellungen — stattdessen einen klaren
+/// Upgrade-Pfad. Genauso bei Plänen, die das Postfach nicht enthalten
+/// (mailboxLimit == 0).
+class _MailboxFreePlanGate extends StatelessWidget {
+  final BillingPlan plan;
+  const _MailboxFreePlanGate({required this.plan});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.lock_outline,
+                            color: Color(0xFFB45309)),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Postfach im Free-Plan nicht enthalten',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Dein aktueller Plan: ${plan.label}. '
+                    'Die automatische Erkennung von Bestell- und Versand-'
+                    'Mails ist ab dem Starter-Plan verfügbar — höhere '
+                    'Pläne erlauben mehr Postfächer und längeren Inbox-'
+                    'Verlauf.',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF334155),
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const _PlanComparisonRow(
+                    label: 'Starter',
+                    value: '1 Postfach · 7 Tage',
+                  ),
+                  const _PlanComparisonRow(
+                    label: 'Pro',
+                    value: '3 Postfächer · 14 Tage',
+                  ),
+                  const _PlanComparisonRow(
+                    label: 'Business',
+                    value: '10 Postfächer · 30 Tage',
+                  ),
+                  const _PlanComparisonRow(
+                    label: 'Ultimate',
+                    value: '15 Postfächer · 90 Tage',
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PricingScreen(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.upgrade),
+                      label: const Text('Plan upgraden'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlanComparisonRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _PlanComparisonRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                color: Color(0xFF2563EB),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF334155),
+              ),
+            ),
           ),
         ],
       ),

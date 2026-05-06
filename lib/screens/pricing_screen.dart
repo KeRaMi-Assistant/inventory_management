@@ -91,11 +91,6 @@ class _PricingScreenState extends State<PricingScreen> {
 
     if (plan.plan == billing.currentPlan) return;
 
-    if (plan.plan == BillingPlan.enterprise) {
-      _showEnterpriseDialog();
-      return;
-    }
-
     // Free: kein Billing-Setup nötig. Direkt umschalten.
     if (plan.plan == BillingPlan.free) {
       await _confirmAndActivate(plan, billing, messenger);
@@ -176,24 +171,6 @@ class _PricingScreenState extends State<PricingScreen> {
     }
   }
 
-  void _showEnterpriseDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Enterprise-Anfrage'),
-        content: const Text(
-          'Enterprise-Pläne werden individuell vereinbart. Schreib uns eine '
-          'Mail an sales@example.com — wir melden uns innerhalb von 24h.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _BillingCycleToggle extends StatelessWidget {
@@ -302,7 +279,6 @@ class _PlanCard extends StatelessWidget {
     final price = cycle == BillingCycle.yearly
         ? plan.yearlyPriceEur
         : plan.monthlyPriceEur;
-    final showsPrice = !plan.customPricing;
     final priceLabel = plan.isFree
         ? '0 €'
         : cycle == BillingCycle.yearly
@@ -367,20 +343,12 @@ class _PlanCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            if (showsPrice)
-              Text(
-                priceLabel,
-                style: theme.textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w700),
-              )
-            else
-              Text(
-                'individuelles Angebot',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            if (showsPrice && cycle == BillingCycle.yearly && !plan.isFree)
+            Text(
+              priceLabel,
+              style: theme.textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            if (cycle == BillingCycle.yearly && !plan.isFree)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
@@ -435,7 +403,6 @@ class _PlanCard extends StatelessWidget {
 
   String _buttonLabel(PricingPlan plan, bool isCurrent) {
     if (isCurrent) return 'Aktiver Plan';
-    if (plan.customPricing) return 'Vertrieb kontaktieren';
     if (plan.isFree) return 'Auf Free wechseln';
     return 'Plan auswählen';
   }

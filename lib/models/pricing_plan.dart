@@ -1,9 +1,8 @@
 import 'billing_profile.dart';
 
 /// Statische Definition der Pricing-Tiers. Wird sowohl vom Pricing-Screen
-/// als auch (perspektivisch) von Quota-Checks im Inventory/Workspace-Code
-/// gelesen. Single source of truth — wenn sich Preise oder Limits ändern,
-/// passiert das hier zentral.
+/// als auch von den Quota-Checks (Inbox-Limit, Mailbox-Anzahl,
+/// Sichtbarkeit etc.) gelesen — single source of truth.
 class PricingPlan {
   final BillingPlan plan;
   final String tagline;
@@ -14,9 +13,18 @@ class PricingPlan {
   final int teamMembers;
   final int imagesPerEntity;
   final int storageMb;
+
+  /// Anzahl der IMAP-Konten, die der User parallel verbinden darf.
+  /// 0 = Postfach-Feature komplett ausgeblendet (Free-Tier).
+  final int mailboxLimit;
+
+  /// Wie weit die Inbox in die Vergangenheit zeigt — Suggestions/Mails
+  /// älter als das werden im UI ausgeblendet (DB-Cleanup läuft separat
+  /// nach 30 Tagen). 0 für Pläne ohne Postfach.
+  final int inboxVisibilityDays;
+
   final List<String> highlights;
   final bool mostPopular;
-  final bool customPricing;
 
   const PricingPlan({
     required this.plan,
@@ -28,14 +36,17 @@ class PricingPlan {
     required this.teamMembers,
     required this.imagesPerEntity,
     required this.storageMb,
+    required this.mailboxLimit,
+    required this.inboxVisibilityDays,
     required this.highlights,
     this.mostPopular = false,
-    this.customPricing = false,
   });
 
   static const int unlimited = -1;
 
   bool get isFree => plan == BillingPlan.free;
+
+  bool get hasInbox => mailboxLimit != 0;
 
   /// Statischer Katalog. Reihenfolge = Anzeige-Reihenfolge im Pricing-Grid.
   static const List<PricingPlan> all = <PricingPlan>[
@@ -47,33 +58,37 @@ class PricingPlan {
       productLimit: 50,
       dealsPerMonthLimit: 25,
       teamMembers: 1,
-      imagesPerEntity: 1,
+      imagesPerEntity: 0,
       storageMb: 50,
+      mailboxLimit: 0,
+      inboxVisibilityDays: 0,
       highlights: [
         'Bis zu 50 Produkte',
         '25 Deals pro Monat',
-        '1 Bild pro Eintrag',
+        'Keine Bilder pro Eintrag',
         'Nur Übersichts-Statistik',
+        'Kein Postfach-Import',
         'Community-Support',
       ],
     ),
     PricingPlan(
       plan: BillingPlan.starter,
-      tagline: 'Für Solo-Reseller',
+      tagline: 'Solo-Reseller, das Wesentliche',
       monthlyPriceEur: 6.99,
       yearlyPriceEur: 69,
       productLimit: 500,
       dealsPerMonthLimit: unlimited,
       teamMembers: 1,
-      imagesPerEntity: 5,
+      imagesPerEntity: 1,
       storageMb: 1024,
+      mailboxLimit: 1,
+      inboxVisibilityDays: 7,
       highlights: [
         'Bis zu 500 Produkte',
         'Unbegrenzt Deals',
-        '5 Bilder pro Eintrag · 1 GB Storage',
-        'Alle 5 Statistik-Tabs',
+        '1 Bild pro Eintrag · 1 GB Storage',
+        '1 Postfach · 7 Tage Inbox-Verlauf',
         'CSV Import & Export',
-        'PDF/Excel Reports',
         'Barcode-Scanner',
         'E-Mail-Support (48h)',
       ],
@@ -86,62 +101,68 @@ class PricingPlan {
       productLimit: 5000,
       dealsPerMonthLimit: unlimited,
       teamMembers: 3,
-      imagesPerEntity: 10,
+      imagesPerEntity: 5,
       storageMb: 10240,
+      mailboxLimit: 3,
+      inboxVisibilityDays: 14,
       mostPopular: true,
       highlights: [
         'Bis zu 5.000 Produkte',
         'Unbegrenzt Deals',
         'Bis zu 3 Team-Mitglieder',
-        '10 Bilder pro Eintrag · 10 GB Storage',
+        '5 Bilder pro Eintrag · 10 GB Storage',
+        '3 Postfächer · 14 Tage Inbox-Verlauf',
         'Drilldowns, Heatmaps & Trends',
         'Activity-Log & Audit-Trail',
-        'Deal-Kommentare',
         'Push-Benachrichtigungen',
         'Priority-Support (24h)',
       ],
     ),
     PricingPlan(
       plan: BillingPlan.business,
-      tagline: 'Für Power-Reseller & Teams',
+      tagline: 'Power-Reseller & Teams',
       monthlyPriceEur: 34.99,
       yearlyPriceEur: 349,
-      productLimit: unlimited,
+      productLimit: 100000,
       dealsPerMonthLimit: unlimited,
       teamMembers: 10,
-      imagesPerEntity: 25,
+      imagesPerEntity: 10,
       storageMb: 51200,
+      mailboxLimit: 10,
+      inboxVisibilityDays: 30,
       highlights: [
-        'Unbegrenzte Produkte',
+        'Bis zu 100.000 Produkte',
         'Bis zu 10 Team-Mitglieder',
-        '25 Bilder pro Eintrag · 50 GB Storage',
-        'DATEV-Export (geplant)',
-        'Marketplace-Sync (geplant)',
+        '10 Bilder pro Eintrag · 50 GB Storage',
+        '10 Postfächer · 30 Tage Inbox-Verlauf',
         'API-Zugriff & Webhooks',
+        'DATEV-Export (geplant)',
         'Custom Branding für Reports',
         'Priority-SLA (12h)',
       ],
     ),
     PricingPlan(
-      plan: BillingPlan.enterprise,
-      tagline: 'Für Wholesale & Multi-Standort',
-      monthlyPriceEur: 99,
-      yearlyPriceEur: 990,
-      productLimit: unlimited,
+      plan: BillingPlan.ultimate,
+      tagline: 'Für Wholesale & Heavy-Volume',
+      monthlyPriceEur: 59.99,
+      yearlyPriceEur: 599,
+      productLimit: 300000,
       dealsPerMonthLimit: unlimited,
-      teamMembers: unlimited,
-      imagesPerEntity: unlimited,
+      teamMembers: 50,
+      imagesPerEntity: 25,
       storageMb: unlimited,
-      customPricing: true,
+      mailboxLimit: 15,
+      inboxVisibilityDays: 90,
       highlights: [
-        'Alles unbegrenzt',
-        'Unbegrenzt Team-Mitglieder',
+        'Bis zu 300.000 Produkte',
+        '15 Postfächer · 90 Tage Inbox-Verlauf',
+        'Bis zu 50 Team-Mitglieder',
+        '25 Bilder pro Eintrag · unbegrenzter Storage',
         'Single Sign-On (SAML/OIDC)',
         'White-Label-Option',
-        'On-Premise möglich',
+        'Marketplace-Sync (geplant)',
         'Dedizierter Account Manager',
         'Uptime-SLA 99,9%',
-        'Auftragsverarbeitungsvertrag (AVV)',
       ],
     ),
   ];

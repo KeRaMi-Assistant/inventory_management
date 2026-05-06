@@ -1,3 +1,36 @@
+/// Persistente Dismiss-Marke pro Workspace. Identität ist entweder
+/// (shopKey, orderId) für Bestellungen mit Order-Nr — alle zukünftigen
+/// Mails zu derselben Bestellung werden ignoriert — ODER die
+/// parsed_message_id für Einzel-Mails ohne Order-Schlüssel.
+class InboxDismissal {
+  final String? shopKey;
+  final String? orderId;
+  final String? parsedMessageId;
+
+  const InboxDismissal({this.shopKey, this.orderId, this.parsedMessageId});
+
+  factory InboxDismissal.fromSupabase(Map<String, dynamic> row) =>
+      InboxDismissal(
+        shopKey: row['shop_key'] as String?,
+        orderId: row['order_id'] as String?,
+        parsedMessageId: row['parsed_message_id'] as String?,
+      );
+
+  /// Eindeutiger String-Key für Set-Membership-Tests im Provider.
+  String get cacheKey {
+    if (shopKey != null && orderId != null) {
+      return 'order:$shopKey:$orderId';
+    }
+    if (parsedMessageId != null) return 'msg:$parsedMessageId';
+    return 'invalid';
+  }
+
+  static String orderKey(String shopKey, String orderId) =>
+      'order:$shopKey:$orderId';
+  static String messageKey(String parsedMessageId) =>
+      'msg:$parsedMessageId';
+}
+
 /// Status einer geparsten Mail. Spiegelt den DB-CHECK aus `parsed_messages`.
 enum ParsedMessageStatus {
   pending,

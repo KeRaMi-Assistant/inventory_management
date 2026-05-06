@@ -692,6 +692,54 @@ class SupabaseRepository {
         .eq('id', id);
   }
 
+  // ── Inbox dismissals (persistent ignore-list) ────────────────────────────
+
+  /// Persistente Dismiss-Marke. Wenn (shopKey, orderId) gesetzt sind, werden
+  /// auch zukünftige Mails zur selben Bestellung ignoriert. Ohne Order-Schlüssel
+  /// wirkt der Dismiss nur auf die einzelne parsed_message_id.
+  Future<void> insertInboxDismissal({
+    String? shopKey,
+    String? orderId,
+    String? parsedMessageId,
+    required DateTime receivedAt,
+  }) async {
+    final hasOrder = shopKey != null && orderId != null && orderId.isNotEmpty;
+    if (!hasOrder && parsedMessageId == null) return;
+    final ws = _wsId;
+    final payload = {
+      'workspace_id': ws,
+      'shop_key': hasOrder ? shopKey : null,
+      'order_id': hasOrder ? orderId : null,
+      'parsed_message_id': hasOrder ? null : parsedMessageId,
+      'received_at': receivedAt.toUtc().toIso8601String(),
+    };
+    final onConflict = hasOrder
+        ? 'workspace_id,shop_key,order_id'
+        : 'workspace_id,parsed_message_id';
+    await _client
+        .from('inbox_dismissals')
+        .upsert(payload, onConflict: onConflict, ignoreDuplicates: true);
+  }
+
+  Future<List<InboxDismissal>> loadInboxDismissals() async {
+    final ws = _workspaceId;
+    if (ws == null) return const [];
+    final rows = await _client
+        .from('inbox_dismissals')
+        .select('shop_key, order_id, parsed_message_id')
+        .eq('workspace_id', ws);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(InboxDismissal.fromSupabase)
+        .toList();
+  }
+
+  Future<void> clearInboxDismissals() async {
+    final ws = _workspaceId;
+    if (ws == null) return;
+    await _client.from('inbox_dismissals').delete().eq('workspace_id', ws);
+  }
+
   /// User wendet Tracking + (optional) Carrier + ETA aus einer Mail auf
   /// einen bestehenden Deal an, ohne neuen Deal anzulegen. Markiert die
   /// Mail als matched + verlinkt sie mit dem Deal.

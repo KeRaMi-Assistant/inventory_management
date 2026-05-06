@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
+import '../models/pricing_plan.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
@@ -123,6 +124,28 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  /// Index 3 (Inbox) ist nur ab `hasInbox` (Starter+) sichtbar. Reihenfolge
+  /// im sonstigen Nav bleibt stabil, damit andere Screens (GlobalSearch,
+  /// _openTicket, _openSearch) ihre Indizes nicht neu lernen müssen.
+  static const int _inboxNavIndex = 3;
+
+  List<bool> _navVisibility(BillingProvider billing) {
+    final hasInbox =
+        PricingPlan.forBillingPlan(billing.currentPlan).hasInbox;
+    return [
+      true, // 0 dashboard
+      true, // 1 deals
+      true, // 2 tickets
+      hasInbox, // 3 inbox
+      true, // 4 inventory
+      true, // 5 suppliers
+      true, // 6 statistics
+      true, // 7 activity
+      true, // 8 help
+      true, // 9 settings
+    ];
+  }
+
   void _select(int index) {
     setState(() => _selectedIndex = index);
     Navigator.maybePop(context);
@@ -162,11 +185,19 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final labels = _navLabels(l10n);
-    return Consumer<InventoryProvider>(
-      builder: (context, provider, _) {
+    return Consumer2<InventoryProvider, BillingProvider>(
+      builder: (context, provider, billing, _) {
         final width = MediaQuery.of(context).size.width;
         final narrow = width < 800;
         final extended = width >= 1100;
+        final visibility = _navVisibility(billing);
+        // Wenn der User auf einen Plan ohne Postfach downgradet, während
+        // er den Inbox-Tab offen hat, automatisch zurück aufs Dashboard.
+        if (_selectedIndex == _inboxNavIndex && !visibility[_inboxNavIndex]) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _selectedIndex = 0);
+          });
+        }
         final body = _buildBody();
 
         final fab = _selectedIndex == 1 || _selectedIndex == 2
@@ -204,6 +235,7 @@ class _MainScreenState extends State<MainScreen> {
                       selectedIndex: _selectedIndex,
                       icons: _navIcons,
                       labels: labels,
+                      visibility: visibility,
                       onSelect: _select,
                     ),
                   ),
@@ -219,6 +251,7 @@ class _MainScreenState extends State<MainScreen> {
                       selectedIndex: _selectedIndex,
                       icons: _navIcons,
                       labels: labels,
+                      visibility: visibility,
                       extended: extended,
                       onSelect: _select,
                     ),
@@ -261,6 +294,8 @@ class _Sidebar extends StatelessWidget {
   final int selectedIndex;
   final List<(IconData, IconData)> icons;
   final List<String> labels;
+  /// Pro Index: true = sichtbar, false = ausblenden (z.B. Inbox auf Free).
+  final List<bool> visibility;
   final bool extended;
   final ValueChanged<int> onSelect;
 
@@ -268,6 +303,7 @@ class _Sidebar extends StatelessWidget {
     required this.selectedIndex,
     required this.icons,
     required this.labels,
+    required this.visibility,
     required this.extended,
     required this.onSelect,
   });
@@ -310,19 +346,24 @@ class _Sidebar extends StatelessWidget {
           ),
           Container(height: 1, color: Colors.white.withAlpha(20)),
           const SizedBox(height: 8),
-          // Nav items
+          // Nav items — versteckte Indizes (z.B. Inbox auf Free)
+          // werden hier rausgefiltert, der Index-Schlüssel bleibt aber
+          // gleich wie im _buildBody-Switch.
           Expanded(
-            child: ListView.builder(
+            child: ListView(
               padding: EdgeInsets.zero,
-              itemCount: icons.length,
-              itemBuilder: (context, i) => _NavItem(
-                icon: icons[i].$1,
-                activeIcon: icons[i].$2,
-                label: labels[i],
-                isSelected: selectedIndex == i,
-                extended: extended,
-                onTap: () => onSelect(i),
-              ),
+              children: [
+                for (int i = 0; i < icons.length; i++)
+                  if (i >= visibility.length || visibility[i])
+                    _NavItem(
+                      icon: icons[i].$1,
+                      activeIcon: icons[i].$2,
+                      label: labels[i],
+                      isSelected: selectedIndex == i,
+                      extended: extended,
+                      onTap: () => onSelect(i),
+                    ),
+              ],
             ),
           ),
           Container(height: 1, color: Colors.white.withAlpha(20)),
@@ -826,12 +867,14 @@ class _MobileNavList extends StatelessWidget {
   final int selectedIndex;
   final List<(IconData, IconData)> icons;
   final List<String> labels;
+  final List<bool> visibility;
   final ValueChanged<int> onSelect;
 
   const _MobileNavList({
     required this.selectedIndex,
     required this.icons,
     required this.labels,
+    required this.visibility,
     required this.onSelect,
   });
 
@@ -870,14 +913,15 @@ class _MobileNavList extends StatelessWidget {
             padding: EdgeInsets.zero,
             children: [
               for (int i = 0; i < icons.length; i++)
-                _NavItem(
-                  icon: icons[i].$1,
-                  activeIcon: icons[i].$2,
-                  label: labels[i],
-                  isSelected: selectedIndex == i,
-                  extended: true,
-                  onTap: () => onSelect(i),
-                ),
+                if (i >= visibility.length || visibility[i])
+                  _NavItem(
+                    icon: icons[i].$1,
+                    activeIcon: icons[i].$2,
+                    label: labels[i],
+                    isSelected: selectedIndex == i,
+                    extended: true,
+                    onTap: () => onSelect(i),
+                  ),
             ],
           ),
         ),

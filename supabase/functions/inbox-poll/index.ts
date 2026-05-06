@@ -37,7 +37,9 @@ interface PollStats {
 
 // Hard cap pro Lauf, damit ein voller Posteingang nicht das 150MB-Memory-
 // Limit der Edge Function sprengt. Restliche Mails fängt der nächste Tick.
-const MAX_FETCH_PER_RUN = 50
+// 100 ist mit unserer Lightweight-Parser-Pipeline (ohne mailparser) safe;
+// erlaubt aber ein zügiges Backfill von >1k Mails in akzeptabler Zeit.
+const MAX_FETCH_PER_RUN = 100
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
