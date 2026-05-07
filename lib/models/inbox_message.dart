@@ -262,3 +262,22 @@ class PendingDealSuggestion {
     );
   }
 }
+
+/// Lese-Marker für eine einzelne parsed_message des eingeloggten Users.
+/// Wird aus `public.inbox_reads` geladen (RLS filtert auf auth.uid()).
+/// Kein `toJson` nötig — Reads werden serverseitig per RPC `mark_all_inbox_read`
+/// geschrieben, niemals vom Client direkt.
+class InboxRead {
+  final String parsedMessageId;
+  final DateTime readAt;
+
+  const InboxRead({
+    required this.parsedMessageId,
+    required this.readAt,
+  });
+
+  factory InboxRead.fromSupabase(Map<String, dynamic> row) => InboxRead(
+        parsedMessageId: row['parsed_message_id'] as String,
+        readAt: DateTime.parse(row['read_at'] as String),
+      );
+}

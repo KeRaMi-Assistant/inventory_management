@@ -3482,6 +3482,48 @@ abstract class AppLocalizations {
   /// **'Ø EK'**
   String get statsAvgEk;
 
+  /// No description provided for @inboxMarkAllRead.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle als gelesen markieren'**
+  String get inboxMarkAllRead;
+
+  /// No description provided for @inboxMarkAllReadTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle als gelesen markieren ({count})'**
+  String inboxMarkAllReadTooltip(int count);
+
+  /// No description provided for @inboxMarkAllReadConfirmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle als gelesen markieren?'**
+  String get inboxMarkAllReadConfirmTitle;
+
+  /// No description provided for @inboxMarkAllReadConfirmBody.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} ungelesene Einträge werden als gelesen markiert. Vorschläge und Mails bleiben in der Inbox.'**
+  String inboxMarkAllReadConfirmBody(int count);
+
+  /// No description provided for @inboxMarkAllReadSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Einträge als gelesen markiert.'**
+  String inboxMarkAllReadSuccess(int count);
+
+  /// No description provided for @inboxMarkAllReadFailure.
+  ///
+  /// In de, this message translates to:
+  /// **'Markieren fehlgeschlagen: {error}'**
+  String inboxMarkAllReadFailure(Object error);
+
+  /// No description provided for @inboxUnreadBadge.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} neu'**
+  String inboxUnreadBadge(int count);
+
   /// No description provided for @invitesBellTooltip.
   ///
   /// In de, this message translates to:

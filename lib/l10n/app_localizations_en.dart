@@ -1818,6 +1818,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsAvgEk => 'Avg. cost';
 
   @override
+  String get inboxMarkAllRead => 'Mark all as read';
+
+  @override
+  String inboxMarkAllReadTooltip(int count) {
+    return 'Mark all as read ($count)';
+  }
+
+  @override
+  String get inboxMarkAllReadConfirmTitle => 'Mark all as read?';
+
+  @override
+  String inboxMarkAllReadConfirmBody(int count) {
+    return '$count unread items will be marked as read. Suggestions and messages stay in the inbox.';
+  }
+
+  @override
+  String inboxMarkAllReadSuccess(int count) {
+    return '$count items marked as read.';
+  }
+
+  @override
+  String inboxMarkAllReadFailure(Object error) {
+    return 'Mark as read failed: $error';
+  }
+
+  @override
+  String inboxUnreadBadge(int count) {
+    return '$count new';
+  }
+
+  @override
   String get invitesBellTooltip => 'Invites';
 
   @override

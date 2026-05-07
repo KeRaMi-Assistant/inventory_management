@@ -52,9 +52,24 @@ class CloudSnapshot {
 /// Inserts ohnehin auf Mitgliedschaft prüfen, der explizite eq()-Filter
 /// hier ist Performance-Optimierung + macht den Scope explizit.
 class SupabaseRepository {
-  SupabaseRepository(this._client);
+  SupabaseRepository(SupabaseClient client) : _clientOrNull = client;
 
-  final SupabaseClient _client;
+  /// Konstruktor für Tests: Subklassen überschreiben alle relevanten Methoden
+  /// und rufen `_client` niemals auf. Nie in Produktion verwenden.
+  SupabaseRepository.forTesting() : _clientOrNull = null;
+
+  final SupabaseClient? _clientOrNull;
+
+  SupabaseClient get _client {
+    final c = _clientOrNull;
+    if (c == null) {
+      throw StateError(
+        'SupabaseRepository.forTesting: _client darf nicht aufgerufen werden '
+        '— alle Methoden müssen in der Test-Subklasse überschrieben werden.',
+      );
+    }
+    return c;
+  }
 
   String? _workspaceId;
 
@@ -63,6 +78,11 @@ class SupabaseRepository {
   void setActiveWorkspace(String? workspaceId) {
     _workspaceId = workspaceId;
   }
+
+  /// Liefert die aktuell gesetzte Workspace-ID oder `null`, wenn kein
+  /// Workspace aktiv ist. Wird von Providern benötigt, die die ID kennen
+  /// müssen, ohne einen Fehler auslösen zu wollen.
+  String? get activeWorkspaceId => _workspaceId;
 
   String get _wsId {
     final id = _workspaceId;
@@ -744,6 +764,34 @@ class SupabaseRepository {
     final ws = _workspaceId;
     if (ws == null) return;
     await _client.from('inbox_dismissals').delete().eq('workspace_id', ws);
+  }
+
+  // ── Inbox reads (pro-User Lese-Status) ───────────────────────────────────
+
+  /// Lädt die Set der bereits gelesenen parsed_message_ids für den
+  /// eingeloggten User. RLS auf `inbox_reads` filtert automatisch auf
+  /// `read_by = auth.uid()` — kein expliziter Filter nötig.
+  Future<Set<String>> loadInboxReads({required String workspaceId}) async {
+    final rows = await _client
+        .from('inbox_reads')
+        .select('parsed_message_id')
+        .eq('workspace_id', workspaceId);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map((r) => r['parsed_message_id'] as String)
+        .toSet();
+  }
+
+  /// Ruft die RPC `mark_all_inbox_read` auf, die alle aktuell sichtbaren
+  /// parsed_messages des Workspace als gelesen markiert (rolling 30-Tage-
+  /// Fenster). Gibt die Anzahl neu inserierter Read-Marker zurück.
+  /// Idempotent via `ON CONFLICT DO NOTHING`.
+  Future<int> markAllInboxRead({required String workspaceId}) async {
+    final result = await _client.rpc(
+      'mark_all_inbox_read',
+      params: {'_workspace_id': workspaceId},
+    );
+    return (result as num?)?.toInt() ?? 0;
   }
 
   /// User wendet Tracking + (optional) Carrier + ETA aus einer Mail auf
