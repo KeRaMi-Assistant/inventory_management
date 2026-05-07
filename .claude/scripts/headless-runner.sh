@@ -138,6 +138,14 @@ Workflow (PFLICHT in dieser Reihenfolge):
 5. Erst nach grünem Visual-Test: \`/ship\` (commit + push + PR + auto-merge).
 6. Bei Blocker: dokumentiere klar, wo's hängt — kein Endlos-Try.
 
+**EXIT-CODE-VERTRAG (KRITISCH):**
+- \`/ship\` erfolgreich (PR merged) → exit 0 → Item landet in done/.
+- Visueller Test failed → exit 1 → Item landet in failed/.
+- Du brichst kontrolliert ab (kein /ship, Tool-Permission fehlt, MCP-Tool nicht da, fehlende Voraussetzungen) → **PFLICHT exit 1**.
+  Sonst werden Items fälschlich als "done" verbucht obwohl nichts gemerged wurde.
+  Vor exit: schreibe einen klaren Blocker-Report ins Run-Log
+  (was fehlte, was zu tun ist, welcher Befehl).
+
 Hard-Constraints:
 - Niemals \`supabase db push\` gegen Prod.
 - Niemals direkt auf main committen.
