@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/shop.dart';
 import '../models/ticket_summary.dart';
@@ -292,7 +293,7 @@ class _TicketFilters extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Material(
-      color: Colors.white,
+      color: AppTheme.bgSurfaceOf(context),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -387,9 +388,9 @@ class _TicketCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEFF6FF) : Colors.white,
+          color: selected ? AppTheme.accentSelectedBgOf(context) : AppTheme.bgSurfaceOf(context),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: selected ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0)),
+          border: Border.all(color: selected ? AppTheme.accent.withAlpha(153) : AppTheme.borderOf(context)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -638,11 +639,11 @@ class _TicketDetail extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: AppTheme.accentLight,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.edit_outlined,
-                    color: Color(0xFF2563EB), size: 20),
+                child: Icon(Icons.edit_outlined,
+                    color: AppTheme.accent, size: 20),
               ),
               const SizedBox(width: 12),
               Text(AppLocalizations.of(context).ticketsEditTitle),
@@ -769,19 +770,19 @@ class _Totals extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Row(
       children: [
-        _box(l10n.ticketsBoxEkTotal, money.format(ticket.totalEk)),
+        _box(context, l10n.ticketsBoxEkTotal, money.format(ticket.totalEk)),
         const SizedBox(width: 10),
-        _box(l10n.ticketsBoxVkTotal, money.format(ticket.totalVk)),
+        _box(context, l10n.ticketsBoxVkTotal, money.format(ticket.totalVk)),
         const SizedBox(width: 10),
-        _box(l10n.ticketsBoxProfit, money.format(ticket.totalProfit),
+        _box(context, l10n.ticketsBoxProfit, money.format(ticket.totalProfit),
             good: ticket.totalProfit >= 0),
         const SizedBox(width: 10),
-        _box(l10n.ticketsBoxQuantity, '${ticket.totalQuantity}'),
+        _box(context, l10n.ticketsBoxQuantity, '${ticket.totalQuantity}'),
       ],
     );
   }
 
-  Widget _box(String label, String value, {bool? good}) {
+  Widget _box(BuildContext context, String label, String value, {bool? good}) {
     return Expanded(
       child: Card(
         child: Padding(
@@ -789,7 +790,7 @@ class _Totals extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w700)),
+              Text(label, style: TextStyle(fontSize: 11, color: AppTheme.textMutedOf(context), fontWeight: FontWeight.w700)),
               const SizedBox(height: 4),
               FittedBox(
                 fit: BoxFit.scaleDown,
@@ -800,10 +801,10 @@ class _Totals extends StatelessWidget {
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                     color: good == null
-                        ? const Color(0xFF0F172A)
+                        ? AppTheme.textPrimaryOf(context)
                         : good
-                            ? const Color(0xFF059669)
-                            : const Color(0xFFDC2626),
+                            ? AppTheme.success
+                            : AppTheme.danger,
                   ),
                 ),
               ),

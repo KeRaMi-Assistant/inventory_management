@@ -51,6 +51,11 @@ class AppTheme {
   static Color textDisabledOf(BuildContext context) =>
       _dark(context) ? textDisabledDark : textDisabled;
 
+  // Selected-Card-Background — accentLight in light mode, dark navy in dark mode.
+  static const Color accentSelectedDark = Color(0xFF1E3A5F);
+  static Color accentSelectedBgOf(BuildContext context) =>
+      _dark(context) ? accentSelectedDark : accentLight;
+
   // -- Accent --
   static const Color accent = Color(0xFF2563EB);
   static const Color accentLight = Color(0xFFEFF6FF);
