@@ -11,6 +11,7 @@ import 'config/supabase_config.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/active_workspace_provider.dart';
 import 'providers/app_preferences_provider.dart';
+import 'providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'models/pricing_plan.dart';
 import 'providers/billing_provider.dart';
@@ -41,11 +42,14 @@ Future<void> main() async {
   final prefs = AppPreferencesProvider();
   await prefs.load();
 
+  final themeProvider = ThemeProvider();
+  await themeProvider.load();
+
   final pushService = PushService(Supabase.instance.client);
   // Best-effort: läuft auch ohne Firebase-Config still durch.
   await pushService.init();
 
-  runApp(InventoryApp(preferences: prefs, pushService: pushService));
+  runApp(InventoryApp(preferences: prefs, pushService: pushService, themeProvider: themeProvider));
 }
 
 final GlobalKey<NavigatorState> _rootNavigator =
@@ -54,10 +58,12 @@ final GlobalKey<NavigatorState> _rootNavigator =
 class InventoryApp extends StatelessWidget {
   final AppPreferencesProvider preferences;
   final PushService pushService;
+  final ThemeProvider themeProvider;
   const InventoryApp({
     super.key,
     required this.preferences,
     required this.pushService,
+    required this.themeProvider,
   });
 
   @override
@@ -87,6 +93,7 @@ class InventoryApp extends StatelessWidget {
           create: (_) => StatisticsFilterProvider(),
         ),
         ChangeNotifierProvider<AppPreferencesProvider>.value(value: preferences),
+        ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
         Provider<SessionManager>(
           lazy: false,
           create: (ctx) =>
@@ -124,10 +131,12 @@ class InventoryApp extends StatelessWidget {
               previous ?? BillingProvider(service),
         ),
       ],
-      child: Consumer<AppPreferencesProvider>(
-        builder: (ctx, prefs, _) => MaterialApp(
+      child: Consumer2<AppPreferencesProvider, ThemeProvider>(
+        builder: (ctx, prefs, themeP, _) => MaterialApp(
           onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
           theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: themeP.mode,
           navigatorKey: _rootNavigator,
           locale: prefs.locale,
           supportedLocales: AppPreferencesProvider.supportedLocales,
