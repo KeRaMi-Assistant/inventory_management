@@ -59,22 +59,22 @@ class _AttachmentGalleryState extends State<AttachmentGallery> {
       children: [
         Row(
           children: [
-            const Icon(Icons.photo_library_outlined,
-                size: 16, color: AppTheme.textMuted),
+            Icon(Icons.photo_library_outlined,
+                size: 16, color: AppTheme.textMutedOf(context)),
             const SizedBox(width: 6),
             Text(
               AppLocalizations.of(context).attachmentTitle,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: AppTheme.textMuted,
+                color: AppTheme.textMutedOf(context),
                 letterSpacing: 0.6,
               ),
             ),
             const SizedBox(width: 6),
             Text(
               '${widget.paths.length}/${AttachmentService.maxPerEntity}',
-              style: const TextStyle(fontSize: 11, color: AppTheme.textDisabled),
+              style: TextStyle(fontSize: 11, color: AppTheme.textDisabledOf(context)),
             ),
           ],
         ),
@@ -100,7 +100,7 @@ class _AttachmentGalleryState extends State<AttachmentGallery> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     AppLocalizations.of(context).dealCommentEmpty,
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                    style: TextStyle(fontSize: 12, color: AppTheme.textMutedOf(context)),
                   ),
                 ),
             ],
@@ -272,7 +272,7 @@ class _Thumbnail extends StatelessWidget {
             child: Container(
               width: size,
               height: size,
-              color: AppTheme.bgSubtle,
+              color: AppTheme.bgSubtleOf(context),
               child: FutureBuilder<String>(
                 future: svc.signedUrl(path),
                 builder: (context, snap) {
@@ -291,10 +291,10 @@ class _Thumbnail extends StatelessWidget {
                     width: size,
                     height: size,
                     placeholder: (_, _) =>
-                        const ColoredBox(color: AppTheme.bgSubtle),
-                    errorWidget: (_, _, _) => const Icon(
+                        ColoredBox(color: AppTheme.bgSubtleOf(context)),
+                    errorWidget: (_, _, _) => Icon(
                       Icons.broken_image_outlined,
-                      color: AppTheme.textDisabled,
+                      color: AppTheme.textDisabledOf(context),
                     ),
                   );
                 },

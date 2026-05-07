@@ -153,13 +153,13 @@ class _ActivityItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(message,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: AppTheme.textSecondary)),
+                        color: AppTheme.textSecondaryOf(context))),
                 const SizedBox(height: 2),
                 Text(date,
-                    style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                    style: TextStyle(fontSize: 11, color: AppTheme.textMutedOf(context))),
               ],
             ),
           ),
@@ -202,30 +202,30 @@ class _BuyerOverview extends StatelessWidget {
                           const SizedBox(width: 20),
                           Expanded(
                             child: Text(l10n.dashboardColBuyer,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
-                                    color: AppTheme.textMuted,
+                                    color: AppTheme.textMutedOf(context),
                                     letterSpacing: 0.5)),
                           ),
                           SizedBox(
                             width: 70,
                             child: Text(l10n.dashboardColDeals,
                                 textAlign: TextAlign.right,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
-                                    color: AppTheme.textMuted,
+                                    color: AppTheme.textMutedOf(context),
                                     letterSpacing: 0.5)),
                           ),
                           SizedBox(
                             width: 110,
                             child: Text(l10n.dashboardColOpen,
                                 textAlign: TextAlign.right,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
-                                    color: AppTheme.textMuted,
+                                    color: AppTheme.textMutedOf(context),
                                     letterSpacing: 0.5)),
                           ),
                           const SizedBox(width: 8),
@@ -233,21 +233,21 @@ class _BuyerOverview extends StatelessWidget {
                             child: Text(l10n.dashboardColLastDeal,
                                 textAlign: TextAlign.right,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
-                                    color: AppTheme.textMuted,
+                                    color: AppTheme.textMutedOf(context),
                                     letterSpacing: 0.5)),
                           ),
                         ],
                       ),
                     ),
-                    const Divider(height: 1, color: AppTheme.borderStrong),
+                    Divider(height: 1, color: AppTheme.borderStrongOf(context)),
                     ...rows.map(
                       (row) => Container(
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: const BoxDecoration(
-                          border: Border(bottom: BorderSide(color: AppTheme.border)),
+                        decoration: BoxDecoration(
+                          border: Border(bottom: BorderSide(color: AppTheme.borderOf(context))),
                         ),
                         child: Row(
                           children: [
@@ -261,18 +261,18 @@ class _BuyerOverview extends StatelessWidget {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(row.buyer.name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13,
-                                      color: AppTheme.textPrimary),
+                                      color: AppTheme.textPrimaryOf(context)),
                                   overflow: TextOverflow.ellipsis),
                             ),
                             SizedBox(
                               width: 70,
                               child: Text('${row.count}',
                                   textAlign: TextAlign.right,
-                                  style: const TextStyle(
-                                      fontSize: 13, color: AppTheme.textSecondary)),
+                                  style: TextStyle(
+                                      fontSize: 13, color: AppTheme.textSecondaryOf(context))),
                             ),
                             SizedBox(
                               width: 110,
@@ -289,8 +289,8 @@ class _BuyerOverview extends StatelessWidget {
                               child: Text(row.last?.product ?? '-',
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.right,
-                                  style: const TextStyle(
-                                      fontSize: 12, color: AppTheme.textMuted)),
+                                  style: TextStyle(
+                                      fontSize: 12, color: AppTheme.textMutedOf(context))),
                             ),
                           ],
                         ),
@@ -316,9 +316,9 @@ class _Panel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.bgSurface,
+        color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.border),
+        border: Border.all(color: AppTheme.borderOf(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,17 +327,17 @@ class _Panel extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Row(
               children: [
-                Icon(icon, size: 16, color: AppTheme.textMuted),
+                Icon(icon, size: 16, color: AppTheme.textMutedOf(context)),
                 const SizedBox(width: 8),
                 Text(title,
                     style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary)),
+                        color: AppTheme.textPrimaryOf(context))),
               ],
             ),
           ),
-          const Divider(height: 1, color: AppTheme.border),
+          Divider(height: 1, color: AppTheme.borderOf(context)),
           Padding(
             padding: const EdgeInsets.all(16),
             child: child,
@@ -355,7 +355,7 @@ class _MutedText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(text,
-        style: const TextStyle(color: AppTheme.textMuted, fontSize: 13));
+        style: TextStyle(color: AppTheme.textMutedOf(context), fontSize: 13));
   }
 }
 

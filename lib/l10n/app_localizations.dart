@@ -3589,6 +3589,30 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Rolle: {role}'**
   String invitesRoleLabel(Object role);
+
+  /// No description provided for @settingsThemeSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Erscheinungsbild'**
+  String get settingsThemeSection;
+
+  /// No description provided for @settingsThemeLight.
+  ///
+  /// In de, this message translates to:
+  /// **'Hell'**
+  String get settingsThemeLight;
+
+  /// No description provided for @settingsThemeDark.
+  ///
+  /// In de, this message translates to:
+  /// **'Dunkel'**
+  String get settingsThemeDark;
+
+  /// No description provided for @settingsThemeSystem.
+  ///
+  /// In de, this message translates to:
+  /// **'System'**
+  String get settingsThemeSystem;
 }
 
 class _AppLocalizationsDelegate

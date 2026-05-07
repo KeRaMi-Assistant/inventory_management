@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// User-Präferenzen die nichts mit der Cloud-DB zu tun haben:
-/// - monatliches Profit-Ziel (für die Statistik)
-/// - Schwellwert für "niedriger Bestand"-Warnungen
-/// - Sprache (`null` = System-Sprache verwenden)
 class AppPreferencesProvider extends ChangeNotifier {
   static const _kProfitGoal = 'pref_monthly_profit_goal';
   static const _kLowStock = 'pref_low_stock_threshold';
   static const _kLocale = 'pref_locale';
+  static const _kThemeMode = 'pref_theme_mode';
 
   static const supportedLocales = <Locale>[
     Locale('de'),
@@ -18,11 +15,13 @@ class AppPreferencesProvider extends ChangeNotifier {
   double _monthlyProfitGoal = 1000;
   int _lowStockThreshold = 5;
   Locale? _locale;
+  ThemeMode _themeMode = ThemeMode.system;
   bool _ready = false;
 
   double get monthlyProfitGoal => _monthlyProfitGoal;
   int get lowStockThreshold => _lowStockThreshold;
   Locale? get locale => _locale;
+  ThemeMode get themeMode => _themeMode;
   bool get isReady => _ready;
 
   Future<void> load() async {
@@ -31,6 +30,12 @@ class AppPreferencesProvider extends ChangeNotifier {
     _lowStockThreshold = prefs.getInt(_kLowStock) ?? 5;
     final raw = prefs.getString(_kLocale);
     _locale = (raw == null || raw.isEmpty) ? null : Locale(raw);
+    final rawTheme = prefs.getString(_kThemeMode);
+    _themeMode = switch (rawTheme) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
     _ready = true;
     notifyListeners();
   }
@@ -57,6 +62,18 @@ class AppPreferencesProvider extends ChangeNotifier {
     } else {
       await prefs.setString(_kLocale, locale.languageCode);
     }
+    notifyListeners();
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    _themeMode = mode;
+    final prefs = await SharedPreferences.getInstance();
+    final raw = switch (mode) {
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+      ThemeMode.system => 'system',
+    };
+    await prefs.setString(_kThemeMode, raw);
     notifyListeners();
   }
 }

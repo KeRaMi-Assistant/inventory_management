@@ -137,7 +137,7 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
                     _highlight = 0;
                   }),
                 ),
-                const Divider(height: 1, color: AppTheme.border),
+                Divider(height: 1, color: AppTheme.borderOf(context)),
                 Flexible(
                   child: _query.trim().isEmpty
                       ? const _PlaceholderHint()
@@ -149,7 +149,7 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
                               flatLength: flat.length,
                             ),
                 ),
-                const Divider(height: 1, color: AppTheme.border),
+                Divider(height: 1, color: AppTheme.borderOf(context)),
                 const _Footer(),
               ],
             ),
@@ -400,10 +400,10 @@ class _Results extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Text(
               group.label.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: AppTheme.textMuted,
+                color: AppTheme.textMutedOf(context),
                 letterSpacing: 0.6,
               ),
             ),
@@ -449,10 +449,10 @@ class _ResultTile extends StatelessWidget {
                   children: [
                     Text(
                       result.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
+                        color: AppTheme.textPrimaryOf(context),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -460,9 +460,9 @@ class _ResultTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       result.subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppTheme.textMuted,
+                        color: AppTheme.textMutedOf(context),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -471,8 +471,8 @@ class _ResultTile extends StatelessWidget {
                 ),
               ),
               if (highlighted)
-                const Icon(Icons.subdirectory_arrow_left,
-                    size: 14, color: AppTheme.textMuted),
+                Icon(Icons.subdirectory_arrow_left,
+                    size: 14, color: AppTheme.textMutedOf(context)),
             ],
           ),
         ),
@@ -491,28 +491,28 @@ class _PlaceholderHint extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Tipp:',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: AppTheme.textMuted,
+              color: AppTheme.textMutedOf(context),
               letterSpacing: 0.6,
             ),
           ),
           const SizedBox(height: 8),
-          _hint('Produktname, EAN, SKU, Ticket-Nummer, Käufer-Name…'),
-          _hint('↑ ↓ navigieren · ↵ öffnen · esc schließt.'),
+          _hint('Produktname, EAN, SKU, Ticket-Nummer, Käufer-Name…', context),
+          _hint('↑ ↓ navigieren · ↵ öffnen · esc schließt.', context),
         ],
       ),
     );
   }
 
-  Widget _hint(String text) => Padding(
+  Widget _hint(String text, BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 4),
         child: Text(
           text,
-          style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+          style: TextStyle(fontSize: 13, color: AppTheme.textSecondaryOf(context)),
         ),
       );
 }
@@ -522,18 +522,18 @@ class _NoResults extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
+    return Padding(
       padding: EdgeInsets.symmetric(vertical: 36),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search_off, color: AppTheme.textDisabled, size: 36),
+            Icon(Icons.search_off, color: AppTheme.textDisabledOf(context), size: 36),
             SizedBox(height: 8),
             Text(
               'Keine Treffer.',
               style: TextStyle(
-                  color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                  color: AppTheme.textMutedOf(context), fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -550,20 +550,20 @@ class _Footer extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      color: AppTheme.bgSubtle,
+      color: AppTheme.bgSubtleOf(context),
       child: Row(
         children: [
           const _Kbd('↑↓'),
           const SizedBox(width: 6),
-          Text(l10n.globalSearchKeyNav, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          Text(l10n.globalSearchKeyNav, style: TextStyle(fontSize: 11, color: AppTheme.textMutedOf(context))),
           const SizedBox(width: 14),
           const _Kbd('↵'),
           const SizedBox(width: 6),
-          Text(l10n.globalSearchKeyOpen, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          Text(l10n.globalSearchKeyOpen, style: TextStyle(fontSize: 11, color: AppTheme.textMutedOf(context))),
           const SizedBox(width: 14),
           const _Kbd('esc'),
           const SizedBox(width: 6),
-          Text(l10n.globalSearchKeyClose, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          Text(l10n.globalSearchKeyClose, style: TextStyle(fontSize: 11, color: AppTheme.textMutedOf(context))),
         ],
       ),
     );
@@ -579,16 +579,16 @@ class _Kbd extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
-        color: AppTheme.bgSurface,
-        border: Border.all(color: AppTheme.border),
+        color: AppTheme.bgSurfaceOf(context),
+        border: Border.all(color: AppTheme.borderOf(context)),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: AppTheme.textSecondary,
+          color: AppTheme.textSecondaryOf(context),
           fontFamily: 'monospace',
         ),
       ),
