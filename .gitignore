@@ -4,6 +4,10 @@
 *.pyc
 *.swp
 .DS_Store
+
+# Claude Code working files
+.claude/last-task.txt
+.claude/cache/
 .atom/
 .build/
 .buildlog/

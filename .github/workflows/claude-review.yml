@@ -1,0 +1,38 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  code-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Du reviewst einen PR für eine Flutter+Supabase App (`inventory_management`, Pre-Launch).
+
+            Lies CLAUDE.md im Repo zuerst. Prüfe gegen die dort definierten Regeln:
+            - Provider-Pattern eingehalten (kein Riverpod/Bloc-Mix)
+            - Theme-Konformität (nur AppTheme.* statt Colors.*)
+            - l10n-Vollständigkeit (de + en in lib/l10n/, keine hardcoded UI-Strings)
+            - RLS-Policies bei neuen Migrations
+            - Keine Secrets im Diff
+            - Service-Layer trennt Logik von UI
+            - Edge Functions: Input-Validation, kein PII in Logs
+            - Security-Pflichtcheck: SQL-Injection, IDOR, Auth-Bypass, XSS
+
+            Bei kritischen Findings: explizite "REQUEST CHANGES"-Empfehlung mit konkreten File:Line-Hinweisen.
+            Bei sauberem PR: kurze Approval-Zusammenfassung.
