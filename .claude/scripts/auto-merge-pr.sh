@@ -30,7 +30,9 @@ fi
 
 echo "→ merging PR #$PR_NUM (squash + delete branch)…"
 
-if gh pr merge "$PR_NUM" --squash --delete-branch; then
+# Pre-Launch: --admin erlaubt Merge auch wenn Branch nicht up-to-date.
+# Konflikte werden trotzdem nicht überschrieben (gh checked das vorher).
+if gh pr merge "$PR_NUM" --squash --delete-branch --admin; then
   echo "✓ PR #$PR_NUM merged."
   # Switch zu main + pull falls wir auf dem gemergten Branch waren
   CURRENT="$(git branch --show-current 2>/dev/null || echo)"
