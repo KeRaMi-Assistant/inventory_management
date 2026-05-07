@@ -179,6 +179,21 @@ claude "${CLAUDE_ARGS[@]}" -p "$PROMPT" \
 EXIT_CODE=$?
 set -e
 
+# Sentinel-Mechanismus: Sub-Claude kann claude --print nicht von innen
+# zu exit 1 zwingen. Wenn er einen Blocker-Marker im Output hinterlässt,
+# überschreiben wir hier den Exit-Code auf 1 → Item landet in failed/.
+# Marker-Patterns (case-sensitive, im Body, nicht im Prompt-Echo):
+#   "## Blocker" / "## Abgebrochen" / "Blocker:" / "BLOCKER —"
+#   "exit 1" / "kein /ship" / "kein PR"
+if [ "$EXIT_CODE" -eq 0 ]; then
+  OUTPUT_ONLY="$(awk '/^=== output ===/{found=1; next} found' "$RUN_LOG")"
+  if printf '%s' "$OUTPUT_ONLY" | grep -qE '^(##\s+(Blocker|Abgebrochen)|BLOCKER\s+—|Blocker:)' \
+     || printf '%s' "$OUTPUT_ONLY" | grep -qE '\bkein\s+/ship\b'; then
+    log "blocker sentinel detected — forcing exit 1 (move to failed/)"
+    EXIT_CODE=1
+  fi
+fi
+
 # Capture last 8 lines as notification body
 SUMMARY="$(tail -n 8 "$RUN_LOG" | tr '\n' ' ' | cut -c 1-300)"
 
