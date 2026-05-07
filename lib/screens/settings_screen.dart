@@ -9,7 +9,9 @@ import '../models/shop.dart';
 import '../models/workspace.dart';
 import '../models/mailbox_account.dart';
 import '../providers/active_workspace_provider.dart';
+import '../app_theme.dart';
 import '../providers/app_preferences_provider.dart';
+import '../providers/theme_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
 import '../providers/inbox_provider.dart';
@@ -56,9 +58,9 @@ class SettingsScreen extends StatelessWidget {
               color: Colors.white,
               child: TabBar(
                 isScrollable: true,
-                indicatorColor: const Color(0xFF2563EB),
-                labelColor: const Color(0xFF2563EB),
-                unselectedLabelColor: const Color(0xFF64748B),
+                indicatorColor: AppTheme.accent,
+                labelColor: AppTheme.accent,
+                unselectedLabelColor: AppTheme.textMuted,
                 tabs: [
                   Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.settingsTabBuyers),
                   Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
@@ -104,7 +106,7 @@ class _BuyersTab extends StatelessWidget {
       builder: (context, provider, _) {
         final buyers = provider.buyers;
         return Scaffold(
-          backgroundColor: const Color(0xFFF1F4F8),
+          backgroundColor: AppTheme.bgApp,
           floatingActionButton: FloatingActionButton.extended(
             heroTag: 'addBuyer',
             onPressed: () => showDialog(
@@ -137,7 +139,7 @@ class _BuyersTab extends StatelessWidget {
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: Color(0xFFE2E8F0)),
+                        side: const BorderSide(color: AppTheme.border),
                       ),
                       child: ListTile(
                         contentPadding: const EdgeInsets.symmetric(
@@ -189,7 +191,7 @@ class _BuyersTab extends StatelessWidget {
                             IconButton(
                               icon:
                                   const Icon(Icons.edit_outlined, size: 20),
-                              color: const Color(0xFF64748B),
+                              color: AppTheme.textMuted,
                               onPressed: () => showDialog(
                                 context: context,
                                 builder: (_) =>
@@ -285,7 +287,7 @@ class _ShopsTab extends StatelessWidget {
           ..sort((a, b) =>
               a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         return Scaffold(
-          backgroundColor: const Color(0xFFF1F4F8),
+          backgroundColor: AppTheme.bgApp,
           floatingActionButton: FloatingActionButton.extended(
             heroTag: 'addShop',
             onPressed: () => showDialog(
@@ -413,7 +415,7 @@ class _ShopTile extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        side: const BorderSide(color: AppTheme.border),
       ),
       child: ListTile(
         contentPadding:
@@ -422,7 +424,7 @@ class _ShopTile extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
+            color: AppTheme.accentLight,
             borderRadius: BorderRadius.circular(10),
             border: const Border.fromBorderSide(
                 BorderSide(color: Color(0xFFBFDBFE))),
@@ -442,7 +444,7 @@ class _ShopTile extends StatelessWidget {
           children: [
             IconButton(
               icon: const Icon(Icons.edit_outlined, size: 20),
-              color: const Color(0xFF64748B),
+              color: AppTheme.textMuted,
               onPressed: onEdit,
             ),
             IconButton(
@@ -474,7 +476,7 @@ class _AmazonShopsGroup extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        side: const BorderSide(color: AppTheme.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
@@ -516,7 +518,7 @@ class _AmazonShopsGroup extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 18),
-                    color: const Color(0xFF64748B),
+                    color: AppTheme.textMuted,
                     onPressed: () => onEdit(shop),
                   ),
                   IconButton(
@@ -584,6 +586,10 @@ class _GeneralTab extends StatelessWidget {
             const SizedBox(height: 8),
             const _LanguageCard(),
             const SizedBox(height: 24),
+            _SectionHeader(title: l10n.settingsThemeSection),
+            const SizedBox(height: 8),
+            const _ThemeCard(),
+            const SizedBox(height: 24),
             _SectionHeader(title: l10n.settingsStatsSection),
             const SizedBox(height: 8),
             const _MonthlyGoalCard(),
@@ -619,7 +625,7 @@ class _LogoutCard extends StatelessWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD97706)),
+                backgroundColor: AppTheme.warning),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.accountMenuSignOut),
           ),
@@ -666,7 +672,7 @@ class _LogoutCard extends StatelessWidget {
             OutlinedButton(
               onPressed: () => _confirmLogout(context),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFD97706),
+                foregroundColor: AppTheme.warning,
                 side: const BorderSide(color: Color(0xFFD97706)),
               ),
               child: Text(l10n.accountMenuSignOut),
@@ -970,7 +976,7 @@ class _SettingsCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFF2563EB)),
+            Icon(icon, color: AppTheme.accent),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1034,7 +1040,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
         SnackBar(
           content: Text(AppLocalizations.of(context).pushSaveFailed('$e')),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFDC2626),
+          backgroundColor: AppTheme.danger,
         ),
       );
     } finally {
@@ -1050,7 +1056,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       return const Center(child: CircularProgressIndicator());
     }
     return Container(
-      color: const Color(0xFFF1F4F8),
+      color: AppTheme.bgApp,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1201,7 +1207,7 @@ class _Section extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE0E6EF)),
+        border: Border.all(color: AppTheme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1462,7 +1468,7 @@ class _TeamTabState extends State<_TeamTab> {
     final isOwner = _myRole == WorkspaceRole.owner;
     final myUid = context.read<AuthProvider>().currentUser?.id;
     return Container(
-      color: const Color(0xFFF1F4F8),
+      color: AppTheme.bgApp,
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -1511,7 +1517,7 @@ class _TeamTabState extends State<_TeamTab> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                side: const BorderSide(color: AppTheme.border),
               ),
               child: ListTile(
                 leading: const Icon(Icons.person_outline,
@@ -1552,7 +1558,7 @@ class _TeamTabState extends State<_TeamTab> {
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                  side: const BorderSide(color: AppTheme.border),
                 ),
                 child: ListTile(
                   leading: const Icon(Icons.mail_outline,
@@ -1767,7 +1773,7 @@ class _PlanSectionState extends State<_PlanSection> {
                             fontSize: 12,
                             color: addressMissing
                                 ? Colors.red.shade600
-                                : const Color(0xFF64748B),
+                                : AppTheme.textMuted,
                           ),
                         ),
                       ],
@@ -1881,7 +1887,7 @@ class _MailboxTabState extends State<_MailboxTab> {
         final atLimit = mailboxLimit > 0 &&
             provider.accounts.length >= mailboxLimit;
         return Scaffold(
-          backgroundColor: const Color(0xFFF1F4F8),
+          backgroundColor: AppTheme.bgApp,
           floatingActionButton: hasInbox
               ? FloatingActionButton.extended(
                   heroTag: 'addMailbox',
@@ -1996,7 +2002,7 @@ class _MailboxIntroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      color: const Color(0xFFEFF6FF),
+      color: AppTheme.accentLight,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: Color(0xFFBFDBFE)),
@@ -2072,7 +2078,7 @@ class _MailboxAccountTile extends StatelessWidget {
   }
 
   Color _statusColor() {
-    if (!account.enabled) return const Color(0xFF94A3B8);
+    if (!account.enabled) return AppTheme.navIcon;
     if (account.lastError != null && account.lastError!.isNotEmpty) {
       return const Color(0xFFB91C1C);
     }
@@ -2093,7 +2099,7 @@ class _MailboxAccountTile extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        side: const BorderSide(color: AppTheme.border),
       ),
       child: ListTile(
         contentPadding:
@@ -2103,15 +2109,15 @@ class _MailboxAccountTile extends StatelessWidget {
           height: 42,
           decoration: BoxDecoration(
             color: account.enabled
-                ? const Color(0xFFEFF6FF)
+                ? AppTheme.accentLight
                 : const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
             Icons.mail_outline,
             color: account.enabled
-                ? const Color(0xFF2563EB)
-                : const Color(0xFF94A3B8),
+                ? AppTheme.accent
+                : AppTheme.navIcon,
           ),
         ),
         title: Text(
@@ -2156,7 +2162,7 @@ class _MailboxAccountTile extends StatelessWidget {
           children: [
             IconButton(
               icon: const Icon(Icons.edit_outlined, size: 20),
-              color: const Color(0xFF64748B),
+              color: AppTheme.textMuted,
               onPressed: onEdit,
             ),
             IconButton(
@@ -2224,7 +2230,7 @@ class _MailboxFreePlanGate extends StatelessWidget {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(color: Color(0xFFE2E8F0)),
+              side: const BorderSide(color: AppTheme.border),
             ),
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -2341,6 +2347,84 @@ class _PlanComparisonRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+
+class _ThemeCard extends StatelessWidget {
+  const _ThemeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        final isPhone = MediaQuery.sizeOf(context).width < 600;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.brightness_6_outlined,
+                        color: AppTheme.accent),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.settingsThemeSection,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${l10n.settingsThemeLight} / ${l10n.settingsThemeDark} / ${l10n.settingsThemeSystem}',
+                            style: const TextStyle(
+                                fontSize: 12, color: AppTheme.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: isPhone ? double.infinity : null,
+                  child: SegmentedButton<ThemeMode>(
+                    expandedInsets: isPhone ? EdgeInsets.zero : null,
+                    segments: [
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        label: Text(l10n.settingsThemeLight),
+                        icon: const Icon(Icons.light_mode_outlined, size: 16),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        label: Text(l10n.settingsThemeDark),
+                        icon: const Icon(Icons.dark_mode_outlined, size: 16),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.system,
+                        label: Text(l10n.settingsThemeSystem),
+                        icon: const Icon(Icons.brightness_auto_outlined, size: 16),
+                      ),
+                    ],
+                    selected: {themeProvider.mode},
+                    onSelectionChanged: (modes) {
+                      if (modes.isEmpty) return;
+                      themeProvider.setMode(modes.first);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
