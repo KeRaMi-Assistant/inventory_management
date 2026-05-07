@@ -36,8 +36,11 @@ if [ -f "$ROOT/.env.headless" ]; then
   set +a
 fi
 
-MAX_BUDGET="${HEADLESS_MAX_BUDGET_USD:-5}"
-MODEL="${HEADLESS_MODEL:-sonnet}"
+# Default: opus, no budget cap. User decided: quality over cost.
+# - HEADLESS_MAX_BUDGET_USD env or item frontmatter `budget_usd` can still cap.
+# - Empty MAX_BUDGET = no --max-budget-usd flag passed = no cap.
+MAX_BUDGET="${HEADLESS_MAX_BUDGET_USD:-}"
+MODEL="${HEADLESS_MODEL:-opus}"
 PERMISSION_MODE="${HEADLESS_PERMISSION_MODE:-auto}"
 
 log() { printf '[headless %s] %s\n' "$(date -u +%H:%M:%S)" "$*"; }
@@ -139,26 +142,31 @@ Hard-Constraints:
 - Niemals \`supabase db push\` gegen Prod.
 - Niemals direkt auf main committen.
 - Keine Secrets in Diff.
-- Bleib im Token-Budget.
 - KEIN /ship wenn Visual-Test failed.
+- Du arbeitest gründlich, nicht schnell. Lieber 1 Item komplett fertig als 3 angefangen.
 EOF
 
 # Run claude --print non-interactively. Capture exit code and full log.
-log "invoking claude (model=$MODEL, budget=\$$MAX_BUDGET, mode=$PERMISSION_MODE)"
+log "invoking claude (model=$MODEL, budget=\${MAX_BUDGET:-uncapped}, mode=$PERMISSION_MODE)"
 
 set +e
 echo "=== prompt ===" > "$RUN_LOG"
 printf '%s\n' "$PROMPT" >> "$RUN_LOG"
 echo "=== output ===" >> "$RUN_LOG"
 
-claude \
-  --print \
-  --model "$MODEL" \
-  --permission-mode "$PERMISSION_MODE" \
-  --max-budget-usd "$MAX_BUDGET" \
-  --no-session-persistence \
-  --output-format text \
-  -p "$PROMPT" \
+# Build claude args. Skip --max-budget-usd if MAX_BUDGET is empty.
+CLAUDE_ARGS=(
+  --print
+  --model "$MODEL"
+  --permission-mode "$PERMISSION_MODE"
+  --no-session-persistence
+  --output-format text
+)
+if [ -n "$MAX_BUDGET" ]; then
+  CLAUDE_ARGS+=(--max-budget-usd "$MAX_BUDGET")
+fi
+
+claude "${CLAUDE_ARGS[@]}" -p "$PROMPT" \
   >> "$RUN_LOG" 2>&1
 EXIT_CODE=$?
 set -e
