@@ -1,4 +1,17 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(gh *)",
+      "Bash(git *)",
+      "Bash(flutter *)",
+      "Bash(dart *)",
+      "Bash(supabase *)",
+      "Bash(curl *)",
+      "Bash(npx *)",
+      "Bash(deno *)",
+      "Bash(bash .claude/scripts/*)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
