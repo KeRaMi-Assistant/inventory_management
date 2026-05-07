@@ -96,9 +96,42 @@ Triviale Tasks (Typo-Fix, einzelne Zeile) brauchen keinen Plan.
 - **In CI auf PRs:** `claude-code-action@v1` Code-Review (auch via Max-Plan-OAuth-Token). Macht Security-Check als Teil des Reviews.
 - **Nicht aktiviert:** `claude-code-security-review@main` Action — braucht zwingend einen bezahlten API-Key, deckt aber nichts ab, was der lokale `security-reviewer` nicht auch findet.
 
+## Headless-Loop (Phase 4)
+
+Claude kann unbeaufsichtigt Backlog-Items abarbeiten, während du nicht
+am Laptop sitzt. Setup einmalig:
+
+1. `bash .claude/scripts/install-headless.sh` — installiert macOS
+   LaunchAgent (Default: alle 30 Min). Override-Intervall:
+   `HEADLESS_INTERVAL=600 bash .claude/scripts/install-headless.sh`.
+2. Optional `cp .env.headless.example .env.headless` und `NTFY_TOPIC`
+   setzen für Mobile-Push-Notifications via [ntfy.sh](https://ntfy.sh).
+3. Stoppen: `bash .claude/scripts/uninstall-headless.sh`.
+
+**Workflow:**
+- `/queue <text>` legt ein Backlog-Item an (`.claude/backlog/inbox/`).
+- LaunchAgent oder `/auto-run` triggert `headless-runner.sh`:
+  pickt nächstes Item → `claude --print --permission-mode auto
+  --max-budget-usd 5 --model sonnet` → verschiebt nach `done/` oder
+  `failed/` → schickt Notification.
+- Logs: `.claude/backlog/runs/<timestamp>-<slug>.log`.
+
+**Sicherheitsmechanismen:**
+- Lock-File verhindert parallele Runs.
+- Budget-Cap pro Run.
+- Hard-Block: niemals auf `main` direkt — Runner switcht zu Auto-Branch.
+- Bestehende Bash-Guards bleiben aktiv (`supabase db push`, force-push, …).
+
+**Auto-Merge:**
+- `/ship` aktiviert nach Push automatisch `gh pr merge --auto --squash --delete-branch`.
+- Vorausgesetzt Branch-Protection ist aktiv (einmalig via
+  `bash .claude/scripts/setup-branch-protection.sh` setzen).
+
 ## Referenzen
 
 - Plan-Archiv: [`plans/`](plans/)
 - Architektur-Plan dieses Setups: [`plans/2026-05-07_automation_ecosystem.md`](plans/2026-05-07_automation_ecosystem.md)
+- Browser-Testing: [`plans/2026-05-07_browser_testing.md`](plans/2026-05-07_browser_testing.md)
+- Headless-Loop: [`plans/2026-05-07_headless_loop.md`](plans/2026-05-07_headless_loop.md)
 - Strategie-Doku: [`docs/STRATEGY.md`](docs/STRATEGY.md)
 - Supabase-Setup: [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md)
