@@ -590,7 +590,13 @@ class _DealRowState extends State<_DealRow> {
     if (needsAttention) {
       return AppTheme.warningBgOf(context);
     }
-    if (base != null && base.a > 0) return base;
+    if (base != null && base.a > 0) {
+      // In dark mode, Buyer-row-fills are stored as light pastels — blend
+      // heavily with the dark surface so they read as a tint, not a leak.
+      return dark
+          ? Color.lerp(base, AppTheme.bgSurfaceDark, 0.85)!
+          : base;
+    }
     if (dark) {
       return widget.isEven
           ? AppTheme.bgSurfaceDark
