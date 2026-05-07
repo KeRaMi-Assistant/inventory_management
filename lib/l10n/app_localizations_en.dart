@@ -401,7 +401,64 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTabPush => 'Push';
 
   @override
+  String get settingsTabShipping => 'Shipping';
+
+  @override
   String get settingsTabGeneral => 'General';
+
+  @override
+  String get shippingIntroTitle => 'Carrier API keys';
+
+  @override
+  String get shippingIntroBody =>
+      'Enter an API key for each carrier you use so the inventory app can poll delivery status every 4 hours and mark deals as “Arrived” automatically.';
+
+  @override
+  String get shippingNoAccess =>
+      'Only workspace owners and admins can manage carrier API keys.';
+
+  @override
+  String get shippingNotConfigured => 'Not configured';
+
+  @override
+  String get shippingSetKey => 'Set API key';
+
+  @override
+  String get shippingUpdateKey => 'Replace API key';
+
+  @override
+  String get shippingDeleteKey => 'Remove';
+
+  @override
+  String shippingKeyDialogTitle(Object carrier) {
+    return '$carrier API key';
+  }
+
+  @override
+  String get shippingKeyHelp =>
+      'The key is encrypted on the server. After saving only the last 4 characters are shown.';
+
+  @override
+  String get shippingKeyTooShort => 'Enter at least 8 characters.';
+
+  @override
+  String get shippingKeySaved => 'Saved.';
+
+  @override
+  String get shippingKeyDeleted => 'Removed.';
+
+  @override
+  String shippingLastChecked(Object when) {
+    return 'Last polled: $when';
+  }
+
+  @override
+  String shippingLastError(Object error) {
+    return 'Last error: $error';
+  }
+
+  @override
+  String get shippingLastNeverPolled => 'Not polled yet.';
 
   @override
   String get buyersEmpty => 'No buyers yet.';

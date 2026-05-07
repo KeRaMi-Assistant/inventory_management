@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/activity_entry.dart';
 import '../models/buyer.dart';
+import '../models/carrier_credential.dart';
 import '../models/deal.dart';
 import '../models/deal_comment.dart';
 import '../models/inbox_message.dart';
@@ -619,6 +620,53 @@ class SupabaseRepository {
 
   Future<void> deleteMailboxAccount(String id) async {
     await _client.from('mailbox_accounts').delete().eq('id', id);
+  }
+
+  // ── Carrier-API-Credentials (Sprint 7) ───────────────────────────────────
+
+  /// Lädt die maskierten Credentials aller Carrier des aktiven Workspaces
+  /// via SECURITY-DEFINER-RPC. Klartext bleibt serverseitig.
+  Future<List<CarrierCredential>> loadCarrierCredentials() async {
+    final ws = _workspaceId;
+    if (ws == null) return const [];
+    final rows = await _client.rpc(
+      'list_carrier_credentials',
+      params: {'_workspace_id': ws},
+    );
+    if (rows is! List) return const [];
+    return rows
+        .cast<Map<String, dynamic>>()
+        .map(CarrierCredential.fromSupabase)
+        .toList();
+  }
+
+  /// Setzt einen API-Key für [carrierId] im aktiven Workspace. Validierung
+  /// (Mindestlänge, Carrier-Whitelist) macht die RPC.
+  Future<void> setCarrierApiKey({
+    required String carrierId,
+    required String apiKey,
+  }) async {
+    final ws = _wsId;
+    await _client.rpc(
+      'set_carrier_api_key',
+      params: {
+        '_workspace_id': ws,
+        '_carrier_id': carrierId,
+        '_api_key': apiKey,
+      },
+    );
+  }
+
+  /// Entfernt den gespeicherten API-Key für [carrierId] im aktiven Workspace.
+  Future<void> deleteCarrierApiKey(String carrierId) async {
+    final ws = _wsId;
+    await _client.rpc(
+      'delete_carrier_api_key',
+      params: {
+        '_workspace_id': ws,
+        '_carrier_id': carrierId,
+      },
+    );
   }
 
   // ── Parsed messages / suggestions ────────────────────────────────────────

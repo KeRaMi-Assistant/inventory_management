@@ -824,11 +824,107 @@ abstract class AppLocalizations {
   /// **'Push'**
   String get settingsTabPush;
 
+  /// No description provided for @settingsTabShipping.
+  ///
+  /// In de, this message translates to:
+  /// **'Versand'**
+  String get settingsTabShipping;
+
   /// No description provided for @settingsTabGeneral.
   ///
   /// In de, this message translates to:
   /// **'Allgemein'**
   String get settingsTabGeneral;
+
+  /// No description provided for @shippingIntroTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Carrier-API-Keys'**
+  String get shippingIntroTitle;
+
+  /// No description provided for @shippingIntroBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Hinterlege je Carrier einen API-Key, damit die App alle 4 Stunden den Sendungsstatus pollt und Deals automatisch auf „Angekommen“ setzt.'**
+  String get shippingIntroBody;
+
+  /// No description provided for @shippingNoAccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur Workspace-Owner und Admins dürfen Carrier-Keys pflegen.'**
+  String get shippingNoAccess;
+
+  /// No description provided for @shippingNotConfigured.
+  ///
+  /// In de, this message translates to:
+  /// **'Nicht hinterlegt'**
+  String get shippingNotConfigured;
+
+  /// No description provided for @shippingSetKey.
+  ///
+  /// In de, this message translates to:
+  /// **'API-Key hinterlegen'**
+  String get shippingSetKey;
+
+  /// No description provided for @shippingUpdateKey.
+  ///
+  /// In de, this message translates to:
+  /// **'API-Key ersetzen'**
+  String get shippingUpdateKey;
+
+  /// No description provided for @shippingDeleteKey.
+  ///
+  /// In de, this message translates to:
+  /// **'Entfernen'**
+  String get shippingDeleteKey;
+
+  /// No description provided for @shippingKeyDialogTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'{carrier}-API-Key'**
+  String shippingKeyDialogTitle(Object carrier);
+
+  /// No description provided for @shippingKeyHelp.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Key wird serverseitig verschlüsselt. Nach dem Speichern siehst du nur noch die letzten 4 Zeichen.'**
+  String get shippingKeyHelp;
+
+  /// No description provided for @shippingKeyTooShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestens 8 Zeichen eingeben.'**
+  String get shippingKeyTooShort;
+
+  /// No description provided for @shippingKeySaved.
+  ///
+  /// In de, this message translates to:
+  /// **'Gespeichert.'**
+  String get shippingKeySaved;
+
+  /// No description provided for @shippingKeyDeleted.
+  ///
+  /// In de, this message translates to:
+  /// **'Entfernt.'**
+  String get shippingKeyDeleted;
+
+  /// No description provided for @shippingLastChecked.
+  ///
+  /// In de, this message translates to:
+  /// **'Zuletzt gepollt: {when}'**
+  String shippingLastChecked(Object when);
+
+  /// No description provided for @shippingLastError.
+  ///
+  /// In de, this message translates to:
+  /// **'Letzter Fehler: {error}'**
+  String shippingLastError(Object error);
+
+  /// No description provided for @shippingLastNeverPolled.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch nicht gepollt.'**
+  String get shippingLastNeverPolled;
 
   /// No description provided for @buyersEmpty.
   ///
