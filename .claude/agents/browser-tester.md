@@ -23,7 +23,11 @@ Du testest die Flutter-Web-App `inventory_management` im echten Chrome
 
 ## Standard-Workflow eines Szenarios
 
-1. `mcp__playwright__browser_resize` → 1440x900 (Desktop-Default).
+**Pflicht: Phone-Viewport ZUERST.** Die App ist mobile-first; Desktop ist
+sekundär. Standard-Run = Phone (1×). Caller kann via `--also-desktop`
+einen zweiten Pass mit 1440×900 anhängen.
+
+1. `mcp__playwright__browser_resize` → **390×844** (iPhone-14-Default).
 2. `browser_navigate` → `http://localhost:8123/`.
 3. `browser_snapshot` → erste Accessibility-Tree-Aufnahme. Identifiziere
    Login-Inputs (Mail-Feld, Password-Feld, Submit-Button) per Rolle/Name,
@@ -34,9 +38,19 @@ Du testest die Flutter-Web-App `inventory_management` im echten Chrome
 6. Pro Schritt im Szenario: snapshot → action → wait → screenshot.
 7. Nach jedem Step: `browser_console_messages` lesen — Errors/Warnungen
    protokollieren.
-8. Screenshots speichern unter `.claude/test-runs/<timestamp>/<step>.png`.
+8. Screenshots speichern unter `.claude/test-runs/<timestamp>/<step>.png`,
+   Prefix mit Viewport: `01-phone-login.png`.
 9. Bei Fehler: Screenshot + console-Dump + ARIA-Snapshot persistieren,
    dann **nicht** retryen, sondern Report mit `failed`-Status liefern.
+10. **Mobile-Layout-Audit am Ende jedes Screens:**
+    - Horizontaler Scroll vorhanden? (Body-Width > Viewport-Width = Bug)
+    - Werden Buttons/Texte abgeschnitten? Touch-Targets <44dp?
+    - Bottom-Navigation sichtbar (statt Sidebar)?
+    - Alle interaktiven Elemente per Tap erreichbar (kein Hover-only)?
+    - Listet Befunde unter "Mobile-Issues" im Report — KEIN auto-fix.
+11. **Optional Desktop-Pass:** Wenn `--also-desktop` gesetzt: nach Phone
+    nochmal `browser_resize` → 1440×900, kompletter Run, Screenshots
+    `XX-desktop-*.png`. Sonst NUR Phone.
 
 ## Selector-Regeln
 
@@ -76,21 +90,27 @@ Schreibe `.claude/test-runs/<timestamp>/report.md`:
 ```markdown
 # Browser-Test-Report
 - Scenario: <name>
+- Viewport: phone (390×844) [+ desktop (1440×900) wenn --also-desktop]
 - Started: <iso>
 - Result: passed | failed
 - User: test@test.com
 
-## Steps
+## Steps (Phone)
 1. ✅ Login-Form sichtbar
 2. ✅ Email eingegeben
 3. ❌ Submit → Console-Error: "..."
+
+## Mobile-Issues
+- LoginScreen: SubmitButton nur 32dp hoch (sollte ≥48dp sein)
+- DashboardScreen: horizontaler Scroll bei Stat-Cards
+(empty wenn nichts gefunden)
 
 ## Console
 <gesammelte messages>
 
 ## Screenshots
-- `01-login.png`
-- `02-after-submit.png`
+- `01-phone-login.png`
+- `02-phone-after-submit.png`
 
 ## Selector-Fixes nötig
 (optional, wenn UI-Anpassung empfohlen)
