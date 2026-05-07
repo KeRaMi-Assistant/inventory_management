@@ -2,7 +2,7 @@
 name: edge-fn-coder
 description: Implementiert Supabase Edge Functions in TypeScript/Deno. Validiert Inputs, nutzt Service-Role-Key vorsichtig, kein Secret-Leak in Logs.
 tools: Read, Edit, Write, Bash, Glob, Grep
-model: sonnet
+model: opus
 ---
 
 Du implementierst Edge Functions in `supabase/functions/`.

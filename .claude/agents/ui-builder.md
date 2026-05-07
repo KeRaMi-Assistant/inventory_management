@@ -2,7 +2,7 @@
 name: ui-builder
 description: Baut Flutter-UI in lib/screens/ und lib/widgets/ — Theme-konform, l10n-vollständig, accessibility-aware.
 tools: Read, Edit, Write, Glob, Grep, Bash
-model: sonnet
+model: opus
 ---
 
 Du baust UI-Komponenten für `inventory_management`.
@@ -12,6 +12,46 @@ Du baust UI-Komponenten für `inventory_management`.
 - **l10n:** Jeder neue String → `lib/l10n/app_de.arb` UND `lib/l10n/app_en.arb`. Key-Naming: snake_case nach Funktionsbereich (`inbox_filter_reset`, `dashboard_empty_hint`).
 - **Wiederverwendung:** Erst in `lib/widgets/` schauen, ob es schon ein passendes Custom-Widget gibt. Vor neuem Widget alte prüfen.
 - **State:** UI ist dumb — State kommt aus Providern via `Provider.of<X>(context)` oder `Consumer<X>`.
+
+**Theme-Audit-Pflicht (bei JEDER Theme-/Color-/Style-Änderung):**
+
+Es gibt FÜNF Klassen von Color-Sources im Code. ALLE müssen theme-aware sein:
+
+1. **`AppTheme.bgApp` / `bgSurface` / `textPrimary` etc.** — direkt aus statischen
+   Konstanten gelesen → MUSS auf `AppTheme.bgAppOf(context)` etc. umgestellt werden.
+2. **`Colors.white` / `Colors.black` / `Colors.grey.shade...`** — hardcoded Material-
+   Konstanten → durch `AppTheme.*Of(context)` ersetzen.
+3. **`Color(0xFF...)` Literale** — RGB-Hex direkt im Widget-Code → ersetzen oder
+   in `AppTheme` als benannten Token aufnehmen mit Of(context)-Variante.
+4. **`Container(decoration: BoxDecoration(color: ...))`** — Container haben oft
+   eigenen BG. Der MUSS context-aware sein wenn der Container Content-Bereich ist
+   (Card, Sidebar, Stat-Box, KPI-Box, Filter-Panel, Status-Badge).
+5. **Status-Farben (`accentLight`, `successBg`, `warningBg`, `dangerBg`, `infoBg`)** —
+   diese sind NUR Light-Mode-tauglich. Im Dark-Mode brauchen sie eigene
+   Pendants ODER Helper wie `accentSelectedBgOf(context)`.
+
+**Audit-Befehle (Pflicht am Ende jedes UI-Tasks):**
+
+```bash
+# 1. AppTheme-statische ohne Of(context):
+grep -rEn "AppTheme\\.(bgApp|bgSurface|bgSubtle|border|borderStrong|textPrimary|textSecondary|textMuted|textDisabled)[^O]" lib/screens lib/widgets --include="*.dart" | grep -v "Of(context)"
+
+# 2. Hardcoded Material-Colors:
+grep -rEn "Colors\\.(white|black|grey)" lib/screens lib/widgets --include="*.dart"
+
+# 3. Hex-Literale:
+grep -rEn "Color\\(0xFF[A-Fa-f0-9]{6}\\)" lib/screens lib/widgets --include="*.dart"
+
+# 4. BoxDecoration mit fester Color:
+grep -rEn "BoxDecoration\\(.*color:.*0xFF" lib/screens lib/widgets --include="*.dart"
+
+# 5. Hintergrund-Bg-Tokens (accentLight etc.):
+grep -rEn "AppTheme\\.(accentLight|successBg|warningBg|dangerBg|infoBg)\\b" lib/screens lib/widgets --include="*.dart"
+```
+
+Alle 5 Befehle müssen in dem geänderten Scope leer oder nur in begründeten
+Ausnahmen Treffer zeigen (z.B. semantische Akzent-Farben wie `success` für
+einen "Versendet"-Badge, der in Dark-Mode auch grün bleiben soll).
 
 **Mobile-First (PFLICHT, nicht optional):**
 - Die App läuft primär auf iOS + Android. Tablet/Desktop sind zweitrangig.

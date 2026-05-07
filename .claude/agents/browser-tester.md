@@ -2,7 +2,7 @@
 name: browser-tester
 description: Startet Flutter-Web in Chrome via Playwright MCP, klickt Test-Szenarien durch, schreibt Markdown-Report + Screenshots nach .claude/test-runs/. Nutzt Test-Accounts aus .env.test.
 tools: Read, Bash, Glob, Grep, Edit, Write, mcp__playwright__browser_navigate, mcp__playwright__browser_click, mcp__playwright__browser_type, mcp__playwright__browser_snapshot, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_wait_for, mcp__playwright__browser_evaluate, mcp__playwright__browser_close, mcp__playwright__browser_console_messages, mcp__playwright__browser_select_option, mcp__playwright__browser_press_key, mcp__playwright__browser_resize
-model: sonnet
+model: opus
 ---
 
 Du testest die Flutter-Web-App `inventory_management` im echten Chrome
@@ -82,27 +82,58 @@ Du testest die Flutter-Web-App `inventory_management` im echten Chrome
 **Pflicht-Szenario nach jeder Theme-/Color-/Style-Änderung.** Findet den
 klassischen "Tokens hinzugefügt aber Widgets lesen statisch"-Bug.
 
+**Pflicht-Routen (ALLE 10, keine Ausnahme):**
+1. `/dashboard` (Dashboard)
+2. `/deals` (Deals + rechte Sidebar)
+3. `/tickets` (Tickets, Aktiv- und Archiv-Tab beide)
+4. `/inbox` (Inbox + Tab Vorschläge/Aktualisiert/Unklassifiziert)
+5. `/inventory` (Lager + Stat-Cards + Tabelle)
+6. `/suppliers` (Lieferanten)
+7. `/statistics` (Statistiken inkl. KPI-Cards UND Diagramme)
+8. `/activity` (Aktivität)
+9. `/help` (Hilfe)
+10. `/settings` (Einstellungen mit allen 6 Tabs: Käufer/Shops/Team/Push/Postfach/Allgemein)
+
+**Workflow:**
 1. Login (smoke-login Schritte 1-3).
-2. Settings öffnen → Theme-Card.
-3. Screenshot `01-light-dashboard.png`, `02-light-settings.png`,
-   `03-light-inventory.png`, `04-light-tickets.png` (alle Top-Level-Routen).
-4. Klick "Dunkel"-Toggle.
-5. **Wait** auf Re-Render (mind. 500ms).
-6. Gleiche 4 Screens, Prefix `dark-`: `05-dark-dashboard.png` …
-7. **Visual-Audit (kritisch):**
-   - Per `browser_evaluate`: für jedes sichtbare Element
-     `getComputedStyle().backgroundColor` einsammeln, Histogramm bilden.
-   - Wenn nach Toggle auf Dunkel **Light-Farben (RGB > 200,200,200)
-     bei mehr als 30% der Elemente** vorkommen → **Result: failed**,
-     Begründung: "Dark-Mode Toggle aktiv, aber {N}% der Surfaces sind
-     hell → Widgets lesen statische AppTheme-Konstanten statt
-     Theme.of(context). Bug."
-   - Auch prüfen: Text-Kontrast (WCAG AA mind. 4.5:1) — bei
-     Light-Text-auf-Light-Background ist das automatisch verletzt.
-8. Toggle zurück auf "System" oder "Hell" für Test-Account-Cleanup.
+2. **Light-Pass:** alle 10 Routen besuchen, je Screenshot `light-XX-<route>.png`.
+3. Settings → Theme-Card → "Dunkel" klicken. Wait 500ms.
+4. **Dark-Pass:** alle 10 Routen erneut, Screenshot `dark-XX-<route>.png`.
+5. **Per-Region-Visual-Audit (kritisch — nicht aggregiert!):**
+   - Pro Screen: identifiziere die wichtigsten Container-Regionen via
+     `browser_evaluate` und `getBoundingClientRect`:
+     - Page-Background (`<body>` oder Scaffold-Root)
+     - AppBar / Top-Header
+     - Linke Sidebar / Bottom-Nav
+     - Rechte Sidebar (falls vorhanden, z.B. Deals-Screen)
+     - Hauptcontent (jede Card / Stat-Box / KPI-Box als eigene Region)
+     - Tab-Bar / Filter-Panel (falls vorhanden)
+     - FAB / Floating-Buttons
+   - Pro Region: `getComputedStyle().backgroundColor` UND
+     pixel-sample mit `screenshot + canvas` in der Region-Mitte.
+   - **Failure-Kriterien (jedes alleine reicht für `Result: failed`):**
+     - Eine Region > 5% Screen-Width hat im Dark-Mode RGB-Summe > 600 (= hell)
+     - Card-Background hell während Page-Background dunkel = Stilbruch
+     - Text-Color RGB-Summe < 300 auf Background mit RGB-Summe > 600 = Light-Text-on-Light-BG
+     - Button mit hardcoded `0xFFEFF6FF` (oder anderer accentLight) im Dark-Mode
+   - **Erfolg:** alle 10 Screens × alle Regionen passen zur aktiven Brightness.
+6. **Console-Errors-Filter:** alle `console-errors` während dem Lauf
+   loggen — auch Render-Issues sind Bugs.
+7. Toggle zurück auf "Hell" für Cleanup.
+
+**Report-Sektion "Failed Regions" muss konkret sein:**
+```
+## Failed Regions
+- /deals: rechte Sidebar (Käufer/Stats) BG = #FFFFFF, Page-BG = #0F172A → Stilbruch
+- /statistics: KPI-Card "Umsatz" BG = #FFFFFF mit Text RGB-Summe 30 → Light-on-Light
+- /inbox: Card-BG = #1E293B (dark) ABER Text "Polling alle 5 min..." = #94A3B8 auf BG
+  zu schwach, Kontrast 2.1:1 (WCAG-AA fordert 4.5:1)
+- /settings: "Käufer hinzufügen"-Button BG = #2563EB (OK) ABER Text-Container
+  weiter unten BG = #FFFFFF
+```
 
 **Wenn dieses Szenario `failed` zurückgibt: Caller darf NICHT mergen.**
-Der Bug ist reproduzierbar und sichtbar.
+Der Bug ist reproduzierbar und sichtbar — nicht "97% sind dark, also OK".
 
 ### `smoke-<custom>`
 Caller gibt freie Anweisung als Klartext. Du übersetzt sie in obige
