@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
+import '../models/carrier_credential.dart';
 import '../models/pricing_plan.dart';
 import '../models/shop.dart';
 import '../models/workspace.dart';
@@ -13,6 +14,7 @@ import '../providers/active_workspace_provider.dart';
 import '../providers/app_preferences_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
+import '../providers/carrier_credentials_provider.dart';
 import '../providers/inbox_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/push_service.dart';
@@ -31,7 +33,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final tabs = DefaultTabController(
-      length: 6,
+      length: 7,
       child: Column(
         children: [
           if (!embedded)
@@ -48,6 +50,7 @@ class SettingsScreen extends StatelessWidget {
                   Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
                   Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
                   const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
+                  Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
                   Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
                 ],
               ),
@@ -67,6 +70,7 @@ class SettingsScreen extends StatelessWidget {
                   Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
                   Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
                   const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
+                  Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
                   Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
                 ],
               ),
@@ -79,6 +83,7 @@ class SettingsScreen extends StatelessWidget {
                 _TeamTab(),
                 _NotificationsTab(),
                 _MailboxTab(),
+                _ShippingTab(),
                 _GeneralTab(),
               ],
             ),
@@ -2402,6 +2407,360 @@ class _PlanComparisonRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Shipping Tab (Carrier API Keys) ─────────────────────────────────────────
+
+class _ShippingTab extends StatefulWidget {
+  const _ShippingTab();
+
+  @override
+  State<_ShippingTab> createState() => _ShippingTabState();
+}
+
+class _ShippingTabState extends State<_ShippingTab> {
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<CarrierCredentialsProvider>().refresh();
+      });
+    }
+  }
+
+  Future<void> _showKeyDialog(
+    BuildContext context, {
+    required String carrierId,
+    required CarrierCredential? existing,
+  }) async {
+    final l10n = AppLocalizations.of(context);
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.shippingKeyDialogTitle(labelForCarrierId(carrierId))),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: controller,
+                autofocus: true,
+                obscureText: true,
+                enableSuggestions: false,
+                autocorrect: false,
+                decoration: InputDecoration(
+                  labelText: 'API-Key',
+                  hintText: existing?.masked,
+                ),
+                validator: (v) {
+                  final value = (v ?? '').trim();
+                  if (value.length < 8) {
+                    return l10n.shippingKeyTooShort;
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.shippingKeyHelp,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textMutedOf(context),
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.actionCancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() != true) return;
+              Navigator.pop(ctx, true);
+            },
+            child: Text(l10n.actionSave),
+          ),
+        ],
+      ),
+    );
+    if (saved != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.read<CarrierCredentialsProvider>().setApiKey(
+            carrierId: carrierId,
+            apiKey: controller.text.trim(),
+          );
+      messenger.showSnackBar(SnackBar(content: Text(l10n.shippingKeySaved)));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context, {
+    required String carrierId,
+  }) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.shippingDeleteKey),
+        content: Text(
+          '${labelForCarrierId(carrierId)}: API-Key wirklich entfernen?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.actionCancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text(
+              l10n.shippingDeleteKey,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.read<CarrierCredentialsProvider>().deleteApiKey(carrierId);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.shippingKeyDeleted)));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Consumer<CarrierCredentialsProvider>(
+      builder: (context, provider, _) {
+        return Scaffold(
+          backgroundColor: AppTheme.bgAppOf(context),
+          body: provider.isLoading && provider.credentials.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : provider.lastError != null && provider.credentials.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Center(
+                        child: Text(
+                          l10n.shippingNoAccess,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppTheme.textMutedOf(context),
+                          ),
+                        ),
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        _ShippingIntroCard(),
+                        const SizedBox(height: 12),
+                        for (final id in supportedCarrierIds) ...[
+                          _CarrierTile(
+                            carrierId: id,
+                            credential: provider.credentialFor(id),
+                            onSet: () => _showKeyDialog(
+                              context,
+                              carrierId: id,
+                              existing: provider.credentialFor(id),
+                            ),
+                            onDelete: () =>
+                                _confirmDelete(context, carrierId: id),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ],
+                    ),
+        );
+      },
+    );
+  }
+}
+
+class _ShippingIntroCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Card(
+      elevation: 0,
+      color: AppTheme.accentLightOf(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: AppTheme.accentBorderOf(context)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.local_shipping_outlined,
+                color: AppTheme.accentTextOf(context)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.shippingIntroTitle,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.accentTextOf(context),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.shippingIntroBody,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondaryOf(context),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CarrierTile extends StatelessWidget {
+  const _CarrierTile({
+    required this.carrierId,
+    required this.credential,
+    required this.onSet,
+    required this.onDelete,
+  });
+
+  final String carrierId;
+  final CarrierCredential? credential;
+  final VoidCallback onSet;
+  final VoidCallback onDelete;
+
+  String _statusLine(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final c = credential;
+    if (c == null) return l10n.shippingNotConfigured;
+    if (c.lastError != null && c.lastError!.isNotEmpty) {
+      return l10n.shippingLastError(c.lastError!);
+    }
+    if (c.lastPolledAt == null) return l10n.shippingLastNeverPolled;
+    final fmt = DateFormat.yMd().add_Hm();
+    return l10n.shippingLastChecked(fmt.format(c.lastPolledAt!.toLocal()));
+  }
+
+  Color _statusColor(BuildContext context) {
+    final c = credential;
+    if (c == null) return AppTheme.textMutedOf(context);
+    if (c.lastError != null && c.lastError!.isNotEmpty) {
+      return AppTheme.dangerTextOf(context);
+    }
+    return AppTheme.textSecondaryOf(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final c = credential;
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: AppTheme.borderOf(context)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppTheme.bgSurfaceOf(context),
+                  child: Icon(
+                    Icons.local_shipping_outlined,
+                    size: 18,
+                    color: AppTheme.accentTextOf(context),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        labelForCarrierId(carrierId),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        c != null ? c.masked : l10n.shippingNotConfigured,
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                          color: AppTheme.textMutedOf(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (c != null)
+                  IconButton(
+                    tooltip: l10n.shippingDeleteKey,
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: onDelete,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _statusLine(context),
+              style: TextStyle(
+                fontSize: 11,
+                color: _statusColor(context),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton.icon(
+                onPressed: onSet,
+                icon: Icon(c == null ? Icons.add : Icons.edit_outlined),
+                label: Text(
+                  c == null ? l10n.shippingSetKey : l10n.shippingUpdateKey,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

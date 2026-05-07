@@ -14,6 +14,7 @@ import 'providers/app_preferences_provider.dart';
 import 'providers/auth_provider.dart';
 import 'models/pricing_plan.dart';
 import 'providers/billing_provider.dart';
+import 'providers/carrier_credentials_provider.dart';
 import 'providers/filter_provider.dart';
 import 'providers/inbox_provider.dart';
 import 'providers/inventory_provider.dart';
@@ -107,6 +108,14 @@ class InventoryApp extends StatelessWidget {
           update: (_, repository, previous) =>
               previous ?? InboxProvider(repository: repository),
         ),
+        ChangeNotifierProxyProvider<SupabaseRepository,
+            CarrierCredentialsProvider>(
+          create: (ctx) => CarrierCredentialsProvider(
+            repository: ctx.read<SupabaseRepository>(),
+          ),
+          update: (_, repository, previous) =>
+              previous ?? CarrierCredentialsProvider(repository: repository),
+        ),
         ChangeNotifierProxyProvider<WorkspaceService, ActiveWorkspaceProvider>(
           create: (ctx) =>
               ActiveWorkspaceProvider(ctx.read<WorkspaceService>()),
@@ -189,6 +198,7 @@ class _AuthGateState extends State<_AuthGate> {
           if (!mounted) return;
           context.read<InventoryProvider>().clearLocalState();
           context.read<InboxProvider>().clear();
+          context.read<CarrierCredentialsProvider>().clear();
           context.read<ActiveWorkspaceProvider>().clear();
           context.read<BillingProvider>().clear();
           context.read<InvitesProvider>()
@@ -262,6 +272,8 @@ class _AuthGateState extends State<_AuthGate> {
     _lastWsId = newId;
     // Reload Inventory + Comments etc. gegen neuen Workspace.
     context.read<InventoryProvider>().setActiveWorkspace(newId);
+    // Carrier-Keys sind workspace-scoped — neu laden statt Stale-Cache zeigen.
+    context.read<CarrierCredentialsProvider>().refresh();
   }
 
   void _attachBillingListener(BillingProvider billing) {

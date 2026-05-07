@@ -403,7 +403,64 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTabPush => 'Push';
 
   @override
+  String get settingsTabShipping => 'Versand';
+
+  @override
   String get settingsTabGeneral => 'Allgemein';
+
+  @override
+  String get shippingIntroTitle => 'Carrier-API-Keys';
+
+  @override
+  String get shippingIntroBody =>
+      'Hinterlege je Carrier einen API-Key, damit die App alle 4 Stunden den Sendungsstatus pollt und Deals automatisch auf „Angekommen“ setzt.';
+
+  @override
+  String get shippingNoAccess =>
+      'Nur Workspace-Owner und Admins dürfen Carrier-Keys pflegen.';
+
+  @override
+  String get shippingNotConfigured => 'Nicht hinterlegt';
+
+  @override
+  String get shippingSetKey => 'API-Key hinterlegen';
+
+  @override
+  String get shippingUpdateKey => 'API-Key ersetzen';
+
+  @override
+  String get shippingDeleteKey => 'Entfernen';
+
+  @override
+  String shippingKeyDialogTitle(Object carrier) {
+    return '$carrier-API-Key';
+  }
+
+  @override
+  String get shippingKeyHelp =>
+      'Der Key wird serverseitig verschlüsselt. Nach dem Speichern siehst du nur noch die letzten 4 Zeichen.';
+
+  @override
+  String get shippingKeyTooShort => 'Mindestens 8 Zeichen eingeben.';
+
+  @override
+  String get shippingKeySaved => 'Gespeichert.';
+
+  @override
+  String get shippingKeyDeleted => 'Entfernt.';
+
+  @override
+  String shippingLastChecked(Object when) {
+    return 'Zuletzt gepollt: $when';
+  }
+
+  @override
+  String shippingLastError(Object error) {
+    return 'Letzter Fehler: $error';
+  }
+
+  @override
+  String get shippingLastNeverPolled => 'Noch nicht gepollt.';
 
   @override
   String get buyersEmpty => 'Noch keine Käufer angelegt.';
