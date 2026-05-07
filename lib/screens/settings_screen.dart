@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
 import '../models/pricing_plan.dart';
@@ -53,12 +54,13 @@ class SettingsScreen extends StatelessWidget {
             )
           else
             Material(
-              color: Colors.white,
+              color: AppTheme.bgSurfaceOf(context),
               child: TabBar(
                 isScrollable: true,
-                indicatorColor: const Color(0xFF2563EB),
-                labelColor: const Color(0xFF2563EB),
-                unselectedLabelColor: const Color(0xFF64748B),
+                indicatorColor: AppTheme.accentTextOf(context),
+                labelColor: AppTheme.accentTextOf(context),
+                unselectedLabelColor: AppTheme.textMutedOf(context),
+                dividerColor: AppTheme.borderOf(context),
                 tabs: [
                   Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.settingsTabBuyers),
                   Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
@@ -87,6 +89,7 @@ class SettingsScreen extends StatelessWidget {
 
     if (embedded) return tabs;
     return Scaffold(
+      backgroundColor: AppTheme.bgAppOf(context),
       body: tabs,
     );
   }
@@ -104,7 +107,7 @@ class _BuyersTab extends StatelessWidget {
       builder: (context, provider, _) {
         final buyers = provider.buyers;
         return Scaffold(
-          backgroundColor: const Color(0xFFF1F4F8),
+          backgroundColor: AppTheme.bgAppOf(context),
           floatingActionButton: FloatingActionButton.extended(
             heroTag: 'addBuyer',
             onPressed: () => showDialog(
@@ -119,11 +122,13 @@ class _BuyersTab extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.people_outline,
-                          size: 52, color: Color(0xFFCBD5E1)),
+                      Icon(Icons.people_outline,
+                          size: 52,
+                          color: AppTheme.textDisabledOf(context)),
                       const SizedBox(height: 12),
                       Text(l10n.buyersEmpty,
-                          style: const TextStyle(color: Color(0xFF94A3B8))),
+                          style: TextStyle(
+                              color: AppTheme.textMutedOf(context))),
                     ],
                   ),
                 )
@@ -137,7 +142,7 @@ class _BuyersTab extends StatelessWidget {
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: Color(0xFFE2E8F0)),
+                        side: BorderSide(color: AppTheme.borderOf(context)),
                       ),
                       child: ListTile(
                         contentPadding: const EdgeInsets.symmetric(
@@ -285,7 +290,7 @@ class _ShopsTab extends StatelessWidget {
           ..sort((a, b) =>
               a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         return Scaffold(
-          backgroundColor: const Color(0xFFF1F4F8),
+          backgroundColor: AppTheme.bgAppOf(context),
           floatingActionButton: FloatingActionButton.extended(
             heroTag: 'addShop',
             onPressed: () => showDialog(
@@ -413,7 +418,7 @@ class _ShopTile extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        side: BorderSide(color: AppTheme.borderOf(context)),
       ),
       child: ListTile(
         contentPadding:
@@ -422,32 +427,34 @@ class _ShopTile extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
+            color: AppTheme.accentLightOf(context),
             borderRadius: BorderRadius.circular(10),
-            border: const Border.fromBorderSide(
-                BorderSide(color: Color(0xFFBFDBFE))),
+            border: Border.fromBorderSide(
+                BorderSide(color: AppTheme.accentBorderOf(context))),
           ),
-          child: const Icon(Icons.store_outlined,
-              color: Color(0xFF2563EB), size: 22),
+          child: Icon(Icons.store_outlined,
+              color: AppTheme.accentTextOf(context), size: 22),
         ),
         title: Text(shop.name,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimaryOf(context))),
         subtitle: Text(
           '${shop.region}${shop.channel.isNotEmpty ? " · ${shop.channel}" : ""}',
-          style:
-              const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          style: TextStyle(
+              fontSize: 12, color: AppTheme.textMutedOf(context)),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
               icon: const Icon(Icons.edit_outlined, size: 20),
-              color: const Color(0xFF64748B),
+              color: AppTheme.textMutedOf(context),
               onPressed: onEdit,
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline, size: 20),
-              color: Colors.red[400],
+              color: AppTheme.dangerTextOf(context),
               onPressed: onDelete,
             ),
           ],
@@ -474,7 +481,7 @@ class _AmazonShopsGroup extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        side: BorderSide(color: AppTheme.borderOf(context)),
       ),
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
@@ -484,19 +491,22 @@ class _AmazonShopsGroup extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF7ED),
+            color: AppTheme.warningBgOf(context),
             borderRadius: BorderRadius.circular(10),
-            border: const Border.fromBorderSide(
-                BorderSide(color: Color(0xFFFED7AA))),
+            border: Border.fromBorderSide(
+                BorderSide(color: AppTheme.warningBorderOf(context))),
           ),
-          child: const Icon(Icons.shopping_bag_outlined,
-              color: Color(0xFFD97706), size: 22),
+          child: Icon(Icons.shopping_bag_outlined,
+              color: AppTheme.warningTextOf(context), size: 22),
         ),
-        title: const Text('Amazon',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title: Text('Amazon',
+            style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimaryOf(context))),
         subtitle: Text(
           '${shops.length} ${shops.length == 1 ? "Country-Account" : "Country-Accounts"}',
-          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          style: TextStyle(
+              fontSize: 12, color: AppTheme.textMutedOf(context)),
         ),
         children: [
           for (final shop in shops)
@@ -505,23 +515,25 @@ class _AmazonShopsGroup extends StatelessWidget {
                   left: 56, right: 16, top: 0, bottom: 0),
               dense: true,
               title: Text(shop.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimaryOf(context))),
               subtitle: Text(
                 '${shop.region}${shop.channel.isNotEmpty ? " · ${shop.channel}" : ""}',
-                style: const TextStyle(
-                    fontSize: 12, color: Color(0xFF64748B)),
+                style: TextStyle(
+                    fontSize: 12, color: AppTheme.textMutedOf(context)),
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 18),
-                    color: const Color(0xFF64748B),
+                    color: AppTheme.textMutedOf(context),
                     onPressed: () => onEdit(shop),
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline, size: 18),
-                    color: Colors.red[400],
+                    color: AppTheme.dangerTextOf(context),
                     onPressed: () => onDelete(shop),
                   ),
                 ],
@@ -1088,7 +1100,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       return const Center(child: CircularProgressIndicator());
     }
     return Container(
-      color: const Color(0xFFF1F4F8),
+      color: AppTheme.bgAppOf(context),
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1097,20 +1109,22 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFFBEB),
+                color: AppTheme.warningBgOf(context),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFDE68A)),
+                border:
+                    Border.all(color: AppTheme.warningBorderOf(context)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded,
-                      color: Color(0xFFD97706), size: 20),
+                  Icon(Icons.warning_amber_rounded,
+                      color: AppTheme.warningTextOf(context), size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       l10n.pushFirebaseMissing,
-                      style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF92400E)),
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.warningTextOf(context)),
                     ),
                   ),
                 ],
@@ -1237,9 +1251,9 @@ class _Section extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE0E6EF)),
+        border: Border.all(color: AppTheme.borderOf(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1248,10 +1262,10 @@ class _Section extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
             child: Text(
               title.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF64748B),
+                color: AppTheme.textMutedOf(context),
                 letterSpacing: 0.7,
               ),
             ),
@@ -1500,7 +1514,7 @@ class _TeamTabState extends State<_TeamTab> {
     final isOwner = _myRole == WorkspaceRole.owner;
     final myUid = context.read<AuthProvider>().currentUser?.id;
     return Container(
-      color: const Color(0xFFF1F4F8),
+      color: AppTheme.bgAppOf(context),
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -1549,24 +1563,28 @@ class _TeamTabState extends State<_TeamTab> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                side: BorderSide(color: AppTheme.borderOf(context)),
               ),
               child: ListTile(
-                leading: const Icon(Icons.person_outline,
-                    color: Color(0xFF2563EB)),
+                leading: Icon(Icons.person_outline,
+                    color: AppTheme.accentTextOf(context)),
                 title: Text(m.email ?? m.userId.substring(0, 8),
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimaryOf(context))),
                 subtitle: Text(
                   l10n.teamMemberSince(_roleLabel(l10n, m.role),
                       dateFmt.format(m.joinedAt.toLocal())),
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFF64748B)),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textMutedOf(context)),
                 ),
                 trailing: canManage && m.role != WorkspaceRole.owner
                     ? IconButton(
                         tooltip: l10n.teamMemberRemove,
-                        icon: const Icon(Icons.person_remove_outlined,
-                            color: Color(0xFFDC2626), size: 18),
+                        icon: Icon(Icons.person_remove_outlined,
+                            color: AppTheme.dangerTextOf(context),
+                            size: 18),
                         onPressed: () async {
                           await context
                               .read<WorkspaceService>()
@@ -1590,24 +1608,28 @@ class _TeamTabState extends State<_TeamTab> {
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                  side: BorderSide(color: AppTheme.borderOf(context)),
                 ),
                 child: ListTile(
-                  leading: const Icon(Icons.mail_outline,
-                      color: Color(0xFF64748B)),
+                  leading: Icon(Icons.mail_outline,
+                      color: AppTheme.textMutedOf(context)),
                   title: Text(inv.email,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimaryOf(context))),
                   subtitle: Text(
                     l10n.teamInviteExpires(_roleLabel(l10n, inv.role),
                         dateFmt.format(inv.expiresAt.toLocal())),
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMutedOf(context)),
                   ),
                   trailing: canManage
                       ? IconButton(
                           tooltip: l10n.teamInviteRevoke,
-                          icon: const Icon(Icons.cancel_outlined,
-                              color: Color(0xFFDC2626), size: 18),
+                          icon: Icon(Icons.cancel_outlined,
+                              color: AppTheme.dangerTextOf(context),
+                              size: 18),
                           onPressed: () async {
                             await context
                                 .read<WorkspaceService>()
@@ -1919,7 +1941,7 @@ class _MailboxTabState extends State<_MailboxTab> {
         final atLimit = mailboxLimit > 0 &&
             provider.accounts.length >= mailboxLimit;
         return Scaffold(
-          backgroundColor: const Color(0xFFF1F4F8),
+          backgroundColor: AppTheme.bgAppOf(context),
           floatingActionButton: hasInbox
               ? FloatingActionButton.extended(
                   heroTag: 'addMailbox',
@@ -2034,31 +2056,31 @@ class _MailboxIntroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      color: const Color(0xFFEFF6FF),
+      color: AppTheme.accentLightOf(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFBFDBFE)),
+        side: BorderSide(color: AppTheme.accentBorderOf(context)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.info_outline, color: Color(0xFF2563EB)),
+            Icon(Icons.info_outline, color: AppTheme.accentTextOf(context)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Postfach-Integration',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1E3A8A),
+                      color: AppTheme.accentTextOf(context),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     'Hinterlege ein IMAP-Konto, um Bestell- und Versand-Mails '
                     'automatisch erkennen zu lassen. Polling läuft alle 5 min '
                     'serverseitig — Passwörter werden mit pgp_sym_encrypt '
@@ -2066,17 +2088,17 @@ class _MailboxIntroCard extends StatelessWidget {
                     'erkannte Deals annehmen.',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF1E40AF),
+                      color: AppTheme.textSecondaryOf(context),
                       height: 1.4,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     _quotaLine(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1E3A8A),
+                      color: AppTheme.accentTextOf(context),
                     ),
                   ),
                 ],
@@ -2109,12 +2131,12 @@ class _MailboxAccountTile extends StatelessWidget {
     return 'Zuletzt gepollt: ${_relative(account.lastPolledAt!)}';
   }
 
-  Color _statusColor() {
-    if (!account.enabled) return const Color(0xFF94A3B8);
+  Color _statusColor(BuildContext context) {
+    if (!account.enabled) return AppTheme.textMutedOf(context);
     if (account.lastError != null && account.lastError!.isNotEmpty) {
-      return const Color(0xFFB91C1C);
+      return AppTheme.dangerTextOf(context);
     }
-    return const Color(0xFF15803D);
+    return AppTheme.successTextOf(context);
   }
 
   static String _relative(DateTime ts) {
@@ -2131,7 +2153,7 @@ class _MailboxAccountTile extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        side: BorderSide(color: AppTheme.borderOf(context)),
       ),
       child: ListTile(
         contentPadding:
@@ -2141,20 +2163,22 @@ class _MailboxAccountTile extends StatelessWidget {
           height: 42,
           decoration: BoxDecoration(
             color: account.enabled
-                ? const Color(0xFFEFF6FF)
-                : const Color(0xFFF1F5F9),
+                ? AppTheme.accentLightOf(context)
+                : AppTheme.bgSubtleOf(context),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
             Icons.mail_outline,
             color: account.enabled
-                ? const Color(0xFF2563EB)
-                : const Color(0xFF94A3B8),
+                ? AppTheme.accentTextOf(context)
+                : AppTheme.textMutedOf(context),
           ),
         ),
         title: Text(
           account.label,
-          style: const TextStyle(fontWeight: FontWeight.w700),
+          style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimaryOf(context)),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2162,8 +2186,8 @@ class _MailboxAccountTile extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               '${account.username} · ${account.imapHost}:${account.imapPort}',
-              style:
-                  const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              style: TextStyle(
+                  fontSize: 12, color: AppTheme.textMutedOf(context)),
             ),
             const SizedBox(height: 2),
             Text(
@@ -2171,7 +2195,7 @@ class _MailboxAccountTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: _statusColor(),
+                color: _statusColor(context),
               ),
             ),
             if (account.lastError != null && account.lastError!.isNotEmpty)
@@ -2181,9 +2205,9 @@ class _MailboxAccountTile extends StatelessWidget {
                   account.lastError!,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: Color(0xFFB91C1C),
+                    color: AppTheme.dangerTextOf(context),
                   ),
                 ),
               ),
@@ -2194,12 +2218,12 @@ class _MailboxAccountTile extends StatelessWidget {
           children: [
             IconButton(
               icon: const Icon(Icons.edit_outlined, size: 20),
-              color: const Color(0xFF64748B),
+              color: AppTheme.textMutedOf(context),
               onPressed: onEdit,
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline, size: 20),
-              color: Colors.red[400],
+              color: AppTheme.dangerTextOf(context),
               onPressed: onDelete,
             ),
           ],
@@ -2231,12 +2255,12 @@ class _MailboxEmptyState extends StatelessWidget {
                 PricingPlan.forBillingPlan(plan).inboxVisibilityDays,
           ),
           const SizedBox(height: 32),
-          const Icon(Icons.mail_outline,
-              size: 52, color: Color(0xFFCBD5E1)),
+          Icon(Icons.mail_outline,
+              size: 52, color: AppTheme.textDisabledOf(context)),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Noch kein Postfach hinterlegt.',
-            style: TextStyle(color: Color(0xFF94A3B8)),
+            style: TextStyle(color: AppTheme.textMutedOf(context)),
           ),
         ],
       ),
@@ -2262,7 +2286,7 @@ class _MailboxFreePlanGate extends StatelessWidget {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(color: Color(0xFFE2E8F0)),
+              side: BorderSide(color: AppTheme.borderOf(context)),
             ),
             child: Padding(
               padding: const EdgeInsets.all(24),

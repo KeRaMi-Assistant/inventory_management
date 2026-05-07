@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/deal.dart';
 import '../models/inventory_item.dart';
@@ -191,26 +192,36 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Widget _kpi(String label, String value, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w700)),
-                  Text(value, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-                ],
+    return Builder(builder: (ctx) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label,
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMutedOf(ctx),
+                            fontWeight: FontWeight.w700)),
+                    Text(value,
+                        style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.textPrimaryOf(ctx))),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildCardList(BuildContext context, InventoryProvider provider, NumberFormat money, List<InventoryItem> items) {
@@ -249,7 +260,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 const SizedBox(height: 4),
                 Text(
                   '${item.sku ?? "-"} · ${item.location ?? "Kein Lagerort"}',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  style: TextStyle(
+                      fontSize: 12, color: AppTheme.textMutedOf(context)),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -267,7 +279,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     Expanded(
                       child: Text(
                         item.ticketNumber != null ? 'Ticket: ${item.ticketNumber}' : '-',
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                        style: TextStyle(
+                            fontSize: 12, color: AppTheme.textMutedOf(context)),
                       ),
                     ),
                     _statusChip(context, item.status),
@@ -328,13 +341,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0xFF2563EB).withAlpha(20),
+        color: AppTheme.accentLightOf(context),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(localizeInventoryStatus(context, status),
-          style: const TextStyle(
+          style: TextStyle(
               fontSize: 11,
-              color: Color(0xFF2563EB),
+              color: AppTheme.accentTextOf(context),
               fontWeight: FontWeight.w700)),
     );
   }
@@ -663,20 +676,20 @@ class _InventoryDialogState extends State<_InventoryDialog> {
             // ── Header ────────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
-                    bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                    bottom: BorderSide(color: AppTheme.borderOf(context))),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: AppTheme.accentLightOf(context),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.inventory_2_outlined,
-                        color: Color(0xFF2563EB), size: 20),
+                    child: Icon(Icons.inventory_2_outlined,
+                        color: AppTheme.accentTextOf(context), size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -684,15 +697,16 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                       widget.item == null
                           ? l10n.inventoryAddItemTitle
                           : l10n.inventoryEditItemTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimaryOf(context),
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close,
-                        size: 20, color: Color(0xFF64748B)),
+                    icon: Icon(Icons.close,
+                        size: 20, color: AppTheme.textMutedOf(context)),
                     onPressed: () => Navigator.pop(context),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -954,9 +968,9 @@ class _InventoryDialogState extends State<_InventoryDialog> {
             // ── Actions ────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
-                    top: BorderSide(color: Color(0xFFE2E8F0))),
+                    top: BorderSide(color: AppTheme.borderOf(context))),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -1021,21 +1035,25 @@ class _InventoryDialogState extends State<_InventoryDialog> {
   }
 
   Widget _sectionLabel(String text) {
-    return Row(
-      children: [
-        Text(
-          text.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF64748B),
-            letterSpacing: 0.7,
+    return Builder(builder: (ctx) {
+      return Row(
+        children: [
+          Text(
+            text.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textMutedOf(ctx),
+              letterSpacing: 0.7,
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        const Expanded(child: Divider(height: 1)),
-      ],
-    );
+          const SizedBox(width: 8),
+          Expanded(
+            child: Divider(height: 1, color: AppTheme.borderOf(ctx)),
+          ),
+        ],
+      );
+    });
   }
 }
 
@@ -1058,16 +1076,20 @@ class _EmptyInventoryState extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey),
+        Icon(Icons.inventory_2_outlined,
+            size: 48, color: AppTheme.textDisabledOf(context)),
         const SizedBox(height: 12),
         Text(
           l10n.inventoryEmpty,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimaryOf(context)),
         ),
         const SizedBox(height: 4),
         Text(
           l10n.suppliersEmptyHint,
-          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+          style: TextStyle(
+              color: AppTheme.textMutedOf(context), fontSize: 12),
         ),
       ],
     );
@@ -1087,16 +1109,20 @@ class _LowStockBannerState extends State<_LowStockBanner> {
   Widget build(BuildContext context) {
     if (_dismissed) return const SizedBox.shrink();
     return MaterialBanner(
-      backgroundColor: const Color(0xFFFEF2F2),
-      leading: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626)),
+      backgroundColor: AppTheme.dangerBgOf(context),
+      leading: Icon(Icons.warning_amber_rounded,
+          color: AppTheme.dangerTextOf(context)),
       content: Text(
         '${widget.count} Artikel ${widget.count == 1 ? "hat" : "haben"} Bestand unter dem Mindestbestand!',
-        style: const TextStyle(color: Color(0xFFDC2626), fontWeight: FontWeight.w700),
+        style: TextStyle(
+            color: AppTheme.dangerTextOf(context),
+            fontWeight: FontWeight.w700),
       ),
       actions: [
         TextButton(
           onPressed: () => setState(() => _dismissed = true),
-          child: const Text('Schließen', style: TextStyle(color: Color(0xFFDC2626))),
+          child: Text('Schließen',
+              style: TextStyle(color: AppTheme.dangerTextOf(context))),
         ),
       ],
     );

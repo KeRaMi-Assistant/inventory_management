@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../app_theme.dart';
 
 /// Wiederverwendbarer Panel-Container für die Statistik-Tabs.
-/// Weißer Hintergrund, dezenter Border, optionaler Titel + Icon + Action.
+/// Theme-aware Hintergrund, dezenter Border, optionaler Titel + Icon + Action.
 class StatPanel extends StatelessWidget {
   final String? title;
   final IconData? icon;
@@ -23,9 +24,9 @@ class StatPanel extends StatelessWidget {
     final hasHeader = title != null || icon != null || trailing != null;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E6EF)),
+        border: Border.all(color: AppTheme.borderOf(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -36,17 +37,17 @@ class StatPanel extends StatelessWidget {
               child: Row(
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, size: 16, color: const Color(0xFF6B7280)),
+                    Icon(icon, size: 16, color: AppTheme.textMutedOf(context)),
                     const SizedBox(width: 8),
                   ],
                   if (title != null)
                     Expanded(
                       child: Text(
                         title!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF111827),
+                          color: AppTheme.textPrimaryOf(context),
                         ),
                       ),
                     )
@@ -56,7 +57,7 @@ class StatPanel extends StatelessWidget {
                 ],
               ),
             ),
-            const Divider(height: 1, color: Color(0xFFE0E6EF)),
+            Divider(height: 1, color: AppTheme.borderOf(context)),
           ],
           Padding(padding: padding, child: child),
         ],

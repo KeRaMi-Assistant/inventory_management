@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../app_theme.dart';
 
 /// Große KPI-Karte mit großem Wert, Label und optionalem Δ%-Vergleich.
 class KpiCard extends StatelessWidget {
@@ -29,10 +30,10 @@ class KpiCard extends StatelessWidget {
     final goodDirection = deltaInverted ? isNegative : isPositive;
     final badDirection = deltaInverted ? isPositive : isNegative;
     final deltaColor = goodDirection
-        ? const Color(0xFF059669)
+        ? AppTheme.successTextOf(context)
         : badDirection
-            ? const Color(0xFFDC2626)
-            : const Color(0xFF6B7280);
+            ? AppTheme.dangerTextOf(context)
+            : AppTheme.textMutedOf(context);
     final arrow = isPositive
         ? Icons.arrow_upward
         : isNegative
@@ -42,9 +43,9 @@ class KpiCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E6EF)),
+        border: Border.all(color: AppTheme.borderOf(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,7 +55,10 @@ class KpiCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: accent.withAlpha(20),
+                  color: accent.withAlpha(
+                      Theme.of(context).brightness == Brightness.dark
+                          ? 50
+                          : 20),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, size: 16, color: accent),
@@ -63,9 +67,9 @@ class KpiCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF6B7280),
+                    color: AppTheme.textMutedOf(context),
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.2,
                   ),
@@ -77,10 +81,10 @@ class KpiCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF111827),
+              color: AppTheme.textPrimaryOf(context),
               letterSpacing: -0.3,
             ),
             maxLines: 1,
@@ -105,9 +109,9 @@ class KpiCard extends StatelessWidget {
                   Flexible(
                     child: Text(
                       deltaLabel!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF9CA3AF),
+                        color: AppTheme.textDisabledOf(context),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),

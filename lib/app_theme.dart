@@ -60,16 +60,69 @@ class AppTheme {
   static const Color accent = Color(0xFF2563EB);
   static const Color accentLight = Color(0xFFEFF6FF);
   static const Color accentDark = Color(0xFF1D4ED8);
+  static const Color accentLightDark = Color(0xFF1E3A5F);
+  static const Color accentBorderLight = Color(0xFFBFDBFE);
+  static const Color accentBorderDark = Color(0xFF1E40AF);
+  static Color accentLightOf(BuildContext context) =>
+      _dark(context) ? accentLightDark : accentLight;
+  static Color accentBorderOf(BuildContext context) =>
+      _dark(context) ? accentBorderDark : accentBorderLight;
 
   // -- Semantic status colors --
   static const Color success = Color(0xFF059669);
   static const Color successBg = Color(0xFFECFDF5);
+  static const Color successBgDark = Color(0xFF064E3B);
+  static const Color successBorder = Color(0xFF86EFAC);
+  static const Color successBorderDark = Color(0xFF065F46);
   static const Color warning = Color(0xFFD97706);
   static const Color warningBg = Color(0xFFFFFBEB);
+  static const Color warningBgDark = Color(0xFF422006);
+  static const Color warningBorder = Color(0xFFFDE68A);
+  static const Color warningBorderDark = Color(0xFF78350F);
   static const Color danger = Color(0xFFDC2626);
   static const Color dangerBg = Color(0xFFFEF2F2);
+  static const Color dangerBgDark = Color(0xFF450A0A);
+  static const Color dangerBorder = Color(0xFFFECACA);
+  static const Color dangerBorderDark = Color(0xFF7F1D1D);
   static const Color info = Color(0xFF0284C7);
   static const Color infoBg = Color(0xFFF0F9FF);
+  static const Color infoBgDark = Color(0xFF0C2A3D);
+  static const Color infoBorder = Color(0xFFBAE6FD);
+  static const Color infoBorderDark = Color(0xFF075985);
+
+  static Color successBgOf(BuildContext context) =>
+      _dark(context) ? successBgDark : successBg;
+  static Color successBorderOf(BuildContext context) =>
+      _dark(context) ? successBorderDark : successBorder;
+  static Color warningBgOf(BuildContext context) =>
+      _dark(context) ? warningBgDark : warningBg;
+  static Color warningBorderOf(BuildContext context) =>
+      _dark(context) ? warningBorderDark : warningBorder;
+  static Color dangerBgOf(BuildContext context) =>
+      _dark(context) ? dangerBgDark : dangerBg;
+  static Color dangerBorderOf(BuildContext context) =>
+      _dark(context) ? dangerBorderDark : dangerBorder;
+  static Color infoBgOf(BuildContext context) =>
+      _dark(context) ? infoBgDark : infoBg;
+  static Color infoBorderOf(BuildContext context) =>
+      _dark(context) ? infoBorderDark : infoBorder;
+
+  // Status text — slightly brighter in dark mode for readability.
+  static const Color successTextDark = Color(0xFF34D399);
+  static const Color warningTextDark = Color(0xFFFBBF24);
+  static const Color dangerTextDark = Color(0xFFF87171);
+  static const Color infoTextDark = Color(0xFF38BDF8);
+  static const Color accentTextDark = Color(0xFF60A5FA);
+  static Color successTextOf(BuildContext context) =>
+      _dark(context) ? successTextDark : success;
+  static Color warningTextOf(BuildContext context) =>
+      _dark(context) ? warningTextDark : warning;
+  static Color dangerTextOf(BuildContext context) =>
+      _dark(context) ? dangerTextDark : danger;
+  static Color infoTextOf(BuildContext context) =>
+      _dark(context) ? infoTextDark : info;
+  static Color accentTextOf(BuildContext context) =>
+      _dark(context) ? accentTextDark : accent;
 
   // -- Sidebar navigation --
   static const Color navBg = Color(0xFF1E293B);

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/deal.dart';
 import '../models/inbox_message.dart';
@@ -50,17 +51,18 @@ class _InboxScreenState extends State<InboxScreen> {
       child: Consumer<InboxProvider>(
         builder: (context, provider, _) {
           return Scaffold(
-            backgroundColor: const Color(0xFFF1F4F8),
+            backgroundColor: AppTheme.bgAppOf(context),
             body: Column(
               children: [
                 _InboxHeader(provider: provider, onRefresh: _refresh),
                 _InboxFilterBar(provider: provider),
                 Material(
-                  color: Colors.white,
+                  color: AppTheme.bgSurfaceOf(context),
                   child: TabBar(
-                    indicatorColor: const Color(0xFF2563EB),
-                    labelColor: const Color(0xFF2563EB),
-                    unselectedLabelColor: const Color(0xFF64748B),
+                    indicatorColor: AppTheme.accentTextOf(context),
+                    labelColor: AppTheme.accentTextOf(context),
+                    unselectedLabelColor: AppTheme.textMutedOf(context),
+                    dividerColor: AppTheme.borderOf(context),
                     tabs: [
                       Tab(
                         icon: Badge.count(
@@ -139,15 +141,15 @@ class _InboxHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasAccount = provider.accounts.isNotEmpty;
     return Container(
-      color: Colors.white,
+      color: AppTheme.bgSurfaceOf(context),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
         children: [
           Icon(
             hasAccount ? Icons.mail_outline : Icons.warning_amber_outlined,
             color: hasAccount
-                ? const Color(0xFF2563EB)
-                : const Color(0xFFD97706),
+                ? AppTheme.accentTextOf(context)
+                : AppTheme.warningTextOf(context),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -159,9 +161,10 @@ class _InboxHeader extends StatelessWidget {
                       ? '${provider.accounts.length} Postfach'
                           '${provider.accounts.length == 1 ? "" : "er"} verbunden'
                       : 'Noch kein Postfach verbunden',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
+                    color: AppTheme.textPrimaryOf(context),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -171,8 +174,9 @@ class _InboxHeader extends StatelessWidget {
                           'Versand- und Stornierungs-Mails der konfigurierten '
                           'Shops landen hier.'
                       : 'Lege unter Einstellungen → Postfach ein IMAP-Konto an.',
-                  style: const TextStyle(
-                      fontSize: 11, color: Color(0xFF64748B)),
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textSecondaryOf(context)),
                 ),
               ],
             ),
@@ -188,7 +192,7 @@ class _InboxHeader extends StatelessWidget {
                   ? Icons.filter_alt_outlined
                   : Icons.filter_alt_off_outlined,
               color: provider.dismissalCount == 0
-                  ? const Color(0xFF94A3B8)
+                  ? AppTheme.textMutedOf(context)
                   : null,
             ),
             onPressed: provider.dismissalCount == 0 || provider.isLoading
@@ -200,7 +204,7 @@ class _InboxHeader extends StatelessWidget {
                 .inboxMarkAllReadTooltip(provider.unreadCount),
             icon: const Icon(Icons.mark_email_read_outlined),
             color: provider.unreadCount == 0
-                ? const Color(0xFF94A3B8)
+                ? AppTheme.textMutedOf(context)
                 : null,
             onPressed: provider.unreadCount == 0 || provider.isLoading
                 ? null
@@ -238,7 +242,7 @@ class _InboxFilterBar extends StatelessWidget {
       return const SizedBox.shrink();
     }
     return Container(
-      color: Colors.white,
+      color: AppTheme.bgSurfaceOf(context),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: Row(
         children: [
@@ -271,7 +275,7 @@ class _InboxFilterBar extends StatelessWidget {
               icon: const Icon(Icons.clear_all, size: 16),
               label: const Text('Filter zurücksetzen'),
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF2563EB),
+                foregroundColor: AppTheme.accentTextOf(context),
                 padding: const EdgeInsets.symmetric(horizontal: 8),
               ),
               onPressed: provider.clearFilters,
@@ -402,13 +406,14 @@ class _FilterPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = active
-        ? const Color(0xFFEFF6FF)
-        : const Color(0xFFF1F5F9);
+        ? AppTheme.accentLightOf(context)
+        : AppTheme.bgSubtleOf(context);
     final fg = active
-        ? const Color(0xFF2563EB)
-        : const Color(0xFF334155);
-    final border =
-        active ? const Color(0xFFBFDBFE) : const Color(0xFFE2E8F0);
+        ? AppTheme.accentTextOf(context)
+        : AppTheme.textSecondaryOf(context);
+    final border = active
+        ? AppTheme.accentBorderOf(context)
+        : AppTheme.borderOf(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
@@ -798,7 +803,7 @@ class _SuggestionCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        side: BorderSide(color: AppTheme.borderOf(context)),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
@@ -816,9 +821,9 @@ class _SuggestionCard extends StatelessWidget {
                 const Spacer(),
                 Text(
                   dfDateTime.format(suggestion.receivedAt.toLocal()),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF64748B),
+                    color: AppTheme.textMutedOf(context),
                   ),
                 ),
                 PopupMenuButton<String>(
@@ -890,8 +895,8 @@ class _SuggestionCard extends StatelessWidget {
                 fontSize: 14,
                 fontWeight: unread ? FontWeight.w800 : FontWeight.w700,
                 color: productTitle != null
-                    ? const Color(0xFF0F172A)
-                    : const Color(0xFF94A3B8),
+                    ? AppTheme.textPrimaryOf(context)
+                    : AppTheme.textMutedOf(context),
                 fontStyle: productTitle == null ? FontStyle.italic : null,
               ),
             ),
@@ -939,7 +944,7 @@ class _SuggestionCard extends StatelessWidget {
                 TextButton.icon(
                   icon: const Icon(Icons.close, size: 16),
                   style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFB91C1C)),
+                      foregroundColor: AppTheme.dangerTextOf(context)),
                   onPressed: () => _reject(context),
                   label: const Text('Verwerfen'),
                 ),
@@ -1011,7 +1016,7 @@ class _MatchedTab extends StatelessWidget {
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: Color(0xFFE2E8F0)),
+                    side: BorderSide(color: AppTheme.borderOf(context)),
                   ),
                   child: ListTile(
                     onTap: () => InboxMessageDetails.show(
@@ -1019,10 +1024,10 @@ class _MatchedTab extends StatelessWidget {
                       message: msg,
                       actions: _detailActionsFor(context, msg, orderId),
                     ),
-                    leading: const CircleAvatar(
-                      backgroundColor: Color(0xFFDCFCE7),
+                    leading: CircleAvatar(
+                      backgroundColor: AppTheme.successBgOf(context),
                       child: Icon(Icons.sync,
-                          color: Color(0xFF15803D), size: 20),
+                          color: AppTheme.successTextOf(context), size: 20),
                     ),
                     title: Text(
                       product ?? msg.subject ?? 'Aktualisierter Deal',
@@ -1031,6 +1036,7 @@ class _MatchedTab extends StatelessWidget {
                       style: TextStyle(
                         fontWeight:
                             unread ? FontWeight.w800 : FontWeight.w600,
+                        color: AppTheme.textPrimaryOf(context),
                       ),
                     ),
                     subtitle: Column(
@@ -1040,14 +1046,16 @@ class _MatchedTab extends StatelessWidget {
                         Text(
                           '$shopLabel${orderId != null ? " · #$orderId" : ""}'
                           '${msg.matchDealId != null ? " → Deal #${msg.matchDealId}" : ""}',
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF64748B)),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textSecondaryOf(context)),
                         ),
                         if (tracking != null)
                           Text(
                             'Tracking: $tracking',
-                            style: const TextStyle(
-                                fontSize: 11, color: Color(0xFF334155)),
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.textSecondaryOf(context)),
                           ),
                       ],
                     ),
@@ -1055,8 +1063,8 @@ class _MatchedTab extends StatelessWidget {
                       DateFormat.MMMd('de_DE').add_Hm().format(
                             (msg.processedAt ?? msg.receivedAt).toLocal(),
                           ),
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF94A3B8)),
+                      style: TextStyle(
+                          fontSize: 11, color: AppTheme.textMutedOf(context)),
                     ),
                   ),
                 );
@@ -1099,7 +1107,7 @@ class _MatchedTab extends StatelessWidget {
         icon: const Icon(Icons.delete_outline, size: 16),
         label: const Text('Verwerfen'),
         style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xFFB91C1C),
+          foregroundColor: AppTheme.dangerTextOf(context),
         ),
         onPressed: () {
           Navigator.pop(context);
@@ -1268,7 +1276,7 @@ class _UnclassifiedRow extends StatelessWidget {
           icon: const Icon(Icons.delete_outline, size: 16),
           label: const Text('Verwerfen'),
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFB91C1C),
+            foregroundColor: AppTheme.dangerTextOf(context),
           ),
           onPressed: () {
             Navigator.pop(context);
@@ -1294,16 +1302,16 @@ class _UnclassifiedRow extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        side: BorderSide(color: AppTheme.borderOf(context)),
       ),
       child: ListTile(
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         onTap: () => _showDetails(context),
-        leading: const CircleAvatar(
-          backgroundColor: Color(0xFFFEF3C7),
+        leading: CircleAvatar(
+          backgroundColor: AppTheme.warningBgOf(context),
           child: Icon(Icons.help_outline,
-              color: Color(0xFFB45309), size: 20),
+              color: AppTheme.warningTextOf(context), size: 20),
         ),
         title: Text(
           message.subject ?? '— ohne Betreff —',
@@ -1311,6 +1319,7 @@ class _UnclassifiedRow extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontWeight: unread ? FontWeight.w800 : FontWeight.w600,
+            color: AppTheme.textPrimaryOf(context),
           ),
         ),
         subtitle: Column(
@@ -1321,15 +1330,15 @@ class _UnclassifiedRow extends StatelessWidget {
               '${shopLabel ?? "Unbekannt"} · ${message.fromAddress ?? "—"}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style:
-                  const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              style: TextStyle(
+                  fontSize: 12, color: AppTheme.textSecondaryOf(context)),
             ),
             Text(
               DateFormat.yMMMd('de_DE')
                   .add_Hm()
                   .format(message.receivedAt.toLocal()),
-              style:
-                  const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+              style: TextStyle(
+                  fontSize: 11, color: AppTheme.textMutedOf(context)),
             ),
           ],
         ),
@@ -1428,10 +1437,10 @@ class _CountdownPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final clamped = daysLeft.clamp(0, totalDays);
     final (bg, fg) = clamped <= 3
-        ? (const Color(0xFFFEE2E2), const Color(0xFFB91C1C))
+        ? (AppTheme.dangerBgOf(context), AppTheme.dangerTextOf(context))
         : clamped <= 7
-            ? (const Color(0xFFFEF3C7), const Color(0xFFB45309))
-            : (const Color(0xFFE0F2FE), const Color(0xFF0369A1));
+            ? (AppTheme.warningBgOf(context), AppTheme.warningTextOf(context))
+            : (AppTheme.infoBgOf(context), AppTheme.infoTextOf(context));
     final label = clamped == 0
         ? 'Heute weg'
         : clamped == 1
@@ -1476,15 +1485,15 @@ class _ShopBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
+        color: AppTheme.accentLightOf(context),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF2563EB),
+          color: AppTheme.accentTextOf(context),
         ),
       ),
     );
@@ -1497,17 +1506,27 @@ class _ShipStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final (bg, fg) = switch (status) {
-      SuggestionShipStatus.ordered =>
-        (const Color(0xFFE0F2FE), const Color(0xFF0369A1)),
-      SuggestionShipStatus.shipped =>
-        (const Color(0xFFFEF3C7), const Color(0xFFB45309)),
-      SuggestionShipStatus.delivered =>
-        (const Color(0xFFDCFCE7), const Color(0xFF15803D)),
-      SuggestionShipStatus.cancelled =>
-        (const Color(0xFFFEE2E2), const Color(0xFFB91C1C)),
-      SuggestionShipStatus.refunded =>
-        (const Color(0xFFEDE9FE), const Color(0xFF6D28D9)),
+      SuggestionShipStatus.ordered => (
+          AppTheme.infoBgOf(context),
+          AppTheme.infoTextOf(context)
+        ),
+      SuggestionShipStatus.shipped => (
+          AppTheme.warningBgOf(context),
+          AppTheme.warningTextOf(context)
+        ),
+      SuggestionShipStatus.delivered => (
+          AppTheme.successBgOf(context),
+          AppTheme.successTextOf(context)
+        ),
+      SuggestionShipStatus.cancelled => (
+          AppTheme.dangerBgOf(context),
+          AppTheme.dangerTextOf(context)
+        ),
+      SuggestionShipStatus.refunded => dark
+          ? (const Color(0xFF2E1065), const Color(0xFFC4B5FD))
+          : (const Color(0xFFEDE9FE), const Color(0xFF6D28D9)),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1542,13 +1561,13 @@ class _MetaItem extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: const Color(0xFF64748B)),
+        Icon(icon, size: 13, color: AppTheme.textMutedOf(context)),
         const SizedBox(width: 4),
         Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: const Color(0xFF334155),
+            color: AppTheme.textSecondaryOf(context),
             fontFamily: monospace ? 'monospace' : null,
           ),
         ),
@@ -1578,22 +1597,22 @@ class _TrackingPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
+          color: AppTheme.bgSubtleOf(context),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.local_shipping_outlined,
-                size: 14, color: Color(0xFF334155)),
+            Icon(Icons.local_shipping_outlined,
+                size: 14, color: AppTheme.textSecondaryOf(context)),
             const SizedBox(width: 6),
             Text(
               tracking,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontFamily: 'monospace',
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0F172A),
+                color: AppTheme.textPrimaryOf(context),
               ),
             ),
             if (carrier != null) ...[
@@ -1602,23 +1621,23 @@ class _TrackingPill extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.bgSurfaceOf(context),
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                  border: Border.all(color: AppTheme.borderStrongOf(context)),
                 ),
                 child: Text(
                   carrier!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF475569),
+                    color: AppTheme.textSecondaryOf(context),
                   ),
                 ),
               ),
             ],
             const SizedBox(width: 4),
-            const Icon(Icons.copy_outlined,
-                size: 12, color: Color(0xFF94A3B8)),
+            Icon(Icons.copy_outlined,
+                size: 12, color: AppTheme.textMutedOf(context)),
           ],
         ),
       ),
@@ -1637,12 +1656,12 @@ class _InboxEmpty extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         const SizedBox(height: 80),
-        Icon(icon, size: 52, color: const Color(0xFFCBD5E1)),
+        Icon(icon, size: 52, color: AppTheme.textDisabledOf(context)),
         const SizedBox(height: 12),
         Center(
           child: Text(
             text,
-            style: const TextStyle(color: Color(0xFF94A3B8)),
+            style: TextStyle(color: AppTheme.textMutedOf(context)),
           ),
         ),
       ],

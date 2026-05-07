@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/inventory_provider.dart';
 import '../../providers/statistics_filter_provider.dart';
@@ -22,9 +23,9 @@ class StatisticsFilterBar extends StatelessWidget {
     final r = filter.currentRange;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE0E6EF))),
+      decoration: BoxDecoration(
+        color: AppTheme.bgSurfaceOf(context),
+        border: Border(bottom: BorderSide(color: AppTheme.borderOf(context))),
       ),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: LayoutBuilder(
@@ -104,11 +105,13 @@ class StatisticsFilterBar extends StatelessWidget {
                   prefixIcon: const Icon(Icons.search, size: 18),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFFE0E6EF)),
+                    borderSide:
+                        BorderSide(color: AppTheme.borderOf(context)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFFE0E6EF)),
+                    borderSide:
+                        BorderSide(color: AppTheme.borderOf(context)),
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
@@ -120,7 +123,7 @@ class StatisticsFilterBar extends StatelessWidget {
                 icon: const Icon(Icons.refresh, size: 16),
                 label: Text(l10n.actionReset),
                 style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF6B7280)),
+                    foregroundColor: AppTheme.textMutedOf(context)),
               ),
           ];
 
@@ -130,14 +133,14 @@ class StatisticsFilterBar extends StatelessWidget {
               Row(
                 children: [
                   Icon(Icons.filter_alt_outlined,
-                      size: 16, color: Colors.grey.shade600),
+                      size: 16, color: AppTheme.textMutedOf(context)),
                   const SizedBox(width: 6),
                   Text(
                     '${dateFmt.format(r.from)} – ${dateFmt.format(r.to)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF374151),
+                      color: AppTheme.textSecondaryOf(context),
                     ),
                   ),
                   const Spacer(),
@@ -147,7 +150,7 @@ class StatisticsFilterBar extends StatelessWidget {
                       icon: const Icon(Icons.file_download_outlined, size: 16),
                       label: Text(l10n.statsExportReport),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFFE0E6EF)),
+                        side: BorderSide(color: AppTheme.borderOf(context)),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                       ),
@@ -201,7 +204,9 @@ class _PresetGroup extends StatelessWidget {
       children: StatsPreset.values.map((p) {
         final isSelected = p == selected;
         return Material(
-          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
+          color: isSelected
+              ? AppTheme.accent
+              : AppTheme.bgSubtleOf(context),
           borderRadius: BorderRadius.circular(8),
           child: InkWell(
             borderRadius: BorderRadius.circular(8),
@@ -213,7 +218,9 @@ class _PresetGroup extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white : const Color(0xFF374151),
+                  color: isSelected
+                      ? Colors.white
+                      : AppTheme.textSecondaryOf(context),
                 ),
               ),
             ),
@@ -232,7 +239,9 @@ class _CompareToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: value ? const Color(0xFFE0E7FF) : const Color(0xFFF1F5F9),
+      color: value
+          ? AppTheme.accentLightOf(context)
+          : AppTheme.bgSubtleOf(context),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
@@ -245,7 +254,9 @@ class _CompareToggle extends StatelessWidget {
               Icon(
                 value ? Icons.check_box : Icons.check_box_outline_blank,
                 size: 14,
-                color: value ? const Color(0xFF2563EB) : const Color(0xFF6B7280),
+                color: value
+                    ? AppTheme.accentTextOf(context)
+                    : AppTheme.textMutedOf(context),
               ),
               const SizedBox(width: 6),
               Text(
@@ -254,8 +265,8 @@ class _CompareToggle extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: value
-                      ? const Color(0xFF1D4ED8)
-                      : const Color(0xFF374151),
+                      ? AppTheme.accentTextOf(context)
+                      : AppTheme.textSecondaryOf(context),
                 ),
               ),
             ],
@@ -285,14 +296,14 @@ class _FilterDropdown<T> extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE0E6EF)),
+        border: Border.all(color: AppTheme.borderOf(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: Colors.grey.shade500),
+          Icon(icon, size: 14, color: AppTheme.textMutedOf(context)),
           const SizedBox(width: 6),
           DropdownButtonHideUnderline(
             child: DropdownButton<T>(
@@ -300,7 +311,8 @@ class _FilterDropdown<T> extends StatelessWidget {
               hint: Text(hint, style: const TextStyle(fontSize: 12)),
               items: items,
               onChanged: onChanged,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF374151)),
+              style: TextStyle(
+                  fontSize: 12, color: AppTheme.textSecondaryOf(context)),
               isDense: true,
               icon: const Icon(Icons.keyboard_arrow_down, size: 18),
             ),
