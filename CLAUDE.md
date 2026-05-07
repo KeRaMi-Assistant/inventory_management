@@ -47,6 +47,19 @@ Triviale Tasks (Typo-Fix, einzelne Zeile) brauchen keinen Plan.
 - **Imports:** Relativ innerhalb `lib/`, absolut für Pakete. Kein Wildcard-Export.
 - **Null-Safety:** Strikt, keine `!`-Bangs ohne klaren Grund.
 
+### Mobile-First (PFLICHT für jede UI-Änderung)
+
+Die App läuft primär auf iOS + Android. Tablet/Desktop sind sekundär.
+
+- **Test-Viewports im Kopf:** 360×640 (kleinster Phone), 390×844 (iPhone-Default), 768×1024 (Tablet), 1440×900 (Desktop). Alle vier müssen funktionieren — Phone darf NICHT abschneiden oder horizontal scrollen.
+- **Touch-Targets:** mind. 48×48 dp.
+- **Keine Hover-Only-Logik.** Tooltips OK, aber Funktionen müssen per Tap erreichbar sein.
+- **Bottom-Nav** für Top-Level-Routen auf Phone (`MediaQuery.sizeOf(context).width < 600`), Sidebar/Drawer nur auf Desktop.
+- **Responsive Switches:** `LayoutBuilder` / `MediaQuery.sizeOf` — niemals `Platform.is*`.
+- **`SafeArea`** um Content (Notch, Home-Indicator); bei TextFields `MediaQuery.viewInsetsOf` damit Tastatur den Input nicht verdeckt.
+- **Listen:** auf Phone vertikale Cards, nicht Tabellen mit horizontalem Scroll.
+- **Browser-Tester** prüft jedes UI-Smoke-Szenario zuerst auf Phone-Viewport (390×844). Desktop nur via `--also-desktop`.
+
 ### Supabase
 
 - **Migrations:** `supabase/migrations/YYYYMMDDHHMMSS_<slug>.sql`. Erstellen via `supabase migration new <slug>`.
@@ -96,6 +109,56 @@ Triviale Tasks (Typo-Fix, einzelne Zeile) brauchen keinen Plan.
 - **In CI auf PRs:** `claude-code-action@v1` Code-Review (auch via Max-Plan-OAuth-Token). Macht Security-Check als Teil des Reviews.
 - **Nicht aktiviert:** `claude-code-security-review@main` Action — braucht zwingend einen bezahlten API-Key, deckt aber nichts ab, was der lokale `security-reviewer` nicht auch findet.
 
+## Auto-Merge (Pre-Launch-Modus)
+
+Da die App Pre-Launch ist und alles git-versioniert ist, darf Claude PRs
+direkt mergen, sobald die lokalen Quality-Gates grün sind:
+
+- `flutter analyze` ✓
+- `flutter test` ✓
+- `security-reviewer` ohne `verdict: block` ✓
+
+**Befehl im /ship-Slash:** `gh pr merge <num> --squash --delete-branch`
+(kein `--auto`, das bräuchte Branch-Protection auf privaten Repos = Pro).
+
+**Helper:** `bash .claude/scripts/auto-merge-pr.sh [<pr-num>]`
+- Ohne Argument: nimmt PR des aktuellen Branches.
+- Switched nach Erfolg auf `main` + `git pull`.
+
+**Wenn Merge fehlschlägt** (Konflikt mit main): KEIN automatisches Reset/
+Force, sondern Abort mit klarer Fehlermeldung. User entscheidet manuell.
+
+## Headless-Loop (Phase 4)
+
+Claude kann unbeaufsichtigt Backlog-Items abarbeiten, während du nicht
+am Laptop sitzt. Setup einmalig:
+
+1. `bash .claude/scripts/install-headless.sh` — installiert macOS
+   LaunchAgent (Default: alle 30 Min). Override-Intervall:
+   `HEADLESS_INTERVAL=600 bash .claude/scripts/install-headless.sh`.
+2. Optional `cp .env.headless.example .env.headless` und `NTFY_TOPIC`
+   setzen für Mobile-Push-Notifications via [ntfy.sh](https://ntfy.sh).
+3. Stoppen: `bash .claude/scripts/uninstall-headless.sh`.
+
+**Workflow:**
+- `/queue <text>` legt ein Backlog-Item an (`.claude/backlog/inbox/`).
+- LaunchAgent oder `/auto-run` triggert `headless-runner.sh`:
+  pickt nächstes Item → `claude --print --permission-mode auto
+  --max-budget-usd 5 --model sonnet` → verschiebt nach `done/` oder
+  `failed/` → schickt Notification.
+- Logs: `.claude/backlog/runs/<timestamp>-<slug>.log`.
+
+**Sicherheitsmechanismen:**
+- Lock-File verhindert parallele Runs.
+- Budget-Cap pro Run.
+- Hard-Block: niemals auf `main` direkt — Runner switcht zu Auto-Branch.
+- Bestehende Bash-Guards bleiben aktiv (`supabase db push`, force-push, …).
+
+**Auto-Merge:**
+- `/ship` aktiviert nach Push automatisch `gh pr merge --auto --squash --delete-branch`.
+- Vorausgesetzt Branch-Protection ist aktiv (einmalig via
+  `bash .claude/scripts/setup-branch-protection.sh` setzen).
+
 ## Browser-Smoke-Tests (Playwright MCP)
 
 Claude kann die Flutter-Web-App in Chrome starten, einloggen und durchklicken,
@@ -121,5 +184,7 @@ um Regressionen zu finden, die `flutter analyze` + `flutter test` nicht sehen.
 
 - Plan-Archiv: [`plans/`](plans/)
 - Architektur-Plan dieses Setups: [`plans/2026-05-07_automation_ecosystem.md`](plans/2026-05-07_automation_ecosystem.md)
+- Browser-Testing: [`plans/2026-05-07_browser_testing.md`](plans/2026-05-07_browser_testing.md)
+- Headless-Loop: [`plans/2026-05-07_headless_loop.md`](plans/2026-05-07_headless_loop.md)
 - Strategie-Doku: [`docs/STRATEGY.md`](docs/STRATEGY.md)
 - Supabase-Setup: [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md)
