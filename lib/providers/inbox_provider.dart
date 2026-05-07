@@ -56,6 +56,9 @@ class InboxProvider extends ChangeNotifier {
   SuggestionShipStatus? _statusFilter;
   DateTime _lastRefreshedAt = DateTime.now();
 
+  /// IDs aller parsed_messages, die der eingeloggte User bereits gesehen hat.
+  Set<String> _readMessageIds = {};
+
   bool _loading = false;
   Object? _lastError;
 
@@ -71,6 +74,47 @@ class InboxProvider extends ChangeNotifier {
   List<PendingDealSuggestion> get pendingSuggestions =>
       List.unmodifiable(_suggestions);
   List<ParsedMessage> get recentMessages => List.unmodifiable(_recent);
+
+  // ── Read-Status-Helpers ──────────────────────────────────────────────────
+
+  /// Gibt `true` zurück, wenn die parsed_message mit [parsedMessageId] noch
+  /// nicht vom eingeloggten User als gelesen markiert wurde.
+  bool isUnread(String parsedMessageId) =>
+      !_readMessageIds.contains(parsedMessageId);
+
+  /// Anzahl aller sichtbaren Einträge (Suggestions + matched + unclassified),
+  /// die noch nicht als gelesen markiert sind. Duplikate (gleiche
+  /// parsedMessageId in mehreren Tabs) werden dedupliziert.
+  int get unreadCount {
+    final allIds = <String>{};
+    for (final s in _suggestions) {
+      allIds.add(s.parsedMessageId);
+    }
+    for (final m in _recent) {
+      allIds.add(m.id);
+    }
+    return allIds.where(isUnread).length;
+  }
+
+  /// Anzahl ungelesener Einträge im Suggestions-Tab.
+  int get unreadSuggestionsCount =>
+      _suggestions.where((s) => isUnread(s.parsedMessageId)).length;
+
+  /// Anzahl ungelesener Einträge im Matched-Tab.
+  int get unreadMatchedCount => _recent
+      .where(
+        (m) =>
+            m.status == ParsedMessageStatus.matched && isUnread(m.id),
+      )
+      .length;
+
+  /// Anzahl ungelesener Einträge im Unclassified-Tab.
+  int get unreadUnclassifiedCount => _recent
+      .where(
+        (m) =>
+            m.status == ParsedMessageStatus.unclassified && isUnread(m.id),
+      )
+      .length;
 
   List<ParsedMessage> get matchedRecently => _recent
       .where((m) => m.status == ParsedMessageStatus.matched)
@@ -145,6 +189,12 @@ class InboxProvider extends ChangeNotifier {
     _lastError = null;
     notifyListeners();
     try {
+      // loadInboxReads benötigt die Workspace-ID. Falls kein Workspace aktiv
+      // ist, wirft _repository._wsId bereits — konsistent mit den anderen
+      // Repo-Calls. Workspace-ID über den Repository-Getter holen ist nicht
+      // möglich (privat), deshalb versuchen wir den Reads-Load und fangen
+      // StateError separat ab.
+      final ws = _repository.activeWorkspaceId;
       final results = await Future.wait([
         _repository.loadMailboxAccounts(),
         _repository.loadPendingSuggestions(daysBack: _visibilityDays),
@@ -157,6 +207,10 @@ class InboxProvider extends ChangeNotifier {
           daysBack: _visibilityDays,
         ),
         _repository.loadInboxDismissals(),
+        if (ws != null)
+          _repository.loadInboxReads(workspaceId: ws)
+        else
+          Future.value(<String>{}),
       ]);
       _accounts = results[0] as List<MailboxAccount>;
       _suggestionsRaw = results[1] as List<PendingDealSuggestion>;
@@ -164,6 +218,7 @@ class InboxProvider extends ChangeNotifier {
       final dismissals = results[3] as List<InboxDismissal>;
       _dismissalKeys = dismissals.map((d) => d.cacheKey).toSet();
       _dismissalCount = dismissals.length;
+      _readMessageIds = results[4] as Set<String>;
       _recomputeViews();
       _lastRefreshedAt = DateTime.now();
     } catch (e) {
@@ -232,6 +287,33 @@ class InboxProvider extends ChangeNotifier {
       }
       return true;
     }).toList(growable: false);
+  }
+
+  /// Markiert alle aktuell sichtbaren Inbox-Einträge als gelesen.
+  /// Ruft die RPC `mark_all_inbox_read` auf und aktualisiert lokal das
+  /// `_readMessageIds`-Set, ohne einen erneuten Refresh auszulösen
+  /// (verhindert UI-Flackern). Kein-Op wenn ein Ladevorgang läuft.
+  Future<void> markAllRead() async {
+    if (_loading) return;
+    final ws = _repository.activeWorkspaceId;
+    if (ws == null) return;
+    try {
+      await _repository.markAllInboxRead(workspaceId: ws);
+      // Lokal alle sichtbaren parsed_message_ids als gelesen markieren —
+      // genau das, was die RPC serverseitig ebenfalls tut.
+      final nowRead = <String>{};
+      for (final s in _suggestions) {
+        nowRead.add(s.parsedMessageId);
+      }
+      for (final m in _recent) {
+        nowRead.add(m.id);
+      }
+      _readMessageIds = {..._readMessageIds, ...nowRead};
+    } catch (e) {
+      _lastError = e;
+      if (kDebugMode) debugPrint('InboxProvider.markAllRead failed: $e');
+    }
+    notifyListeners();
   }
 
   /// Leert die Dismiss-Liste komplett — alle bisher verworfenen
@@ -567,6 +649,7 @@ class InboxProvider extends ChangeNotifier {
     _recent = [];
     _dismissalKeys = const {};
     _dismissalCount = 0;
+    _readMessageIds = {};
     _shopFilter = null;
     _statusFilter = null;
     _lastError = null;

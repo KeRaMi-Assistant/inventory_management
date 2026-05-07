@@ -676,6 +676,39 @@
   "statsStockValueShort": "Lagerwert",
   "statsAvgEk": "Ø EK",
 
+  "inboxMarkAllRead": "Alle als gelesen markieren",
+  "inboxMarkAllReadTooltip": "Alle als gelesen markieren ({count})",
+  "@inboxMarkAllReadTooltip": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxMarkAllReadConfirmTitle": "Alle als gelesen markieren?",
+  "inboxMarkAllReadConfirmBody": "{count} ungelesene Einträge werden als gelesen markiert. Vorschläge und Mails bleiben in der Inbox.",
+  "@inboxMarkAllReadConfirmBody": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxMarkAllReadSuccess": "{count} Einträge als gelesen markiert.",
+  "@inboxMarkAllReadSuccess": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxMarkAllReadFailure": "Markieren fehlgeschlagen: {error}",
+  "@inboxMarkAllReadFailure": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "inboxUnreadBadge": "{count} neu",
+  "@inboxUnreadBadge": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
   "invitesBellTooltip": "Einladungen",
   "invitesEmpty": "Keine offenen Einladungen.",
   "invitesHeader": "Workspace-Einladungen",

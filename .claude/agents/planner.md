@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Erstellt detaillierte Implementation-Pläne aus Feature-Requests für die Flutter+Supabase App. Nutzt Plan-Mode. Speichert in plans/.
-tools: Read, Glob, Grep, WebSearch
+tools: Read, Write, Glob, Grep, WebSearch
 model: opus
 ---
 

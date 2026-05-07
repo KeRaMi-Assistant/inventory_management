@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/deal.dart';
 import '../models/inbox_message.dart';
 import '../models/mailbox_account.dart';
@@ -62,17 +63,36 @@ class _InboxScreenState extends State<InboxScreen> {
                     unselectedLabelColor: const Color(0xFF64748B),
                     tabs: [
                       Tab(
-                        icon: const Icon(Icons.add_box_outlined, size: 18),
+                        icon: Badge.count(
+                          count: provider.unreadSuggestionsCount,
+                          isLabelVisible:
+                              provider.unreadSuggestionsCount > 0,
+                          child: const Icon(
+                              Icons.add_box_outlined,
+                              size: 18),
+                        ),
                         text:
                             'Vorschläge (${provider.pendingSuggestions.length})',
                       ),
                       Tab(
-                        icon: const Icon(Icons.sync, size: 18),
+                        icon: Badge.count(
+                          count: provider.unreadMatchedCount,
+                          isLabelVisible:
+                              provider.unreadMatchedCount > 0,
+                          child: const Icon(Icons.sync, size: 18),
+                        ),
                         text:
                             'Aktualisiert (${provider.matchedRecently.length})',
                       ),
                       Tab(
-                        icon: const Icon(Icons.help_outline, size: 18),
+                        icon: Badge.count(
+                          count: provider.unreadUnclassifiedCount,
+                          isLabelVisible:
+                              provider.unreadUnclassifiedCount > 0,
+                          child: const Icon(
+                              Icons.help_outline,
+                              size: 18),
+                        ),
                         text:
                             'Unklassifiziert (${provider.unclassified.length})',
                       ),
@@ -174,6 +194,17 @@ class _InboxHeader extends StatelessWidget {
             onPressed: provider.dismissalCount == 0 || provider.isLoading
                 ? null
                 : () => _confirmClearDismissals(context, provider),
+          ),
+          IconButton(
+            tooltip: AppLocalizations.of(context)
+                .inboxMarkAllReadTooltip(provider.unreadCount),
+            icon: const Icon(Icons.mark_email_read_outlined),
+            color: provider.unreadCount == 0
+                ? const Color(0xFF94A3B8)
+                : null,
+            onPressed: provider.unreadCount == 0 || provider.isLoading
+                ? null
+                : () => _confirmMarkAllRead(context, provider),
           ),
           IconButton(
             tooltip: 'Aktualisieren',
@@ -455,6 +486,47 @@ Future<void> _confirmClearDismissals(
   }
 }
 
+Future<void> _confirmMarkAllRead(
+  BuildContext context,
+  InboxProvider provider,
+) async {
+  final l10n = AppLocalizations.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+  final unreadCount = provider.unreadCount;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(l10n.inboxMarkAllReadConfirmTitle),
+      content: Text(l10n.inboxMarkAllReadConfirmBody(unreadCount)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(l10n.actionCancel),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(l10n.inboxMarkAllRead),
+        ),
+      ],
+    ),
+  );
+  if (ok != true) return;
+  try {
+    await provider.markAllRead();
+    final markedCount = unreadCount - provider.unreadCount;
+    messenger.showSnackBar(SnackBar(
+      content: Text(l10n.inboxMarkAllReadSuccess(
+          markedCount > 0 ? markedCount : unreadCount)),
+      behavior: SnackBarBehavior.floating,
+    ));
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(
+      content: Text(l10n.inboxMarkAllReadFailure(e.toString())),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────
 
 String? _imapHostFor(List<MailboxAccount> accounts, {String? accountId}) {
@@ -715,11 +787,12 @@ class _SuggestionCard extends StatelessWidget {
     final shopName = suggestion.shopLabel ?? suggestion.shopKey;
     final productTitle =
         (suggestion.product ?? '').trim().isEmpty ? null : suggestion.product;
-    final inbox = context.read<InboxProvider>();
+    final inbox = context.watch<InboxProvider>();
     final referenceNow = inbox.lastRefreshedAt;
     final visDays = inbox.visibilityDays;
     final daysLeft =
         visDays - referenceNow.difference(suggestion.receivedAt).inDays;
+    final unread = inbox.isUnread(suggestion.parsedMessageId);
 
     return Card(
       elevation: 0,
@@ -815,7 +888,7 @@ class _SuggestionCard extends StatelessWidget {
               productTitle ?? '— ohne Produktnamen —',
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w700,
+                fontWeight: unread ? FontWeight.w800 : FontWeight.w700,
                 color: productTitle != null
                     ? const Color(0xFF0F172A)
                     : const Color(0xFF94A3B8),
@@ -931,6 +1004,9 @@ class _MatchedTab extends StatelessWidget {
                 final tracking = payload['tracking'] as String?;
                 final shopLabel =
                     payload['shop_label'] as String? ?? msg.shopKey ?? '—';
+                final unread = context
+                    .watch<InboxProvider>()
+                    .isUnread(msg.id);
                 return Card(
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -952,7 +1028,10 @@ class _MatchedTab extends StatelessWidget {
                       product ?? msg.subject ?? 'Aktualisierter Deal',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        fontWeight:
+                            unread ? FontWeight.w800 : FontWeight.w600,
+                      ),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1209,6 +1288,8 @@ class _UnclassifiedRow extends StatelessWidget {
           imapHost: imapHost,
         ) !=
         null;
+    final unread =
+        context.watch<InboxProvider>().isUnread(message.id);
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -1228,7 +1309,9 @@ class _UnclassifiedRow extends StatelessWidget {
           message.subject ?? '— ohne Betreff —',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w700),
+          style: TextStyle(
+            fontWeight: unread ? FontWeight.w800 : FontWeight.w600,
+          ),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

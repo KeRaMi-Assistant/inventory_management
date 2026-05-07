@@ -676,6 +676,39 @@
   "statsStockValueShort": "Stock value",
   "statsAvgEk": "Avg. cost",
 
+  "inboxMarkAllRead": "Mark all as read",
+  "inboxMarkAllReadTooltip": "Mark all as read ({count})",
+  "@inboxMarkAllReadTooltip": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxMarkAllReadConfirmTitle": "Mark all as read?",
+  "inboxMarkAllReadConfirmBody": "{count} unread items will be marked as read. Suggestions and messages stay in the inbox.",
+  "@inboxMarkAllReadConfirmBody": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxMarkAllReadSuccess": "{count} items marked as read.",
+  "@inboxMarkAllReadSuccess": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxMarkAllReadFailure": "Mark as read failed: {error}",
+  "@inboxMarkAllReadFailure": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "inboxUnreadBadge": "{count} new",
+  "@inboxUnreadBadge": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
   "invitesBellTooltip": "Invites",
   "invitesEmpty": "No pending invites.",
   "invitesHeader": "Workspace invites",
