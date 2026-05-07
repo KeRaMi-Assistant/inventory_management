@@ -8,6 +8,19 @@
 # Claude Code working files
 .claude/last-task.txt
 .claude/cache/
+.claude/test-runs/
+
+# Local test secrets / env
+.env.test
+.env.local
+
+# Supabase local state
+supabase/.branches/
+supabase/.temp/
+
+# Playwright test artifacts
+playwright-report/
+test-results/
 .atom/
 .build/
 .buildlog/

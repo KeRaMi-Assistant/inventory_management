@@ -96,6 +96,27 @@ Triviale Tasks (Typo-Fix, einzelne Zeile) brauchen keinen Plan.
 - **In CI auf PRs:** `claude-code-action@v1` Code-Review (auch via Max-Plan-OAuth-Token). Macht Security-Check als Teil des Reviews.
 - **Nicht aktiviert:** `claude-code-security-review@main` Action — braucht zwingend einen bezahlten API-Key, deckt aber nichts ab, was der lokale `security-reviewer` nicht auch findet.
 
+## Browser-Smoke-Tests (Playwright MCP)
+
+Claude kann die Flutter-Web-App in Chrome starten, einloggen und durchklicken,
+um Regressionen zu finden, die `flutter analyze` + `flutter test` nicht sehen.
+
+**Setup (einmalig, manuell):**
+1. `cp .env.test.example .env.test` — `.env.test` ist gitignored.
+2. Test-Accounts in Supabase Dev: `test@test.com` / `passwort` und `test2@test.com` / `passwort` müssen existieren (sonst Login-Fehler).
+3. Playwright-MCP ist project-scoped registriert in `.mcp.json` — der erste `npx`-Run lädt Chromium (~1× pro Maschine).
+
+**Nutzung:**
+- `/test-ui smoke-login` → ruft `browser-tester`, läuft Login-Flow durch.
+- `/test-ui smoke-inbox` → Login + Inbox + "Alle als gelesen markieren".
+- `/test-ui <freitext>` → Klartext-Anweisung, der Agent übersetzt sie selbst.
+
+**Web-Server:** `bash .claude/scripts/dev-web.sh` startet `flutter build web` + `python -m http.server 8123`. `bash .claude/scripts/stop-web.sh` stoppt sauber.
+
+**Reports:** Markdown + Screenshots landen unter `.claude/test-runs/<timestamp>/` (gitignored).
+
+**Selector-Regel:** Browser-Tester nutzt Accessibility-Names / Roles / Tooltips, keine brittle CSS-Selektoren. Wenn ein Widget keinen erkennbaren Anker hat, schlägt der Tester eine `Key('...')`-Ergänzung in `lib/...` vor — Implementer fügt sie nachträglich ein.
+
 ## Referenzen
 
 - Plan-Archiv: [`plans/`](plans/)
