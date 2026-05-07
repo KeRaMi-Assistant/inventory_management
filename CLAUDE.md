@@ -109,6 +109,25 @@ Die App läuft primär auf iOS + Android. Tablet/Desktop sind sekundär.
 - **In CI auf PRs:** `claude-code-action@v1` Code-Review (auch via Max-Plan-OAuth-Token). Macht Security-Check als Teil des Reviews.
 - **Nicht aktiviert:** `claude-code-security-review@main` Action — braucht zwingend einen bezahlten API-Key, deckt aber nichts ab, was der lokale `security-reviewer` nicht auch findet.
 
+## Auto-Merge (Pre-Launch-Modus)
+
+Da die App Pre-Launch ist und alles git-versioniert ist, darf Claude PRs
+direkt mergen, sobald die lokalen Quality-Gates grün sind:
+
+- `flutter analyze` ✓
+- `flutter test` ✓
+- `security-reviewer` ohne `verdict: block` ✓
+
+**Befehl im /ship-Slash:** `gh pr merge <num> --squash --delete-branch`
+(kein `--auto`, das bräuchte Branch-Protection auf privaten Repos = Pro).
+
+**Helper:** `bash .claude/scripts/auto-merge-pr.sh [<pr-num>]`
+- Ohne Argument: nimmt PR des aktuellen Branches.
+- Switched nach Erfolg auf `main` + `git pull`.
+
+**Wenn Merge fehlschlägt** (Konflikt mit main): KEIN automatisches Reset/
+Force, sondern Abort mit klarer Fehlermeldung. User entscheidet manuell.
+
 ## Headless-Loop (Phase 4)
 
 Claude kann unbeaufsichtigt Backlog-Items abarbeiten, während du nicht
