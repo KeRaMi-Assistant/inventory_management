@@ -13,6 +13,7 @@ class Deal {
   final String? ticketUrl;
   final String? tracking;
   final DateTime? arrivalDate;
+  final DateTime? shippedAt;
   final String status;
   final String? lexware;
   final bool hasReceipt;
@@ -37,6 +38,7 @@ class Deal {
     this.ticketUrl,
     this.tracking,
     this.arrivalDate,
+    this.shippedAt,
     this.status = 'Bestellt',
     this.lexware,
     this.hasReceipt = false,
@@ -90,6 +92,7 @@ class Deal {
         'ticketUrl': ticketUrl,
         'tracking': tracking,
         'arrivalDate': arrivalDate?.toIso8601String(),
+        'shippedAt': shippedAt?.toIso8601String(),
         'status': status,
         'lexware': lexware,
         'hasReceipt': hasReceipt,
@@ -116,6 +119,9 @@ class Deal {
         tracking: json['tracking'] as String?,
         arrivalDate: json['arrivalDate'] != null
             ? DateTime.parse(json['arrivalDate'] as String)
+            : null,
+        shippedAt: json['shippedAt'] != null
+            ? DateTime.parse(json['shippedAt'] as String)
             : null,
         status: json['status'] as String? ?? 'Bestellt',
         lexware: json['lexware'] as String?,
@@ -149,6 +155,7 @@ class Deal {
         'ticket_url': ticketUrl,
         'tracking': tracking,
         'arrival_date': arrivalDate?.toIso8601String(),
+        'shipped_at': shippedAt?.toIso8601String(),
         'status': status,
         'lexware': lexware,
         'has_receipt': hasReceipt,
@@ -181,6 +188,9 @@ class Deal {
       tracking: row['tracking'] as String?,
       arrivalDate: row['arrival_date'] != null
           ? DateTime.parse(row['arrival_date'] as String)
+          : null,
+      shippedAt: row['shipped_at'] != null
+          ? DateTime.parse(row['shipped_at'] as String)
           : null,
       status: row['status'] as String? ?? 'Bestellt',
       lexware: row['lexware'] as String?,
@@ -223,6 +233,7 @@ class Deal {
     Object? ticketUrl = _sentinel,
     Object? tracking = _sentinel,
     Object? arrivalDate = _sentinel,
+    Object? shippedAt = _sentinel,
     String? status,
     Object? lexware = _sentinel,
     bool? hasReceipt,
@@ -253,6 +264,9 @@ class Deal {
         arrivalDate: arrivalDate == _sentinel
             ? this.arrivalDate
             : arrivalDate as DateTime?,
+        shippedAt: shippedAt == _sentinel
+            ? this.shippedAt
+            : shippedAt as DateTime?,
         status: status ?? this.status,
         lexware: lexware == _sentinel ? this.lexware : lexware as String?,
         hasReceipt: hasReceipt ?? this.hasReceipt,
