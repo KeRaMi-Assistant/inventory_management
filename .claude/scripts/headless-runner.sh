@@ -85,16 +85,31 @@ log "starting item: $SLUG (branch=$(git branch --show-current))"
 # Build prompt: read content (frontmatter optional) and prepend repo-context note.
 ITEM_CONTENT="$(cat "$NEXT_ITEM")"
 
-# Extract test_scenario from item frontmatter (optional).
-# Format: a YAML line `test_scenario: smoke-foo` between --- delimiters.
-TEST_SCENARIO="$(awk '
-  /^---[[:space:]]*$/ { fm++; next }
-  fm == 1 && /^test_scenario:/ {
-    sub(/^test_scenario:[[:space:]]*/, "")
-    gsub(/^["'\'']|["'\'']$/, "")
-    print; exit
-  }
-' "$NEXT_ITEM")"
+# Extract fields from item frontmatter (optional).
+# Format: YAML lines between --- delimiters.
+parse_frontmatter() {
+  awk -v key="$1" '
+    /^---[[:space:]]*$/ { fm++; next }
+    fm == 1 && $0 ~ "^"key":" {
+      sub("^"key":[[:space:]]*", "")
+      gsub(/^["'\'']|["'\'']$/, "")
+      print; exit
+    }
+  ' "$NEXT_ITEM"
+}
+
+TEST_SCENARIO="$(parse_frontmatter test_scenario)"
+ITEM_BUDGET="$(parse_frontmatter budget_usd)"
+
+# Item budget overrides ENV default. ENV var still wins as a hard cap.
+if [ -n "$ITEM_BUDGET" ] && [[ "$ITEM_BUDGET" =~ ^[0-9]+$ ]]; then
+  if [ -z "${HEADLESS_MAX_BUDGET_USD:-}" ]; then
+    MAX_BUDGET="$ITEM_BUDGET"
+    log "item frontmatter budget_usd=$ITEM_BUDGET applied"
+  else
+    log "ENV HEADLESS_MAX_BUDGET_USD=$MAX_BUDGET overrides item budget_usd=$ITEM_BUDGET"
+  fi
+fi
 
 read -r -d '' PROMPT <<EOF || true
 Du arbeitest als autonome Coding-Session im Repo \`inventory_management\`

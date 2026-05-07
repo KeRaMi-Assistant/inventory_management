@@ -2,7 +2,7 @@
 slug: dark-mode-toggle
 priority: 8
 plan: true
-budget_usd: 6
+budget_usd: 12
 test_scenario: smoke-theme-toggle
 ---
 
