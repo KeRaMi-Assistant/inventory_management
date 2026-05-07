@@ -23,11 +23,40 @@ import { detectAndParse, detectShop, type ParsedOrder } from '../_shared/inbox_a
 interface PendingMessage {
   id: string
   workspace_id: string
+  account_id: string
   from_address: string | null
   subject: string | null
   message_id: string | null
   received_at: string
   parsed_payload: { _raw?: { text?: string; html?: string } } | null
+}
+
+// Reihenfolge des Deal-Lifecycles. Wird genutzt um Status-Downgrades
+// bei Mail-Race-Conditions zu verhindern: Wenn der Deal lokal schon auf
+// "Angekommen" steht, soll eine später eintreffende Versand-Bestätigung
+// ihn nicht zurück auf "Unterwegs" werfen.
+const STATUS_RANK: Record<string, number> = {
+  'Bestellt': 1,
+  'Unterwegs': 2,
+  'Angekommen': 3,
+  'Rechnung gestellt': 4,
+  'Done': 5,
+}
+
+function mapShipStatusToDeal(s?: string): string | null {
+  switch (s) {
+    case 'shipped': return 'Unterwegs'
+    case 'delivered': return 'Angekommen'
+    case 'cancelled':
+    case 'refunded': return 'Done'
+    default: return null
+  }
+}
+
+interface DealRow {
+  status: string
+  tracking: string | null
+  arrival_date: string | null
 }
 
 const corsHeaders = {
@@ -55,7 +84,7 @@ Deno.serve(async (req) => {
 
   const { data: pending, error } = await admin
     .from('parsed_messages')
-    .select('id, workspace_id, from_address, subject, message_id, received_at, parsed_payload')
+    .select('id, workspace_id, account_id, from_address, subject, message_id, received_at, parsed_payload')
     .eq('status', 'pending')
     .order('received_at', { ascending: true })
     .limit(200)
@@ -114,12 +143,10 @@ async function processOne(
   }
 
   // Try to match an existing deal first.
-  const dealId = parsed.orderId
-    ? await findMatchingDeal(admin, row.workspace_id, parsed.orderId)
-    : null
+  const dealId = await findMatchingDeal(admin, row.workspace_id, parsed)
 
   if (dealId) {
-    await applyUpdateToDeal(admin, dealId, parsed)
+    await applyUpdateToDeal(admin, dealId, parsed, row)
     await admin
       .from('parsed_messages')
       .update({
@@ -169,35 +196,143 @@ async function processOne(
   return 'suggested'
 }
 
+/// Findet den passenden Deal für eine Mail. Match-Strategie:
+///   1. Order-ID == ticket_number — der Hauptfall (Bestellbestätigung
+///      schreibt ticket_number, alle Folge-Mails referenzieren sie).
+///   2. Tracking-Nr == deals.tracking — Fallback für Versand- oder
+///      Zustell-Updates, deren Body die Order-ID nicht (oder im falschen
+///      Format) wiederholt, aber die Tracking-Nr aus einer früheren
+///      gematchten Mail bereits am Deal hängt.
 async function findMatchingDeal(
   admin: ReturnType<typeof createClient>,
   workspaceId: string,
-  orderId: string,
+  parsed: ParsedOrder,
 ): Promise<number | null> {
-  const { data } = await admin
-    .from('deals')
-    .select('id')
-    .eq('workspace_id', workspaceId)
-    .eq('ticket_number', orderId)
-    .is('deleted_at', null)
-    .limit(1)
-  const row = (data ?? [])[0]
-  return row ? (row as { id: number }).id : null
+  if (parsed.orderId) {
+    const { data } = await admin
+      .from('deals')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('ticket_number', parsed.orderId)
+      .is('deleted_at', null)
+      .limit(1)
+    const row = (data ?? [])[0]
+    if (row) return (row as { id: number }).id
+  }
+  const candidates = parsed.trackings && parsed.trackings.length > 0
+    ? parsed.trackings
+    : parsed.tracking ? [parsed.tracking] : []
+  for (const tn of candidates) {
+    if (!tn) continue
+    const { data } = await admin
+      .from('deals')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('tracking', tn)
+      .is('deleted_at', null)
+      .limit(1)
+    const row = (data ?? [])[0]
+    if (row) return (row as { id: number }).id
+  }
+  return null
 }
 
+/// Wendet die Mail-Erkenntnisse forward-only auf den Deal an:
+///   - Status nur upgraden (Bestellt → Unterwegs → Angekommen → Done),
+///     kein Downgrade durch verspätete Mails.
+///   - Tracking nur setzen wenn aktuell leer; nie überschreiben (User
+///     könnte manuell eine andere Nummer gepflegt haben).
+///   - arrival_date aus Adapter-eta oder — bei "delivered" ohne eta —
+///     aus dem received_at der Mail. Ebenfalls nur wenn aktuell leer.
+///   - Bei jeder echten Änderung: Activity-Log-Eintrag, damit der User
+///     im Aktivitäten-Tab sieht, woher das Update kam.
 async function applyUpdateToDeal(
   admin: ReturnType<typeof createClient>,
   dealId: number,
   parsed: ParsedOrder,
+  row: PendingMessage,
 ): Promise<void> {
+  const { data: dealData, error: readErr } = await admin
+    .from('deals')
+    .select('status, tracking, arrival_date')
+    .eq('id', dealId)
+    .maybeSingle()
+  if (readErr || !dealData) {
+    console.warn('deal read for update failed', dealId, readErr)
+    return
+  }
+  const before = dealData as DealRow
   const update: Record<string, unknown> = {}
-  if (parsed.tracking) update.tracking = parsed.tracking
-  if (parsed.eta) update.arrival_date = parsed.eta
-  if (parsed.status === 'shipped') update.status = 'Unterwegs'
-  else if (parsed.status === 'delivered') update.status = 'Angekommen'
+  const changes: string[] = []
+
+  if (parsed.tracking && !before.tracking) {
+    update.tracking = parsed.tracking
+    changes.push(`Tracking ${parsed.tracking}`)
+  }
+
+  const targetStatus = mapShipStatusToDeal(parsed.status)
+  if (targetStatus
+      && (STATUS_RANK[targetStatus] ?? 0) > (STATUS_RANK[before.status] ?? 0)) {
+    update.status = targetStatus
+    changes.push(`Status ${before.status} → ${targetStatus}`)
+  }
+
+  let arrivalIso = parsed.eta
+  if (parsed.status === 'delivered' && !arrivalIso) {
+    arrivalIso = row.received_at ?? new Date().toISOString()
+  }
+  if (arrivalIso && !before.arrival_date) {
+    update.arrival_date = arrivalIso
+    changes.push(`Lieferdatum ${arrivalIso.slice(0, 10)}`)
+  }
+
   if (Object.keys(update).length === 0) return
+
   const { error } = await admin.from('deals').update(update).eq('id', dealId)
-  if (error) console.warn('deal update failed', dealId, error)
+  if (error) {
+    console.warn('deal update failed', dealId, error)
+    return
+  }
+
+  await writeInboxActivityLog(admin, row, dealId, changes)
+}
+
+/// activity_log braucht zwingend eine user_id. Die Edge Function selbst
+/// läuft als service_role; wir leiten den User aus dem zugehörigen
+/// mailbox_account ab (User, der die Mailbox eingerichtet hat — auch der
+/// Owner aus User-Sicht). Wenn das fehlschlägt, schlucken wir den Log-
+/// Fehler still: das Deal-Update ist wichtiger als der Audit-Eintrag.
+async function writeInboxActivityLog(
+  admin: ReturnType<typeof createClient>,
+  row: PendingMessage,
+  dealId: number,
+  changes: string[],
+): Promise<void> {
+  if (changes.length === 0) return
+  try {
+    const { data } = await admin
+      .from('mailbox_accounts')
+      .select('user_id')
+      .eq('id', row.account_id)
+      .maybeSingle()
+    const userId = (data as { user_id?: string } | null)?.user_id
+    if (!userId) return
+    const subject = (row.subject ?? '').trim().slice(0, 80)
+    const message = subject.length > 0
+      ? `Mail-Update Deal #${dealId}: ${changes.join(', ')} (Mail: ${subject})`
+      : `Mail-Update Deal #${dealId}: ${changes.join(', ')}`
+    // workspace_id ist seit 20260504000500_data_workspace_scope NOT NULL
+    // und RLS filtert reads über workspace_id — ohne wäre der Eintrag
+    // weder schreibbar noch im UI sichtbar.
+    await admin.from('activity_log').insert({
+      user_id: userId,
+      workspace_id: row.workspace_id,
+      type: 'inbox_match',
+      message,
+    })
+  } catch (e) {
+    console.warn('activity_log insert failed', dealId, e)
+  }
 }
 
 function stripBody(parsed: ParsedOrder): Record<string, unknown> {
