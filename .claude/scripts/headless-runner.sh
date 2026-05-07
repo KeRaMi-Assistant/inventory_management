@@ -85,6 +85,17 @@ log "starting item: $SLUG (branch=$(git branch --show-current))"
 # Build prompt: read content (frontmatter optional) and prepend repo-context note.
 ITEM_CONTENT="$(cat "$NEXT_ITEM")"
 
+# Extract test_scenario from item frontmatter (optional).
+# Format: a YAML line `test_scenario: smoke-foo` between --- delimiters.
+TEST_SCENARIO="$(awk '
+  /^---[[:space:]]*$/ { fm++; next }
+  fm == 1 && /^test_scenario:/ {
+    sub(/^test_scenario:[[:space:]]*/, "")
+    gsub(/^["'\'']|["'\'']$/, "")
+    print; exit
+  }
+' "$NEXT_ITEM")"
+
 read -r -d '' PROMPT <<EOF || true
 Du arbeitest als autonome Coding-Session im Repo \`inventory_management\`
 (Flutter + Supabase, Pre-Launch). Lies CLAUDE.md zuerst.
@@ -92,18 +103,29 @@ Du arbeitest als autonome Coding-Session im Repo \`inventory_management\`
 Aufgabe:
 $ITEM_CONTENT
 
-Workflow:
+Workflow (PFLICHT in dieser Reihenfolge):
 1. Wenn nötig, plane kurz (max 10 Zeilen).
 2. Implementiere in feature-branch (du bist bereits drin).
 3. \`flutter analyze\` + \`flutter test\` müssen am Ende grün sein.
-4. Wenn fertig: \`/ship\` (commit + push + PR + auto-merge).
-5. Bei Blocker: dokumentiere klar, wo's hängt — kein Endlos-Try.
+4. **Visueller Test (PFLICHT bei UI-/Theme-/Color-Änderungen):**
+   - Wenn das Item ein \`test_scenario\` im Frontmatter hat (hier:
+     "${TEST_SCENARIO:-NICHT GESETZT}"), rufe den \`browser-tester\`-
+     Subagenten mit diesem Szenario auf, BEVOR du /ship aufrufst.
+   - Wenn der Tester \`Result: failed\` zurückgibt: KEIN /ship.
+     Stattdessen: Diagnose ins Run-Log schreiben + exit 1 (Item landet
+     in failed/, nicht done/).
+   - Wenn kein test_scenario im Frontmatter: nur ausführen wenn das
+     Item UI-relevant ist (Files in lib/screens/ oder lib/widgets/
+     geändert). Dann \`smoke-login\` als Fallback nutzen.
+5. Erst nach grünem Visual-Test: \`/ship\` (commit + push + PR + auto-merge).
+6. Bei Blocker: dokumentiere klar, wo's hängt — kein Endlos-Try.
 
 Hard-Constraints:
 - Niemals \`supabase db push\` gegen Prod.
 - Niemals direkt auf main committen.
 - Keine Secrets in Diff.
 - Bleib im Token-Budget.
+- KEIN /ship wenn Visual-Test failed.
 EOF
 
 # Run claude --print non-interactively. Capture exit code and full log.
