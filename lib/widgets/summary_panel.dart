@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/status_l10n.dart';
@@ -59,14 +60,15 @@ class SummaryPanel extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.bar_chart_rounded, size: 16, color: Color(0xFF64748B)),
+                    Icon(Icons.bar_chart_rounded,
+                        size: 16, color: AppTheme.textMutedOf(context)),
                     const SizedBox(width: 6),
                     Text(
                       l10n.summaryHeading,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
-                        color: Color(0xFF1E293B),
+                        color: AppTheme.textPrimaryOf(context),
                       ),
                     ),
                   ],
@@ -75,7 +77,10 @@ class SummaryPanel extends StatelessWidget {
                 _SectionLabel(l10n.summaryByBuyer),
                 const SizedBox(height: 6),
                 if (buyerStats.isEmpty)
-                  const Text('–', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)))
+                  Text('–',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textMutedOf(context)))
                 else
                   ...buyerStats.entries.map((e) => _BuyerRow(
                         name: e.key,
@@ -108,15 +113,15 @@ class _SectionLabel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: AppTheme.bgSubtleOf(context),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF64748B),
+          color: AppTheme.textMutedOf(context),
           letterSpacing: 0.5,
         ),
       ),
@@ -144,7 +149,8 @@ class _BuyerRow extends StatelessWidget {
           Expanded(
             child: Text(
               name,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF334155)),
+              style: TextStyle(
+                  fontSize: 12, color: AppTheme.textSecondaryOf(context)),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -153,10 +159,10 @@ class _BuyerRow extends StatelessWidget {
             child: Text(
               '${stat.count}',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF475569),
+                color: AppTheme.textSecondaryOf(context),
               ),
             ),
           ),
@@ -166,9 +172,9 @@ class _BuyerRow extends StatelessWidget {
               fmt.format(stat.profit),
               textAlign: TextAlign.right,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: Color(0xFF059669),
+                color: AppTheme.successTextOf(context),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -187,6 +193,9 @@ class _StatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final bgAlpha = dark ? 50 : 26;
+    final borderAlpha = dark ? 130 : 90;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
@@ -198,9 +207,9 @@ class _StatusRow extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                   decoration: BoxDecoration(
-                    color: stat.color.withAlpha(26),
+                    color: stat.color.withAlpha(bgAlpha),
                     borderRadius: BorderRadius.circular(5),
-                    border: Border.all(color: stat.color.withAlpha(90)),
+                    border: Border.all(color: stat.color.withAlpha(borderAlpha)),
                   ),
                   child: Text(
                     name,
@@ -219,10 +228,10 @@ class _StatusRow extends StatelessWidget {
                 child: Text(
                   '${stat.count}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF475569),
+                    color: AppTheme.textSecondaryOf(context),
                   ),
                 ),
               ),
@@ -232,9 +241,9 @@ class _StatusRow extends StatelessWidget {
                   fmt.format(stat.profit),
                   textAlign: TextAlign.right,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF059669),
+                    color: AppTheme.successTextOf(context),
                     fontWeight: FontWeight.w600,
                   ),
                 ),

@@ -384,20 +384,21 @@ class _ActivityListenerState extends State<_ActivityListener> {
               right: 0,
               child: SafeArea(
                 child: Material(
-                  color: const Color(0xFFFEF3C7),
+                  color: AppTheme.warningBgOf(context),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 10),
                     child: Row(
                       children: [
-                        const Icon(Icons.timer_outlined,
-                            size: 18, color: Color(0xFF92400E)),
+                        Icon(Icons.timer_outlined,
+                            size: 18,
+                            color: AppTheme.warningTextOf(context)),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             AppLocalizations.of(context).sessionExpiringSoon,
-                            style: const TextStyle(
-                                color: Color(0xFF78350F),
+                            style: TextStyle(
+                                color: AppTheme.warningTextOf(context),
                                 fontWeight: FontWeight.w600),
                           ),
                         ),

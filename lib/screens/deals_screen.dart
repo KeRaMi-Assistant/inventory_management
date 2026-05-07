@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
 import '../widgets/buyer_legend.dart';
 import '../widgets/deal_table.dart';
 import '../widgets/summary_panel.dart';
@@ -16,9 +17,11 @@ class DealsScreen extends StatelessWidget {
         if (MediaQuery.of(context).size.width >= 1100)
           Container(
             width: 292,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF1F5F9),
-              border: Border(left: BorderSide(color: Color(0xFFE2E8F0))),
+            decoration: BoxDecoration(
+              color: AppTheme.bgSubtleOf(context),
+              border: Border(
+                left: BorderSide(color: AppTheme.borderOf(context)),
+              ),
             ),
             child: const SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(14, 14, 14, 100),

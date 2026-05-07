@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
@@ -148,11 +149,12 @@ class _DealTableState extends State<DealTable> {
                   )
                 else ...[
                   Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF1F5F9),
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgSubtleOf(context),
                       border: Border(
                         bottom: BorderSide(
-                            color: Color(0xFFDDE3ED), width: 1.5),
+                            color: AppTheme.borderStrongOf(context),
+                            width: 1.5),
                       ),
                     ),
                     child: SingleChildScrollView(
@@ -242,7 +244,7 @@ class _FilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Material(
-      color: Colors.white,
+      color: AppTheme.bgSurfaceOf(context),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Wrap(
@@ -409,7 +411,7 @@ class _BulkActionBar extends StatelessWidget {
     final ids = filters.selectedDealIds.toList();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      color: const Color(0xFFEFF6FF),
+      color: AppTheme.accentLightOf(context),
       child: Wrap(
         spacing: 8,
         runSpacing: 6,
@@ -417,9 +419,9 @@ class _BulkActionBar extends StatelessWidget {
         children: [
           Text(
             l10n.commonSelected(ids.length),
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: Color(0xFF1D4ED8),
+              color: AppTheme.accentTextOf(context),
             ),
           ),
           PopupMenuButton<String>(
@@ -518,7 +520,9 @@ class _HeaderCell extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: active ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                    color: active
+                        ? AppTheme.accentTextOf(context)
+                        : AppTheme.textMutedOf(context),
                     letterSpacing: 0.6,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -530,7 +534,9 @@ class _HeaderCell extends StatelessWidget {
                       ? (filters.sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
                       : Icons.unfold_more,
                   size: 13,
-                  color: active ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
+                  color: active
+                      ? AppTheme.accentTextOf(context)
+                      : AppTheme.textDisabledOf(context),
                 ),
             ],
           ),
@@ -577,9 +583,25 @@ class _DealRowState extends State<_DealRow> {
     final needsAttention =
         widget.deal.status == 'Unterwegs' && widget.deal.arrivalDate == null;
     final base = buyer?.rowFillColor;
-    if (_hovered) return const Color(0xFFEFF3FC);
-    if (needsAttention) return const Color(0xFFFFFBEB);
-    if (base != null && base.a > 0) return base;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    if (_hovered) {
+      return dark ? AppTheme.accentLightDark : const Color(0xFFEFF3FC);
+    }
+    if (needsAttention) {
+      return AppTheme.warningBgOf(context);
+    }
+    if (base != null && base.a > 0) {
+      // In dark mode, Buyer-row-fills are stored as light pastels — blend
+      // heavily with the dark surface so they read as a tint, not a leak.
+      return dark
+          ? Color.lerp(base, AppTheme.bgSurfaceDark, 0.85)!
+          : base;
+    }
+    if (dark) {
+      return widget.isEven
+          ? AppTheme.bgSurfaceDark
+          : const Color(0xFF273449);
+    }
     return widget.isEven ? Colors.white : const Color(0xFFFAFBFD);
   }
 
@@ -611,8 +633,13 @@ class _DealRowState extends State<_DealRow> {
         duration: const Duration(milliseconds: 100),
         height: 46,
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFDDEBFF) : _rowColor,
-          border: const Border(bottom: BorderSide(color: Color(0xFFECF0F6))),
+          color: selected
+              ? (Theme.of(context).brightness == Brightness.dark
+                  ? AppTheme.accentLightDark
+                  : const Color(0xFFDDEBFF))
+              : _rowColor,
+          border: Border(
+              bottom: BorderSide(color: AppTheme.borderOf(context))),
         ),
         child: Row(
           children: [
@@ -634,8 +661,8 @@ class _DealRowState extends State<_DealRow> {
                     deal.isDropship
                         ? AppLocalizations.of(context).dealDropship
                         : AppLocalizations.of(context).dealReship,
-                    const Color(0xFFF1F5F9),
-                    const Color(0xFF64748B)),
+                    AppTheme.bgSubtleOf(context),
+                    AppTheme.textMutedOf(context)),
                 widget.cols[4]),
             _c(shop?.url != null ? _LinkCell(text: deal.shop, url: shop!.url!) : Text(deal.shop, style: _normal(), overflow: TextOverflow.ellipsis), widget.cols[5]),
             _c(Text(widget.dateFmt.format(deal.orderDate), style: _normal()), widget.cols[6]),
@@ -694,7 +721,7 @@ class _DealRowState extends State<_DealRow> {
                 children: [
                   _ActionBtn(
                     icon: Icons.edit_outlined,
-                    color: const Color(0xFF2563EB),
+                    color: AppTheme.accent,
                     tooltip: 'Bearbeiten',
                     onTap: () => showDialog(
                       context: context,
@@ -704,7 +731,7 @@ class _DealRowState extends State<_DealRow> {
                   ),
                   _ActionBtn(
                     icon: Icons.delete_outline,
-                    color: const Color(0xFFDC2626),
+                    color: AppTheme.danger,
                     tooltip: 'Löschen',
                     onTap: () => _confirmDelete(context, provider, deal),
                   ),
@@ -772,16 +799,21 @@ class _DealRowState extends State<_DealRow> {
         ),
       );
 
-  TextStyle _normal() => const TextStyle(fontSize: 12, color: Color(0xFF475569));
-  TextStyle _muted() => const TextStyle(fontSize: 12, color: Color(0xFF94A3B8));
-  TextStyle _strong() => const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A));
+  TextStyle _normal() => TextStyle(
+      fontSize: 12, color: AppTheme.textSecondaryOf(context));
+  TextStyle _muted() => TextStyle(
+      fontSize: 12, color: AppTheme.textMutedOf(context));
+  TextStyle _strong() => TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: AppTheme.textPrimaryOf(context));
 
   Widget _mono(String text) => Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
-          color: Color(0xFF334155),
-          fontFeatures: [FontFeature.tabularFigures()],
+          color: AppTheme.textSecondaryOf(context),
+          fontFeatures: const [FontFeature.tabularFigures()],
         ),
       );
 
@@ -790,7 +822,7 @@ class _DealRowState extends State<_DealRow> {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: AppTheme.borderOf(context)),
         ),
         child: Text(label, style: TextStyle(fontSize: 11, color: fg, fontWeight: FontWeight.w600)),
       );
@@ -812,16 +844,23 @@ class _DealRowState extends State<_DealRow> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: ok ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+        color: ok
+            ? AppTheme.successBgOf(context)
+            : AppTheme.bgSubtleOf(context),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: ok ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0)),
+        border: Border.all(
+            color: ok
+                ? AppTheme.successBorderOf(context)
+                : AppTheme.borderOf(context)),
       ),
       child: Text(
         ok ? l10n.dealReceiptYes : l10n.dealReceiptNo,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: ok ? const Color(0xFF15803D) : const Color(0xFF94A3B8),
+          color: ok
+              ? AppTheme.successTextOf(context)
+              : AppTheme.textMutedOf(context),
         ),
       ),
     );
@@ -833,27 +872,44 @@ class _DealRowState extends State<_DealRow> {
           fontSize: 12,
           fontWeight: FontWeight.w700,
           color: value == null
-              ? const Color(0xFF94A3B8)
-              : (value >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626)),
+              ? AppTheme.textMutedOf(context)
+              : (value >= 0
+                  ? AppTheme.successTextOf(context)
+                  : AppTheme.dangerTextOf(context)),
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
       );
 
-  TextStyle _money() => const TextStyle(
+  TextStyle _money() => TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: Color(0xFFD97706),
-        fontFeatures: [FontFeature.tabularFigures()],
+        color: AppTheme.warningTextOf(context),
+        fontFeatures: const [FontFeature.tabularFigures()],
       );
 
-  ({Color bg, Color border, Color text}) _statusStyle(String s) => switch (s) {
-        'Bestellt' => (bg: const Color(0xFFEFF6FF), border: const Color(0xFFBFDBFE), text: const Color(0xFF1D4ED8)),
-        'Unterwegs' => (bg: const Color(0xFFFFFBEB), border: const Color(0xFFFDE68A), text: const Color(0xFFB45309)),
-        'Angekommen' => (bg: const Color(0xFFF0FDFA), border: const Color(0xFF99F6E4), text: const Color(0xFF0F766E)),
-        'Rechnung gestellt' => (bg: const Color(0xFFF5F3FF), border: const Color(0xFFDDD6FE), text: const Color(0xFF6D28D9)),
-        'Done' => (bg: const Color(0xFFF0FDF4), border: const Color(0xFFBBF7D0), text: const Color(0xFF15803D)),
-        _ => (bg: const Color(0xFFF8FAFC), border: const Color(0xFFE2E8F0), text: const Color(0xFF64748B)),
-      };
+  ({Color bg, Color border, Color text}) _statusStyle(String s) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return switch (s) {
+      'Bestellt' => dark
+          ? (bg: const Color(0xFF1E3A5F), border: const Color(0xFF1E40AF), text: const Color(0xFF93C5FD))
+          : (bg: const Color(0xFFEFF6FF), border: const Color(0xFFBFDBFE), text: const Color(0xFF1D4ED8)),
+      'Unterwegs' => dark
+          ? (bg: const Color(0xFF422006), border: const Color(0xFF78350F), text: const Color(0xFFFBBF24))
+          : (bg: const Color(0xFFFFFBEB), border: const Color(0xFFFDE68A), text: const Color(0xFFB45309)),
+      'Angekommen' => dark
+          ? (bg: const Color(0xFF042F2E), border: const Color(0xFF115E59), text: const Color(0xFF5EEAD4))
+          : (bg: const Color(0xFFF0FDFA), border: const Color(0xFF99F6E4), text: const Color(0xFF0F766E)),
+      'Rechnung gestellt' => dark
+          ? (bg: const Color(0xFF2E1065), border: const Color(0xFF5B21B6), text: const Color(0xFFC4B5FD))
+          : (bg: const Color(0xFFF5F3FF), border: const Color(0xFFDDD6FE), text: const Color(0xFF6D28D9)),
+      'Done' => dark
+          ? (bg: const Color(0xFF064E3B), border: const Color(0xFF065F46), text: const Color(0xFF6EE7B7))
+          : (bg: const Color(0xFFF0FDF4), border: const Color(0xFFBBF7D0), text: const Color(0xFF15803D)),
+      _ => dark
+          ? (bg: AppTheme.bgSubtleDark, border: AppTheme.borderDark, text: AppTheme.textMutedDark)
+          : (bg: const Color(0xFFF8FAFC), border: const Color(0xFFE2E8F0), text: const Color(0xFF64748B)),
+    };
+  }
 
   Future<void> _editArrivalDate(BuildContext context,
       InventoryProvider provider, Deal deal) async {
@@ -976,7 +1032,9 @@ class _ActionBtnState extends State<_ActionBtn> {
             child: Icon(
               widget.icon,
               size: 16,
-              color: _hovered ? widget.color : const Color(0xFFCBD5E1),
+              color: _hovered
+                  ? widget.color
+                  : AppTheme.textDisabledOf(context),
             ),
           ),
         ),
@@ -999,7 +1057,7 @@ class _LinkCell extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
           minimumSize: Size.zero,
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          foregroundColor: const Color(0xFF2563EB),
+          foregroundColor: AppTheme.accentTextOf(context),
         ),
         icon: const Icon(Icons.open_in_new, size: 12),
         label: Text(
@@ -1023,13 +1081,13 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.inbox_outlined,
-              size: 48, color: Color(0xFF94A3B8)),
+          Icon(Icons.inbox_outlined,
+              size: 48, color: AppTheme.textMutedOf(context)),
           const SizedBox(height: 16),
           Text(
             l10n.dealsEmpty,
-            style: const TextStyle(
-              color: Color(0xFF475569),
+            style: TextStyle(
+              color: AppTheme.textSecondaryOf(context),
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
@@ -1037,7 +1095,8 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             l10n.dealsEmptyHint,
-            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+            style: TextStyle(
+                color: AppTheme.textMutedOf(context), fontSize: 13),
           ),
         ],
       ),

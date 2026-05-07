@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/inventory_provider.dart';
 import 'add_edit_buyer_dialog.dart';
@@ -21,15 +22,16 @@ class BuyerLegend extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.people_outline, size: 16, color: Color(0xFF64748B)),
+                    Icon(Icons.people_outline,
+                        size: 16, color: AppTheme.textMutedOf(context)),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         l10n.buyerLegendTitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
-                          color: Color(0xFF1E293B),
+                          color: AppTheme.textPrimaryOf(context),
                         ),
                       ),
                     ),
@@ -40,23 +42,27 @@ class BuyerLegend extends StatelessWidget {
                       ),
                       borderRadius: BorderRadius.circular(6),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
+                          color: AppTheme.accentLightOf(context),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                          border:
+                              Border.all(color: AppTheme.accentBorderOf(context)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.add, size: 13, color: Color(0xFF2563EB)),
+                            Icon(Icons.add,
+                                size: 13,
+                                color: AppTheme.accentTextOf(context)),
                             const SizedBox(width: 3),
                             Text(
                               l10n.actionAdd,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF2563EB),
+                                color: AppTheme.accentTextOf(context),
                               ),
                             ),
                           ],
@@ -70,15 +76,17 @@ class BuyerLegend extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Text(
                       l10n.buyersEmpty,
-                      style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                      style: TextStyle(
+                          color: AppTheme.textMutedOf(context), fontSize: 12),
                     ),
                   )
                 else ...[
                   const SizedBox(height: 10),
-                  const Divider(height: 1),
+                  Divider(height: 1, color: AppTheme.borderOf(context)),
                   const SizedBox(height: 8),
                   ...buyers.map((b) {
-                    final count = provider.deals.where((d) => d.buyer == b.name).length;
+                    final count =
+                        provider.deals.where((d) => d.buyer == b.name).length;
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
@@ -95,18 +103,24 @@ class BuyerLegend extends StatelessWidget {
                           Expanded(
                             child: Text(
                               b.name,
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF334155)),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondaryOf(context)),
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
+                              color: AppTheme.bgSubtleOf(context),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
                               '$count',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textSecondaryOf(context)),
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -116,9 +130,11 @@ class BuyerLegend extends StatelessWidget {
                               builder: (_) => AddEditBuyerDialog(buyer: b),
                             ),
                             borderRadius: BorderRadius.circular(4),
-                            child: const Padding(
-                              padding: EdgeInsets.all(2),
-                              child: Icon(Icons.edit_outlined, size: 13, color: Color(0xFF94A3B8)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: Icon(Icons.edit_outlined,
+                                  size: 13,
+                                  color: AppTheme.textMutedOf(context)),
                             ),
                           ),
                         ],

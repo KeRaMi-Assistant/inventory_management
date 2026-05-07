@@ -51,10 +51,14 @@ class DealCard extends StatelessWidget {
     final profit = deal.totalProfit;
     final profitColor = profit == null
         ? AppTheme.textMutedOf(context)
-        : (profit >= 0 ? AppTheme.success : AppTheme.danger);
+        : (profit >= 0
+            ? AppTheme.successTextOf(context)
+            : AppTheme.dangerTextOf(context));
 
     return Material(
-      color: selected ? AppTheme.accentLight : AppTheme.bgSurfaceOf(context),
+      color: selected
+          ? AppTheme.accentLightOf(context)
+          : AppTheme.bgSurfaceOf(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
         side: BorderSide(
@@ -126,9 +130,9 @@ class DealCard extends StatelessWidget {
                                           context, shop!.url!),
                                       child: Text(
                                         deal.shop,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 11,
-                                          color: AppTheme.accent,
+                                          color: AppTheme.accentTextOf(context),
                                           fontWeight: FontWeight.w600,
                                         ),
                                         overflow: TextOverflow.ellipsis,
@@ -271,15 +275,15 @@ class DealCard extends StatelessWidget {
                       barrierDismissible: false,
                       builder: (_) => AddEditDealDialog(deal: deal),
                     ),
-                    icon: const Icon(Icons.edit_outlined,
-                        size: 18, color: AppTheme.accent),
+                    icon: Icon(Icons.edit_outlined,
+                        size: 18, color: AppTheme.accentTextOf(context)),
                   ),
                   IconButton(
                     tooltip: l10n.actionDelete,
                     visualDensity: VisualDensity.compact,
                     onPressed: () => _confirmDelete(context),
-                    icon: const Icon(Icons.delete_outline,
-                        size: 18, color: AppTheme.danger),
+                    icon: Icon(Icons.delete_outline,
+                        size: 18, color: AppTheme.dangerTextOf(context)),
                   ),
                 ],
               ),
@@ -340,39 +344,37 @@ class DealCard extends StatelessWidget {
     );
   }
 
-  ({Color bg, Color border, Color text}) _statusStyle(String s, BuildContext context) =>
-      switch (s) {
-        'Bestellt' => (
-            bg: AppTheme.accentLight,
-            border: const Color(0xFFBFDBFE),
-            text: AppTheme.accentDark
-          ),
-        'Unterwegs' => (
-            bg: AppTheme.warningBg,
-            border: const Color(0xFFFDE68A),
-            text: AppTheme.warning
-          ),
-        'Angekommen' => (
-            bg: const Color(0xFFF0FDFA),
-            border: const Color(0xFF99F6E4),
-            text: const Color(0xFF0F766E)
-          ),
-        'Rechnung gestellt' => (
-            bg: const Color(0xFFF5F3FF),
-            border: const Color(0xFFDDD6FE),
-            text: const Color(0xFF6D28D9)
-          ),
-        'Done' => (
-            bg: AppTheme.successBg,
-            border: const Color(0xFFBBF7D0),
-            text: AppTheme.success
-          ),
-        _ => (
-            bg: AppTheme.bgSubtleOf(context),
-            border: AppTheme.borderOf(context),
-            text: AppTheme.textMutedOf(context)
-          ),
-      };
+  ({Color bg, Color border, Color text}) _statusStyle(String s, BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return switch (s) {
+      'Bestellt' => (
+          bg: AppTheme.accentLightOf(context),
+          border: AppTheme.accentBorderOf(context),
+          text: dark ? const Color(0xFF93C5FD) : AppTheme.accentDark
+        ),
+      'Unterwegs' => (
+          bg: AppTheme.warningBgOf(context),
+          border: AppTheme.warningBorderOf(context),
+          text: AppTheme.warningTextOf(context)
+        ),
+      'Angekommen' => dark
+          ? (bg: const Color(0xFF042F2E), border: const Color(0xFF115E59), text: const Color(0xFF5EEAD4))
+          : (bg: const Color(0xFFF0FDFA), border: const Color(0xFF99F6E4), text: const Color(0xFF0F766E)),
+      'Rechnung gestellt' => dark
+          ? (bg: const Color(0xFF2E1065), border: const Color(0xFF5B21B6), text: const Color(0xFFC4B5FD))
+          : (bg: const Color(0xFFF5F3FF), border: const Color(0xFFDDD6FE), text: const Color(0xFF6D28D9)),
+      'Done' => (
+          bg: AppTheme.successBgOf(context),
+          border: AppTheme.successBorderOf(context),
+          text: AppTheme.successTextOf(context)
+        ),
+      _ => (
+          bg: AppTheme.bgSubtleOf(context),
+          border: AppTheme.borderOf(context),
+          text: AppTheme.textMutedOf(context)
+        ),
+    };
+  }
 }
 
 // ─── small parts ─────────────────────────────────────────────────────────────

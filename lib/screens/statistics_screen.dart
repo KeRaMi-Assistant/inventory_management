@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/inventory_batch.dart';
 import '../providers/app_preferences_provider.dart';
@@ -141,21 +142,22 @@ class _StatisticsScreenState extends State<StatisticsScreen>
             );
 
             return Container(
-              color: const Color(0xFFF8FAFC),
+              color: AppTheme.bgAppOf(context),
               child: Column(
                 children: [
                   StatisticsFilterBar(onExport: () => _onExport(stats)),
                   Material(
-                    color: Colors.white,
+                    color: AppTheme.bgSurfaceOf(context),
                     elevation: 0,
                     child: TabBar(
                       controller: _tab,
                       isScrollable: true,
                       tabAlignment: TabAlignment.start,
-                      indicatorColor: const Color(0xFF2563EB),
+                      indicatorColor: AppTheme.accentTextOf(context),
                       indicatorWeight: 2,
-                      labelColor: const Color(0xFF2563EB),
-                      unselectedLabelColor: const Color(0xFF6B7280),
+                      labelColor: AppTheme.accentTextOf(context),
+                      unselectedLabelColor: AppTheme.textMutedOf(context),
+                      dividerColor: AppTheme.borderOf(context),
                       labelStyle: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w700),
                       unselectedLabelStyle: const TextStyle(

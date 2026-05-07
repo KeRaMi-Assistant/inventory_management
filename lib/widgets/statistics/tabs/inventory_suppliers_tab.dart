@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app_theme.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/statistics_filter_provider.dart';
 import '../../../services/statistics_service.dart';
@@ -216,7 +217,7 @@ class _HealthCardState extends State<_HealthCard>
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.bgSurfaceOf(context),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: widget.color.withAlpha(40)),
         ),
@@ -230,10 +231,10 @@ class _HealthCardState extends State<_HealthCard>
                 Expanded(
                   child: Text(
                     widget.label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF6B7280),
+                      color: AppTheme.textMutedOf(context),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -253,8 +254,8 @@ class _HealthCardState extends State<_HealthCard>
               const SizedBox(height: 4),
               Text(
                 widget.hint!,
-                style: const TextStyle(
-                    fontSize: 10, color: Color(0xFF9CA3AF)),
+                style: TextStyle(
+                    fontSize: 10, color: AppTheme.textDisabledOf(context)),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),

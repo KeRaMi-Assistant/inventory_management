@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/inventory_provider.dart';
 
@@ -50,8 +51,11 @@ class HelpScreen extends StatelessWidget {
       ],
     );
 
-    if (embedded) return body;
+    if (embedded) {
+      return Container(color: AppTheme.bgAppOf(context), child: body);
+    }
     return Scaffold(
+      backgroundColor: AppTheme.bgAppOf(context),
       appBar: AppBar(title: Text(l10n.helpTitle)),
       body: body,
     );
@@ -66,6 +70,7 @@ class _DiscordSection extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final buyers = context.watch<InventoryProvider>().buyers;
+    final dark = theme.brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -75,7 +80,7 @@ class _DiscordSection extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: const Color(0xFF5865F2).withAlpha(12),
+            color: const Color(0xFF5865F2).withAlpha(dark ? 35 : 12),
             borderRadius: BorderRadius.circular(16),
             border:
                 Border.all(color: const Color(0xFF5865F2).withAlpha(60)),
@@ -99,13 +104,14 @@ class _DiscordSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(l10n.helpDiscordHowTitle,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold)),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimaryOf(context))),
                     const SizedBox(height: 6),
                     Text(
                       l10n.helpDiscordHowDesc,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.colorScheme.onSurface),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondaryOf(context)),
                     ),
                   ],
                 ),
@@ -133,8 +139,9 @@ class _DiscordSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(l10n.helpDiscordConfiguredIds,
-            style: theme.textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.w700)),
+            style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimaryOf(context))),
         const SizedBox(height: 8),
         if (buyers.isEmpty)
           _InfoCard(
@@ -150,7 +157,7 @@ class _DiscordSection extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 8),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
-                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                side: BorderSide(color: AppTheme.borderOf(context)),
               ),
               child: ListTile(
                 leading: Container(
@@ -169,7 +176,9 @@ class _DiscordSection extends StatelessWidget {
                   ),
                 ),
                 title: Text(b.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimaryOf(context))),
                 subtitle: Text(
                   ids.isEmpty
                       ? l10n.helpDiscordNoServerIds
@@ -177,13 +186,13 @@ class _DiscordSection extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     color: ids.isEmpty
-                        ? theme.colorScheme.outline
+                        ? AppTheme.textMutedOf(context)
                         : const Color(0xFF5865F2),
                   ),
                 ),
                 trailing: Icon(Icons.discord,
                     color: ids.isEmpty
-                        ? const Color(0xFFCBD5E1)
+                        ? AppTheme.textDisabledOf(context)
                         : const Color(0xFF5865F2)),
               ),
             );
@@ -201,10 +210,10 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF6B7280),
+        color: AppTheme.textMutedOf(context),
         letterSpacing: 0.7,
       ),
     );
@@ -227,9 +236,9 @@ class _HelpStep extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppTheme.borderOf(context)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,13 +247,13 @@ class _HelpStep extends StatelessWidget {
             width: 26,
             height: 26,
             decoration: BoxDecoration(
-              color: const Color(0xFF2563EB).withAlpha(20),
+              color: AppTheme.accentLightOf(context),
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(number,
-                  style: const TextStyle(
-                      color: Color(0xFF2563EB),
+                  style: TextStyle(
+                      color: AppTheme.accentTextOf(context),
                       fontWeight: FontWeight.bold,
                       fontSize: 12)),
             ),
@@ -255,12 +264,13 @@ class _HelpStep extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600)),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimaryOf(context))),
                 const SizedBox(height: 2),
                 Text(desc,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: theme.colorScheme.outline)),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textSecondaryOf(context))),
               ],
             ),
           ),
@@ -286,25 +296,27 @@ class _InfoCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        side: BorderSide(color: AppTheme.borderOf(context)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFF2563EB)),
+            Icon(icon, color: AppTheme.accentTextOf(context)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                      style:
-                          const TextStyle(fontWeight: FontWeight.w700)),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimaryOf(context))),
                   const SizedBox(height: 2),
                   Text(subtitle,
-                      style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF64748B))),
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondaryOf(context))),
                 ],
               ),
             ),
