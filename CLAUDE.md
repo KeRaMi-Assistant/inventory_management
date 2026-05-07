@@ -47,6 +47,19 @@ Triviale Tasks (Typo-Fix, einzelne Zeile) brauchen keinen Plan.
 - **Imports:** Relativ innerhalb `lib/`, absolut für Pakete. Kein Wildcard-Export.
 - **Null-Safety:** Strikt, keine `!`-Bangs ohne klaren Grund.
 
+### Mobile-First (PFLICHT für jede UI-Änderung)
+
+Die App läuft primär auf iOS + Android. Tablet/Desktop sind sekundär.
+
+- **Test-Viewports im Kopf:** 360×640 (kleinster Phone), 390×844 (iPhone-Default), 768×1024 (Tablet), 1440×900 (Desktop). Alle vier müssen funktionieren — Phone darf NICHT abschneiden oder horizontal scrollen.
+- **Touch-Targets:** mind. 48×48 dp.
+- **Keine Hover-Only-Logik.** Tooltips OK, aber Funktionen müssen per Tap erreichbar sein.
+- **Bottom-Nav** für Top-Level-Routen auf Phone (`MediaQuery.sizeOf(context).width < 600`), Sidebar/Drawer nur auf Desktop.
+- **Responsive Switches:** `LayoutBuilder` / `MediaQuery.sizeOf` — niemals `Platform.is*`.
+- **`SafeArea`** um Content (Notch, Home-Indicator); bei TextFields `MediaQuery.viewInsetsOf` damit Tastatur den Input nicht verdeckt.
+- **Listen:** auf Phone vertikale Cards, nicht Tabellen mit horizontalem Scroll.
+- **Browser-Tester** prüft jedes UI-Smoke-Szenario zuerst auf Phone-Viewport (390×844). Desktop nur via `--also-desktop`.
+
 ### Supabase
 
 - **Migrations:** `supabase/migrations/YYYYMMDDHHMMSS_<slug>.sql`. Erstellen via `supabase migration new <slug>`.
