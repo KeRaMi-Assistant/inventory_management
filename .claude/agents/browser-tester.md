@@ -37,6 +37,19 @@ Du testest die Flutter-Web-App `inventory_management` im echten Chrome
 8. Screenshots speichern unter `.claude/test-runs/<timestamp>/<step>.png`.
 9. Bei Fehler: Screenshot + console-Dump + ARIA-Snapshot persistieren,
    dann **nicht** retryen, sondern Report mit `failed`-Status liefern.
+10. **Mobile-Layout-Audit:** horizontaler Scroll? Touch-Targets <44dp?
+    Bottom-Nav vorhanden statt Sidebar? Befunde → Sektion "Mobile-Issues".
+11. **Visual-Consistency-Audit (Pflicht bei Theme-/Color-Änderungen):**
+    - Via `browser_evaluate` die `backgroundColor` aller sichtbaren
+      Elemente sammeln (`document.querySelectorAll('*')`, gefiltert auf
+      visible).
+    - Wenn das Test-Item Dark-Mode aktiviert hat: mind. 70% der Surfaces
+      müssen dunkel sein (RGB-Summe < 400). Sonst → Bug: Widgets lesen
+      statische Light-Tokens, nicht `Theme.of(context)`. **Result: failed**.
+    - Bei Light-Mode spiegelbildlich (mind. 70% hell, RGB-Summe > 600).
+    - Text-Kontrast: Light-Text auf Light-Background = automatisch
+      WCAG-Verletzung — Bug.
+    - Befunde → Sektion "Visual-Issues" im Report.
 
 ## Selector-Regeln
 
@@ -64,6 +77,32 @@ Du testest die Flutter-Web-App `inventory_management` im echten Chrome
 5. Confirm im Dialog
 6. Warte auf SnackBar
 7. Snapshot — Badge soll 0 / weg sein
+
+### `smoke-theme-toggle`
+**Pflicht-Szenario nach jeder Theme-/Color-/Style-Änderung.** Findet den
+klassischen "Tokens hinzugefügt aber Widgets lesen statisch"-Bug.
+
+1. Login (smoke-login Schritte 1-3).
+2. Settings öffnen → Theme-Card.
+3. Screenshot `01-light-dashboard.png`, `02-light-settings.png`,
+   `03-light-inventory.png`, `04-light-tickets.png` (alle Top-Level-Routen).
+4. Klick "Dunkel"-Toggle.
+5. **Wait** auf Re-Render (mind. 500ms).
+6. Gleiche 4 Screens, Prefix `dark-`: `05-dark-dashboard.png` …
+7. **Visual-Audit (kritisch):**
+   - Per `browser_evaluate`: für jedes sichtbare Element
+     `getComputedStyle().backgroundColor` einsammeln, Histogramm bilden.
+   - Wenn nach Toggle auf Dunkel **Light-Farben (RGB > 200,200,200)
+     bei mehr als 30% der Elemente** vorkommen → **Result: failed**,
+     Begründung: "Dark-Mode Toggle aktiv, aber {N}% der Surfaces sind
+     hell → Widgets lesen statische AppTheme-Konstanten statt
+     Theme.of(context). Bug."
+   - Auch prüfen: Text-Kontrast (WCAG AA mind. 4.5:1) — bei
+     Light-Text-auf-Light-Background ist das automatisch verletzt.
+8. Toggle zurück auf "System" oder "Hell" für Test-Account-Cleanup.
+
+**Wenn dieses Szenario `failed` zurückgibt: Caller darf NICHT mergen.**
+Der Bug ist reproduzierbar und sichtbar.
 
 ### `smoke-<custom>`
 Caller gibt freie Anweisung als Klartext. Du übersetzt sie in obige

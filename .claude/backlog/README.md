@@ -15,19 +15,22 @@ du am Laptop sitzt.
 ```markdown
 ---
 slug: short-kebab-case-name
-priority: 2          # 1 = höchste, läuft zuerst (per filename-prefix)
-plan: false          # true = erst /plan, dann implementieren
-budget_usd: 5        # optional, Default 5
+priority: 2                        # 1 = höchste, läuft zuerst
+plan: false                        # true = erst /plan, dann implementieren
+budget_usd: 5                      # optional, Default 5
+test_scenario: smoke-theme-toggle  # optional — Browser-Test der vor /ship
+                                   # laufen MUSS. Bei UI-Tasks immer setzen.
 ---
 
 Klare Anweisung an Claude. Was soll gebaut werden? Welche Files sind
 betroffen? Welche Tests sollen am Ende grün sein?
-
-Beispiel:
-"Füge in `lib/screens/settings_screen.dart` einen Toggle für Dark-Mode hinzu.
-Persistiere via SharedPreferences. l10n-Keys ergänzen.
-Test: `flutter test test/settings_test.dart` muss grün sein."
 ```
+
+**`test_scenario`-Hinweis:** Wenn gesetzt, ruft der headless-runner nach
+Implementation den `browser-tester`-Subagenten mit diesem Szenario auf.
+Bei `Result: failed` wird /ship NICHT ausgeführt — Item landet in `failed/`.
+Standard-Szenarien siehe `.claude/agents/browser-tester.md` (z.B.
+`smoke-login`, `smoke-inbox`, `smoke-theme-toggle`).
 
 ## Filename-Konvention
 
