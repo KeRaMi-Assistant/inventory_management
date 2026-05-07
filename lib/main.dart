@@ -128,6 +128,8 @@ class InventoryApp extends StatelessWidget {
         builder: (ctx, prefs, _) => MaterialApp(
           onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
           theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: prefs.themeMode,
           navigatorKey: _rootNavigator,
           locale: prefs.locale,
           supportedLocales: AppPreferencesProvider.supportedLocales,

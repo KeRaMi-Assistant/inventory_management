@@ -35,7 +35,7 @@ class DealCard extends StatelessWidget {
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final dateFmt = DateFormat.yMd(localeTag);
     final money = NumberFormat.currency(locale: localeTag, symbol: '€');
-    final status = _statusStyle(deal.status);
+    final status = _statusStyle(deal.status, context);
     final selected = filters.selectedDealIds.contains(deal.id);
 
     Buyer? buyer;
@@ -50,15 +50,15 @@ class DealCard extends StatelessWidget {
 
     final profit = deal.totalProfit;
     final profitColor = profit == null
-        ? AppTheme.textMuted
+        ? AppTheme.textMutedOf(context)
         : (profit >= 0 ? AppTheme.success : AppTheme.danger);
 
     return Material(
-      color: selected ? AppTheme.accentLight : AppTheme.bgSurface,
+      color: selected ? AppTheme.accentLight : AppTheme.bgSurfaceOf(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
         side: BorderSide(
-          color: selected ? AppTheme.accent : AppTheme.border,
+          color: selected ? AppTheme.accent : AppTheme.borderOf(context),
           width: selected ? 1.4 : 1,
         ),
       ),
@@ -95,10 +95,10 @@ class DealCard extends StatelessWidget {
                       children: [
                         Text(
                           deal.product,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: AppTheme.textPrimary,
+                            color: AppTheme.textPrimaryOf(context),
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -108,15 +108,15 @@ class DealCard extends StatelessWidget {
                           children: [
                             Text(
                               '#${deal.id} · ${deal.quantity} Stk.',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
-                                color: AppTheme.textMuted,
+                                color: AppTheme.textMutedOf(context),
                               ),
                             ),
                             const SizedBox(width: 6),
-                            const Text(
+                            Text(
                               '·',
-                              style: TextStyle(color: AppTheme.textDisabled),
+                              style: TextStyle(color: AppTheme.textDisabledOf(context)),
                             ),
                             const SizedBox(width: 6),
                             Flexible(
@@ -136,9 +136,9 @@ class DealCard extends StatelessWidget {
                                     )
                                   : Text(
                                       deal.shop,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 11,
-                                        color: AppTheme.textMuted,
+                                        color: AppTheme.textMutedOf(context),
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -164,14 +164,14 @@ class DealCard extends StatelessWidget {
                       value: deal.ekBrutto != null
                           ? money.format(deal.ekBrutto)
                           : '-',
-                      color: AppTheme.textSecondary,
+                      color: AppTheme.textSecondaryOf(context),
                     ),
                   ),
                   Expanded(
                     child: _NumberCell(
                       label: 'VK',
                       value: deal.vk != null ? money.format(deal.vk) : '-',
-                      color: AppTheme.textPrimary,
+                      color: AppTheme.textPrimaryOf(context),
                     ),
                   ),
                   Expanded(
@@ -192,7 +192,7 @@ class DealCard extends StatelessWidget {
                 runSpacing: 6,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  if (deal.buyer != null) _buyerBadge(deal.buyer!, buyer),
+                  if (deal.buyer != null) _buyerBadge(deal.buyer!, buyer, context),
                   _MetaChip(
                     icon: Icons.event_outlined,
                     label: dateFmt.format(deal.orderDate),
@@ -246,13 +246,13 @@ class DealCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.bgSubtle,
+                    color: AppTheme.bgSubtleOf(context),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     deal.note!,
-                    style: const TextStyle(
-                        fontSize: 11, color: AppTheme.textSecondary),
+                    style: TextStyle(
+                        fontSize: 11, color: AppTheme.textSecondaryOf(context)),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -290,11 +290,11 @@ class DealCard extends StatelessWidget {
     );
   }
 
-  Widget _buyerBadge(String name, Buyer? buyer) {
+  Widget _buyerBadge(String name, Buyer? buyer, BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: buyer?.buyerCellColor ?? AppTheme.textMuted,
+        color: buyer?.buyerCellColor ?? AppTheme.textMutedOf(context),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -340,7 +340,7 @@ class DealCard extends StatelessWidget {
     );
   }
 
-  ({Color bg, Color border, Color text}) _statusStyle(String s) =>
+  ({Color bg, Color border, Color text}) _statusStyle(String s, BuildContext context) =>
       switch (s) {
         'Bestellt' => (
             bg: AppTheme.accentLight,
@@ -368,9 +368,9 @@ class DealCard extends StatelessWidget {
             text: AppTheme.success
           ),
         _ => (
-            bg: AppTheme.bgSubtle,
-            border: AppTheme.border,
-            text: AppTheme.textMuted
+            bg: AppTheme.bgSubtleOf(context),
+            border: AppTheme.borderOf(context),
+            text: AppTheme.textMutedOf(context)
           ),
       };
 }
@@ -422,9 +422,9 @@ class _NumberCell extends StatelessWidget {
       children: [
         Text(
           label.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 9,
-            color: AppTheme.textMuted,
+            color: AppTheme.textMutedOf(context),
             fontWeight: FontWeight.w700,
             letterSpacing: 0.6,
           ),
@@ -458,7 +458,7 @@ class _MetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? AppTheme.textMuted;
+    final c = color ?? AppTheme.textMutedOf(context);
     final widget = Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(

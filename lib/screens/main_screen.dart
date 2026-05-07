@@ -486,9 +486,9 @@ class _ContentHeader extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Container(
       height: 56,
-      decoration: const BoxDecoration(
-        color: AppTheme.bgSurface,
-        border: Border(bottom: BorderSide(color: AppTheme.border)),
+      decoration: BoxDecoration(
+        color: AppTheme.bgSurfaceOf(context),
+        border: Border(bottom: BorderSide(color: AppTheme.borderOf(context))),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -498,7 +498,7 @@ class _ContentHeader extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: AppTheme.textPrimary,
+              color: AppTheme.textPrimaryOf(context),
             ),
           ),
           const Spacer(),
@@ -506,15 +506,15 @@ class _ContentHeader extends StatelessWidget {
           const SizedBox(width: 8),
           IconButton(
             tooltip: l10n.headerImportCsv,
-            icon: const Icon(Icons.upload_file_outlined,
-                size: 18, color: AppTheme.textMuted),
+            icon: Icon(Icons.upload_file_outlined,
+                size: 18, color: AppTheme.textMutedOf(context)),
             onPressed: onImport,
           ),
           const SizedBox(width: 4),
           IconButton(
             tooltip: l10n.headerExportCsv,
-            icon: const Icon(Icons.download_outlined,
-                size: 18, color: AppTheme.textMuted),
+            icon: Icon(Icons.download_outlined,
+                size: 18, color: AppTheme.textMutedOf(context)),
             onPressed: onExport,
           ),
           const SizedBox(width: 8),
@@ -545,35 +545,35 @@ class _SearchHint extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           decoration: BoxDecoration(
-            color: AppTheme.bgSubtle,
+            color: AppTheme.bgSubtleOf(context),
             borderRadius: BorderRadius.circular(7),
-            border: Border.all(color: AppTheme.border),
+            border: Border.all(color: AppTheme.borderOf(context)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.search, size: 14, color: AppTheme.textMuted),
+              Icon(Icons.search, size: 14, color: AppTheme.textMutedOf(context)),
               const SizedBox(width: 6),
               Text(
                 l10n.actionSearch,
                 style:
-                    const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                    TextStyle(fontSize: 12, color: AppTheme.textMutedOf(context)),
               ),
               const SizedBox(width: 10),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
-                  color: AppTheme.bgSurface,
-                  border: Border.all(color: AppTheme.border),
+                  color: AppTheme.bgSurfaceOf(context),
+                  border: Border.all(color: AppTheme.borderOf(context)),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   isMac ? '⌘K' : 'Ctrl+K',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.textSecondary,
+                    color: AppTheme.textSecondaryOf(context),
                     fontFamily: 'monospace',
                   ),
                 ),
@@ -623,13 +623,13 @@ class _AccountMenu extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(l10n.accountMenuSignedInAs,
-                  style: const TextStyle(
-                      fontSize: 11, color: AppTheme.textMuted)),
+                  style: TextStyle(
+                      fontSize: 11, color: AppTheme.textMutedOf(context))),
               const SizedBox(height: 2),
               Text(email,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary)),
+                      color: AppTheme.textPrimaryOf(context))),
             ],
           ),
         ),
@@ -655,8 +655,8 @@ class _AccountMenu extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'Aktuell: ${plan.label}',
-                      style: const TextStyle(
-                          fontSize: 11, color: AppTheme.textMuted),
+                      style: TextStyle(
+                          fontSize: 11, color: AppTheme.textMutedOf(context)),
                     ),
                   ],
                 ),
@@ -690,8 +690,8 @@ class _AccountMenu extends StatelessWidget {
             enabled: false,
             child: Text(
               l10n.accountMenuActiveWorkspace,
-              style: const TextStyle(
-                  fontSize: 11, color: AppTheme.textMuted),
+              style: TextStyle(
+                  fontSize: 11, color: AppTheme.textMutedOf(context)),
             ),
           ),
           for (final ws in workspaces.workspaces)
@@ -706,7 +706,7 @@ class _AccountMenu extends StatelessWidget {
                     size: 16,
                     color: workspaces.active?.id == ws.id
                         ? AppTheme.accent
-                        : AppTheme.textMuted,
+                        : AppTheme.textMutedOf(context),
                   ),
                   const SizedBox(width: 10),
                   Expanded(

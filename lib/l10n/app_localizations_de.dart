@@ -1888,4 +1888,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String invitesRoleLabel(Object role) {
     return 'Rolle: $role';
   }
+
+  @override
+  String get settingsThemeSection => 'Erscheinungsbild';
+
+  @override
+  String get settingsThemeLight => 'Hell';
+
+  @override
+  String get settingsThemeDark => 'Dunkel';
+
+  @override
+  String get settingsThemeSystem => 'System';
 }

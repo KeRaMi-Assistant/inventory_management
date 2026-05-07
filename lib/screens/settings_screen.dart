@@ -580,6 +580,44 @@ class _GeneralTab extends StatelessWidget {
                   provider.deals.length + provider.inventoryItems.length)),
             ),
             const SizedBox(height: 24),
+            _SectionHeader(title: l10n.settingsThemeSection),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final prefs = context.watch<AppPreferencesProvider>();
+                  return SegmentedButton<ThemeMode>(
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    expandedInsets: constraints.maxWidth < 600
+                        ? EdgeInsets.zero
+                        : null,
+                    segments: [
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        label: Text(l10n.settingsThemeLight),
+                        icon: const Icon(Icons.light_mode_outlined, size: 16),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        label: Text(l10n.settingsThemeDark),
+                        icon: const Icon(Icons.dark_mode_outlined, size: 16),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.system,
+                        label: Text(l10n.settingsThemeSystem),
+                        icon: const Icon(Icons.brightness_auto_outlined, size: 16),
+                      ),
+                    ],
+                    selected: {prefs.themeMode},
+                    onSelectionChanged: (s) =>
+                        context.read<AppPreferencesProvider>().setThemeMode(s.first),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
             _SectionHeader(title: l10n.settingsLanguageSection),
             const SizedBox(height: 8),
             const _LanguageCard(),

@@ -722,5 +722,10 @@
   "invitesExpiresOn": "Expires {date}",
   "@invitesExpiresOn": { "placeholders": { "date": {} } },
   "invitesRoleLabel": "Role: {role}",
-  "@invitesRoleLabel": { "placeholders": { "role": {} } }
+  "@invitesRoleLabel": { "placeholders": { "role": {} } },
+
+  "settingsThemeSection": "Appearance",
+  "settingsThemeLight": "Light",
+  "settingsThemeDark": "Dark",
+  "settingsThemeSystem": "System"
 }

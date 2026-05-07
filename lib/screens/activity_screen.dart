@@ -139,7 +139,7 @@ class _Header extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
+                    color: AppTheme.textPrimaryOf(context),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -147,9 +147,9 @@ class _Header extends StatelessWidget {
                   showFiltered
                       ? l10n.activityCountFiltered(filtered, total)
                       : l10n.activityCountTotal(total),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.textMuted,
+                    color: AppTheme.textMutedOf(context),
                   ),
                 ),
               ],
@@ -224,7 +224,7 @@ class _FilterBar extends StatelessWidget {
                     icon: const Icon(Icons.close, size: 14),
                     label: Text(l10n.activityFilterReset),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.textMuted,
+                      foregroundColor: AppTheme.textMutedOf(context),
                       textStyle: const TextStyle(fontSize: 12),
                     ),
                   ),
@@ -261,24 +261,24 @@ class _TypeChip extends StatelessWidget {
         duration: const Duration(milliseconds: 120),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? color.withAlpha(28) : AppTheme.bgSubtle,
+          color: selected ? color.withAlpha(28) : AppTheme.bgSubtleOf(context),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? color : AppTheme.border,
+            color: selected ? color : AppTheme.borderOf(context),
             width: selected ? 1.2 : 1,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: selected ? color : AppTheme.textMuted),
+            Icon(icon, size: 14, color: selected ? color : AppTheme.textMutedOf(context)),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: selected ? color : AppTheme.textSecondary,
+                color: selected ? color : AppTheme.textSecondaryOf(context),
               ),
             ),
           ],
@@ -319,10 +319,10 @@ class _ActivityList extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
               child: Text(
                 group.label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.textMuted,
+                  color: AppTheme.textMutedOf(context),
                   letterSpacing: 0.6,
                 ),
               ),
@@ -384,9 +384,9 @@ class _ActivityTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppTheme.bgSurface,
+        color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.border),
+        border: Border.all(color: AppTheme.borderOf(context)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,9 +406,9 @@ class _ActivityTile extends StatelessWidget {
               children: [
                 Text(
                   entry.message,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: AppTheme.textPrimary,
+                    color: AppTheme.textPrimaryOf(context),
                     height: 1.3,
                   ),
                 ),
@@ -428,17 +428,17 @@ class _ActivityTile extends StatelessWidget {
                     Container(
                       width: 3,
                       height: 3,
-                      decoration: const BoxDecoration(
-                        color: AppTheme.textDisabled,
+                      decoration: BoxDecoration(
+                        color: AppTheme.textDisabledOf(context),
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       time,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: AppTheme.textMuted,
+                        color: AppTheme.textMutedOf(context),
                       ),
                     ),
                   ],
@@ -470,16 +470,16 @@ class _Empty extends StatelessWidget {
                 ? Icons.filter_alt_off_rounded
                 : Icons.history_toggle_off_rounded,
             size: 48,
-            color: AppTheme.textDisabled,
+            color: AppTheme.textDisabledOf(context),
           ),
           const SizedBox(height: 12),
           Text(
             hasActivities
                 ? l10n.activityNoMatches
                 : l10n.activityNoActivitiesYet,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: AppTheme.textSecondary,
+              color: AppTheme.textSecondaryOf(context),
             ),
           ),
           const SizedBox(height: 4),
@@ -487,7 +487,7 @@ class _Empty extends StatelessWidget {
             hasActivities
                 ? l10n.activityAdjustFilters
                 : l10n.activityAutoAppears,
-            style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+            style: TextStyle(fontSize: 12, color: AppTheme.textMutedOf(context)),
           ),
         ],
       ),

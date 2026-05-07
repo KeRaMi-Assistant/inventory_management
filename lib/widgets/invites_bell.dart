@@ -31,8 +31,8 @@ class InvitesBell extends StatelessWidget {
       icon: Stack(
         clipBehavior: Clip.none,
         children: [
-          const Icon(Icons.notifications_none_rounded,
-              size: 18, color: AppTheme.textMuted),
+          Icon(Icons.notifications_none_rounded,
+              size: 18, color: AppTheme.textMutedOf(context)),
           if (count > 0)
             Positioned(
               right: -3,
@@ -99,10 +99,10 @@ class _InvitesDialog extends StatelessWidget {
                   Expanded(
                     child: Text(
                       l10n.invitesHeader,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
-                          color: AppTheme.textPrimary),
+                          color: AppTheme.textPrimaryOf(context)),
                     ),
                   ),
                   IconButton(
@@ -122,15 +122,15 @@ class _InvitesDialog extends StatelessWidget {
                 ],
               ),
             ),
-            const Divider(height: 1, color: AppTheme.border),
+            Divider(height: 1, color: AppTheme.borderOf(context)),
             if (invites.invites.isEmpty)
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
                   l10n.invitesEmpty,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 13, color: AppTheme.textMuted),
+                  style: TextStyle(
+                      fontSize: 13, color: AppTheme.textMutedOf(context)),
                 ),
               )
             else
@@ -140,7 +140,7 @@ class _InvitesDialog extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   itemCount: invites.invites.length,
                   separatorBuilder: (_, _) =>
-                      const Divider(height: 1, color: AppTheme.border),
+                      Divider(height: 1, color: AppTheme.borderOf(context)),
                   itemBuilder: (_, i) =>
                       _InviteRow(invite: invites.invites[i], dateFmt: dateFmt),
                 ),
@@ -247,30 +247,30 @@ class _InviteRowState extends State<_InviteRow> {
                   children: [
                     Text(
                       l10n.invitesFrom,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary),
+                          color: AppTheme.textPrimaryOf(context)),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       wsIdShort,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 11,
-                          color: AppTheme.textMuted,
+                          color: AppTheme.textMutedOf(context),
                           fontFamily: 'monospace'),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       l10n.invitesRoleLabel(_roleLabel(l10n, inv.role)),
-                      style: const TextStyle(
-                          fontSize: 11, color: AppTheme.textMuted),
+                      style: TextStyle(
+                          fontSize: 11, color: AppTheme.textMutedOf(context)),
                     ),
                     Text(
                       l10n.invitesExpiresOn(
                           widget.dateFmt.format(inv.expiresAt.toLocal())),
-                      style: const TextStyle(
-                          fontSize: 11, color: AppTheme.textMuted),
+                      style: TextStyle(
+                          fontSize: 11, color: AppTheme.textMutedOf(context)),
                     ),
                   ],
                 ),
@@ -284,7 +284,7 @@ class _InviteRowState extends State<_InviteRow> {
               TextButton(
                 onPressed: _busy ? null : _decline,
                 style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.textMuted,
+                    foregroundColor: AppTheme.textMutedOf(context),
                     visualDensity: VisualDensity.compact),
                 child: Text(l10n.invitesDecline),
               ),

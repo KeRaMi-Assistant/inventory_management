@@ -87,7 +87,7 @@ class _ChipBody extends StatelessWidget {
       context: context,
       position: pos,
       items: [
-        const PopupMenuItem<_PickAction>(
+        PopupMenuItem<_PickAction>(
           enabled: false,
           height: 32,
           child: Text(
@@ -95,7 +95,7 @@ class _ChipBody extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: AppTheme.textMuted,
+              color: AppTheme.textMutedOf(context),
             ),
           ),
         ),
@@ -110,8 +110,8 @@ class _ChipBody extends StatelessWidget {
                 Text(c.label, style: const TextStyle(fontSize: 13)),
                 if (c == detected) ...[
                   const SizedBox(width: 6),
-                  const Icon(Icons.check,
-                      size: 14, color: AppTheme.textMuted),
+                  Icon(Icons.check,
+                      size: 14, color: AppTheme.textMutedOf(context)),
                 ],
               ],
             ),
@@ -130,11 +130,11 @@ class _ChipBody extends StatelessWidget {
               const Text('Amazon', style: TextStyle(fontSize: 13)),
               if (detected == Carrier.amazon) ...[
                 const SizedBox(width: 6),
-                const Icon(Icons.check, size: 14, color: AppTheme.textMuted),
+                Icon(Icons.check, size: 14, color: AppTheme.textMutedOf(context)),
               ],
               const Spacer(),
-              const Icon(Icons.chevron_right,
-                  size: 16, color: AppTheme.textMuted),
+              Icon(Icons.chevron_right,
+                  size: 16, color: AppTheme.textMutedOf(context)),
             ],
           ),
         ),
@@ -161,7 +161,7 @@ class _ChipBody extends StatelessWidget {
       context: context,
       position: pos,
       items: [
-        const PopupMenuItem<String>(
+        PopupMenuItem<String>(
           enabled: false,
           height: 32,
           child: Text(
@@ -169,7 +169,7 @@ class _ChipBody extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: AppTheme.textMuted,
+              color: AppTheme.textMutedOf(context),
             ),
           ),
         ),

@@ -19,9 +19,9 @@ class KpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.bgSurface,
+        color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.border),
+        border: Border.all(color: AppTheme.borderOf(context)),
         // 4px linker Akzentbalken (Variante B – Left-Accent-Border)
       ),
       clipBehavior: Clip.hardEdge,
@@ -44,10 +44,10 @@ class KpiCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: AppTheme.textMuted,
+                              color: AppTheme.textMutedOf(context),
                               letterSpacing: 0.2,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -62,10 +62,10 @@ class KpiCard extends StatelessWidget {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         value,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary,
+                          color: AppTheme.textPrimaryOf(context),
                           letterSpacing: -0.5,
                         ),
                       ),
