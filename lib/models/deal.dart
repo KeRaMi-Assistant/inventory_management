@@ -13,6 +13,7 @@ class Deal {
   final String? ticketUrl;
   final String? tracking;
   final DateTime? arrivalDate;
+  final DateTime? shippedAt;
   final String status;
   final String? lexware;
   final bool hasReceipt;
@@ -37,6 +38,7 @@ class Deal {
     this.ticketUrl,
     this.tracking,
     this.arrivalDate,
+    this.shippedAt,
     this.status = 'Bestellt',
     this.lexware,
     this.hasReceipt = false,
@@ -90,6 +92,7 @@ class Deal {
         'ticketUrl': ticketUrl,
         'tracking': tracking,
         'arrivalDate': arrivalDate?.toIso8601String(),
+        'shippedAt': shippedAt?.toIso8601String(),
         'status': status,
         'lexware': lexware,
         'hasReceipt': hasReceipt,
