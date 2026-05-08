@@ -1,0 +1,20 @@
+<!--
+  Amazon.de — Versandbestätigung, die NUR den Amazon-internen Progress-
+  Tracker verlinkt (kein echter Carrier-Link). Kein TBA, kein DHL-Idc.
+  Typisch für "Sammelversand"-Mails ("und 1 weiterer Artikel"), bei
+  denen Amazon noch nicht weiß, welcher Carrier das Paket ausliefert.
+  → Adapter muss orderId+shipmentId als synthetisches Tracking-ID
+  ableiten (Carrier 'amazon').
+-->
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+  <h2>Deine Sendung ist unterwegs</h2>
+  <p>Deine Amazon.de-Bestellung mit „Tischsteckdose Schreibtisch" und 1 weiteren Artikel(n) wurde versandt!</p>
+  <p>Bestellnummer: 304-9988776-6655443</p>
+  <p>Voraussichtliche Lieferung: Montag, 12. Mai</p>
+  <p>
+    <a href="https://www.amazon.de/progress-tracker/package/ref=pe_progress_tracker_pkg?ie=UTF8&amp;orderId=304-9988776-6655443&amp;packageIndex=0&amp;shipmentId=Cmnp55443">Sendung verfolgen</a>
+  </p>
+</body>
+</html>

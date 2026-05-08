@@ -147,7 +147,7 @@ export async function processOne(
         status: 'matched',
         shop_key: parsed.shopKey,
         match_deal_id: dealId,
-        parsed_payload: stripBody(parsed),
+        parsed_payload: stripBody(parsed, html),
         processed_at: new Date().toISOString(),
       })
       .eq('id', row.id)
@@ -182,7 +182,7 @@ export async function processOne(
     .update({
       status: 'suggested',
       shop_key: parsed.shopKey,
-      parsed_payload: stripBody(parsed),
+      parsed_payload: stripBody(parsed, html),
       processed_at: new Date().toISOString(),
     })
     .eq('id', row.id)
@@ -304,8 +304,17 @@ async function writeInboxActivityLog(
   }
 }
 
-export function stripBody(parsed: ParsedOrder): Record<string, unknown> {
-  return {
+// HTML-Body wird (kompakt) im parsed_payload aufbewahrt, damit der
+// /reparse-Mode bei Adapter-Verbesserungen erneut Tracking-Nrn extrahieren
+// kann. Hard-Cap bei 60KB, damit eine 100KB-Mail mit eingebetteten Bildern
+// nicht jede Row aufbläht.
+const HTML_RAW_CAP_BYTES = 60_000
+
+export function stripBody(
+  parsed: ParsedOrder,
+  rawHtml?: string,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {
     shop_key: parsed.shopKey,
     shop_label: parsed.shopLabel,
     order_id: parsed.orderId,
@@ -319,4 +328,12 @@ export function stripBody(parsed: ParsedOrder): Record<string, unknown> {
     eta: parsed.eta,
     status: parsed.status,
   }
+  // Re-Parse-Quelle: nur wenn KEIN tracking extrahiert werden konnte und
+  // die Mail aussieht wie ein Versand-Update. Sonst Speicher sparen.
+  if (!parsed.tracking
+      && (parsed.status === 'shipped' || parsed.status === 'delivered')
+      && rawHtml && rawHtml.length > 0) {
+    out._raw_html = rawHtml.slice(0, HTML_RAW_CAP_BYTES)
+  }
+  return out
 }
