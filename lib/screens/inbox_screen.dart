@@ -553,10 +553,21 @@ Future<void> _triggerPoll(BuildContext context, InboxProvider provider) async {
   ));
   final result = await provider.pollNow();
   if (result != null) {
-    final msg = result.fetched == 0
-        ? 'Keine neuen Mails. Postfach ist aktuell.'
-        : '${result.fetched} Mail${result.fetched == 1 ? "" : "s"} geholt, '
-            '${result.stored} klassifiziert.';
+    final parts = <String>[];
+    if (result.fetched > 0) {
+      parts.add('${result.fetched} Mail${result.fetched == 1 ? "" : "s"} geholt');
+    }
+    if (result.stored > 0) {
+      parts.add('${result.stored} aufgenommen');
+    }
+    final s = result.suggested ?? 0;
+    final m = result.matched ?? 0;
+    if (s > 0 || m > 0) {
+      parts.add('$s Vorschl. / $m gemerged');
+    }
+    final msg = parts.isEmpty
+        ? 'Keine neuen passenden Mails. Postfach ist aktuell.'
+        : '${parts.join(", ")}.';
     messenger.showSnackBar(SnackBar(
       content: Text(msg),
       behavior: SnackBarBehavior.floating,

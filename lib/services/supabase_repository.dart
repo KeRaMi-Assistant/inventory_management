@@ -705,13 +705,41 @@ class SupabaseRepository {
     }
     final data = response.data;
     if (data is Map) {
-      final stored = (data['total_stored'] as num?)?.toInt() ?? 0;
-      final fetched = (data['total_fetched'] as num?)?.toInt() ?? 0;
-      final accounts = (data['accounts_processed'] as num?)?.toInt() ?? 0;
+      // Edge-Function liefert sowohl Top-Level-Summen (`total_fetched`,
+      // `total_stored`, `accounts_processed`) als auch ein `stats`-Array.
+      // Falls die Top-Level-Felder fehlen (alte Function-Version), summieren
+      // wir aus `stats` — robust gegen Schema-Drift.
+      final stats = (data['stats'] as List?) ?? const [];
+      int storedFromStats = 0;
+      int fetchedFromStats = 0;
+      for (final s in stats) {
+        if (s is Map) {
+          storedFromStats += (s['stored'] as num?)?.toInt() ?? 0;
+          fetchedFromStats += (s['fetched'] as num?)?.toInt() ?? 0;
+        }
+      }
+      final stored =
+          (data['total_stored'] as num?)?.toInt() ?? storedFromStats;
+      final fetched =
+          (data['total_fetched'] as num?)?.toInt() ?? fetchedFromStats;
+      final accounts =
+          (data['accounts_processed'] as num?)?.toInt() ??
+              (data['accounts'] as num?)?.toInt() ??
+              stats.length;
+      // Parser-Stats aus dem `parse`-Sub-Objekt (seit Mai 2026 mitgeliefert).
+      final parseMap = data['parse'];
+      int? suggested;
+      int? matched;
+      if (parseMap is Map) {
+        suggested = (parseMap['suggested'] as num?)?.toInt();
+        matched = (parseMap['matched'] as num?)?.toInt();
+      }
       return InboxPollResult(
         stored: stored,
         fetched: fetched,
         accountsProcessed: accounts,
+        suggested: suggested,
+        matched: matched,
       );
     }
     return const InboxPollResult(stored: 0, fetched: 0, accountsProcessed: 0);
@@ -1015,14 +1043,20 @@ class SupabaseRepository {
 }
 
 /// Rückgabe von [SupabaseRepository.triggerInboxPoll]. Felder enthalten die
-/// Aggregat-Statistik aus der `inbox-poll`-Edge-Function.
+/// Aggregat-Statistik aus der `inbox-poll`-Edge-Function. `suggested` und
+/// `matched` sind nullable, weil ältere Function-Versionen den Parser-Sub-
+/// Status nicht in der Antwort mitliefern (UI fällt dann auf Refresh zurück).
 class InboxPollResult {
   final int stored;
   final int fetched;
   final int accountsProcessed;
+  final int? suggested;
+  final int? matched;
   const InboxPollResult({
     required this.stored,
     required this.fetched,
     required this.accountsProcessed,
+    this.suggested,
+    this.matched,
   });
 }
