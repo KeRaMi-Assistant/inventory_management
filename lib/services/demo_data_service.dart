@@ -230,6 +230,48 @@ class DemoDataService {
     String returning,
   ) async {
     if (rows.isEmpty) return const [];
+    final user = _client.auth.currentUser;
+    final firstHasName = rows.first.containsKey('name');
+
+    // Tabellen mit (user_id, lower(name))-Unique-Constraints (shops, buyers,
+    // suppliers): existierende Rows mit gleichem Namen NICHT erneut einfügen,
+    // sondern als "OK, ist schon da" durchwinken. Sonst stürzt das Onboarding
+    // ab wenn der User die App schon einmal benutzt + Shops manuell angelegt
+    // hat (siehe shops_user_name_unique on (user_id, lower(name))).
+    if (firstHasName && user != null) {
+      final existingRes = await _client
+          .from(table)
+          .select(returning.contains('name') ? returning : '$returning, name')
+          .eq('user_id', user.id);
+      final existingByName = <String, Map<String, dynamic>>{};
+      for (final row in (existingRes as List).cast<Map<String, dynamic>>()) {
+        final name = (row['name'] as String?)?.toLowerCase();
+        if (name != null) existingByName[name] = row;
+      }
+
+      final outputs = List<Map<String, dynamic>?>.filled(rows.length, null);
+      final toInsert = <Map<String, dynamic>>[];
+      final insertSlots = <int>[];
+      for (var i = 0; i < rows.length; i++) {
+        final name = (rows[i]['name'] as String?)?.toLowerCase();
+        if (name != null && existingByName.containsKey(name)) {
+          outputs[i] = existingByName[name];
+        } else {
+          insertSlots.add(i);
+          toInsert.add(rows[i]);
+        }
+      }
+      if (toInsert.isNotEmpty) {
+        final res =
+            await _client.from(table).insert(toInsert).select(returning);
+        final inserted = (res as List).cast<Map<String, dynamic>>();
+        for (var j = 0; j < inserted.length && j < insertSlots.length; j++) {
+          outputs[insertSlots[j]] = inserted[j];
+        }
+      }
+      return outputs.whereType<Map<String, dynamic>>().toList();
+    }
+
     final res = await _client.from(table).insert(rows).select(returning);
     return (res as List).cast<Map<String, dynamic>>();
   }
