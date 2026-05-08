@@ -689,6 +689,34 @@ class SupabaseRepository {
     await _client.from('mailbox_accounts').delete().eq('id', id);
   }
 
+  /// Triggert die `inbox-poll` Edge Function manuell, statt auf den
+  /// 5-Min-Cron-Tick zu warten. Wird nach `insertMailboxAccount` automatisch
+  /// gerufen + ist im Inbox-Screen als "Jetzt pollen"-Button exponiert.
+  /// Wirft mit Klartext-Message bei Function-Fehlern, damit die UI eine
+  /// SnackBar mit Diagnose anzeigen kann.
+  Future<InboxPollResult> triggerInboxPoll() async {
+    final response = await _client.functions.invoke('inbox-poll');
+    if (response.status >= 400) {
+      throw StateError(
+        'Polling fehlgeschlagen (HTTP ${response.status}). '
+        'Pruefe in Supabase Studio: 1) Edge Function "inbox-poll" deployed? '
+        '2) pg_cron-Job "inbox-poll-5min" aktiv? 3) IMAP-Credentials korrekt?',
+      );
+    }
+    final data = response.data;
+    if (data is Map) {
+      final stored = (data['total_stored'] as num?)?.toInt() ?? 0;
+      final fetched = (data['total_fetched'] as num?)?.toInt() ?? 0;
+      final accounts = (data['accounts_processed'] as num?)?.toInt() ?? 0;
+      return InboxPollResult(
+        stored: stored,
+        fetched: fetched,
+        accountsProcessed: accounts,
+      );
+    }
+    return const InboxPollResult(stored: 0, fetched: 0, accountsProcessed: 0);
+  }
+
   // ── Carrier-API-Credentials (Sprint 7) ───────────────────────────────────
 
   /// Lädt die maskierten Credentials aller Carrier des aktiven Workspaces
@@ -984,4 +1012,17 @@ class SupabaseRepository {
         })
         .eq('id', parsedMessageId);
   }
+}
+
+/// Rückgabe von [SupabaseRepository.triggerInboxPoll]. Felder enthalten die
+/// Aggregat-Statistik aus der `inbox-poll`-Edge-Function.
+class InboxPollResult {
+  final int stored;
+  final int fetched;
+  final int accountsProcessed;
+  const InboxPollResult({
+    required this.stored,
+    required this.fetched,
+    required this.accountsProcessed,
+  });
 }

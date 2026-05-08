@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/inbox_message.dart';
@@ -424,7 +426,41 @@ class InboxProvider extends ChangeNotifier {
     );
     _accounts = [..._accounts, saved];
     notifyListeners();
+    // Sofort einmal pollen statt auf den 5-Min-Cron-Tick zu warten —
+    // User sieht innerhalb Sekunden ob die Credentials passen oder ob
+    // ein Setup-Bug (Function nicht deployed, Cron tot) den Loop blockt.
+    // Fehler werden geswallowed, damit ein fehlender Polling-Job nicht
+    // den erfolgreichen IMAP-Account-Insert torpediert. Die App kann
+    // den Status nachträglich via [pollNow] anzeigen.
+    unawaited(_pollSilently());
     return saved;
+  }
+
+  Future<void> _pollSilently() async {
+    try {
+      await _repository.triggerInboxPoll();
+      await refresh();
+    } catch (_) {
+      // Stille — UI hat ohnehin den "Jetzt pollen"-Button für lautes Retry.
+    }
+  }
+
+  /// Manueller Polling-Trigger (Inbox-Header-Button). Setzt [lastError]
+  /// bei Fehlern + ruft [refresh] bei Erfolg, damit neue Vorschläge
+  /// sofort sichtbar sind.
+  Future<InboxPollResult?> pollNow() async {
+    if (_loading) return null;
+    _lastError = null;
+    notifyListeners();
+    try {
+      final result = await _repository.triggerInboxPoll();
+      await refresh();
+      return result;
+    } catch (e) {
+      _lastError = e.toString();
+      notifyListeners();
+      return null;
+    }
   }
 
   Future<MailboxAccount> updateAccount(
