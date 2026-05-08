@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
@@ -649,6 +650,7 @@ class _GeneralTab extends StatelessWidget {
             const _MonthlyGoalCard(),
             const SizedBox(height: 12),
             const _LowStockThresholdCard(),
+            const _DemoReloadSection(),
             const SizedBox(height: 32),
             const Divider(),
             const SizedBox(height: 16),
@@ -658,6 +660,158 @@ class _GeneralTab extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _DemoReloadSection extends StatelessWidget {
+  const _DemoReloadSection();
+
+  static const String _allowedEmail = 'test@test.com';
+
+  @override
+  Widget build(BuildContext context) {
+    final email = context.watch<AuthProvider>().userEmail?.toLowerCase();
+    if (email != _allowedEmail) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 24),
+        _SectionHeader(title: l10n.settingsDemoSection),
+        const SizedBox(height: 8),
+        const _DemoReloadCard(),
+      ],
+    );
+  }
+}
+
+class _DemoReloadCard extends StatefulWidget {
+  const _DemoReloadCard();
+
+  @override
+  State<_DemoReloadCard> createState() => _DemoReloadCardState();
+}
+
+class _DemoReloadCardState extends State<_DemoReloadCard> {
+  bool _loading = false;
+
+  Future<void> _onReload() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final inventory = context.read<InventoryProvider>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.settingsDemoReloadConfirmTitle),
+        content: Text(l10n.settingsDemoReloadConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.actionCancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.settingsDemoReload),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _loading = true);
+    try {
+      final response = await Supabase.instance.client.functions
+          .invoke('seed-demo-workspace');
+      if (response.status != 200) {
+        final data = response.data;
+        final msg = data is Map && data['error'] is String
+            ? data['error'] as String
+            : 'HTTP ${response.status}';
+        throw Exception(msg);
+      }
+      await inventory.loadData();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.settingsDemoReloadSuccess)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.settingsDemoReloadError(e.toString()))),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final stack = constraints.maxWidth < 480;
+            final info = Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.refresh, color: Color(0xFF2563EB)),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.settingsDemoReloadTitle,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        l10n.settingsDemoReloadDescription,
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+            final button = SizedBox(
+              height: 44,
+              child: ElevatedButton.icon(
+                onPressed: _loading ? null : _onReload,
+                icon: _loading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh, size: 18),
+                label: Text(l10n.settingsDemoReload),
+              ),
+            );
+            if (stack) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  info,
+                  const SizedBox(height: 12),
+                  button,
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(child: info),
+                const SizedBox(width: 12),
+                button,
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }

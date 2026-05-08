@@ -3961,6 +3961,54 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Erstellt mit InventoryOS'**
   String get publicProfileFooter;
+
+  /// No description provided for @settingsDemoSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Demo / Daten'**
+  String get settingsDemoSection;
+
+  /// No description provided for @settingsDemoReloadTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Demo-Daten neu laden'**
+  String get settingsDemoReloadTitle;
+
+  /// No description provided for @settingsDemoReloadDescription.
+  ///
+  /// In de, this message translates to:
+  /// **'Setzt diesen Workspace zurück und füllt ihn mit 30–50 realistischen Beispiel-Deals aus deinen Mails der letzten 90 Tage. Alle aktuellen Daten gehen verloren.'**
+  String get settingsDemoReloadDescription;
+
+  /// No description provided for @settingsDemoReload.
+  ///
+  /// In de, this message translates to:
+  /// **'Demo neu laden'**
+  String get settingsDemoReload;
+
+  /// No description provided for @settingsDemoReloadConfirmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Demo-Daten neu laden?'**
+  String get settingsDemoReloadConfirmTitle;
+
+  /// No description provided for @settingsDemoReloadConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieser Workspace wird zurückgesetzt und mit frischen Demo-Daten gefüllt. Alle aktuellen Deals, Käufer, Shops und Lagerartikel gehen verloren. Fortfahren?'**
+  String get settingsDemoReloadConfirm;
+
+  /// No description provided for @settingsDemoReloadSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Demo-Daten neu geladen.'**
+  String get settingsDemoReloadSuccess;
+
+  /// No description provided for @settingsDemoReloadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Demo-Reload fehlgeschlagen: {error}'**
+  String settingsDemoReloadError(Object error);
 }
 
 class _AppLocalizationsDelegate

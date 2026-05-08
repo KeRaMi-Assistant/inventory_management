@@ -2099,4 +2099,32 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get publicProfileFooter => 'Erstellt mit InventoryOS';
+
+  @override
+  String get settingsDemoSection => 'Demo / Daten';
+
+  @override
+  String get settingsDemoReloadTitle => 'Demo-Daten neu laden';
+
+  @override
+  String get settingsDemoReloadDescription =>
+      'Setzt diesen Workspace zurück und füllt ihn mit 30–50 realistischen Beispiel-Deals aus deinen Mails der letzten 90 Tage. Alle aktuellen Daten gehen verloren.';
+
+  @override
+  String get settingsDemoReload => 'Demo neu laden';
+
+  @override
+  String get settingsDemoReloadConfirmTitle => 'Demo-Daten neu laden?';
+
+  @override
+  String get settingsDemoReloadConfirm =>
+      'Dieser Workspace wird zurückgesetzt und mit frischen Demo-Daten gefüllt. Alle aktuellen Deals, Käufer, Shops und Lagerartikel gehen verloren. Fortfahren?';
+
+  @override
+  String get settingsDemoReloadSuccess => 'Demo-Daten neu geladen.';
+
+  @override
+  String settingsDemoReloadError(Object error) {
+    return 'Demo-Reload fehlgeschlagen: $error';
+  }
 }

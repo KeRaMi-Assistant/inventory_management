@@ -795,5 +795,15 @@
   "publicProfileItemPrice": "Preis",
   "publicProfileItemQuantity": "Verfügbar: {count}",
   "@publicProfileItemQuantity": { "placeholders": { "count": { "type": "int" } } },
-  "publicProfileFooter": "Erstellt mit InventoryOS"
+  "publicProfileFooter": "Erstellt mit InventoryOS",
+
+  "settingsDemoSection": "Demo / Daten",
+  "settingsDemoReloadTitle": "Demo-Daten neu laden",
+  "settingsDemoReloadDescription": "Setzt diesen Workspace zurück und füllt ihn mit 30–50 realistischen Beispiel-Deals aus deinen Mails der letzten 90 Tage. Alle aktuellen Daten gehen verloren.",
+  "settingsDemoReload": "Demo neu laden",
+  "settingsDemoReloadConfirmTitle": "Demo-Daten neu laden?",
+  "settingsDemoReloadConfirm": "Dieser Workspace wird zurückgesetzt und mit frischen Demo-Daten gefüllt. Alle aktuellen Deals, Käufer, Shops und Lagerartikel gehen verloren. Fortfahren?",
+  "settingsDemoReloadSuccess": "Demo-Daten neu geladen.",
+  "settingsDemoReloadError": "Demo-Reload fehlgeschlagen: {error}",
+  "@settingsDemoReloadError": { "placeholders": { "error": {} } }
 }
