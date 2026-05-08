@@ -57,19 +57,63 @@ Deno.serve(async (req) => {
   const isCron = cronSecret && authHeader === `Bearer ${cronSecret}`
   const isService =
     authHeader === `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-  if (!isCron && !isService) return jsonResp({ error: 'Unauthorized' }, 401)
+
+  // Dritter Auth-Pfad: User-JWT vom Flutter-Client (Inbox-Header
+  // "Jetzt pollen"-Button). Wir validieren das JWT mit anon-Client und
+  // beschränken den Lauf auf Postfächer der Workspaces, in denen der User
+  // Mitglied ist — RLS-konforme Untermenge des Cron-Verhaltens.
+  let scopedUserId: string | null = null
+  if (!isCron && !isService) {
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    if (!authHeader || !anonKey) {
+      return jsonResp({ error: 'Unauthorized' }, 401)
+    }
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      anonKey,
+      { global: { headers: { Authorization: authHeader } } },
+    )
+    const { data: userData, error: userErr } = await userClient.auth.getUser()
+    if (userErr || !userData.user) {
+      return jsonResp({ error: 'Unauthorized' }, 401)
+    }
+    scopedUserId = userData.user.id
+  }
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   )
 
-  const { data: rows, error } = await admin
+  // Wenn ein User pollt: nur seine eigenen Workspace-Mailboxen.
+  // Cron/Service: alle aktiven Postfächer (existing behavior).
+  let allowedWorkspaceIds: string[] | null = null
+  if (scopedUserId !== null) {
+    const { data: memberRows, error: memberErr } = await admin
+      .from('workspace_members')
+      .select('workspace_id')
+      .eq('user_id', scopedUserId)
+    if (memberErr) {
+      return jsonResp({ error: memberErr.message }, 500)
+    }
+    allowedWorkspaceIds = (memberRows ?? []).map(
+      (r: { workspace_id: string }) => r.workspace_id,
+    )
+    if (allowedWorkspaceIds.length === 0) {
+      return jsonResp({ ok: true, accounts: 0, stats: [], scoped_user: scopedUserId })
+    }
+  }
+
+  let query = admin
     .from('mailbox_accounts')
     .select('id, workspace_id, imap_host, imap_port, use_ssl, username, folder, last_uid')
     .eq('enabled', true)
     .order('last_polled_at', { ascending: true, nullsFirst: true })
     .limit(20)
+  if (allowedWorkspaceIds) {
+    query = query.in('workspace_id', allowedWorkspaceIds)
+  }
+  const { data: rows, error } = await query
   if (error) {
     console.error('Failed to load mailbox_accounts', error)
     return jsonResp({ error: error.message }, 500)
