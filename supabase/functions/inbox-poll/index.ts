@@ -33,6 +33,10 @@ interface PollStats {
   fetched: number
   stored: number
   bootstrapped?: boolean
+  // True wenn es nach diesem Lauf noch ungesehene UIDs gibt (UID-Cap getroffen
+  // ODER Time-Budget-Stop). Der Client liest das aggregiert über alle Accounts
+  // und entscheidet ob er sofort einen Folge-Call macht (Bootstrap-Pump).
+  more?: boolean
   error?: string
 }
 
@@ -180,12 +184,18 @@ Deno.serve(async (req) => {
     console.warn('inline parse failed', e)
   }
 
+  // Aggregiertes "more": true wenn IRGENDEIN Account noch UIDs offen hat.
+  // Der Client schickt dann sofort einen Folge-Call (Bootstrap-Pump), bis
+  // alle Accounts more=false melden oder das Client-seitige Cap greift.
+  const aggregateMore = stats.some((s) => s.more === true)
+
   return jsonResp({
     ok: true,
     accounts: stats.length,
     accounts_processed: stats.length,
     total_fetched: totalFetched,
     total_stored: totalStored,
+    more: aggregateMore,
     parse: { ok: true, ...parseStats },
     stats,
   })
@@ -351,6 +361,19 @@ async function pollAccount(
           .update({ last_uid: maxUid })
           .eq('id', account.id)
       }
+
+      // "more": signalisiere dem Client, dass es noch ungesehene UIDs gibt.
+      // Trifft zu wenn:
+      //  a) wir ein Slice unter newUids.length geholt haben (UID-Cap), ODER
+      //  b) das Time-Budget mid-loop gerissen wurde (slice unfinished), ODER
+      //  c) ein Bootstrap-Lauf mit fetchCap=200 trotzdem die volle Schiene
+      //     gefüllt hat — dann ist es plausibel dass im 90-Tage-Fenster
+      //     weitere UIDs > maxUid existieren (kann nur ein Folge-Call klären).
+      // Der Client pumpt solange `more=true` zurückkommt — Cap dort
+      // verhindert Endlos-Loop bei pathologischen Postfächern.
+      const cappedSlice = slice.length < newUids.length
+      const filledFully = stat.fetched >= fetchCap && bootstrapped
+      stat.more = cappedSlice || timeBudgetExhausted || filledFully
     } finally {
       lock.release()
     }

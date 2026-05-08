@@ -692,57 +692,116 @@ class SupabaseRepository {
   /// Triggert die `inbox-poll` Edge Function manuell, statt auf den
   /// 5-Min-Cron-Tick zu warten. Wird nach `insertMailboxAccount` automatisch
   /// gerufen + ist im Inbox-Screen als "Jetzt pollen"-Button exponiert.
-  /// Wirft mit Klartext-Message bei Function-Fehlern, damit die UI eine
-  /// SnackBar mit Diagnose anzeigen kann.
-  Future<InboxPollResult> triggerInboxPoll() async {
-    final response = await _client.functions.invoke('inbox-poll');
-    if (response.status >= 400) {
-      throw StateError(
-        'Polling fehlgeschlagen (HTTP ${response.status}). '
-        'Pruefe in Supabase Studio: 1) Edge Function "inbox-poll" deployed? '
-        '2) pg_cron-Job "inbox-poll-5min" aktiv? 3) IMAP-Credentials korrekt?',
-      );
-    }
-    final data = response.data;
-    if (data is Map) {
-      // Edge-Function liefert sowohl Top-Level-Summen (`total_fetched`,
-      // `total_stored`, `accounts_processed`) als auch ein `stats`-Array.
-      // Falls die Top-Level-Felder fehlen (alte Function-Version), summieren
-      // wir aus `stats` — robust gegen Schema-Drift.
+  ///
+  /// Bootstrap-Pump: bei einem frisch hinzugefügten Account hat IMAP oft
+  /// >100 ungesehene UIDs im 90-Tage-Lookback-Fenster. Die Edge Function
+  /// holt pro Lauf max ~200 Mails (Memory-/Timeout-Cap), signalisiert
+  /// aber `more=true` solange es weitere UIDs gibt. Wir loopen client-
+  /// seitig bis `more=false` ODER [maxIterations] erreicht ist (Cap gegen
+  /// Pathological-Mailboxen). Optionaler [onProgress]-Callback meldet
+  /// nach jeder Iteration den kumulativen Zwischenstand, damit das UI
+  /// "Lade noch X" rendern kann.
+  ///
+  /// Wirft mit Klartext-Message bei Function-Fehlern (HTTP 4xx/5xx im
+  /// allerersten Call), damit die UI eine SnackBar mit Diagnose anzeigen
+  /// kann. Schlägt ein Folge-Call mid-pump fehl, geben wir das bisher
+  /// erreichte Aggregat zurück (Best-Effort).
+  Future<InboxPollResult> triggerInboxPoll({
+    int maxIterations = 12,
+    void Function(InboxPollResult partial)? onProgress,
+  }) async {
+    int totalStored = 0;
+    int totalFetched = 0;
+    int? totalSuggested;
+    int? totalMatched;
+    int accountsProcessed = 0;
+    var iterations = 0;
+    var more = true;
+
+    while (more && iterations < maxIterations) {
+      iterations++;
+      final response = await _client.functions.invoke('inbox-poll');
+      if (response.status >= 400) {
+        if (iterations == 1) {
+          throw StateError(
+            'Polling fehlgeschlagen (HTTP ${response.status}). '
+            'Pruefe in Supabase Studio: 1) Edge Function "inbox-poll" deployed? '
+            '2) pg_cron-Job "inbox-poll-5min" aktiv? 3) IMAP-Credentials korrekt?',
+          );
+        }
+        // Mid-pump Failure: brich ab, gib Best-Effort-Aggregat zurück.
+        break;
+      }
+      final data = response.data;
+      if (data is! Map) {
+        if (iterations == 1) {
+          return const InboxPollResult(
+            stored: 0,
+            fetched: 0,
+            accountsProcessed: 0,
+          );
+        }
+        break;
+      }
+      // Felder mit Fallback aus stats[] für Schema-Drift-Robustheit.
       final stats = (data['stats'] as List?) ?? const [];
-      int storedFromStats = 0;
-      int fetchedFromStats = 0;
+      var storedFromStats = 0;
+      var fetchedFromStats = 0;
       for (final s in stats) {
         if (s is Map) {
           storedFromStats += (s['stored'] as num?)?.toInt() ?? 0;
           fetchedFromStats += (s['fetched'] as num?)?.toInt() ?? 0;
         }
       }
-      final stored =
+      final iterStored =
           (data['total_stored'] as num?)?.toInt() ?? storedFromStats;
-      final fetched =
+      final iterFetched =
           (data['total_fetched'] as num?)?.toInt() ?? fetchedFromStats;
-      final accounts =
+      final iterAccounts =
           (data['accounts_processed'] as num?)?.toInt() ??
               (data['accounts'] as num?)?.toInt() ??
               stats.length;
-      // Parser-Stats aus dem `parse`-Sub-Objekt (seit Mai 2026 mitgeliefert).
+
+      totalStored += iterStored;
+      totalFetched += iterFetched;
+      // Parser-Stats kumulieren wenn der Server sie liefert.
       final parseMap = data['parse'];
-      int? suggested;
-      int? matched;
       if (parseMap is Map) {
-        suggested = (parseMap['suggested'] as num?)?.toInt();
-        matched = (parseMap['matched'] as num?)?.toInt();
+        final s = (parseMap['suggested'] as num?)?.toInt();
+        final m = (parseMap['matched'] as num?)?.toInt();
+        if (s != null) totalSuggested = (totalSuggested ?? 0) + s;
+        if (m != null) totalMatched = (totalMatched ?? 0) + m;
       }
-      return InboxPollResult(
-        stored: stored,
-        fetched: fetched,
-        accountsProcessed: accounts,
-        suggested: suggested,
-        matched: matched,
+      // accountsProcessed = max über alle Iterations (Anzahl Accounts bleibt
+      // stabil; aufsummieren würde verfälschen).
+      if (iterAccounts > accountsProcessed) accountsProcessed = iterAccounts;
+
+      // Pump-Signal vom Server. Default false → kein Loop für ältere
+      // Function-Versionen, die das Feld noch nicht senden.
+      more = (data['more'] as bool?) ?? false;
+
+      // Zwischenstand nach JEDER Iteration melden — ermöglicht dem UI
+      // ein "Lade weiter…"-Banner mit live-aktualisiertem Counter.
+      onProgress?.call(
+        InboxPollResult(
+          stored: totalStored,
+          fetched: totalFetched,
+          accountsProcessed: accountsProcessed,
+          suggested: totalSuggested,
+          matched: totalMatched,
+          more: more && iterations < maxIterations,
+        ),
       );
     }
-    return const InboxPollResult(stored: 0, fetched: 0, accountsProcessed: 0);
+
+    return InboxPollResult(
+      stored: totalStored,
+      fetched: totalFetched,
+      accountsProcessed: accountsProcessed,
+      suggested: totalSuggested,
+      matched: totalMatched,
+      more: more && iterations >= maxIterations,
+    );
   }
 
   // ── Carrier-API-Credentials (Sprint 7) ───────────────────────────────────
@@ -1046,17 +1105,23 @@ class SupabaseRepository {
 /// Aggregat-Statistik aus der `inbox-poll`-Edge-Function. `suggested` und
 /// `matched` sind nullable, weil ältere Function-Versionen den Parser-Sub-
 /// Status nicht in der Antwort mitliefern (UI fällt dann auf Refresh zurück).
+///
+/// `more=true` signalisiert: der Pump hat das clientseitige Iterations-Cap
+/// erreicht, im IMAP-Postfach liegen aber noch ungesehene UIDs. Der nächste
+/// Cron-Tick (oder ein erneuter "Jetzt pollen"-Klick) holt sie nach.
 class InboxPollResult {
   final int stored;
   final int fetched;
   final int accountsProcessed;
   final int? suggested;
   final int? matched;
+  final bool more;
   const InboxPollResult({
     required this.stored,
     required this.fetched,
     required this.accountsProcessed,
     this.suggested,
     this.matched,
+    this.more = false,
   });
 }

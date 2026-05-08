@@ -436,10 +436,18 @@ class InboxProvider extends ChangeNotifier {
     return saved;
   }
 
+  /// Live-Status des laufenden Bootstrap-Pumps. Während `triggerInboxPoll`
+  /// in mehreren Iterationen Mails nachzieht, halten wir hier die kumulierte
+  /// Zahl der bereits gespeicherten Mails fest, damit die UI ein Banner
+  /// "Lade Mails (X bisher)…" rendern kann statt "Noch nicht gepollt".
+  bool _pumping = false;
+  int _pumpStored = 0;
+  bool get isPumping => _pumping;
+  int get pumpStored => _pumpStored;
+
   Future<void> _pollSilently() async {
     try {
-      await _repository.triggerInboxPoll();
-      await refresh();
+      await _runPump(silent: true);
     } catch (_) {
       // Stille — UI hat ohnehin den "Jetzt pollen"-Button für lautes Retry.
     }
@@ -449,17 +457,45 @@ class InboxProvider extends ChangeNotifier {
   /// bei Fehlern + ruft [refresh] bei Erfolg, damit neue Vorschläge
   /// sofort sichtbar sind.
   Future<InboxPollResult?> pollNow() async {
-    if (_loading) return null;
+    if (_loading || _pumping) return null;
     _lastError = null;
     notifyListeners();
     try {
-      final result = await _repository.triggerInboxPoll();
-      await refresh();
-      return result;
+      return await _runPump(silent: false);
     } catch (e) {
       _lastError = e.toString();
       notifyListeners();
       return null;
+    }
+  }
+
+  /// Wrapper um [SupabaseRepository.triggerInboxPoll], der den Pump-State
+  /// pflegt und nach jeder Server-Iteration einen [refresh] auslöst —
+  /// so wachsen die Tab-Counter live mit, anstatt erst nach dem Loop-Ende
+  /// einmal zu springen.
+  Future<InboxPollResult> _runPump({required bool silent}) async {
+    _pumping = true;
+    _pumpStored = 0;
+    notifyListeners();
+    try {
+      final result = await _repository.triggerInboxPoll(
+        onProgress: (partial) {
+          _pumpStored = partial.stored;
+          notifyListeners();
+          // Live-Refresh fire-and-forget: Counter im Inbox-Header steigen
+          // mit jeder Iteration sichtbar an. Wir warten NICHT auf das
+          // SELECT, damit der nächste Server-Call sofort starten kann.
+          // Fehler schlucken, damit ein flackerndes SELECT den Pump nicht
+          // killt.
+          unawaited(refresh().catchError((Object _) {}));
+        },
+      );
+      await refresh();
+      return result;
+    } finally {
+      _pumping = false;
+      _pumpStored = 0;
+      notifyListeners();
     }
   }
 
