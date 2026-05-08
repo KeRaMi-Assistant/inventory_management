@@ -80,7 +80,7 @@ class _InvitesDialog extends StatelessWidget {
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final dateFmt = DateFormat.yMd(localeTag);
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.bgSurfaceOf(context),
       shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
@@ -93,8 +93,8 @@ class _InvitesDialog extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
               child: Row(
                 children: [
-                  const Icon(Icons.notifications_active_outlined,
-                      size: 18, color: AppTheme.accent),
+                  Icon(Icons.notifications_active_outlined,
+                      size: 18, color: AppTheme.accentTextOf(context)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -234,11 +234,11 @@ class _InviteRowState extends State<_InviteRow> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppTheme.accentLight,
+                  color: AppTheme.accentLightOf(context),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Icon(Icons.workspaces_outlined,
-                    size: 16, color: AppTheme.accent),
+                child: Icon(Icons.workspaces_outlined,
+                    size: 16, color: AppTheme.accentTextOf(context)),
               ),
               const SizedBox(width: 10),
               Expanded(

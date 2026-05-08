@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app_theme.dart';
+
 /// Donut-Chart mit Legende rechts. Zeigt automatisch nur Top-N Slices,
 /// der Rest wird zu "Sonstige" zusammengefasst.
 class DonutChart extends StatefulWidget {
@@ -24,6 +26,8 @@ class DonutChart extends StatefulWidget {
 class _DonutChartState extends State<DonutChart> {
   int? _hovered;
 
+  // Chart-Series-Palette: bleibt theme-unabhängig, damit die Slices über
+  // Theme-Wechsel hinweg konsistent unterscheidbar sind.
   static const _palette = [
     Color(0xFF2563EB),
     Color(0xFF059669),
@@ -39,9 +43,10 @@ class _DonutChartState extends State<DonutChart> {
     if (widget.data.isEmpty) {
       return SizedBox(
         height: widget.height,
-        child: const Center(
+        child: Center(
           child: Text('Keine Daten.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+              style: TextStyle(
+                  color: AppTheme.textDisabledOf(context), fontSize: 13)),
         ),
       );
     }
@@ -110,18 +115,18 @@ class _DonutChartState extends State<DonutChart> {
                   children: [
                     Text(
                       widget.centerLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
-                        color: Color(0xFF6B7280),
+                        color: AppTheme.textMutedOf(context),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       money.format(total),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: Color(0xFF111827),
+                        color: AppTheme.textPrimaryOf(context),
                         fontWeight: FontWeight.w800,
                       ),
                     ),

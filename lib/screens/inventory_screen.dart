@@ -262,10 +262,14 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget _buildHeader(BuildContext context, InventoryProvider provider, bool isNarrow, NumberFormat money, double width) {
     final l10n = AppLocalizations.of(context);
     final kpis = [
-      _kpi(l10n.inventoryKpiTotalItems, '${provider.inventoryItems.length}', Icons.category_outlined, const Color(0xFF2563EB)),
-      _kpi(l10n.inventoryKpiTotalStock, '${provider.totalStockQuantity}', Icons.inventory_2_outlined, const Color(0xFF059669)),
-      _kpi(l10n.inventoryKpiCriticalItems, '${provider.criticalStockCount}', Icons.warning_amber_rounded, const Color(0xFFDC2626)),
-      _kpi(l10n.inventoryKpiStockValue, money.format(provider.totalStockValue), Icons.euro_outlined, const Color(0xFFD97706)),
+      _kpi(l10n.inventoryKpiTotalItems, '${provider.inventoryItems.length}',
+          Icons.category_outlined, AppTheme.accentTextOf(context)),
+      _kpi(l10n.inventoryKpiTotalStock, '${provider.totalStockQuantity}',
+          Icons.inventory_2_outlined, AppTheme.successTextOf(context)),
+      _kpi(l10n.inventoryKpiCriticalItems, '${provider.criticalStockCount}',
+          Icons.warning_amber_rounded, AppTheme.dangerTextOf(context)),
+      _kpi(l10n.inventoryKpiStockValue, money.format(provider.totalStockValue),
+          Icons.euro_outlined, AppTheme.warningTextOf(context)),
     ];
     final addButton = ElevatedButton.icon(
       onPressed: () => showDialog(
@@ -380,15 +384,15 @@ class _InventoryScreenState extends State<InventoryScreen>
       l10n.inventorySoldKpiCount,
       '$totalQuantity',
       Icons.sell_outlined,
-      const Color(0xFF2563EB),
+      AppTheme.accentTextOf(context),
     );
     final profitCard = _kpi(
       l10n.inventorySoldKpiProfit,
       money.format(totalProfit),
       Icons.trending_up,
       totalProfit >= 0
-          ? const Color(0xFF059669)
-          : const Color(0xFFDC2626),
+          ? AppTheme.successTextOf(context)
+          : AppTheme.dangerTextOf(context),
     );
     final buyersCard = _topBuyersCard(context, top3, l10n);
 
@@ -438,8 +442,8 @@ class _InventoryScreenState extends State<InventoryScreen>
           children: [
             Row(
               children: [
-                const Icon(Icons.emoji_events_outlined,
-                    color: Color(0xFFD97706), size: 18),
+                Icon(Icons.emoji_events_outlined,
+                    color: AppTheme.warningTextOf(context), size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -507,10 +511,10 @@ class _InventoryScreenState extends State<InventoryScreen>
       itemBuilder: (context, i) {
         final item = items[i];
         final color = item.quantity < item.minStock
-            ? const Color(0xFFDC2626)
+            ? AppTheme.dangerTextOf(context)
             : item.quantity == item.minStock
-                ? const Color(0xFFD97706)
-                : const Color(0xFF059669);
+                ? AppTheme.warningTextOf(context)
+                : AppTheme.successTextOf(context);
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -570,14 +574,24 @@ class _InventoryScreenState extends State<InventoryScreen>
                       return Row(children: [
                         TextButton.icon(
                           onPressed: () => _adjust(context, provider, item, true),
-                          icon: const Icon(Icons.add_circle_outline, size: 16, color: Color(0xFF059669)),
-                          label: Text(l10n.inventoryStockIn, style: const TextStyle(color: Color(0xFF059669), fontSize: 12)),
+                          icon: Icon(Icons.add_circle_outline,
+                              size: 16,
+                              color: AppTheme.successTextOf(context)),
+                          label: Text(l10n.inventoryStockIn,
+                              style: TextStyle(
+                                  color: AppTheme.successTextOf(context),
+                                  fontSize: 12)),
                           style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
                         ),
                         TextButton.icon(
                           onPressed: () => _adjust(context, provider, item, false),
-                          icon: const Icon(Icons.remove_circle_outline, size: 16, color: Color(0xFFD97706)),
-                          label: Text(l10n.inventoryStockOut, style: const TextStyle(color: Color(0xFFD97706), fontSize: 12)),
+                          icon: Icon(Icons.remove_circle_outline,
+                              size: 16,
+                              color: AppTheme.warningTextOf(context)),
+                          label: Text(l10n.inventoryStockOut,
+                              style: TextStyle(
+                                  color: AppTheme.warningTextOf(context),
+                                  fontSize: 12)),
                           style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
                         ),
                         IconButton(

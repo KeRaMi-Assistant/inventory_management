@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/validators.dart';
 
@@ -20,12 +21,13 @@ class PasswordStrengthIndicator extends StatelessWidget {
       3 => l10n.passwordStrengthStrong,
       _ => l10n.passwordStrengthVeryStrong,
     };
+    final emptyTrack = AppTheme.bgSubtleOf(context);
     final color = switch (score) {
-      0 => const Color(0xFFE2E8F0),
-      1 => const Color(0xFFDC2626),
-      2 => const Color(0xFFF59E0B),
-      3 => const Color(0xFF10B981),
-      _ => const Color(0xFF059669),
+      0 => emptyTrack,
+      1 => AppTheme.dangerTextOf(context),
+      2 => AppTheme.warningTextOf(context),
+      3 => AppTheme.successTextOf(context),
+      _ => AppTheme.successTextOf(context),
     };
 
     return Padding(
@@ -41,7 +43,7 @@ class PasswordStrengthIndicator extends StatelessWidget {
                   height: 4,
                   margin: EdgeInsets.only(right: i == 3 ? 0 : 4),
                   decoration: BoxDecoration(
-                    color: filled ? color : const Color(0xFFE2E8F0),
+                    color: filled ? color : emptyTrack,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),

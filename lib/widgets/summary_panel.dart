@@ -48,7 +48,7 @@ class SummaryPanel extends StatelessWidget {
               profit: deals
                   .where((d) => d.status == s)
                   .fold(0.0, (sum, d) => sum + (d.totalProfit ?? 0)),
-              color: statusColors[s] ?? Colors.grey,
+              color: statusColors[s] ?? AppTheme.textMutedOf(context),
             ),
         };
 

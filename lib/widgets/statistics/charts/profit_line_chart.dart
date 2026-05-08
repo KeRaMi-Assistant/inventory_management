@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app_theme.dart';
 import '../../../services/statistics_service.dart';
 
 /// Linien-Chart mit zwei Linien: Umsatz (blau) und Profit (grün).
@@ -19,9 +20,10 @@ class ProfitLineChart extends StatelessWidget {
     if (series.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(
+        child: Center(
           child: Text('Keine Daten im Zeitraum.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+              style: TextStyle(
+                  color: AppTheme.textDisabledOf(context), fontSize: 13)),
         ),
       );
     }
@@ -54,8 +56,8 @@ class ProfitLineChart extends StatelessWidget {
             show: true,
             drawVerticalLine: false,
             horizontalInterval: ((maxY - minY) / 4).abs().clamp(1, double.infinity),
-            getDrawingHorizontalLine: (_) => const FlLine(
-              color: Color(0xFFEEF2F7),
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: AppTheme.borderOf(context),
               strokeWidth: 1,
             ),
           ),
@@ -70,7 +72,9 @@ class ProfitLineChart extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 6),
                   child: Text(
                     money.format(v),
-                    style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)),
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: AppTheme.textMutedOf(context)),
                     textAlign: TextAlign.right,
                   ),
                 ),
@@ -88,8 +92,9 @@ class ProfitLineChart extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
                       dateFmt.format(series[i].date),
-                      style: const TextStyle(
-                          fontSize: 10, color: Color(0xFF9CA3AF)),
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.textMutedOf(context)),
                     ),
                   );
                 },
@@ -99,7 +104,8 @@ class ProfitLineChart extends StatelessWidget {
           borderData: FlBorderData(show: false),
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (_) => const Color(0xFF111827),
+              // Tooltip stays dark in both themes.
+              getTooltipColor: (_) => AppTheme.navBg,
               tooltipRoundedRadius: 8,
               tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               getTooltipItems: (spots) {
@@ -126,24 +132,24 @@ class ProfitLineChart extends StatelessWidget {
               spots: revenueSpots,
               isCurved: true,
               curveSmoothness: 0.25,
-              color: const Color(0xFF2563EB),
+              color: AppTheme.accentTextOf(context),
               barWidth: 2.5,
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
-                color: const Color(0xFF2563EB).withAlpha(25),
+                color: AppTheme.accentTextOf(context).withAlpha(25),
               ),
             ),
             LineChartBarData(
               spots: profitSpots,
               isCurved: true,
               curveSmoothness: 0.25,
-              color: const Color(0xFF059669),
+              color: AppTheme.successTextOf(context),
               barWidth: 2.5,
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
-                color: const Color(0xFF059669).withAlpha(25),
+                color: AppTheme.successTextOf(context).withAlpha(25),
               ),
             ),
           ],
@@ -171,10 +177,10 @@ class ProfitChartLegend extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
-      children: const [
-        _LegendDot(color: Color(0xFF2563EB), label: 'Umsatz'),
-        SizedBox(width: 14),
-        _LegendDot(color: Color(0xFF059669), label: 'Profit'),
+      children: [
+        _LegendDot(color: AppTheme.accentTextOf(context), label: 'Umsatz'),
+        const SizedBox(width: 14),
+        _LegendDot(color: AppTheme.successTextOf(context), label: 'Profit'),
       ],
     );
   }
@@ -200,8 +206,8 @@ class _LegendDot extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Text(label,
-            style:
-                const TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
+            style: TextStyle(
+                fontSize: 11, color: AppTheme.textMutedOf(context))),
       ],
     );
   }

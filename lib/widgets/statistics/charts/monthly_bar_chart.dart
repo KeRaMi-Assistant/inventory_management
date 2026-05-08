@@ -224,8 +224,8 @@ class MarginLineChart extends StatelessWidget {
             drawVerticalLine: false,
             horizontalInterval:
                 ((maxY - minY) / 4).abs().clamp(1, double.infinity),
-            getDrawingHorizontalLine: (_) => const FlLine(
-              color: Color(0xFFEEF2F7),
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: AppTheme.borderOf(context),
               strokeWidth: 1,
             ),
           ),
@@ -241,8 +241,9 @@ class MarginLineChart extends StatelessWidget {
                 getTitlesWidget: (v, _) => Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: Text('${v.toStringAsFixed(0)}%',
-                      style: const TextStyle(
-                          fontSize: 10, color: Color(0xFF9CA3AF)),
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.textMutedOf(context)),
                       textAlign: TextAlign.right),
                 ),
               ),
@@ -259,8 +260,9 @@ class MarginLineChart extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
                       dateFmt.format(series[i].date),
-                      style: const TextStyle(
-                          fontSize: 10, color: Color(0xFF9CA3AF)),
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.textMutedOf(context)),
                     ),
                   );
                 },
@@ -270,7 +272,8 @@ class MarginLineChart extends StatelessWidget {
           borderData: FlBorderData(show: false),
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (_) => const Color(0xFF111827),
+              // Tooltip stays dark in both themes.
+              getTooltipColor: (_) => AppTheme.navBg,
               tooltipRoundedRadius: 8,
               getTooltipItems: (spots) => spots.map((s) {
                 final i = s.x.toInt();
@@ -292,6 +295,7 @@ class MarginLineChart extends StatelessWidget {
               spots: spots,
               isCurved: true,
               curveSmoothness: 0.3,
+              // Purple margin accent — chart-series semantic constant.
               color: const Color(0xFF7C3AED),
               barWidth: 2.5,
               dotData: const FlDotData(show: false),

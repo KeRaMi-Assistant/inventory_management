@@ -427,7 +427,7 @@ class _ResultTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: highlighted ? AppTheme.accentLight : Colors.transparent,
+      color: highlighted ? AppTheme.accentLightOf(context) : Colors.transparent,
       child: InkWell(
         onTap: result.onTap,
         child: Padding(

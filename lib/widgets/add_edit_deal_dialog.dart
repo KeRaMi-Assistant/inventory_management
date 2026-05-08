@@ -793,16 +793,16 @@ class _DatePickerField extends StatelessWidget {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
-          suffixIcon: const Icon(Icons.calendar_today_outlined, size: 16,
-              color: Color(0xFF64748B)),
+          suffixIcon: Icon(Icons.calendar_today_outlined,
+              size: 16, color: AppTheme.textMutedOf(context)),
         ),
         child: Text(
           date != null ? dateFmt.format(date!) : (placeholder ?? ''),
           style: TextStyle(
             fontSize: 14,
             color: date != null
-                ? const Color(0xFF0F172A)
-                : const Color(0xFF94A3B8),
+                ? AppTheme.textPrimaryOf(context)
+                : AppTheme.textMutedOf(context),
           ),
         ),
       ),
@@ -843,14 +843,14 @@ class _ProfitPreview extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppTheme.bgSubtleOf(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppTheme.borderOf(context)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.calculate_outlined,
-              size: 18, color: Color(0xFF64748B)),
+          Icon(Icons.calculate_outlined,
+              size: 18, color: AppTheme.textMutedOf(context)),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -862,10 +862,10 @@ class _ProfitPreview extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: profit == null
-                    ? const Color(0xFF64748B)
+                    ? AppTheme.textMutedOf(context)
                     : profit >= 0
-                        ? const Color(0xFF059669)
-                        : const Color(0xFFDC2626),
+                        ? AppTheme.successTextOf(context)
+                        : AppTheme.dangerTextOf(context),
               ),
             ),
           ),
@@ -927,19 +927,22 @@ class _DiscordServerButtons extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0F9FF),
+              color: AppTheme.infoBgOf(context),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: const Color(0xFFBAE6FD)),
+              border: Border.all(color: AppTheme.infoBorderOf(context)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.info_outline, size: 12, color: Color(0xFF0369A1)),
+                Icon(Icons.info_outline,
+                    size: 12, color: AppTheme.infoTextOf(context)),
                 const SizedBox(width: 5),
                 Flexible(
                   child: Text(
                     AppLocalizations.of(context).dealDiscordChannelHint,
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF0369A1)),
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.infoTextOf(context)),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 2,
                   ),
@@ -1041,7 +1044,7 @@ class _ProductAutocomplete extends StatelessWidget {
                 shrinkWrap: true,
                 itemCount: list.length,
                 separatorBuilder: (_, _) =>
-                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                    Divider(height: 1, color: AppTheme.borderOf(ctx)),
                 itemBuilder: (_, i) {
                   final d = list[i];
                   final ek = d.ekBrutto ?? d.ekNetto;
@@ -1053,15 +1056,15 @@ class _ProductAutocomplete extends StatelessWidget {
                   ].join(' · ');
                   return ListTile(
                     dense: true,
-                    leading: const Icon(Icons.history,
-                        size: 18, color: Color(0xFF64748B)),
+                    leading: Icon(Icons.history,
+                        size: 18, color: AppTheme.textMutedOf(ctx)),
                     title: Text(d.product,
                         style:
                             const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(
                       summary,
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF64748B)),
+                      style: TextStyle(
+                          fontSize: 11, color: AppTheme.textMutedOf(ctx)),
                       overflow: TextOverflow.ellipsis,
                     ),
                     onTap: () => onSelected(d),
