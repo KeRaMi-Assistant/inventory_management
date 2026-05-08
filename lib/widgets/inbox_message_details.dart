@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/inbox_message.dart';
 
 /// Vollbild-fähiges Bottom-Sheet, das Header + extrahierte Felder einer
@@ -257,6 +258,7 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -288,7 +290,7 @@ class _DetailRow extends StatelessWidget {
               padding: EdgeInsets.zero,
               constraints:
                   const BoxConstraints.tightFor(width: 28, height: 28),
-              tooltip: 'Kopieren',
+              tooltip: l10n.actionCopy,
               onPressed: () => Clipboard.setData(ClipboardData(text: value)),
             ),
         ],

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
 import '../models/pricing_plan.dart';
 import '../providers/billing_provider.dart';
+import '../utils/pricing_plan_l10n.dart';
 import 'billing_profile_screen.dart';
 
 /// Pricing-/Plan-Übersicht. Aktuell rein "Dummy" — keine Anbindung an
@@ -33,12 +35,13 @@ class _PricingScreenState extends State<PricingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final billing = context.watch<BillingProvider>();
     final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pläne & Preise'),
+        title: Text(l10n.pricingTitle),
       ),
       body: billing.isLoading && billing.profile == null
           ? const Center(child: CircularProgressIndicator())
@@ -48,14 +51,13 @@ class _PricingScreenState extends State<PricingScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 children: [
                   Text(
-                    'Wähle den Plan, der zu dir passt',
+                    l10n.pricingChooseTitle,
                     style: theme.textTheme.headlineSmall
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Free bleibt dauerhaft kostenlos. Upgrades schalten Quotas, '
-                    'Team-Plätze und Analyse-Features frei.',
+                    l10n.pricingFreeIncluded,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: Colors.black54,
                     ),
@@ -125,6 +127,7 @@ class _PricingScreenState extends State<PricingScreen> {
     BillingProvider billing,
     ScaffoldMessengerState messenger,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final isDowngradeToFree = plan.plan == BillingPlan.free;
     final ok = await showDialog<bool>(
       context: context,
@@ -136,12 +139,12 @@ class _PricingScreenState extends State<PricingScreen> {
           isDowngradeToFree
               ? 'Du verlierst Zugang zu Pro-Features. Bestehende Daten bleiben erhalten.'
               : 'Hinweis: Dies ist ein Demo-Switch ohne Zahlungsabwicklung. '
-                  'Sobald Stripe/Paddle integriert ist, läuft hier der echte Checkout.',
+                  '${l10n.pricingCheckoutPlaceholder}',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Abbrechen'),
+            child: Text(l10n.actionCancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -159,12 +162,12 @@ class _PricingScreenState extends State<PricingScreen> {
       );
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Plan ${plan.plan.label} aktiviert.')),
+        SnackBar(content: Text(l10n.pricingPlanActivated(plan.plan.label))),
       );
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Aktivierung fehlgeschlagen: $e')),
+        SnackBar(content: Text(l10n.pricingActivationFailed(e.toString()))),
       );
     } finally {
       if (mounted) setState(() => _activating = false);
@@ -180,6 +183,7 @@ class _BillingCycleToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(4),
@@ -199,7 +203,7 @@ class _BillingCycleToggle extends StatelessWidget {
           Expanded(
             child: _ToggleChip(
               selected: cycle == BillingCycle.yearly,
-              label: 'Jährlich · –17%',
+              label: l10n.pricingYearlyDiscount,
               onTap: () => onChanged(BillingCycle.yearly),
               accent: theme.colorScheme.primary,
             ),
@@ -274,6 +278,7 @@ class _PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final accent = theme.colorScheme.primary;
     final price = cycle == BillingCycle.yearly
@@ -321,14 +326,14 @@ class _PlanCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 if (plan.mostPopular)
                   _Pill(
-                    text: 'Most Popular',
+                    text: l10n.pricingMostPopular,
                     bg: accent.withAlpha(30),
                     fg: accent,
                   ),
                 if (isCurrent) ...[
                   if (plan.mostPopular) const SizedBox(width: 6),
                   _Pill(
-                    text: 'Aktueller Plan',
+                    text: l10n.pricingCurrentPlan,
                     bg: Colors.black.withAlpha(15),
                     fg: Colors.black87,
                   ),
@@ -337,7 +342,7 @@ class _PlanCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              plan.tagline,
+              localizePricingTagline(l10n, plan.plan),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: Colors.black54,
               ),
@@ -352,7 +357,7 @@ class _PlanCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
-                  '≈ ${_fmtEur(price / 12)} / Monat',
+                  l10n.pricingPriceMonthlyApprox(_fmtEur(price / 12)),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: Colors.black54,
                   ),
@@ -371,13 +376,13 @@ class _PlanCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: Text(_buttonLabel(plan, isCurrent)),
+                child: Text(_buttonLabel(context, plan, isCurrent)),
               ),
             ),
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 14),
-            for (final h in plan.highlights)
+            for (final h in localizePricingHighlights(l10n, plan.plan))
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
@@ -401,10 +406,11 @@ class _PlanCard extends StatelessWidget {
     );
   }
 
-  String _buttonLabel(PricingPlan plan, bool isCurrent) {
-    if (isCurrent) return 'Aktiver Plan';
-    if (plan.isFree) return 'Auf Free wechseln';
-    return 'Plan auswählen';
+  String _buttonLabel(BuildContext context, PricingPlan plan, bool isCurrent) {
+    final l10n = AppLocalizations.of(context);
+    if (isCurrent) return l10n.pricingActivePlan;
+    if (plan.isFree) return l10n.pricingSwitchToFree;
+    return l10n.pricingChoosePlan;
   }
 
   static String _fmtEur(double v) {
@@ -445,11 +451,9 @@ class _LegalFootnote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Text(
-      'Alle Preise verstehen sich zzgl. der gesetzlichen Mehrwertsteuer. '
-      'Der Wechsel auf einen kostenpflichtigen Plan erfordert eine '
-      'vollständige Rechnungsadresse. Diese kann unter „Rechnungsdaten" '
-      'jederzeit aktualisiert werden.',
+      l10n.pricingPaidNeedsBillingHint,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Colors.black54,
           ),

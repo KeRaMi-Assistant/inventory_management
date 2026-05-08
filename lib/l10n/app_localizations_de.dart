@@ -2273,4 +2273,977 @@ class AppLocalizationsDe extends AppLocalizations {
   String settingsDemoWipeError(Object error) {
     return 'Löschen fehlgeschlagen: $error';
   }
+
+  @override
+  String get inboxFilterAllShops => 'Alle Shops';
+
+  @override
+  String get inboxFilterAllStatus => 'Alle Status';
+
+  @override
+  String get inboxFilterResetConfirmTitle => 'Filter zurücksetzen?';
+
+  @override
+  String get inboxFilterResetSuccess => 'Verworfen-Filter geleert.';
+
+  @override
+  String inboxFilterResetFailed(Object error) {
+    return 'Zurücksetzen fehlgeschlagen: $error';
+  }
+
+  @override
+  String get inboxPolling => 'Pollt das Postfach…';
+
+  @override
+  String inboxPollingFailed(Object error) {
+    return 'Polling fehlgeschlagen: $error';
+  }
+
+  @override
+  String get inboxMessageIdCopied =>
+      'Message-ID in die Zwischenablage kopiert.';
+
+  @override
+  String get inboxNoMailLink => 'Kein Mail-Link verfügbar.';
+
+  @override
+  String get inboxDiscardTitle => 'Mail verwerfen?';
+
+  @override
+  String get inboxDiscardAction => 'Verwerfen';
+
+  @override
+  String get inboxDiscardSuccess => 'Mail verworfen.';
+
+  @override
+  String inboxDiscardFailed(Object error) {
+    return 'Verwerfen fehlgeschlagen: $error';
+  }
+
+  @override
+  String get inboxNoSuggestions => 'Keine offenen Vorschläge.';
+
+  @override
+  String inboxDealCreatedFromSuggestion(int id) {
+    return 'Deal #$id aus Vorschlag erstellt.';
+  }
+
+  @override
+  String inboxSuggestionAcceptFailed(Object error) {
+    return 'Konnte Vorschlag nicht abschließen: $error';
+  }
+
+  @override
+  String inboxSuggestionRejectFailed(Object error) {
+    return 'Ablehnen fehlgeschlagen: $error';
+  }
+
+  @override
+  String get inboxNoTracking => 'Diese Mail enthält kein Tracking.';
+
+  @override
+  String inboxTrackingApplied(int id) {
+    return 'Tracking auf Deal #$id übernommen.';
+  }
+
+  @override
+  String inboxTrackingApplyFailed(Object error) {
+    return 'Tracking-Übernahme fehlgeschlagen: $error';
+  }
+
+  @override
+  String inboxSuggestionLinked(int id) {
+    return 'Vorschlag mit Deal #$id verknüpft.';
+  }
+
+  @override
+  String inboxAssignFailed(Object error) {
+    return 'Zuweisung fehlgeschlagen: $error';
+  }
+
+  @override
+  String get inboxActionsTooltip => 'Aktionen';
+
+  @override
+  String get inboxApplyTrackingToDeal => 'Tracking auf Deal anwenden';
+
+  @override
+  String get inboxAssignToExistingDeal => 'Zu bestehendem Deal zuweisen';
+
+  @override
+  String get inboxOpenInBrowser => 'Mail im Browser öffnen';
+
+  @override
+  String get inboxOpenMail => 'Mail öffnen';
+
+  @override
+  String get inboxAcceptAndEdit => 'Annehmen & bearbeiten';
+
+  @override
+  String get inboxAutoUpdatesEmpty =>
+      'Noch keine automatisch aktualisierten Deals.';
+
+  @override
+  String get inboxOpenTicket => 'Ticket öffnen';
+
+  @override
+  String get inboxAllSorted => 'Alles eingeordnet — keine unklaren Mails.';
+
+  @override
+  String inboxDealCreatedFromMail(int id) {
+    return 'Deal #$id aus Mail angelegt.';
+  }
+
+  @override
+  String get inboxCreateDeal => 'Deal anlegen';
+
+  @override
+  String get inboxTrackingToDeal => 'Tracking → Deal';
+
+  @override
+  String get inboxShowDetails => 'Details anzeigen';
+
+  @override
+  String get inboxTrackingNumberCopied => 'Tracking-Nummer kopiert.';
+
+  @override
+  String get pricingTitle => 'Pläne & Preise';
+
+  @override
+  String get pricingMostPopular => 'Beliebteste Wahl';
+
+  @override
+  String get pricingCurrentPlan => 'Aktueller Plan';
+
+  @override
+  String pricingPlanActivated(Object plan) {
+    return 'Plan $plan aktiviert.';
+  }
+
+  @override
+  String pricingActivationFailed(Object error) {
+    return 'Aktivierung fehlgeschlagen: $error';
+  }
+
+  @override
+  String get billingProfileTitle => 'Rechnungsdaten';
+
+  @override
+  String get billingProfileSaved => 'Rechnungsdaten gespeichert.';
+
+  @override
+  String billingProfileSaveFailed(Object error) {
+    return 'Speichern fehlgeschlagen: $error';
+  }
+
+  @override
+  String get settingsAddAmazonShops => 'Amazon-Shops hinzufügen';
+
+  @override
+  String settingsAddFailed(Object error) {
+    return 'Fehler beim Hinzufügen: $error';
+  }
+
+  @override
+  String get settingsMailboxRemoveTitle => 'Postfach entfernen';
+
+  @override
+  String settingsMailboxRemoveFailed(Object error) {
+    return 'Löschen fehlgeschlagen: $error';
+  }
+
+  @override
+  String get settingsMailboxLimitTitle => 'Postfach-Limit erreicht';
+
+  @override
+  String get settingsUpgradePlan => 'Plan upgraden';
+
+  @override
+  String get settingsApiKeyLabel => 'API-Key';
+
+  @override
+  String get settingsMailboxSection => 'Postfach';
+
+  @override
+  String get settingsCloudBackend => 'Supabase';
+
+  @override
+  String get mailboxImapServer => 'IMAP-Server';
+
+  @override
+  String get mailboxLabel => 'Label';
+
+  @override
+  String get mailboxPort => 'Port';
+
+  @override
+  String get mailboxUsername => 'Benutzername / Mail-Adresse';
+
+  @override
+  String get mailboxFolder => 'Ordner';
+
+  @override
+  String get mailboxFolderHint => 'INBOX';
+
+  @override
+  String get mailboxUseSsl => 'SSL/TLS verwenden';
+
+  @override
+  String get mailboxPollingActive => 'Polling aktiv';
+
+  @override
+  String inventoryEanCopied(Object code) {
+    return 'EAN: $code';
+  }
+
+  @override
+  String get inventoryDiscordTicketOpen => 'Discord-Ticket öffnen';
+
+  @override
+  String get inventoryColDealOrTicket => 'Deal / Ticket';
+
+  @override
+  String get inventoryProductRequiredLabel => 'Produkt *';
+
+  @override
+  String get inventoryProductHint => 'Aus Ticket auswählen oder frei eingeben';
+
+  @override
+  String get inventoryColEanGtin => 'EAN / GTIN';
+
+  @override
+  String ticketsBoxEkAmount(Object amount) {
+    return 'EK $amount';
+  }
+
+  @override
+  String ticketsBoxVkAmount(Object amount) {
+    return 'VK $amount';
+  }
+
+  @override
+  String get ticketsColEk => 'EK';
+
+  @override
+  String get ticketsColVk => 'VK';
+
+  @override
+  String get suppliersAddCarriers => 'Versanddienste hinzufügen';
+
+  @override
+  String get statsExportSheetMetrics => 'Kennzahlen';
+
+  @override
+  String get statsExportSheetTopProducts => 'Top-Produkte (max. 10)';
+
+  @override
+  String get statsExportSheetBuyersTop => 'Käufer (max. 10)';
+
+  @override
+  String get statsExportSheetShopsTop => 'Shops (max. 10)';
+
+  @override
+  String get statsExportSheetCashflow => 'Cashflow';
+
+  @override
+  String statsExportFilenamePrefix(Object file) {
+    return 'Excel-Export: $file';
+  }
+
+  @override
+  String get urlOpenFailed => 'Link konnte nicht geöffnet werden.';
+
+  @override
+  String buyerServerIdN(int n) {
+    return 'Server ID $n';
+  }
+
+  @override
+  String shopAmazonRegion(Object region) {
+    return 'Amazon · $region';
+  }
+
+  @override
+  String get shopDerivedFromName => 'Aus Shop-Namen abgeleitet';
+
+  @override
+  String get dealPickerSearchHint =>
+      'Suche nach Produkt, Ticket, Shop oder Käufer …';
+
+  @override
+  String get globalSearchHint =>
+      'Suchen über Deals, Lager, Tickets, Käufer, Lieferanten…';
+
+  @override
+  String get inboxMessageDetailsCopyTooltip => 'Kopieren';
+
+  @override
+  String inventoryBatchSnPrefix(Object sn) {
+    return 'SN: $sn';
+  }
+
+  @override
+  String get inventoryBatchSnLabel => 'SN';
+
+  @override
+  String get inventoryBatchExpiryLabel => 'MHD';
+
+  @override
+  String get statsNoData => 'Keine Daten.';
+
+  @override
+  String get statsNoDataInPeriod => 'Keine Daten im Zeitraum.';
+
+  @override
+  String get statsNoDataAvailable => 'Keine Daten vorhanden.';
+
+  @override
+  String get statsHeatmapLess => 'Weniger';
+
+  @override
+  String get statsHeatmapMore => 'Mehr';
+
+  @override
+  String get dealTableEditTooltip => 'Bearbeiten';
+
+  @override
+  String get dealTableDeleteTooltip => 'Löschen';
+
+  @override
+  String ticketsCountPlural(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Deals',
+      one: '1 Deal',
+      zero: 'Keine Deals',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ticketsItemsCountPlural(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Artikel',
+      one: '1 Artikel',
+      zero: 'Keine Artikel',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String supplierItemsPlural(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Artikel',
+      one: '1 Artikel',
+      zero: 'Keine Artikel',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String inventorySoldBuyerItemsPlural(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Stück',
+      one: '1 Stück',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pushPaymentLeadDaysPlural(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days Tage',
+      one: '1 Tag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String inboxTabSuggestions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Vorschläge ($count)',
+      one: 'Vorschläge (1)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String inboxTabUpdated(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Aktualisiert ($count)',
+      one: 'Aktualisiert (1)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String inboxTabUnclassified(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Unklassifiziert ($count)',
+      one: 'Unklassifiziert (1)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String inboxAccountsConnected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Postfächer verbunden',
+      one: '1 Postfach verbunden',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get inboxNoAccountConnected => 'Noch kein Postfach verbunden';
+
+  @override
+  String get inboxFooterDescription =>
+      'Polling alle 5 min — nur Bestellbestätigungen, Versand- und Stornierungs-Mails der konfigurierten Shops landen hier.';
+
+  @override
+  String get inboxFooterNoAccountHint =>
+      'Lege unter Einstellungen → Postfach ein IMAP-Konto an.';
+
+  @override
+  String get inboxDismissalsTooltipEmpty => 'Verworfen-Filter (0)';
+
+  @override
+  String inboxDismissalsTooltipActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Verworfen-Filter zurücksetzen ($count Einträge)',
+      one: 'Verworfen-Filter zurücksetzen (1 Eintrag)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String inboxImportingTooltip(int count) {
+    return 'Importiere Mails… ($count bisher)';
+  }
+
+  @override
+  String get inboxPollNowTooltip => 'Jetzt pollen (statt 5 min warten)';
+
+  @override
+  String get inboxPollNoAccountTooltip =>
+      'Erst Postfach in den Einstellungen verbinden';
+
+  @override
+  String inboxFilterResetConfirmBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count verworfene Einträge werden wieder angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.',
+      one:
+          '1 verworfener Eintrag wird wieder angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String inboxPollFetchedSummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Mails geholt',
+      one: '1 Mail geholt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String inboxPollStoredSummary(int count) {
+    return '$count aufgenommen';
+  }
+
+  @override
+  String inboxPollSuggMatchedSummary(int s, int m) {
+    return '$s Vorschl. / $m gemerged';
+  }
+
+  @override
+  String get inboxPollNoNewMails =>
+      'Keine neuen passenden Mails. Postfach ist aktuell.';
+
+  @override
+  String inboxDiscardConfirmBody(Object subject) {
+    return 'Die Mail \"$subject\" wird aus der Inbox entfernt und nicht mehr angezeigt.';
+  }
+
+  @override
+  String get inboxAssignSuggestionTitle => 'Vorschlag zu Deal zuweisen';
+
+  @override
+  String get inboxAssignSuggestionBody =>
+      'Order-ID, Tracking und ETA werden in den ausgewählten Deal übernommen, der Vorschlag wird abgehakt.';
+
+  @override
+  String inboxApplyTrackingHint(Object tracking) {
+    return 'Tracking $tracking → Deal-Tracking, Status wird auf „Unterwegs\" gesetzt.';
+  }
+
+  @override
+  String get inboxManualMailEntry => 'Manueller Eintrag aus Mail';
+
+  @override
+  String get inboxAutoUpdateRefreshHint =>
+      'Aktualisiert sich beim nächsten Refresh.';
+
+  @override
+  String get inboxNoProductName => '— ohne Produktnamen —';
+
+  @override
+  String inboxQuantityShort(int count) {
+    return '$count Stk.';
+  }
+
+  @override
+  String inboxEtaPrefix(Object date) {
+    return 'ETA $date';
+  }
+
+  @override
+  String inboxOrderForShop(Object shop) {
+    return 'Bestellung für $shop';
+  }
+
+  @override
+  String inboxRecognizedOrder(Object shop) {
+    return 'Erkannter Auftrag ($shop)';
+  }
+
+  @override
+  String inboxOrderPrefix(Object id) {
+    return 'Bestellung $id';
+  }
+
+  @override
+  String get billingProfileFullName => 'Vollständiger Name';
+
+  @override
+  String get billingProfileStreet => 'Straße & Hausnummer';
+
+  @override
+  String get billingProfileSavingDots => 'Speichern…';
+
+  @override
+  String get billingProfileRequiredForPaid =>
+      'Pflichtfeld für kostenpflichtige Pläne';
+
+  @override
+  String get billingProfileIntroBody =>
+      'Für kostenpflichtige Pläne benötigen wir eine vollständige Rechnungsadresse (Pflichtfelder mit *).';
+
+  @override
+  String get billingProfilePrivacyHint =>
+      'Diese Daten werden ausschließlich für Rechnungen und steuerrelevante Dokumente verwendet.';
+
+  @override
+  String settingsAmazonExisting(int skipped) {
+    return 'Amazon-Shops sind bereits vorhanden ($skipped übersprungen).';
+  }
+
+  @override
+  String settingsAmazonAdded(int added) {
+    String _temp0 = intl.Intl.pluralLogic(
+      added,
+      locale: localeName,
+      other: '$added Amazon-Shops hinzugefügt',
+      one: '1 Amazon-Shop hinzugefügt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String settingsMailboxRemoveBody(Object label) {
+    return 'Postfach \"$label\" wirklich löschen? Auch alle aus diesem Postfach importierten Mails (Vorschläge + Unklassifizierte) werden gelöscht. Bereits in Deals übernommene Bestellungen bleiben unberührt.';
+  }
+
+  @override
+  String settingsMailboxLimitBody(Object plan, int limit) {
+    String _temp0 = intl.Intl.pluralLogic(
+      limit,
+      locale: localeName,
+      other: '$limit Postfächer',
+      one: '1 Postfach',
+    );
+    return '$plan enthält nur $_temp0. Upgrade auf einen höheren Plan, um weitere zu verbinden.';
+  }
+
+  @override
+  String get settingsMailboxFreeNotIncluded =>
+      'Postfach im Free-Plan nicht enthalten';
+
+  @override
+  String get settingsMailboxStarterUpgradeHint =>
+      'Importieren von Mails ist ab dem Starter-Plan verfügbar — höhere Pläne erlauben mehr Postfächer und längeren Inbox-Verlauf.';
+
+  @override
+  String get settingsMailboxRequiredIncomplete =>
+      'Pflichtangaben unvollständig — bitte ergänzen';
+
+  @override
+  String get settingsMailboxOptional =>
+      'Optional — wird erst beim Upgrade benötigt';
+
+  @override
+  String get settingsMailboxNeverPolled => 'Noch nicht gepollt';
+
+  @override
+  String get settingsMailboxIntroBody =>
+      'Verbinde ein IMAP-Konto, um Bestellbestätigungen automatisch erkennen zu lassen. Polling läuft alle 5 min serverseitig — Passwörter werden mit pgp_sym_encrypt verschlüsselt gespeichert. Im Inbox-Tab kannst du…';
+
+  @override
+  String get settingsAmazonShopsHeading => 'Amazon';
+
+  @override
+  String get settingsAddMailboxButton => 'Postfach hinzufügen';
+
+  @override
+  String get settingsMailboxesHeading => 'Postfächer';
+
+  @override
+  String settingsMailboxesPlanHint(int count, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Postfächer · $days Tage',
+      one: '1 Postfach · $days Tage',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String suppliersCarriersExisting(int skipped) {
+    return 'Versanddienste sind bereits vorhanden ($skipped übersprungen).';
+  }
+
+  @override
+  String suppliersCarriersAdded(int added) {
+    String _temp0 = intl.Intl.pluralLogic(
+      added,
+      locale: localeName,
+      other: '$added Versanddienste hinzugefügt',
+      one: '1 Versanddienst hinzugefügt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pricingChooseTitle => 'Wähle den Plan, der zu dir passt';
+
+  @override
+  String get pricingFreeIncluded => 'Team-Plätze und Analyse-Features frei.';
+
+  @override
+  String get pricingCheckoutPlaceholder =>
+      'Sobald Stripe/Paddle integriert ist, läuft hier der echte Checkout.';
+
+  @override
+  String get pricingYearlyDiscount => 'Jährlich · –17%';
+
+  @override
+  String get pricingActivePlan => 'Aktiver Plan';
+
+  @override
+  String get pricingSwitchToFree => 'Auf Free wechseln';
+
+  @override
+  String get pricingChoosePlan => 'Plan auswählen';
+
+  @override
+  String pricingPriceMonthlyApprox(Object amount) {
+    return '≈ $amount / Monat';
+  }
+
+  @override
+  String get pricingPaidNeedsBillingHint =>
+      'Kostenpflichtige Pläne benötigen eine vollständige Rechnungsadresse. Diese kann unter „Rechnungsdaten\" jederzeit aktualisiert werden.';
+
+  @override
+  String get authLoginNetworkError =>
+      'Anmeldung fehlgeschlagen. Bitte Internetverbindung prüfen.';
+
+  @override
+  String get authConfirmEmailFirst =>
+      'Bitte bestätige zuerst deine E-Mail-Adresse.';
+
+  @override
+  String get authRegisterNetworkError =>
+      'Registrierung fehlgeschlagen. Bitte Internetverbindung prüfen.';
+
+  @override
+  String get authResetLinkFailed => 'Reset-Link konnte nicht gesendet werden.';
+
+  @override
+  String get authPasswordChangeFailed =>
+      'Passwort konnte nicht geändert werden.';
+
+  @override
+  String get authResendFailed => 'E-Mail konnte nicht erneut gesendet werden.';
+
+  @override
+  String authProviderLoginFailed(Object provider) {
+    return 'Anmeldung mit $provider fehlgeschlagen.';
+  }
+
+  @override
+  String get authDeleteAccountFailed => 'Konto konnte nicht gelöscht werden.';
+
+  @override
+  String get authDeleteAccountNetworkError =>
+      'Konto konnte nicht gelöscht werden. Bitte Internetverbindung prüfen.';
+
+  @override
+  String get authEmailOrPasswordWrong => 'E-Mail oder Passwort ist falsch.';
+
+  @override
+  String get authPasswordTooWeak =>
+      'Passwort ist zu schwach. Bitte stärkeres Passwort wählen.';
+
+  @override
+  String get authNoConnection => 'Keine Verbindung. Internetverbindung prüfen.';
+
+  @override
+  String get authNoAccountForEmail => 'Kein Konto mit dieser E-Mail gefunden.';
+
+  @override
+  String get authRegistrationDisabled =>
+      'Registrierung ist derzeit deaktiviert.';
+
+  @override
+  String get authProviderNotEnabled =>
+      'Dieser Anmeldeweg ist im Backend nicht aktiviert.';
+
+  @override
+  String get inboxSuggestionMissingTrackingError =>
+      'Suggestion enthält kein Tracking.';
+
+  @override
+  String get ticketsArchiveColumnHeader => 'Archiv';
+
+  @override
+  String get ticketsManualEntryFromMail => 'Manueller Eintrag aus Mail';
+
+  @override
+  String get pricingPlanFreeTagline => 'Zum Reinschnuppern';
+
+  @override
+  String get pricingPlanStarterTagline => 'Solo-Reseller, das Wesentliche';
+
+  @override
+  String get pricingPlanProTagline => 'Für aktive Reseller';
+
+  @override
+  String get pricingPlanBusinessTagline => 'Power-Reseller & Teams';
+
+  @override
+  String get pricingPlanUltimateTagline => 'Für Wholesale & Heavy-Volume';
+
+  @override
+  String get pricingHighlightFreeProducts => 'Bis zu 50 Produkte';
+
+  @override
+  String get pricingHighlightFreeDeals => '25 Deals pro Monat';
+
+  @override
+  String get pricingHighlightFreeNoImages => 'Keine Bilder pro Eintrag';
+
+  @override
+  String get pricingHighlightFreeOverviewStats => 'Nur Übersichts-Statistik';
+
+  @override
+  String get pricingHighlightFreeNoMailbox => 'Kein Postfach-Import';
+
+  @override
+  String get pricingHighlightFreeCommunitySupport => 'Community-Support';
+
+  @override
+  String get pricingHighlightStarterProducts => 'Bis zu 500 Produkte';
+
+  @override
+  String get pricingHighlightStarterDealsUnlimited => 'Unbegrenzt Deals';
+
+  @override
+  String get pricingHighlightStarterImageStorage =>
+      '1 Bild pro Eintrag · 1 GB Storage';
+
+  @override
+  String get pricingHighlightStarterMailbox =>
+      '1 Postfach · 7 Tage Inbox-Verlauf';
+
+  @override
+  String get pricingHighlightStarterCsv => 'CSV Import & Export';
+
+  @override
+  String get pricingHighlightStarterBarcode => 'Barcode-Scanner';
+
+  @override
+  String get pricingHighlightStarterEmailSupport => 'E-Mail-Support (48h)';
+
+  @override
+  String get pricingHighlightProProducts => 'Bis zu 5.000 Produkte';
+
+  @override
+  String get pricingHighlightProDealsUnlimited => 'Unbegrenzt Deals';
+
+  @override
+  String get pricingHighlightProTeam => 'Bis zu 3 Team-Mitglieder';
+
+  @override
+  String get pricingHighlightProImageStorage =>
+      '5 Bilder pro Eintrag · 10 GB Storage';
+
+  @override
+  String get pricingHighlightProMailbox =>
+      '3 Postfächer · 14 Tage Inbox-Verlauf';
+
+  @override
+  String get pricingHighlightProAnalytics => 'Drilldowns, Heatmaps & Trends';
+
+  @override
+  String get pricingHighlightProActivityLog => 'Activity-Log & Audit-Trail';
+
+  @override
+  String get pricingHighlightProPush => 'Push-Benachrichtigungen';
+
+  @override
+  String get pricingHighlightProPrioritySupport => 'Priority-Support (24h)';
+
+  @override
+  String get pricingHighlightBusinessProducts => 'Bis zu 100.000 Produkte';
+
+  @override
+  String get pricingHighlightBusinessTeam => 'Bis zu 10 Team-Mitglieder';
+
+  @override
+  String get pricingHighlightBusinessImageStorage =>
+      '10 Bilder pro Eintrag · 50 GB Storage';
+
+  @override
+  String get pricingHighlightBusinessMailbox =>
+      '10 Postfächer · 30 Tage Inbox-Verlauf';
+
+  @override
+  String get pricingHighlightBusinessApi => 'API-Zugriff & Webhooks';
+
+  @override
+  String get pricingHighlightBusinessDatev => 'DATEV-Export (geplant)';
+
+  @override
+  String get pricingHighlightBusinessBranding => 'Custom Branding für Reports';
+
+  @override
+  String get pricingHighlightBusinessSla => 'Priority-SLA (12h)';
+
+  @override
+  String get pricingHighlightUltimateProducts => 'Bis zu 300.000 Produkte';
+
+  @override
+  String get pricingHighlightUltimateMailbox =>
+      '15 Postfächer · 90 Tage Inbox-Verlauf';
+
+  @override
+  String get pricingHighlightUltimateTeam => 'Bis zu 50 Team-Mitglieder';
+
+  @override
+  String get pricingHighlightUltimateImageStorage =>
+      '25 Bilder pro Eintrag · unbegrenzter Storage';
+
+  @override
+  String get pricingHighlightUltimateSso => 'Single Sign-On (SAML/OIDC)';
+
+  @override
+  String get pricingHighlightUltimateWhitelabel => 'White-Label-Option';
+
+  @override
+  String get pricingHighlightUltimateMarketplace =>
+      'Marketplace-Sync (geplant)';
+
+  @override
+  String get pricingHighlightUltimateAccountManager =>
+      'Dedizierter Account Manager';
+
+  @override
+  String get pricingHighlightUltimateUptime => 'Uptime-SLA 99,9%';
+
+  @override
+  String get statsServiceUnknownBuyer => '— Ohne Käufer';
+
+  @override
+  String get pricingManageAction => 'Plan verwalten';
+
+  @override
+  String pricingCurrentlyOnPlan(Object plan) {
+    return 'Aktuell: $plan';
+  }
+
+  @override
+  String get navInbox => 'Inbox';
+
+  @override
+  String get inboxCountdownToday => 'Heute weg';
+
+  @override
+  String get inboxCountdownOneDay => 'Noch 1 Tag';
+
+  @override
+  String inboxCountdownDaysLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Noch $count Tage',
+      one: 'Noch 1 Tag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String inboxVisibilityPrefix(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days Tage',
+      one: '1 Tag',
+    );
+    return 'Inbox-Sichtbarkeit $_temp0. ';
+  }
+
+  @override
+  String get inboxUpdatedDealDefault => 'Aktualisierter Deal';
+
+  @override
+  String get inboxNoSubject => '— ohne Betreff —';
+
+  @override
+  String get inboxOtherShop => 'Sonstige';
+
+  @override
+  String get inboxUnknownSender => 'Unbekannt';
+
+  @override
+  String inboxTrackingPrefix(Object tracking) {
+    return 'Tracking: $tracking';
+  }
 }

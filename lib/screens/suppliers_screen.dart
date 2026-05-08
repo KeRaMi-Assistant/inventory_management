@@ -44,18 +44,18 @@ class SuppliersScreen extends StatelessWidget {
     InventoryProvider provider,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
     try {
       final result = await provider.seedCarrierSuppliers();
       messenger.showSnackBar(SnackBar(
         content: Text(result.added == 0
-            ? 'Versanddienste sind bereits vorhanden (${result.skipped} übersprungen).'
-            : '${result.added} Versanddienste hinzugefügt'
-                '${result.skipped > 0 ? ', ${result.skipped} bereits vorhanden' : ''}.'),
+            ? l10n.suppliersCarriersExisting(result.skipped)
+            : l10n.suppliersCarriersAdded(result.added)),
         behavior: SnackBarBehavior.floating,
       ));
     } catch (e) {
       messenger.showSnackBar(SnackBar(
-        content: Text('Fehler beim Hinzufügen: $e'),
+        content: Text(l10n.settingsAddFailed(e.toString())),
         behavior: SnackBarBehavior.floating,
       ));
     }
@@ -88,7 +88,7 @@ class SuppliersScreen extends StatelessWidget {
                       onPressed: () => _seedCarriers(context, provider),
                       icon: const Icon(Icons.local_shipping_outlined,
                           size: 16),
-                      label: const Text('Versanddienste hinzufügen'),
+                      label: Text(l10n.suppliersAddCarriers),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 8),

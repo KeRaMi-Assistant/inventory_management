@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 /// Donut-Chart mit Legende rechts. Zeigt automatisch nur Top-N Slices,
 /// der Rest wird zu "Sonstige" zusammengefasst.
 class DonutChart extends StatefulWidget {
@@ -39,9 +41,9 @@ class _DonutChartState extends State<DonutChart> {
     if (widget.data.isEmpty) {
       return SizedBox(
         height: widget.height,
-        child: const Center(
-          child: Text('Keine Daten.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+        child: Center(
+          child: Text(AppLocalizations.of(context).statsNoData,
+              style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
         ),
       );
     }

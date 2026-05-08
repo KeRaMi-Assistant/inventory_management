@@ -4255,6 +4255,1416 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Löschen fehlgeschlagen: {error}'**
   String settingsDemoWipeError(Object error);
+
+  /// No description provided for @inboxFilterAllShops.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Shops'**
+  String get inboxFilterAllShops;
+
+  /// No description provided for @inboxFilterAllStatus.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Status'**
+  String get inboxFilterAllStatus;
+
+  /// No description provided for @inboxFilterResetConfirmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Filter zurücksetzen?'**
+  String get inboxFilterResetConfirmTitle;
+
+  /// No description provided for @inboxFilterResetSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Verworfen-Filter geleert.'**
+  String get inboxFilterResetSuccess;
+
+  /// No description provided for @inboxFilterResetFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurücksetzen fehlgeschlagen: {error}'**
+  String inboxFilterResetFailed(Object error);
+
+  /// No description provided for @inboxPolling.
+  ///
+  /// In de, this message translates to:
+  /// **'Pollt das Postfach…'**
+  String get inboxPolling;
+
+  /// No description provided for @inboxPollingFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Polling fehlgeschlagen: {error}'**
+  String inboxPollingFailed(Object error);
+
+  /// No description provided for @inboxMessageIdCopied.
+  ///
+  /// In de, this message translates to:
+  /// **'Message-ID in die Zwischenablage kopiert.'**
+  String get inboxMessageIdCopied;
+
+  /// No description provided for @inboxNoMailLink.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Mail-Link verfügbar.'**
+  String get inboxNoMailLink;
+
+  /// No description provided for @inboxDiscardTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Mail verwerfen?'**
+  String get inboxDiscardTitle;
+
+  /// No description provided for @inboxDiscardAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Verwerfen'**
+  String get inboxDiscardAction;
+
+  /// No description provided for @inboxDiscardSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Mail verworfen.'**
+  String get inboxDiscardSuccess;
+
+  /// No description provided for @inboxDiscardFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Verwerfen fehlgeschlagen: {error}'**
+  String inboxDiscardFailed(Object error);
+
+  /// No description provided for @inboxNoSuggestions.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine offenen Vorschläge.'**
+  String get inboxNoSuggestions;
+
+  /// No description provided for @inboxDealCreatedFromSuggestion.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal #{id} aus Vorschlag erstellt.'**
+  String inboxDealCreatedFromSuggestion(int id);
+
+  /// No description provided for @inboxSuggestionAcceptFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Konnte Vorschlag nicht abschließen: {error}'**
+  String inboxSuggestionAcceptFailed(Object error);
+
+  /// No description provided for @inboxSuggestionRejectFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Ablehnen fehlgeschlagen: {error}'**
+  String inboxSuggestionRejectFailed(Object error);
+
+  /// No description provided for @inboxNoTracking.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Mail enthält kein Tracking.'**
+  String get inboxNoTracking;
+
+  /// No description provided for @inboxTrackingApplied.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking auf Deal #{id} übernommen.'**
+  String inboxTrackingApplied(int id);
+
+  /// No description provided for @inboxTrackingApplyFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Übernahme fehlgeschlagen: {error}'**
+  String inboxTrackingApplyFailed(Object error);
+
+  /// No description provided for @inboxSuggestionLinked.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschlag mit Deal #{id} verknüpft.'**
+  String inboxSuggestionLinked(int id);
+
+  /// No description provided for @inboxAssignFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Zuweisung fehlgeschlagen: {error}'**
+  String inboxAssignFailed(Object error);
+
+  /// No description provided for @inboxActionsTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktionen'**
+  String get inboxActionsTooltip;
+
+  /// No description provided for @inboxApplyTrackingToDeal.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking auf Deal anwenden'**
+  String get inboxApplyTrackingToDeal;
+
+  /// No description provided for @inboxAssignToExistingDeal.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu bestehendem Deal zuweisen'**
+  String get inboxAssignToExistingDeal;
+
+  /// No description provided for @inboxOpenInBrowser.
+  ///
+  /// In de, this message translates to:
+  /// **'Mail im Browser öffnen'**
+  String get inboxOpenInBrowser;
+
+  /// No description provided for @inboxOpenMail.
+  ///
+  /// In de, this message translates to:
+  /// **'Mail öffnen'**
+  String get inboxOpenMail;
+
+  /// No description provided for @inboxAcceptAndEdit.
+  ///
+  /// In de, this message translates to:
+  /// **'Annehmen & bearbeiten'**
+  String get inboxAcceptAndEdit;
+
+  /// No description provided for @inboxAutoUpdatesEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine automatisch aktualisierten Deals.'**
+  String get inboxAutoUpdatesEmpty;
+
+  /// No description provided for @inboxOpenTicket.
+  ///
+  /// In de, this message translates to:
+  /// **'Ticket öffnen'**
+  String get inboxOpenTicket;
+
+  /// No description provided for @inboxAllSorted.
+  ///
+  /// In de, this message translates to:
+  /// **'Alles eingeordnet — keine unklaren Mails.'**
+  String get inboxAllSorted;
+
+  /// No description provided for @inboxDealCreatedFromMail.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal #{id} aus Mail angelegt.'**
+  String inboxDealCreatedFromMail(int id);
+
+  /// No description provided for @inboxCreateDeal.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal anlegen'**
+  String get inboxCreateDeal;
+
+  /// No description provided for @inboxTrackingToDeal.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking → Deal'**
+  String get inboxTrackingToDeal;
+
+  /// No description provided for @inboxShowDetails.
+  ///
+  /// In de, this message translates to:
+  /// **'Details anzeigen'**
+  String get inboxShowDetails;
+
+  /// No description provided for @inboxTrackingNumberCopied.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Nummer kopiert.'**
+  String get inboxTrackingNumberCopied;
+
+  /// No description provided for @pricingTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Pläne & Preise'**
+  String get pricingTitle;
+
+  /// No description provided for @pricingMostPopular.
+  ///
+  /// In de, this message translates to:
+  /// **'Beliebteste Wahl'**
+  String get pricingMostPopular;
+
+  /// No description provided for @pricingCurrentPlan.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktueller Plan'**
+  String get pricingCurrentPlan;
+
+  /// No description provided for @pricingPlanActivated.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan {plan} aktiviert.'**
+  String pricingPlanActivated(Object plan);
+
+  /// No description provided for @pricingActivationFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierung fehlgeschlagen: {error}'**
+  String pricingActivationFailed(Object error);
+
+  /// No description provided for @billingProfileTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Rechnungsdaten'**
+  String get billingProfileTitle;
+
+  /// No description provided for @billingProfileSaved.
+  ///
+  /// In de, this message translates to:
+  /// **'Rechnungsdaten gespeichert.'**
+  String get billingProfileSaved;
+
+  /// No description provided for @billingProfileSaveFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen: {error}'**
+  String billingProfileSaveFailed(Object error);
+
+  /// No description provided for @settingsAddAmazonShops.
+  ///
+  /// In de, this message translates to:
+  /// **'Amazon-Shops hinzufügen'**
+  String get settingsAddAmazonShops;
+
+  /// No description provided for @settingsAddFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Hinzufügen: {error}'**
+  String settingsAddFailed(Object error);
+
+  /// No description provided for @settingsMailboxRemoveTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach entfernen'**
+  String get settingsMailboxRemoveTitle;
+
+  /// No description provided for @settingsMailboxRemoveFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen: {error}'**
+  String settingsMailboxRemoveFailed(Object error);
+
+  /// No description provided for @settingsMailboxLimitTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach-Limit erreicht'**
+  String get settingsMailboxLimitTitle;
+
+  /// No description provided for @settingsUpgradePlan.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan upgraden'**
+  String get settingsUpgradePlan;
+
+  /// No description provided for @settingsApiKeyLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'API-Key'**
+  String get settingsApiKeyLabel;
+
+  /// No description provided for @settingsMailboxSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach'**
+  String get settingsMailboxSection;
+
+  /// No description provided for @settingsCloudBackend.
+  ///
+  /// In de, this message translates to:
+  /// **'Supabase'**
+  String get settingsCloudBackend;
+
+  /// No description provided for @mailboxImapServer.
+  ///
+  /// In de, this message translates to:
+  /// **'IMAP-Server'**
+  String get mailboxImapServer;
+
+  /// No description provided for @mailboxLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Label'**
+  String get mailboxLabel;
+
+  /// No description provided for @mailboxPort.
+  ///
+  /// In de, this message translates to:
+  /// **'Port'**
+  String get mailboxPort;
+
+  /// No description provided for @mailboxUsername.
+  ///
+  /// In de, this message translates to:
+  /// **'Benutzername / Mail-Adresse'**
+  String get mailboxUsername;
+
+  /// No description provided for @mailboxFolder.
+  ///
+  /// In de, this message translates to:
+  /// **'Ordner'**
+  String get mailboxFolder;
+
+  /// No description provided for @mailboxFolderHint.
+  ///
+  /// In de, this message translates to:
+  /// **'INBOX'**
+  String get mailboxFolderHint;
+
+  /// No description provided for @mailboxUseSsl.
+  ///
+  /// In de, this message translates to:
+  /// **'SSL/TLS verwenden'**
+  String get mailboxUseSsl;
+
+  /// No description provided for @mailboxPollingActive.
+  ///
+  /// In de, this message translates to:
+  /// **'Polling aktiv'**
+  String get mailboxPollingActive;
+
+  /// No description provided for @inventoryEanCopied.
+  ///
+  /// In de, this message translates to:
+  /// **'EAN: {code}'**
+  String inventoryEanCopied(Object code);
+
+  /// No description provided for @inventoryDiscordTicketOpen.
+  ///
+  /// In de, this message translates to:
+  /// **'Discord-Ticket öffnen'**
+  String get inventoryDiscordTicketOpen;
+
+  /// No description provided for @inventoryColDealOrTicket.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal / Ticket'**
+  String get inventoryColDealOrTicket;
+
+  /// No description provided for @inventoryProductRequiredLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Produkt *'**
+  String get inventoryProductRequiredLabel;
+
+  /// No description provided for @inventoryProductHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Aus Ticket auswählen oder frei eingeben'**
+  String get inventoryProductHint;
+
+  /// No description provided for @inventoryColEanGtin.
+  ///
+  /// In de, this message translates to:
+  /// **'EAN / GTIN'**
+  String get inventoryColEanGtin;
+
+  /// No description provided for @ticketsBoxEkAmount.
+  ///
+  /// In de, this message translates to:
+  /// **'EK {amount}'**
+  String ticketsBoxEkAmount(Object amount);
+
+  /// No description provided for @ticketsBoxVkAmount.
+  ///
+  /// In de, this message translates to:
+  /// **'VK {amount}'**
+  String ticketsBoxVkAmount(Object amount);
+
+  /// No description provided for @ticketsColEk.
+  ///
+  /// In de, this message translates to:
+  /// **'EK'**
+  String get ticketsColEk;
+
+  /// No description provided for @ticketsColVk.
+  ///
+  /// In de, this message translates to:
+  /// **'VK'**
+  String get ticketsColVk;
+
+  /// No description provided for @suppliersAddCarriers.
+  ///
+  /// In de, this message translates to:
+  /// **'Versanddienste hinzufügen'**
+  String get suppliersAddCarriers;
+
+  /// No description provided for @statsExportSheetMetrics.
+  ///
+  /// In de, this message translates to:
+  /// **'Kennzahlen'**
+  String get statsExportSheetMetrics;
+
+  /// No description provided for @statsExportSheetTopProducts.
+  ///
+  /// In de, this message translates to:
+  /// **'Top-Produkte (max. 10)'**
+  String get statsExportSheetTopProducts;
+
+  /// No description provided for @statsExportSheetBuyersTop.
+  ///
+  /// In de, this message translates to:
+  /// **'Käufer (max. 10)'**
+  String get statsExportSheetBuyersTop;
+
+  /// No description provided for @statsExportSheetShopsTop.
+  ///
+  /// In de, this message translates to:
+  /// **'Shops (max. 10)'**
+  String get statsExportSheetShopsTop;
+
+  /// No description provided for @statsExportSheetCashflow.
+  ///
+  /// In de, this message translates to:
+  /// **'Cashflow'**
+  String get statsExportSheetCashflow;
+
+  /// No description provided for @statsExportFilenamePrefix.
+  ///
+  /// In de, this message translates to:
+  /// **'Excel-Export: {file}'**
+  String statsExportFilenamePrefix(Object file);
+
+  /// No description provided for @urlOpenFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Link konnte nicht geöffnet werden.'**
+  String get urlOpenFailed;
+
+  /// No description provided for @buyerServerIdN.
+  ///
+  /// In de, this message translates to:
+  /// **'Server ID {n}'**
+  String buyerServerIdN(int n);
+
+  /// No description provided for @shopAmazonRegion.
+  ///
+  /// In de, this message translates to:
+  /// **'Amazon · {region}'**
+  String shopAmazonRegion(Object region);
+
+  /// No description provided for @shopDerivedFromName.
+  ///
+  /// In de, this message translates to:
+  /// **'Aus Shop-Namen abgeleitet'**
+  String get shopDerivedFromName;
+
+  /// No description provided for @dealPickerSearchHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Suche nach Produkt, Ticket, Shop oder Käufer …'**
+  String get dealPickerSearchHint;
+
+  /// No description provided for @globalSearchHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Suchen über Deals, Lager, Tickets, Käufer, Lieferanten…'**
+  String get globalSearchHint;
+
+  /// No description provided for @inboxMessageDetailsCopyTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Kopieren'**
+  String get inboxMessageDetailsCopyTooltip;
+
+  /// No description provided for @inventoryBatchSnPrefix.
+  ///
+  /// In de, this message translates to:
+  /// **'SN: {sn}'**
+  String inventoryBatchSnPrefix(Object sn);
+
+  /// No description provided for @inventoryBatchSnLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'SN'**
+  String get inventoryBatchSnLabel;
+
+  /// No description provided for @inventoryBatchExpiryLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'MHD'**
+  String get inventoryBatchExpiryLabel;
+
+  /// No description provided for @statsNoData.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Daten.'**
+  String get statsNoData;
+
+  /// No description provided for @statsNoDataInPeriod.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Daten im Zeitraum.'**
+  String get statsNoDataInPeriod;
+
+  /// No description provided for @statsNoDataAvailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Daten vorhanden.'**
+  String get statsNoDataAvailable;
+
+  /// No description provided for @statsHeatmapLess.
+  ///
+  /// In de, this message translates to:
+  /// **'Weniger'**
+  String get statsHeatmapLess;
+
+  /// No description provided for @statsHeatmapMore.
+  ///
+  /// In de, this message translates to:
+  /// **'Mehr'**
+  String get statsHeatmapMore;
+
+  /// No description provided for @dealTableEditTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Bearbeiten'**
+  String get dealTableEditTooltip;
+
+  /// No description provided for @dealTableDeleteTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen'**
+  String get dealTableDeleteTooltip;
+
+  /// No description provided for @ticketsCountPlural.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Keine Deals} =1{1 Deal} other{{count} Deals}}'**
+  String ticketsCountPlural(int count);
+
+  /// No description provided for @ticketsItemsCountPlural.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Keine Artikel} =1{1 Artikel} other{{count} Artikel}}'**
+  String ticketsItemsCountPlural(int count);
+
+  /// No description provided for @supplierItemsPlural.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Keine Artikel} =1{1 Artikel} other{{count} Artikel}}'**
+  String supplierItemsPlural(int count);
+
+  /// No description provided for @inventorySoldBuyerItemsPlural.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Stück} other{{count} Stück}}'**
+  String inventorySoldBuyerItemsPlural(int count);
+
+  /// No description provided for @pushPaymentLeadDaysPlural.
+  ///
+  /// In de, this message translates to:
+  /// **'{days, plural, =1{1 Tag} other{{days} Tage}}'**
+  String pushPaymentLeadDaysPlural(int days);
+
+  /// No description provided for @inboxTabSuggestions.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{Vorschläge (1)} other{Vorschläge ({count})}}'**
+  String inboxTabSuggestions(int count);
+
+  /// No description provided for @inboxTabUpdated.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{Aktualisiert (1)} other{Aktualisiert ({count})}}'**
+  String inboxTabUpdated(int count);
+
+  /// No description provided for @inboxTabUnclassified.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{Unklassifiziert (1)} other{Unklassifiziert ({count})}}'**
+  String inboxTabUnclassified(int count);
+
+  /// No description provided for @inboxAccountsConnected.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Postfach verbunden} other{{count} Postfächer verbunden}}'**
+  String inboxAccountsConnected(int count);
+
+  /// No description provided for @inboxNoAccountConnected.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch kein Postfach verbunden'**
+  String get inboxNoAccountConnected;
+
+  /// No description provided for @inboxFooterDescription.
+  ///
+  /// In de, this message translates to:
+  /// **'Polling alle 5 min — nur Bestellbestätigungen, Versand- und Stornierungs-Mails der konfigurierten Shops landen hier.'**
+  String get inboxFooterDescription;
+
+  /// No description provided for @inboxFooterNoAccountHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege unter Einstellungen → Postfach ein IMAP-Konto an.'**
+  String get inboxFooterNoAccountHint;
+
+  /// No description provided for @inboxDismissalsTooltipEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Verworfen-Filter (0)'**
+  String get inboxDismissalsTooltipEmpty;
+
+  /// No description provided for @inboxDismissalsTooltipActive.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{Verworfen-Filter zurücksetzen (1 Eintrag)} other{Verworfen-Filter zurücksetzen ({count} Einträge)}}'**
+  String inboxDismissalsTooltipActive(int count);
+
+  /// No description provided for @inboxImportingTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Importiere Mails… ({count} bisher)'**
+  String inboxImportingTooltip(int count);
+
+  /// No description provided for @inboxPollNowTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Jetzt pollen (statt 5 min warten)'**
+  String get inboxPollNowTooltip;
+
+  /// No description provided for @inboxPollNoAccountTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Erst Postfach in den Einstellungen verbinden'**
+  String get inboxPollNoAccountTooltip;
+
+  /// No description provided for @inboxFilterResetConfirmBody.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 verworfener Eintrag wird wieder angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.} other{{count} verworfene Einträge werden wieder angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.}}'**
+  String inboxFilterResetConfirmBody(int count);
+
+  /// No description provided for @inboxPollFetchedSummary.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Mail geholt} other{{count} Mails geholt}}'**
+  String inboxPollFetchedSummary(int count);
+
+  /// No description provided for @inboxPollStoredSummary.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} aufgenommen'**
+  String inboxPollStoredSummary(int count);
+
+  /// No description provided for @inboxPollSuggMatchedSummary.
+  ///
+  /// In de, this message translates to:
+  /// **'{s} Vorschl. / {m} gemerged'**
+  String inboxPollSuggMatchedSummary(int s, int m);
+
+  /// No description provided for @inboxPollNoNewMails.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine neuen passenden Mails. Postfach ist aktuell.'**
+  String get inboxPollNoNewMails;
+
+  /// No description provided for @inboxDiscardConfirmBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Mail \"{subject}\" wird aus der Inbox entfernt und nicht mehr angezeigt.'**
+  String inboxDiscardConfirmBody(Object subject);
+
+  /// No description provided for @inboxAssignSuggestionTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschlag zu Deal zuweisen'**
+  String get inboxAssignSuggestionTitle;
+
+  /// No description provided for @inboxAssignSuggestionBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Order-ID, Tracking und ETA werden in den ausgewählten Deal übernommen, der Vorschlag wird abgehakt.'**
+  String get inboxAssignSuggestionBody;
+
+  /// No description provided for @inboxApplyTrackingHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking {tracking} → Deal-Tracking, Status wird auf „Unterwegs\" gesetzt.'**
+  String inboxApplyTrackingHint(Object tracking);
+
+  /// No description provided for @inboxManualMailEntry.
+  ///
+  /// In de, this message translates to:
+  /// **'Manueller Eintrag aus Mail'**
+  String get inboxManualMailEntry;
+
+  /// No description provided for @inboxAutoUpdateRefreshHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktualisiert sich beim nächsten Refresh.'**
+  String get inboxAutoUpdateRefreshHint;
+
+  /// No description provided for @inboxNoProductName.
+  ///
+  /// In de, this message translates to:
+  /// **'— ohne Produktnamen —'**
+  String get inboxNoProductName;
+
+  /// No description provided for @inboxQuantityShort.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Stk.'**
+  String inboxQuantityShort(int count);
+
+  /// No description provided for @inboxEtaPrefix.
+  ///
+  /// In de, this message translates to:
+  /// **'ETA {date}'**
+  String inboxEtaPrefix(Object date);
+
+  /// No description provided for @inboxOrderForShop.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellung für {shop}'**
+  String inboxOrderForShop(Object shop);
+
+  /// No description provided for @inboxRecognizedOrder.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkannter Auftrag ({shop})'**
+  String inboxRecognizedOrder(Object shop);
+
+  /// No description provided for @inboxOrderPrefix.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellung {id}'**
+  String inboxOrderPrefix(Object id);
+
+  /// No description provided for @billingProfileFullName.
+  ///
+  /// In de, this message translates to:
+  /// **'Vollständiger Name'**
+  String get billingProfileFullName;
+
+  /// No description provided for @billingProfileStreet.
+  ///
+  /// In de, this message translates to:
+  /// **'Straße & Hausnummer'**
+  String get billingProfileStreet;
+
+  /// No description provided for @billingProfileSavingDots.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern…'**
+  String get billingProfileSavingDots;
+
+  /// No description provided for @billingProfileRequiredForPaid.
+  ///
+  /// In de, this message translates to:
+  /// **'Pflichtfeld für kostenpflichtige Pläne'**
+  String get billingProfileRequiredForPaid;
+
+  /// No description provided for @billingProfileIntroBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Für kostenpflichtige Pläne benötigen wir eine vollständige Rechnungsadresse (Pflichtfelder mit *).'**
+  String get billingProfileIntroBody;
+
+  /// No description provided for @billingProfilePrivacyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Daten werden ausschließlich für Rechnungen und steuerrelevante Dokumente verwendet.'**
+  String get billingProfilePrivacyHint;
+
+  /// No description provided for @settingsAmazonExisting.
+  ///
+  /// In de, this message translates to:
+  /// **'Amazon-Shops sind bereits vorhanden ({skipped} übersprungen).'**
+  String settingsAmazonExisting(int skipped);
+
+  /// No description provided for @settingsAmazonAdded.
+  ///
+  /// In de, this message translates to:
+  /// **'{added, plural, =1{1 Amazon-Shop hinzugefügt} other{{added} Amazon-Shops hinzugefügt}}'**
+  String settingsAmazonAdded(int added);
+
+  /// No description provided for @settingsMailboxRemoveBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach \"{label}\" wirklich löschen? Auch alle aus diesem Postfach importierten Mails (Vorschläge + Unklassifizierte) werden gelöscht. Bereits in Deals übernommene Bestellungen bleiben unberührt.'**
+  String settingsMailboxRemoveBody(Object label);
+
+  /// No description provided for @settingsMailboxLimitBody.
+  ///
+  /// In de, this message translates to:
+  /// **'{plan} enthält nur {limit, plural, =1{1 Postfach} other{{limit} Postfächer}}. Upgrade auf einen höheren Plan, um weitere zu verbinden.'**
+  String settingsMailboxLimitBody(Object plan, int limit);
+
+  /// No description provided for @settingsMailboxFreeNotIncluded.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach im Free-Plan nicht enthalten'**
+  String get settingsMailboxFreeNotIncluded;
+
+  /// No description provided for @settingsMailboxStarterUpgradeHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Importieren von Mails ist ab dem Starter-Plan verfügbar — höhere Pläne erlauben mehr Postfächer und längeren Inbox-Verlauf.'**
+  String get settingsMailboxStarterUpgradeHint;
+
+  /// No description provided for @settingsMailboxRequiredIncomplete.
+  ///
+  /// In de, this message translates to:
+  /// **'Pflichtangaben unvollständig — bitte ergänzen'**
+  String get settingsMailboxRequiredIncomplete;
+
+  /// No description provided for @settingsMailboxOptional.
+  ///
+  /// In de, this message translates to:
+  /// **'Optional — wird erst beim Upgrade benötigt'**
+  String get settingsMailboxOptional;
+
+  /// No description provided for @settingsMailboxNeverPolled.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch nicht gepollt'**
+  String get settingsMailboxNeverPolled;
+
+  /// No description provided for @settingsMailboxIntroBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbinde ein IMAP-Konto, um Bestellbestätigungen automatisch erkennen zu lassen. Polling läuft alle 5 min serverseitig — Passwörter werden mit pgp_sym_encrypt verschlüsselt gespeichert. Im Inbox-Tab kannst du…'**
+  String get settingsMailboxIntroBody;
+
+  /// No description provided for @settingsAmazonShopsHeading.
+  ///
+  /// In de, this message translates to:
+  /// **'Amazon'**
+  String get settingsAmazonShopsHeading;
+
+  /// No description provided for @settingsAddMailboxButton.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach hinzufügen'**
+  String get settingsAddMailboxButton;
+
+  /// No description provided for @settingsMailboxesHeading.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfächer'**
+  String get settingsMailboxesHeading;
+
+  /// No description provided for @settingsMailboxesPlanHint.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Postfach · {days} Tage} other{{count} Postfächer · {days} Tage}}'**
+  String settingsMailboxesPlanHint(int count, int days);
+
+  /// No description provided for @suppliersCarriersExisting.
+  ///
+  /// In de, this message translates to:
+  /// **'Versanddienste sind bereits vorhanden ({skipped} übersprungen).'**
+  String suppliersCarriersExisting(int skipped);
+
+  /// No description provided for @suppliersCarriersAdded.
+  ///
+  /// In de, this message translates to:
+  /// **'{added, plural, =1{1 Versanddienst hinzugefügt} other{{added} Versanddienste hinzugefügt}}'**
+  String suppliersCarriersAdded(int added);
+
+  /// No description provided for @pricingChooseTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wähle den Plan, der zu dir passt'**
+  String get pricingChooseTitle;
+
+  /// No description provided for @pricingFreeIncluded.
+  ///
+  /// In de, this message translates to:
+  /// **'Team-Plätze und Analyse-Features frei.'**
+  String get pricingFreeIncluded;
+
+  /// No description provided for @pricingCheckoutPlaceholder.
+  ///
+  /// In de, this message translates to:
+  /// **'Sobald Stripe/Paddle integriert ist, läuft hier der echte Checkout.'**
+  String get pricingCheckoutPlaceholder;
+
+  /// No description provided for @pricingYearlyDiscount.
+  ///
+  /// In de, this message translates to:
+  /// **'Jährlich · –17%'**
+  String get pricingYearlyDiscount;
+
+  /// No description provided for @pricingActivePlan.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiver Plan'**
+  String get pricingActivePlan;
+
+  /// No description provided for @pricingSwitchToFree.
+  ///
+  /// In de, this message translates to:
+  /// **'Auf Free wechseln'**
+  String get pricingSwitchToFree;
+
+  /// No description provided for @pricingChoosePlan.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan auswählen'**
+  String get pricingChoosePlan;
+
+  /// No description provided for @pricingPriceMonthlyApprox.
+  ///
+  /// In de, this message translates to:
+  /// **'≈ {amount} / Monat'**
+  String pricingPriceMonthlyApprox(Object amount);
+
+  /// No description provided for @pricingPaidNeedsBillingHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Kostenpflichtige Pläne benötigen eine vollständige Rechnungsadresse. Diese kann unter „Rechnungsdaten\" jederzeit aktualisiert werden.'**
+  String get pricingPaidNeedsBillingHint;
+
+  /// No description provided for @authLoginNetworkError.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung fehlgeschlagen. Bitte Internetverbindung prüfen.'**
+  String get authLoginNetworkError;
+
+  /// No description provided for @authConfirmEmailFirst.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte bestätige zuerst deine E-Mail-Adresse.'**
+  String get authConfirmEmailFirst;
+
+  /// No description provided for @authRegisterNetworkError.
+  ///
+  /// In de, this message translates to:
+  /// **'Registrierung fehlgeschlagen. Bitte Internetverbindung prüfen.'**
+  String get authRegisterNetworkError;
+
+  /// No description provided for @authResetLinkFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Reset-Link konnte nicht gesendet werden.'**
+  String get authResetLinkFailed;
+
+  /// No description provided for @authPasswordChangeFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Passwort konnte nicht geändert werden.'**
+  String get authPasswordChangeFailed;
+
+  /// No description provided for @authResendFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'E-Mail konnte nicht erneut gesendet werden.'**
+  String get authResendFailed;
+
+  /// No description provided for @authProviderLoginFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung mit {provider} fehlgeschlagen.'**
+  String authProviderLoginFailed(Object provider);
+
+  /// No description provided for @authDeleteAccountFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto konnte nicht gelöscht werden.'**
+  String get authDeleteAccountFailed;
+
+  /// No description provided for @authDeleteAccountNetworkError.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto konnte nicht gelöscht werden. Bitte Internetverbindung prüfen.'**
+  String get authDeleteAccountNetworkError;
+
+  /// No description provided for @authEmailOrPasswordWrong.
+  ///
+  /// In de, this message translates to:
+  /// **'E-Mail oder Passwort ist falsch.'**
+  String get authEmailOrPasswordWrong;
+
+  /// No description provided for @authPasswordTooWeak.
+  ///
+  /// In de, this message translates to:
+  /// **'Passwort ist zu schwach. Bitte stärkeres Passwort wählen.'**
+  String get authPasswordTooWeak;
+
+  /// No description provided for @authNoConnection.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Verbindung. Internetverbindung prüfen.'**
+  String get authNoConnection;
+
+  /// No description provided for @authNoAccountForEmail.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Konto mit dieser E-Mail gefunden.'**
+  String get authNoAccountForEmail;
+
+  /// No description provided for @authRegistrationDisabled.
+  ///
+  /// In de, this message translates to:
+  /// **'Registrierung ist derzeit deaktiviert.'**
+  String get authRegistrationDisabled;
+
+  /// No description provided for @authProviderNotEnabled.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieser Anmeldeweg ist im Backend nicht aktiviert.'**
+  String get authProviderNotEnabled;
+
+  /// No description provided for @inboxSuggestionMissingTrackingError.
+  ///
+  /// In de, this message translates to:
+  /// **'Suggestion enthält kein Tracking.'**
+  String get inboxSuggestionMissingTrackingError;
+
+  /// No description provided for @ticketsArchiveColumnHeader.
+  ///
+  /// In de, this message translates to:
+  /// **'Archiv'**
+  String get ticketsArchiveColumnHeader;
+
+  /// No description provided for @ticketsManualEntryFromMail.
+  ///
+  /// In de, this message translates to:
+  /// **'Manueller Eintrag aus Mail'**
+  String get ticketsManualEntryFromMail;
+
+  /// No description provided for @pricingPlanFreeTagline.
+  ///
+  /// In de, this message translates to:
+  /// **'Zum Reinschnuppern'**
+  String get pricingPlanFreeTagline;
+
+  /// No description provided for @pricingPlanStarterTagline.
+  ///
+  /// In de, this message translates to:
+  /// **'Solo-Reseller, das Wesentliche'**
+  String get pricingPlanStarterTagline;
+
+  /// No description provided for @pricingPlanProTagline.
+  ///
+  /// In de, this message translates to:
+  /// **'Für aktive Reseller'**
+  String get pricingPlanProTagline;
+
+  /// No description provided for @pricingPlanBusinessTagline.
+  ///
+  /// In de, this message translates to:
+  /// **'Power-Reseller & Teams'**
+  String get pricingPlanBusinessTagline;
+
+  /// No description provided for @pricingPlanUltimateTagline.
+  ///
+  /// In de, this message translates to:
+  /// **'Für Wholesale & Heavy-Volume'**
+  String get pricingPlanUltimateTagline;
+
+  /// No description provided for @pricingHighlightFreeProducts.
+  ///
+  /// In de, this message translates to:
+  /// **'Bis zu 50 Produkte'**
+  String get pricingHighlightFreeProducts;
+
+  /// No description provided for @pricingHighlightFreeDeals.
+  ///
+  /// In de, this message translates to:
+  /// **'25 Deals pro Monat'**
+  String get pricingHighlightFreeDeals;
+
+  /// No description provided for @pricingHighlightFreeNoImages.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Bilder pro Eintrag'**
+  String get pricingHighlightFreeNoImages;
+
+  /// No description provided for @pricingHighlightFreeOverviewStats.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur Übersichts-Statistik'**
+  String get pricingHighlightFreeOverviewStats;
+
+  /// No description provided for @pricingHighlightFreeNoMailbox.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Postfach-Import'**
+  String get pricingHighlightFreeNoMailbox;
+
+  /// No description provided for @pricingHighlightFreeCommunitySupport.
+  ///
+  /// In de, this message translates to:
+  /// **'Community-Support'**
+  String get pricingHighlightFreeCommunitySupport;
+
+  /// No description provided for @pricingHighlightStarterProducts.
+  ///
+  /// In de, this message translates to:
+  /// **'Bis zu 500 Produkte'**
+  String get pricingHighlightStarterProducts;
+
+  /// No description provided for @pricingHighlightStarterDealsUnlimited.
+  ///
+  /// In de, this message translates to:
+  /// **'Unbegrenzt Deals'**
+  String get pricingHighlightStarterDealsUnlimited;
+
+  /// No description provided for @pricingHighlightStarterImageStorage.
+  ///
+  /// In de, this message translates to:
+  /// **'1 Bild pro Eintrag · 1 GB Storage'**
+  String get pricingHighlightStarterImageStorage;
+
+  /// No description provided for @pricingHighlightStarterMailbox.
+  ///
+  /// In de, this message translates to:
+  /// **'1 Postfach · 7 Tage Inbox-Verlauf'**
+  String get pricingHighlightStarterMailbox;
+
+  /// No description provided for @pricingHighlightStarterCsv.
+  ///
+  /// In de, this message translates to:
+  /// **'CSV Import & Export'**
+  String get pricingHighlightStarterCsv;
+
+  /// No description provided for @pricingHighlightStarterBarcode.
+  ///
+  /// In de, this message translates to:
+  /// **'Barcode-Scanner'**
+  String get pricingHighlightStarterBarcode;
+
+  /// No description provided for @pricingHighlightStarterEmailSupport.
+  ///
+  /// In de, this message translates to:
+  /// **'E-Mail-Support (48h)'**
+  String get pricingHighlightStarterEmailSupport;
+
+  /// No description provided for @pricingHighlightProProducts.
+  ///
+  /// In de, this message translates to:
+  /// **'Bis zu 5.000 Produkte'**
+  String get pricingHighlightProProducts;
+
+  /// No description provided for @pricingHighlightProDealsUnlimited.
+  ///
+  /// In de, this message translates to:
+  /// **'Unbegrenzt Deals'**
+  String get pricingHighlightProDealsUnlimited;
+
+  /// No description provided for @pricingHighlightProTeam.
+  ///
+  /// In de, this message translates to:
+  /// **'Bis zu 3 Team-Mitglieder'**
+  String get pricingHighlightProTeam;
+
+  /// No description provided for @pricingHighlightProImageStorage.
+  ///
+  /// In de, this message translates to:
+  /// **'5 Bilder pro Eintrag · 10 GB Storage'**
+  String get pricingHighlightProImageStorage;
+
+  /// No description provided for @pricingHighlightProMailbox.
+  ///
+  /// In de, this message translates to:
+  /// **'3 Postfächer · 14 Tage Inbox-Verlauf'**
+  String get pricingHighlightProMailbox;
+
+  /// No description provided for @pricingHighlightProAnalytics.
+  ///
+  /// In de, this message translates to:
+  /// **'Drilldowns, Heatmaps & Trends'**
+  String get pricingHighlightProAnalytics;
+
+  /// No description provided for @pricingHighlightProActivityLog.
+  ///
+  /// In de, this message translates to:
+  /// **'Activity-Log & Audit-Trail'**
+  String get pricingHighlightProActivityLog;
+
+  /// No description provided for @pricingHighlightProPush.
+  ///
+  /// In de, this message translates to:
+  /// **'Push-Benachrichtigungen'**
+  String get pricingHighlightProPush;
+
+  /// No description provided for @pricingHighlightProPrioritySupport.
+  ///
+  /// In de, this message translates to:
+  /// **'Priority-Support (24h)'**
+  String get pricingHighlightProPrioritySupport;
+
+  /// No description provided for @pricingHighlightBusinessProducts.
+  ///
+  /// In de, this message translates to:
+  /// **'Bis zu 100.000 Produkte'**
+  String get pricingHighlightBusinessProducts;
+
+  /// No description provided for @pricingHighlightBusinessTeam.
+  ///
+  /// In de, this message translates to:
+  /// **'Bis zu 10 Team-Mitglieder'**
+  String get pricingHighlightBusinessTeam;
+
+  /// No description provided for @pricingHighlightBusinessImageStorage.
+  ///
+  /// In de, this message translates to:
+  /// **'10 Bilder pro Eintrag · 50 GB Storage'**
+  String get pricingHighlightBusinessImageStorage;
+
+  /// No description provided for @pricingHighlightBusinessMailbox.
+  ///
+  /// In de, this message translates to:
+  /// **'10 Postfächer · 30 Tage Inbox-Verlauf'**
+  String get pricingHighlightBusinessMailbox;
+
+  /// No description provided for @pricingHighlightBusinessApi.
+  ///
+  /// In de, this message translates to:
+  /// **'API-Zugriff & Webhooks'**
+  String get pricingHighlightBusinessApi;
+
+  /// No description provided for @pricingHighlightBusinessDatev.
+  ///
+  /// In de, this message translates to:
+  /// **'DATEV-Export (geplant)'**
+  String get pricingHighlightBusinessDatev;
+
+  /// No description provided for @pricingHighlightBusinessBranding.
+  ///
+  /// In de, this message translates to:
+  /// **'Custom Branding für Reports'**
+  String get pricingHighlightBusinessBranding;
+
+  /// No description provided for @pricingHighlightBusinessSla.
+  ///
+  /// In de, this message translates to:
+  /// **'Priority-SLA (12h)'**
+  String get pricingHighlightBusinessSla;
+
+  /// No description provided for @pricingHighlightUltimateProducts.
+  ///
+  /// In de, this message translates to:
+  /// **'Bis zu 300.000 Produkte'**
+  String get pricingHighlightUltimateProducts;
+
+  /// No description provided for @pricingHighlightUltimateMailbox.
+  ///
+  /// In de, this message translates to:
+  /// **'15 Postfächer · 90 Tage Inbox-Verlauf'**
+  String get pricingHighlightUltimateMailbox;
+
+  /// No description provided for @pricingHighlightUltimateTeam.
+  ///
+  /// In de, this message translates to:
+  /// **'Bis zu 50 Team-Mitglieder'**
+  String get pricingHighlightUltimateTeam;
+
+  /// No description provided for @pricingHighlightUltimateImageStorage.
+  ///
+  /// In de, this message translates to:
+  /// **'25 Bilder pro Eintrag · unbegrenzter Storage'**
+  String get pricingHighlightUltimateImageStorage;
+
+  /// No description provided for @pricingHighlightUltimateSso.
+  ///
+  /// In de, this message translates to:
+  /// **'Single Sign-On (SAML/OIDC)'**
+  String get pricingHighlightUltimateSso;
+
+  /// No description provided for @pricingHighlightUltimateWhitelabel.
+  ///
+  /// In de, this message translates to:
+  /// **'White-Label-Option'**
+  String get pricingHighlightUltimateWhitelabel;
+
+  /// No description provided for @pricingHighlightUltimateMarketplace.
+  ///
+  /// In de, this message translates to:
+  /// **'Marketplace-Sync (geplant)'**
+  String get pricingHighlightUltimateMarketplace;
+
+  /// No description provided for @pricingHighlightUltimateAccountManager.
+  ///
+  /// In de, this message translates to:
+  /// **'Dedizierter Account Manager'**
+  String get pricingHighlightUltimateAccountManager;
+
+  /// No description provided for @pricingHighlightUltimateUptime.
+  ///
+  /// In de, this message translates to:
+  /// **'Uptime-SLA 99,9%'**
+  String get pricingHighlightUltimateUptime;
+
+  /// No description provided for @statsServiceUnknownBuyer.
+  ///
+  /// In de, this message translates to:
+  /// **'— Ohne Käufer'**
+  String get statsServiceUnknownBuyer;
+
+  /// No description provided for @pricingManageAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan verwalten'**
+  String get pricingManageAction;
+
+  /// No description provided for @pricingCurrentlyOnPlan.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktuell: {plan}'**
+  String pricingCurrentlyOnPlan(Object plan);
+
+  /// No description provided for @navInbox.
+  ///
+  /// In de, this message translates to:
+  /// **'Inbox'**
+  String get navInbox;
+
+  /// No description provided for @inboxCountdownToday.
+  ///
+  /// In de, this message translates to:
+  /// **'Heute weg'**
+  String get inboxCountdownToday;
+
+  /// No description provided for @inboxCountdownOneDay.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch 1 Tag'**
+  String get inboxCountdownOneDay;
+
+  /// No description provided for @inboxCountdownDaysLeft.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{Noch 1 Tag} other{Noch {count} Tage}}'**
+  String inboxCountdownDaysLeft(int count);
+
+  /// No description provided for @inboxVisibilityPrefix.
+  ///
+  /// In de, this message translates to:
+  /// **'Inbox-Sichtbarkeit {days, plural, =1{1 Tag} other{{days} Tage}}. '**
+  String inboxVisibilityPrefix(int days);
+
+  /// No description provided for @inboxUpdatedDealDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktualisierter Deal'**
+  String get inboxUpdatedDealDefault;
+
+  /// No description provided for @inboxNoSubject.
+  ///
+  /// In de, this message translates to:
+  /// **'— ohne Betreff —'**
+  String get inboxNoSubject;
+
+  /// No description provided for @inboxOtherShop.
+  ///
+  /// In de, this message translates to:
+  /// **'Sonstige'**
+  String get inboxOtherShop;
+
+  /// No description provided for @inboxUnknownSender.
+  ///
+  /// In de, this message translates to:
+  /// **'Unbekannt'**
+  String get inboxUnknownSender;
+
+  /// No description provided for @inboxTrackingPrefix.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking: {tracking}'**
+  String inboxTrackingPrefix(Object tracking);
 }
 
 class _AppLocalizationsDelegate

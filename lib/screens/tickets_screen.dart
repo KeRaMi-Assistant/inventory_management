@@ -747,6 +747,7 @@ class _TicketCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final status = _statusColor(ticket.worstStatus);
     return InkWell(
       onTap: onTap,
@@ -799,8 +800,8 @@ class _TicketCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                Expanded(child: Text('EK ${money.format(ticket.totalEk)}', style: const TextStyle(fontSize: 12))),
-                Expanded(child: Text('VK ${money.format(ticket.totalVk)}', style: const TextStyle(fontSize: 12))),
+                Expanded(child: Text(l10n.ticketsBoxEkAmount(money.format(ticket.totalEk)), style: const TextStyle(fontSize: 12))),
+                Expanded(child: Text(l10n.ticketsBoxVkAmount(money.format(ticket.totalVk)), style: const TextStyle(fontSize: 12))),
                 Expanded(
                   child: Text(
                     money.format(ticket.totalProfit),
@@ -898,8 +899,8 @@ class _TicketDetail extends StatelessWidget {
                     columns: [
                       DataColumn(label: Text(l10n.ticketsColProduct)),
                       DataColumn(label: Text(l10n.ticketsColQuantity)),
-                      const DataColumn(label: Text('EK')),
-                      const DataColumn(label: Text('VK')),
+                      DataColumn(label: Text(l10n.ticketsColEk)),
+                      DataColumn(label: Text(l10n.ticketsColVk)),
                       DataColumn(label: Text(l10n.ticketsBoxProfit)),
                       DataColumn(label: Text(l10n.dealStatus)),
                       DataColumn(label: Text(l10n.dealColArrival)),

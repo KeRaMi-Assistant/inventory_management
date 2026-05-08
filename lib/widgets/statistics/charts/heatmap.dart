@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 /// GitHub-Style Kalender-Heatmap. Zeigt 12 Monate Profit-Aktivität.
 /// 4 Stufen: 0, niedrig, mittel, hoch — basierend auf Quantilen.
 class ProfitHeatmap extends StatefulWidget {
@@ -23,6 +25,7 @@ class _ProfitHeatmapState extends State<ProfitHeatmap> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final start = today.subtract(const Duration(days: 364));
@@ -139,8 +142,8 @@ class _ProfitHeatmapState extends State<ProfitHeatmap> {
                 style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
               ),
             const Spacer(),
-            const Text('Weniger',
-                style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+            Text(l10n.statsHeatmapLess,
+                style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
             const SizedBox(width: 4),
             for (final c in _colors)
               Padding(
@@ -155,8 +158,8 @@ class _ProfitHeatmapState extends State<ProfitHeatmap> {
                 ),
               ),
             const SizedBox(width: 4),
-            const Text('Mehr',
-                style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+            Text(l10n.statsHeatmapMore,
+                style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
           ],
         ),
       ],

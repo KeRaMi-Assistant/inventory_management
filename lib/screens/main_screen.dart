@@ -11,6 +11,7 @@ import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/csv_service.dart';
+import '../utils/auth_error_l10n.dart';
 import '../widgets/add_edit_deal_dialog.dart';
 import '../widgets/global_search_dialog.dart';
 import '../widgets/invites_bell.dart';
@@ -54,7 +55,7 @@ class _MainScreenState extends State<MainScreen> {
         l10n.navDashboard,
         l10n.navDeals,
         l10n.navTickets,
-        'Inbox',
+        l10n.navInbox,
         l10n.navInventory,
         l10n.navSuppliers,
         l10n.navStatistics,
@@ -648,13 +649,13 @@ class _AccountMenu extends StatelessWidget {
                   children: [
                     Text(
                       plan == BillingPlan.free
-                          ? 'Plan auswählen'
-                          : 'Plan verwalten',
+                          ? AppLocalizations.of(context).pricingChoosePlan
+                          : AppLocalizations.of(context).pricingManageAction,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Aktuell: ${plan.label}',
+                      AppLocalizations.of(context).pricingCurrentlyOnPlan(plan.label),
                       style: TextStyle(
                           fontSize: 11, color: AppTheme.textMutedOf(context)),
                     ),
@@ -848,7 +849,7 @@ class _AccountMenu extends StatelessWidget {
             if (error != null && context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(error),
+                  content: Text(localizeAuthError(l10n, error)),
                   backgroundColor: const Color(0xFFC0392B),
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -1065,7 +1066,7 @@ class _MobileNavList extends StatelessWidget {
       if (error != null && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(error),
+            content: Text(localizeAuthError(l10n, error)),
             backgroundColor: const Color(0xFFC0392B),
             behavior: SnackBarBehavior.floating,
           ),

@@ -46,6 +46,7 @@ class _InboxScreenState extends State<InboxScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return DefaultTabController(
       length: 3,
       child: Consumer<InboxProvider>(
@@ -73,8 +74,8 @@ class _InboxScreenState extends State<InboxScreen> {
                               Icons.add_box_outlined,
                               size: 18),
                         ),
-                        text:
-                            'Vorschläge (${provider.pendingSuggestions.length})',
+                        text: l10n.inboxTabSuggestions(
+                            provider.pendingSuggestions.length),
                       ),
                       Tab(
                         icon: Badge.count(
@@ -83,8 +84,8 @@ class _InboxScreenState extends State<InboxScreen> {
                               provider.unreadMatchedCount > 0,
                           child: const Icon(Icons.sync, size: 18),
                         ),
-                        text:
-                            'Aktualisiert (${provider.matchedRecently.length})',
+                        text: l10n.inboxTabUpdated(
+                            provider.matchedRecently.length),
                       ),
                       Tab(
                         icon: Badge.count(
@@ -95,8 +96,8 @@ class _InboxScreenState extends State<InboxScreen> {
                               Icons.help_outline,
                               size: 18),
                         ),
-                        text:
-                            'Unklassifiziert (${provider.unclassified.length})',
+                        text: l10n.inboxTabUnclassified(
+                            provider.unclassified.length),
                       ),
                     ],
                   ),
@@ -139,6 +140,7 @@ class _InboxHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final hasAccount = provider.accounts.isNotEmpty;
     return Container(
       color: AppTheme.bgSurfaceOf(context),
@@ -158,9 +160,8 @@ class _InboxHeader extends StatelessWidget {
               children: [
                 Text(
                   hasAccount
-                      ? '${provider.accounts.length} Postfach'
-                          '${provider.accounts.length == 1 ? "" : "er"} verbunden'
-                      : 'Noch kein Postfach verbunden',
+                      ? l10n.inboxAccountsConnected(provider.accounts.length)
+                      : l10n.inboxNoAccountConnected,
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
@@ -170,10 +171,8 @@ class _InboxHeader extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   hasAccount
-                      ? 'Polling alle 5 min — nur Bestellbestätigungen, '
-                          'Versand- und Stornierungs-Mails der konfigurierten '
-                          'Shops landen hier.'
-                      : 'Lege unter Einstellungen → Postfach ein IMAP-Konto an.',
+                      ? l10n.inboxFooterDescription
+                      : l10n.inboxFooterNoAccountHint,
                   style: TextStyle(
                       fontSize: 11,
                       color: AppTheme.textSecondaryOf(context)),
@@ -183,10 +182,8 @@ class _InboxHeader extends StatelessWidget {
           ),
           IconButton(
             tooltip: provider.dismissalCount == 0
-                ? 'Verworfen-Filter (0)'
-                : 'Verworfen-Filter zurücksetzen '
-                    '(${provider.dismissalCount} '
-                    '${provider.dismissalCount == 1 ? "Eintrag" : "Einträge"})',
+                ? l10n.inboxDismissalsTooltipEmpty
+                : l10n.inboxDismissalsTooltipActive(provider.dismissalCount),
             icon: Icon(
               provider.dismissalCount == 0
                   ? Icons.filter_alt_outlined
@@ -212,10 +209,10 @@ class _InboxHeader extends StatelessWidget {
           ),
           IconButton(
             tooltip: provider.isPumping
-                ? 'Importiere Mails… (${provider.pumpStored} bisher)'
+                ? l10n.inboxImportingTooltip(provider.pumpStored)
                 : hasAccount
-                    ? 'Jetzt pollen (statt 5 min warten)'
-                    : 'Erst Postfach in den Einstellungen verbinden',
+                    ? l10n.inboxPollNowTooltip
+                    : l10n.inboxPollNoAccountTooltip,
             icon: provider.isPumping
                 ? const SizedBox(
                     width: 18,
@@ -232,7 +229,7 @@ class _InboxHeader extends StatelessWidget {
                     : () => _triggerPoll(context, provider),
           ),
           IconButton(
-            tooltip: 'Aktualisieren',
+            tooltip: AppLocalizations.of(context).actionRefresh,
             icon: provider.isLoading
                 ? const SizedBox(
                     width: 18,
@@ -258,6 +255,7 @@ class _InboxFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final shopKeys = provider.availableShopKeys;
     if (shopKeys.isEmpty && !provider.hasActiveFilter) {
       return const SizedBox.shrink();
@@ -270,7 +268,7 @@ class _InboxFilterBar extends StatelessWidget {
           _FilterPill(
             icon: Icons.store_outlined,
             label: provider.shopFilter == null
-                ? 'Alle Shops'
+                ? l10n.inboxFilterAllShops
                 : provider.shopLabelFor(provider.shopFilter!),
             active: provider.shopFilter != null,
             onTap: () => _pickShop(context, provider, shopKeys),
@@ -282,7 +280,7 @@ class _InboxFilterBar extends StatelessWidget {
           _FilterPill(
             icon: Icons.local_shipping_outlined,
             label: provider.statusFilter == null
-                ? 'Alle Status'
+                ? l10n.inboxFilterAllStatus
                 : provider.statusFilter!.label(),
             active: provider.statusFilter != null,
             onTap: () => _pickStatus(context, provider),
@@ -294,7 +292,7 @@ class _InboxFilterBar extends StatelessWidget {
             const Spacer(),
             TextButton.icon(
               icon: const Icon(Icons.clear_all, size: 16),
-              label: const Text('Filter zurücksetzen'),
+              label: Text(l10n.dealsFilterReset),
               style: TextButton.styleFrom(
                 foregroundColor: AppTheme.accentTextOf(context),
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -320,7 +318,7 @@ class _InboxFilterBar extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.all_inbox),
-              title: const Text('Alle Shops'),
+              title: Text(AppLocalizations.of(context).inboxFilterAllShops),
               trailing: provider.shopFilter == null
                   ? const Icon(Icons.check, color: Color(0xFF2563EB))
                   : null,
@@ -358,7 +356,7 @@ class _InboxFilterBar extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.all_inbox),
-              title: const Text('Alle Status'),
+              title: Text(AppLocalizations.of(context).inboxFilterAllStatus),
               trailing: provider.statusFilter == null
                   ? const Icon(Icons.check, color: Color(0xFF2563EB))
                   : null,
@@ -475,24 +473,22 @@ Future<void> _confirmClearDismissals(
   BuildContext context,
   InboxProvider provider,
 ) async {
+  final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Filter zurücksetzen?'),
-      content: Text(
-        '${provider.dismissalCount} verworfene Einträge werden wieder '
-        'angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut '
-        'gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.',
-      ),
+      title: Text(AppLocalizations.of(ctx).inboxFilterResetConfirmTitle),
+      content: Text(AppLocalizations.of(ctx)
+          .inboxFilterResetConfirmBody(provider.dismissalCount)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Abbrechen'),
+          child: Text(AppLocalizations.of(ctx).actionCancel),
         ),
         ElevatedButton(
           onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Zurücksetzen'),
+          child: Text(AppLocalizations.of(ctx).actionReset),
         ),
       ],
     ),
@@ -500,13 +496,13 @@ Future<void> _confirmClearDismissals(
   if (ok != true) return;
   try {
     await provider.clearDismissals();
-    messenger.showSnackBar(const SnackBar(
-      content: Text('Verworfen-Filter geleert.'),
+    messenger.showSnackBar(SnackBar(
+      content: Text(l10n.inboxFilterResetSuccess),
       behavior: SnackBarBehavior.floating,
     ));
   } catch (e) {
     messenger.showSnackBar(SnackBar(
-      content: Text('Zurücksetzen fehlgeschlagen: $e'),
+      content: Text(l10n.inboxFilterResetFailed(e.toString())),
       behavior: SnackBarBehavior.floating,
     ));
   }
@@ -554,28 +550,29 @@ Future<void> _confirmMarkAllRead(
 }
 
 Future<void> _triggerPoll(BuildContext context, InboxProvider provider) async {
+  final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
-  messenger.showSnackBar(const SnackBar(
-    content: Text('Pollt das Postfach…'),
+  messenger.showSnackBar(SnackBar(
+    content: Text(l10n.inboxPolling),
     behavior: SnackBarBehavior.floating,
-    duration: Duration(seconds: 2),
+    duration: const Duration(seconds: 2),
   ));
   final result = await provider.pollNow();
   if (result != null) {
     final parts = <String>[];
     if (result.fetched > 0) {
-      parts.add('${result.fetched} Mail${result.fetched == 1 ? "" : "s"} geholt');
+      parts.add(l10n.inboxPollFetchedSummary(result.fetched));
     }
     if (result.stored > 0) {
-      parts.add('${result.stored} aufgenommen');
+      parts.add(l10n.inboxPollStoredSummary(result.stored));
     }
     final s = result.suggested ?? 0;
     final m = result.matched ?? 0;
     if (s > 0 || m > 0) {
-      parts.add('$s Vorschl. / $m gemerged');
+      parts.add(l10n.inboxPollSuggMatchedSummary(s, m));
     }
     final msg = parts.isEmpty
-        ? 'Keine neuen passenden Mails. Postfach ist aktuell.'
+        ? l10n.inboxPollNoNewMails
         : '${parts.join(", ")}.';
     messenger.showSnackBar(SnackBar(
       content: Text(msg),
@@ -583,7 +580,7 @@ Future<void> _triggerPoll(BuildContext context, InboxProvider provider) async {
     ));
   } else if (provider.lastError != null) {
     messenger.showSnackBar(SnackBar(
-      content: Text('Polling fehlgeschlagen: ${provider.lastError}'),
+      content: Text(l10n.inboxPollingFailed(provider.lastError ?? '')),
       backgroundColor: AppTheme.danger,
       behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 8),
@@ -608,18 +605,19 @@ Future<void> _openMail(
   required String? messageId,
   required String? imapHost,
 }) async {
+  final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final url = buildMailDeepLink(messageId: messageId, imapHost: imapHost);
   if (url == null) {
     if (messageId != null && messageId.isNotEmpty) {
       await Clipboard.setData(ClipboardData(text: messageId));
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Message-ID in die Zwischenablage kopiert.'),
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.inboxMessageIdCopied),
         behavior: SnackBarBehavior.floating,
       ));
     } else {
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Kein Mail-Link verfügbar.'),
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.inboxNoMailLink),
         behavior: SnackBarBehavior.floating,
       ));
     }
@@ -633,25 +631,24 @@ Future<void> _confirmDismissMessage(
   BuildContext context,
   ParsedMessage message,
 ) async {
+  final l10n = AppLocalizations.of(context);
   final inbox = context.read<InboxProvider>();
   final messenger = ScaffoldMessenger.of(context);
   final ok = await showDialog<bool>(
     context: context,
     builder: (_) => AlertDialog(
-      title: const Text('Mail verwerfen?'),
-      content: Text(
-        'Die Mail "${message.subject ?? ""}" wird aus der Inbox entfernt '
-        'und nicht mehr angezeigt.',
-      ),
+      title: Text(l10n.inboxDiscardTitle),
+      content: Text(l10n.inboxDiscardConfirmBody(message.subject ?? '')),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.actionCancel),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
           onPressed: () => Navigator.pop(context, true),
-          child: const Text('Verwerfen', style: TextStyle(color: Colors.white)),
+          child: Text(l10n.inboxDiscardAction,
+              style: const TextStyle(color: Colors.white)),
         ),
       ],
     ),
@@ -659,13 +656,13 @@ Future<void> _confirmDismissMessage(
   if (ok != true) return;
   try {
     await inbox.dismissParsedMessage(message.id);
-    messenger.showSnackBar(const SnackBar(
-      content: Text('Mail verworfen.'),
+    messenger.showSnackBar(SnackBar(
+      content: Text(l10n.inboxDiscardSuccess),
       behavior: SnackBarBehavior.floating,
     ));
   } catch (e) {
     messenger.showSnackBar(SnackBar(
-      content: Text('Verwerfen fehlgeschlagen: $e'),
+      content: Text(l10n.inboxDiscardFailed(e.toString())),
       behavior: SnackBarBehavior.floating,
     ));
   }
@@ -699,9 +696,9 @@ class _SuggestionsTab extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: suggestions.isEmpty
-          ? const _InboxEmpty(
+          ? _InboxEmpty(
               icon: Icons.check_circle_outline,
-              text: 'Keine offenen Vorschläge.',
+              text: AppLocalizations.of(context).inboxNoSuggestions,
             )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
@@ -721,7 +718,8 @@ class _SuggestionCard extends StatelessWidget {
   final String? imapHost;
   const _SuggestionCard({required this.suggestion, this.imapHost});
 
-  Deal _toDraftDeal() {
+  Deal _toDraftDeal(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final shopName = suggestion.shopLabel ?? suggestion.shopKey;
     final orderId = suggestion.orderId;
     final dealStatus = suggestion.status?.toDealStatus() ??
@@ -730,8 +728,8 @@ class _SuggestionCard extends StatelessWidget {
       id: Deal.unsavedId,
       product: (suggestion.product ?? '').trim().isEmpty
           ? (orderId != null
-              ? 'Bestellung $orderId'
-              : 'Erkannter Auftrag ($shopName)')
+              ? l10n.inboxOrderPrefix(orderId)
+              : l10n.inboxRecognizedOrder(shopName))
           : suggestion.product!.trim(),
       quantity: suggestion.quantity,
       isDropship: false,
@@ -747,93 +745,95 @@ class _SuggestionCard extends StatelessWidget {
   }
 
   Future<void> _accept(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final inbox = context.read<InboxProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final saved = await showDialog<Deal>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AddEditDealDialog(prefill: _toDraftDeal()),
+      builder: (_) => AddEditDealDialog(prefill: _toDraftDeal(context)),
     );
     // saved.id == unsavedId → User hat den Dialog ohne Speichern verlassen.
     if (saved == null || saved.id == Deal.unsavedId) return;
     try {
       await inbox.markSuggestionAccepted(suggestion.id, createdDealId: saved.id);
       messenger.showSnackBar(SnackBar(
-        content: Text('Deal #${saved.id} aus Vorschlag erstellt.'),
+        content: Text(l10n.inboxDealCreatedFromSuggestion(saved.id)),
         behavior: SnackBarBehavior.floating,
       ));
     } catch (e) {
       messenger.showSnackBar(SnackBar(
-        content: Text('Konnte Vorschlag nicht abschließen: $e'),
+        content: Text(l10n.inboxSuggestionAcceptFailed(e.toString())),
         behavior: SnackBarBehavior.floating,
       ));
     }
   }
 
   Future<void> _reject(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final inbox = context.read<InboxProvider>();
     final messenger = ScaffoldMessenger.of(context);
     try {
       await inbox.markSuggestionRejected(suggestion.id);
     } catch (e) {
       messenger.showSnackBar(SnackBar(
-        content: Text('Ablehnen fehlgeschlagen: $e'),
+        content: Text(l10n.inboxSuggestionRejectFailed(e.toString())),
         behavior: SnackBarBehavior.floating,
       ));
     }
   }
 
   Future<void> _applyTracking(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final inbox = context.read<InboxProvider>();
     if (suggestion.tracking == null || suggestion.tracking!.isEmpty) {
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Diese Mail enthält kein Tracking.'),
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.inboxNoTracking),
         behavior: SnackBarBehavior.floating,
       ));
       return;
     }
     final deal = await DealPickerDialog.show(
       context,
-      title: 'Tracking auf Deal anwenden',
-      hint: 'Tracking ${suggestion.tracking} → Deal-Tracking, '
-          'Status wird auf "Unterwegs" gesetzt.',
+      title: l10n.inboxApplyTrackingToDeal,
+      hint: l10n.inboxApplyTrackingHint(suggestion.tracking ?? ''),
     );
     if (deal == null) return;
     try {
       await inbox.applyTrackingFromSuggestion(
           suggestion: suggestion, dealId: deal.id);
       messenger.showSnackBar(SnackBar(
-        content: Text('Tracking auf Deal #${deal.id} übernommen.'),
+        content: Text(l10n.inboxTrackingApplied(deal.id)),
         behavior: SnackBarBehavior.floating,
       ));
     } catch (e) {
       messenger.showSnackBar(SnackBar(
-        content: Text('Tracking-Übernahme fehlgeschlagen: $e'),
+        content: Text(l10n.inboxTrackingApplyFailed(e.toString())),
         behavior: SnackBarBehavior.floating,
       ));
     }
   }
 
   Future<void> _linkToDeal(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final inbox = context.read<InboxProvider>();
     final deal = await DealPickerDialog.show(
       context,
-      title: 'Vorschlag zu Deal zuweisen',
-      hint: 'Order-ID, Tracking und ETA werden in den ausgewählten Deal '
-          'übernommen, der Vorschlag wird abgehakt.',
+      title: l10n.inboxAssignSuggestionTitle,
+      hint: l10n.inboxAssignSuggestionBody,
     );
     if (deal == null) return;
     try {
       await inbox.linkSuggestionToDeal(suggestion: suggestion, dealId: deal.id);
       messenger.showSnackBar(SnackBar(
-        content: Text('Vorschlag mit Deal #${deal.id} verknüpft.'),
+        content: Text(l10n.inboxSuggestionLinked(deal.id)),
         behavior: SnackBarBehavior.floating,
       ));
     } catch (e) {
       messenger.showSnackBar(SnackBar(
-        content: Text('Zuweisung fehlgeschlagen: $e'),
+        content: Text(l10n.inboxAssignFailed(e.toString())),
         behavior: SnackBarBehavior.floating,
       ));
     }
@@ -841,6 +841,7 @@ class _SuggestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final dfDate = DateFormat('dd.MM.yyyy', 'de_DE');
     final dfDateTime = DateFormat('dd.MM.yyyy · HH:mm', 'de_DE');
     final hasMailLink = buildMailDeepLink(
@@ -887,39 +888,39 @@ class _SuggestionCard extends StatelessWidget {
                 ),
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, size: 18),
-                  tooltip: 'Aktionen',
+                  tooltip: l10n.inboxActionsTooltip,
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'tracking',
                       child: ListTile(
-                        leading: Icon(Icons.local_shipping_outlined),
-                        title: Text('Tracking auf Deal anwenden'),
+                        leading: const Icon(Icons.local_shipping_outlined),
+                        title: Text(l10n.inboxApplyTrackingToDeal),
                         dense: true,
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'link',
                       child: ListTile(
-                        leading: Icon(Icons.link),
-                        title: Text('Zu bestehendem Deal zuweisen'),
+                        leading: const Icon(Icons.link),
+                        title: Text(l10n.inboxAssignToExistingDeal),
                         dense: true,
                       ),
                     ),
                     if (hasMailLink || suggestion.messageId != null)
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'mail',
                         child: ListTile(
-                          leading: Icon(Icons.open_in_new),
-                          title: Text('Mail im Browser öffnen'),
+                          leading: const Icon(Icons.open_in_new),
+                          title: Text(l10n.inboxOpenInBrowser),
                           dense: true,
                         ),
                       ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'reject',
                       child: ListTile(
-                        leading: Icon(Icons.delete_outline,
+                        leading: const Icon(Icons.delete_outline,
                             color: Color(0xFFB91C1C)),
-                        title: Text('Verwerfen'),
+                        title: Text(l10n.inboxDiscardAction),
                         dense: true,
                       ),
                     ),
@@ -949,7 +950,7 @@ class _SuggestionCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              productTitle ?? '— ohne Produktnamen —',
+              productTitle ?? l10n.inboxNoProductName,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: unread ? FontWeight.w800 : FontWeight.w700,
@@ -972,7 +973,7 @@ class _SuggestionCard extends StatelessWidget {
                   ),
                 _MetaItem(
                   icon: Icons.inventory_2_outlined,
-                  label: '${suggestion.quantity} Stk.',
+                  label: l10n.inboxQuantityShort(suggestion.quantity),
                 ),
                 if (suggestion.total != null)
                   _MetaItem(
@@ -982,7 +983,8 @@ class _SuggestionCard extends StatelessWidget {
                 if (suggestion.eta != null)
                   _MetaItem(
                     icon: Icons.event_outlined,
-                    label: 'ETA ${dfDate.format(suggestion.eta!)}',
+                    label:
+                        l10n.inboxEtaPrefix(dfDate.format(suggestion.eta!)),
                   ),
               ],
             ),
@@ -1005,7 +1007,7 @@ class _SuggestionCard extends StatelessWidget {
                   style: TextButton.styleFrom(
                       foregroundColor: AppTheme.dangerTextOf(context)),
                   onPressed: () => _reject(context),
-                  label: const Text('Verwerfen'),
+                  label: Text(l10n.inboxDiscardAction),
                 ),
                 const Spacer(),
                 if (hasMailLink)
@@ -1016,13 +1018,13 @@ class _SuggestionCard extends StatelessWidget {
                       messageId: suggestion.messageId,
                       imapHost: imapHost,
                     ),
-                    label: const Text('Mail öffnen'),
+                    label: Text(l10n.inboxOpenMail),
                   ),
                 const SizedBox(width: 4),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.edit_outlined, size: 16),
                   onPressed: () => _accept(context),
-                  label: const Text('Annehmen & bearbeiten'),
+                  label: Text(l10n.inboxAcceptAndEdit),
                 ),
               ],
             ),
@@ -1052,15 +1054,16 @@ class _MatchedTab extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: messages.isEmpty
-          ? const _InboxEmpty(
+          ? _InboxEmpty(
               icon: Icons.inbox_outlined,
-              text: 'Noch keine automatisch aktualisierten Deals.',
+              text: AppLocalizations.of(context).inboxAutoUpdatesEmpty,
             )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: messages.length,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (context, i) {
+                final l10n = AppLocalizations.of(context);
                 final msg = messages[i];
                 final payload = msg.parsedPayload ?? const {};
                 final orderId = payload['order_id'] as String?;
@@ -1089,7 +1092,7 @@ class _MatchedTab extends StatelessWidget {
                           color: AppTheme.successTextOf(context), size: 20),
                     ),
                     title: Text(
-                      product ?? msg.subject ?? 'Aktualisierter Deal',
+                      product ?? msg.subject ?? l10n.inboxUpdatedDealDefault,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -1111,7 +1114,7 @@ class _MatchedTab extends StatelessWidget {
                         ),
                         if (tracking != null)
                           Text(
-                            'Tracking: $tracking',
+                            l10n.inboxTrackingPrefix(tracking),
                             style: TextStyle(
                                 fontSize: 11,
                                 color: AppTheme.textSecondaryOf(context)),
@@ -1137,6 +1140,7 @@ class _MatchedTab extends StatelessWidget {
     ParsedMessage msg,
     String? orderId,
   ) {
+    final l10n = AppLocalizations.of(context);
     final imapHost = _imapHostFor(accounts, accountId: msg.accountId);
     final canOpenMail = buildMailDeepLink(
           messageId: msg.messageId,
@@ -1147,7 +1151,7 @@ class _MatchedTab extends StatelessWidget {
       if (orderId != null && onOpenTicket != null)
         ElevatedButton.icon(
           icon: const Icon(Icons.open_in_new, size: 16),
-          label: const Text('Ticket öffnen'),
+          label: Text(l10n.inboxOpenTicket),
           onPressed: () {
             Navigator.pop(context);
             onOpenTicket!(orderId);
@@ -1156,7 +1160,7 @@ class _MatchedTab extends StatelessWidget {
       if (canOpenMail)
         OutlinedButton.icon(
           icon: const Icon(Icons.mail_outline, size: 16),
-          label: const Text('Mail öffnen'),
+          label: Text(l10n.inboxOpenMail),
           onPressed: () {
             Navigator.pop(context);
             _openMail(context, messageId: msg.messageId, imapHost: imapHost);
@@ -1164,7 +1168,7 @@ class _MatchedTab extends StatelessWidget {
         ),
       OutlinedButton.icon(
         icon: const Icon(Icons.delete_outline, size: 16),
-        label: const Text('Verwerfen'),
+        label: Text(l10n.inboxDiscardAction),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppTheme.dangerTextOf(context),
         ),
@@ -1194,9 +1198,9 @@ class _UnclassifiedTab extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: messages.isEmpty
-          ? const _InboxEmpty(
+          ? _InboxEmpty(
               icon: Icons.help_outline,
-              text: 'Alles eingeordnet — keine unklaren Mails.',
+              text: AppLocalizations.of(context).inboxAllSorted,
             )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
@@ -1226,13 +1230,14 @@ class _UnclassifiedRow extends StatelessWidget {
   }
 
   Future<void> _createDeal(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final p = message.parsedPayload ?? const {};
     final shopLabel =
-        (p['shop_label'] as String?) ?? (message.shopKey ?? 'Sonstige');
+        (p['shop_label'] as String?) ?? (message.shopKey ?? l10n.inboxOtherShop);
     final tracking = _trackingFromMessage();
     final draft = Deal(
       id: Deal.unsavedId,
-      product: message.subject ?? 'Manueller Eintrag aus Mail',
+      product: message.subject ?? l10n.inboxManualMailEntry,
       quantity: 1,
       isDropship: false,
       shop: shopLabel,
@@ -1248,27 +1253,28 @@ class _UnclassifiedRow extends StatelessWidget {
     if (saved == null || saved.id == Deal.unsavedId) return;
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Deal #${saved.id} aus Mail angelegt.'),
+        content: Text(l10n.inboxDealCreatedFromMail(saved.id)),
         behavior: SnackBarBehavior.floating,
       ));
     }
   }
 
   Future<void> _applyTracking(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final inbox = context.read<InboxProvider>();
     final tn = _trackingFromMessage();
     if (tn == null || tn.isEmpty) {
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Diese Mail enthält kein Tracking.'),
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.inboxNoTracking),
         behavior: SnackBarBehavior.floating,
       ));
       return;
     }
     final deal = await DealPickerDialog.show(
       context,
-      title: 'Tracking auf Deal anwenden',
-      hint: 'Tracking $tn → Deal-Tracking.',
+      title: l10n.inboxApplyTrackingToDeal,
+      hint: l10n.inboxApplyTrackingHint(tn),
     );
     if (deal == null) return;
     try {
@@ -1280,18 +1286,19 @@ class _UnclassifiedRow extends StatelessWidget {
         eta: _etaFromMessage(),
       );
       messenger.showSnackBar(SnackBar(
-        content: Text('Tracking auf Deal #${deal.id} übernommen.'),
+        content: Text(l10n.inboxTrackingApplied(deal.id)),
         behavior: SnackBarBehavior.floating,
       ));
     } catch (e) {
       messenger.showSnackBar(SnackBar(
-        content: Text('Tracking-Übernahme fehlgeschlagen: $e'),
+        content: Text(l10n.inboxTrackingApplyFailed(e.toString())),
         behavior: SnackBarBehavior.floating,
       ));
     }
   }
 
   void _showDetails(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final hasMailLink = buildMailDeepLink(
           messageId: message.messageId,
           imapHost: imapHost,
@@ -1303,7 +1310,7 @@ class _UnclassifiedRow extends StatelessWidget {
       actions: [
         ElevatedButton.icon(
           icon: const Icon(Icons.add, size: 16),
-          label: const Text('Deal anlegen'),
+          label: Text(l10n.inboxCreateDeal),
           onPressed: () {
             Navigator.pop(context);
             _createDeal(context);
@@ -1312,7 +1319,7 @@ class _UnclassifiedRow extends StatelessWidget {
         if (_trackingFromMessage() != null)
           OutlinedButton.icon(
             icon: const Icon(Icons.local_shipping_outlined, size: 16),
-            label: const Text('Tracking → Deal'),
+            label: Text(l10n.inboxTrackingToDeal),
             onPressed: () {
               Navigator.pop(context);
               _applyTracking(context);
@@ -1321,7 +1328,7 @@ class _UnclassifiedRow extends StatelessWidget {
         if (hasMailLink)
           OutlinedButton.icon(
             icon: const Icon(Icons.mail_outline, size: 16),
-            label: const Text('Mail öffnen'),
+            label: Text(l10n.inboxOpenMail),
             onPressed: () {
               Navigator.pop(context);
               _openMail(
@@ -1333,7 +1340,7 @@ class _UnclassifiedRow extends StatelessWidget {
           ),
         OutlinedButton.icon(
           icon: const Icon(Icons.delete_outline, size: 16),
-          label: const Text('Verwerfen'),
+          label: Text(l10n.inboxDiscardAction),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppTheme.dangerTextOf(context),
           ),
@@ -1348,6 +1355,7 @@ class _UnclassifiedRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final shopLabel = (message.parsedPayload?['shop_label'] as String?) ??
         message.shopKey;
     final hasMailLink = buildMailDeepLink(
@@ -1373,7 +1381,7 @@ class _UnclassifiedRow extends StatelessWidget {
               color: AppTheme.warningTextOf(context), size: 20),
         ),
         title: Text(
-          message.subject ?? '— ohne Betreff —',
+          message.subject ?? l10n.inboxNoSubject,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
@@ -1386,7 +1394,7 @@ class _UnclassifiedRow extends StatelessWidget {
           children: [
             const SizedBox(height: 2),
             Text(
-              '${shopLabel ?? "Unbekannt"} · ${message.fromAddress ?? "—"}',
+              '${shopLabel ?? l10n.inboxUnknownSender} · ${message.fromAddress ?? "—"}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -1403,48 +1411,48 @@ class _UnclassifiedRow extends StatelessWidget {
         ),
         trailing: PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, size: 20),
-          tooltip: 'Aktionen',
+          tooltip: l10n.inboxActionsTooltip,
           itemBuilder: (_) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'create',
               child: ListTile(
-                leading: Icon(Icons.add),
-                title: Text('Deal anlegen'),
+                leading: const Icon(Icons.add),
+                title: Text(l10n.inboxCreateDeal),
                 dense: true,
               ),
             ),
             if (_trackingFromMessage() != null)
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'tracking',
                 child: ListTile(
-                  leading: Icon(Icons.local_shipping_outlined),
-                  title: Text('Tracking auf Deal anwenden'),
+                  leading: const Icon(Icons.local_shipping_outlined),
+                  title: Text(l10n.inboxApplyTrackingToDeal),
                   dense: true,
                 ),
               ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'details',
               child: ListTile(
-                leading: Icon(Icons.info_outline),
-                title: Text('Details anzeigen'),
+                leading: const Icon(Icons.info_outline),
+                title: Text(l10n.inboxShowDetails),
                 dense: true,
               ),
             ),
             if (hasMailLink)
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'mail',
                 child: ListTile(
-                  leading: Icon(Icons.mail_outline),
-                  title: Text('Mail öffnen'),
+                  leading: const Icon(Icons.mail_outline),
+                  title: Text(l10n.inboxOpenMail),
                   dense: true,
                 ),
               ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'dismiss',
               child: ListTile(
-                leading:
-                    Icon(Icons.delete_outline, color: Color(0xFFB91C1C)),
-                title: Text('Verwerfen'),
+                leading: const Icon(Icons.delete_outline,
+                    color: Color(0xFFB91C1C)),
+                title: Text(l10n.inboxDiscardAction),
                 dense: true,
               ),
             ),
@@ -1494,6 +1502,7 @@ class _CountdownPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final clamped = daysLeft.clamp(0, totalDays);
     final (bg, fg) = clamped <= 3
         ? (AppTheme.dangerBgOf(context), AppTheme.dangerTextOf(context))
@@ -1501,14 +1510,12 @@ class _CountdownPill extends StatelessWidget {
             ? (AppTheme.warningBgOf(context), AppTheme.warningTextOf(context))
             : (AppTheme.infoBgOf(context), AppTheme.infoTextOf(context));
     final label = clamped == 0
-        ? 'Heute weg'
-        : clamped == 1
-            ? 'Noch 1 Tag'
-            : 'Noch $clamped Tage';
+        ? l10n.inboxCountdownToday
+        : l10n.inboxCountdownDaysLeft(clamped);
     return Tooltip(
       message:
-          'Inbox-Sichtbarkeit $totalDays Tage. '
-          'Aktualisiert sich beim nächsten Refresh.',
+          '${l10n.inboxVisibilityPrefix(totalDays)}'
+          '${l10n.inboxAutoUpdateRefreshHint}',
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
         decoration: BoxDecoration(
@@ -1644,10 +1651,11 @@ class _TrackingPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () async {
+        final l10n = AppLocalizations.of(context);
         await Clipboard.setData(ClipboardData(text: tracking));
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Tracking-Nummer kopiert.'),
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(l10n.inboxTrackingNumberCopied),
             behavior: SnackBarBehavior.floating,
           ));
         }

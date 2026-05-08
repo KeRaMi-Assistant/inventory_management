@@ -23,6 +23,7 @@ import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../services/push_service.dart';
 import '../services/workspace_service.dart';
+import '../utils/auth_error_l10n.dart';
 import '../widgets/add_edit_buyer_dialog.dart';
 import '../widgets/add_edit_mailbox_dialog.dart';
 import '../widgets/add_edit_shop_dialog.dart';
@@ -53,7 +54,7 @@ class SettingsScreen extends StatelessWidget {
                   Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
                   Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
                   Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
-                  const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
+                  Tab(icon: const Icon(Icons.mail_outline, size: 18), text: l10n.settingsMailboxSection),
                   Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
                   Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
                   Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
@@ -74,7 +75,7 @@ class SettingsScreen extends StatelessWidget {
                   Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
                   Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
                   Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
-                  const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
+                  Tab(icon: const Icon(Icons.mail_outline, size: 18), text: l10n.settingsMailboxSection),
                   Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
                   Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
                   Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
@@ -271,19 +272,19 @@ class _ShopsTab extends StatelessWidget {
     BuildContext context,
     InventoryProvider provider,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
       final result = await provider.seedAmazonShops();
       messenger.showSnackBar(SnackBar(
         content: Text(result.added == 0
-            ? 'Amazon-Shops sind bereits vorhanden (${result.skipped} übersprungen).'
-            : '${result.added} Amazon-Shops hinzugefügt'
-                '${result.skipped > 0 ? ', ${result.skipped} bereits vorhanden' : ''}.'),
+            ? l10n.settingsAmazonExisting(result.skipped)
+            : l10n.settingsAmazonAdded(result.added)),
         behavior: SnackBarBehavior.floating,
       ));
     } catch (e) {
       messenger.showSnackBar(SnackBar(
-        content: Text('Fehler beim Hinzufügen: $e'),
+        content: Text(l10n.settingsAddFailed(e.toString())),
         behavior: SnackBarBehavior.floating,
       ));
     }
@@ -323,7 +324,7 @@ class _ShopsTab extends StatelessWidget {
                     OutlinedButton.icon(
                       onPressed: () => _seedAmazon(context, provider),
                       icon: const Icon(Icons.shopping_bag_outlined, size: 16),
-                      label: const Text('Amazon-Shops hinzufügen'),
+                      label: Text(l10n.settingsAddAmazonShops),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 8),
@@ -588,7 +589,7 @@ class _GeneralTab extends StatelessWidget {
               icon: Icons.cloud_done_outlined,
               title: l10n.settingsCloudTitle,
               subtitle: l10n.settingsCloudSubtitle,
-              trailing: const Text('Supabase'),
+              trailing: Text(l10n.settingsCloudBackend),
             ),
             const SizedBox(height: 12),
             _SettingsCard(
@@ -1268,7 +1269,7 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
     if (error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error),
+          content: Text(localizeAuthError(l10n, error)),
           backgroundColor: const Color(0xFFC0392B),
           behavior: SnackBarBehavior.floating,
         ),
@@ -2146,11 +2147,11 @@ class _PlanSectionState extends State<_PlanSection> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Rechnungsdaten',
-                            style: TextStyle(fontWeight: FontWeight.w800)),
+                        Text(AppLocalizations.of(context).billingProfileTitle,
+                            style: const TextStyle(fontWeight: FontWeight.w800)),
                         const SizedBox(height: 3),
                         Text(
-                          _billingSubtitle(profile, plan, addressMissing),
+                          _billingSubtitle(context, profile, plan, addressMissing),
                           style: TextStyle(
                             fontSize: 12,
                             color: addressMissing
@@ -2174,15 +2175,16 @@ class _PlanSectionState extends State<_PlanSection> {
     );
   }
 
-  static String _billingSubtitle(
+  static String _billingSubtitle(BuildContext context,
       BillingProfile? p, BillingPlan plan, bool missing) {
+    final l10n = AppLocalizations.of(context);
     if (missing) {
-      return 'Pflichtangaben unvollständig — bitte ergänzen';
+      return l10n.settingsMailboxRequiredIncomplete;
     }
     if (p == null || (p.fullName ?? '').trim().isEmpty) {
       return plan.isPaid
           ? 'Adresse hinterlegen'
-          : 'Optional — wird erst beim Upgrade benötigt';
+          : l10n.settingsMailboxOptional;
     }
     final parts = <String>[
       p.fullName!.trim(),
@@ -2226,25 +2228,22 @@ class _MailboxTabState extends State<_MailboxTab> {
     InboxProvider provider,
     MailboxAccount account,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Postfach entfernen'),
-        content: Text(
-            'Soll das IMAP-Konto "${account.label}" wirklich gelöscht werden? '
-            'Auch alle aus diesem Postfach importierten Mails (Vorschläge + '
-            'Unklassifizierte) werden gelöscht. Bereits in Deals übernommene '
-            'Bestellungen bleiben unberührt.'),
+        title: Text(l10n.settingsMailboxRemoveTitle),
+        content: Text(l10n.settingsMailboxRemoveBody(account.label)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Abbrechen'),
+            child: Text(l10n.actionCancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Löschen',
-                style: TextStyle(color: Colors.white)),
+            child: Text(l10n.actionDelete,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -2255,7 +2254,7 @@ class _MailboxTabState extends State<_MailboxTab> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Löschen fehlgeschlagen: $e')),
+          SnackBar(content: Text(l10n.settingsMailboxRemoveFailed(e.toString()))),
         );
       }
     }
@@ -2333,19 +2332,16 @@ class _MailboxTabState extends State<_MailboxTab> {
 
 void _showMailboxLimitReached(
     BuildContext context, BillingPlan plan, int limit) {
+  final l10n = AppLocalizations.of(context);
   showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Postfach-Limit erreicht'),
-      content: Text(
-        'Dein ${plan.label}-Plan erlaubt $limit '
-        '${limit == 1 ? "Postfach" : "Postfächer"}. '
-        'Upgrade auf einen höheren Plan, um weitere zu verbinden.',
-      ),
+      title: Text(l10n.settingsMailboxLimitTitle),
+      content: Text(l10n.settingsMailboxLimitBody(plan.label, limit)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.actionCancel),
         ),
         ElevatedButton(
           onPressed: () {
@@ -2354,7 +2350,7 @@ void _showMailboxLimitReached(
               MaterialPageRoute(builder: (_) => const PricingScreen()),
             );
           },
-          child: const Text('Plan upgraden'),
+          child: Text(l10n.settingsUpgradePlan),
         ),
       ],
     ),
@@ -2411,11 +2407,7 @@ class _MailboxIntroCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Hinterlege ein IMAP-Konto, um Bestell- und Versand-Mails '
-                    'automatisch erkennen zu lassen. Polling läuft alle 5 min '
-                    'serverseitig — Passwörter werden mit pgp_sym_encrypt '
-                    'verschlüsselt gespeichert. Im Inbox-Tab kannst du '
-                    'erkannte Deals annehmen.',
+                    AppLocalizations.of(context).settingsMailboxIntroBody,
                     style: TextStyle(
                       fontSize: 12,
                       color: AppTheme.textSecondaryOf(context),
@@ -2452,12 +2444,14 @@ class _MailboxAccountTile extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  String _statusLabel() {
+  String _statusLabel(BuildContext context) {
     if (!account.enabled) return 'Pausiert';
     if (account.lastError != null && account.lastError!.isNotEmpty) {
       return 'Fehler';
     }
-    if (account.lastPolledAt == null) return 'Noch nicht gepollt';
+    if (account.lastPolledAt == null) {
+      return AppLocalizations.of(context).settingsMailboxNeverPolled;
+    }
     return 'Zuletzt gepollt: ${_relative(account.lastPolledAt!)}';
   }
 
@@ -2521,7 +2515,7 @@ class _MailboxAccountTile extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              _statusLabel(),
+              _statusLabel(context),
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
@@ -2636,10 +2630,10 @@ class _MailboxFreePlanGate extends StatelessWidget {
                             color: Color(0xFFB45309)),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Postfach im Free-Plan nicht enthalten',
-                          style: TextStyle(
+                          AppLocalizations.of(context).settingsMailboxFreeNotIncluded,
+                          style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 16,
                           ),
@@ -2649,11 +2643,7 @@ class _MailboxFreePlanGate extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'Dein aktueller Plan: ${plan.label}. '
-                    'Die automatische Erkennung von Bestell- und Versand-'
-                    'Mails ist ab dem Starter-Plan verfügbar — höhere '
-                    'Pläne erlauben mehr Postfächer und längeren Inbox-'
-                    'Verlauf.',
+                    AppLocalizations.of(context).settingsMailboxStarterUpgradeHint,
                     style: const TextStyle(
                       fontSize: 13,
                       color: Color(0xFF334155),
@@ -2661,21 +2651,21 @@ class _MailboxFreePlanGate extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const _PlanComparisonRow(
+                  _PlanComparisonRow(
                     label: 'Starter',
-                    value: '1 Postfach · 7 Tage',
+                    value: AppLocalizations.of(context).settingsMailboxesPlanHint(1, 7),
                   ),
-                  const _PlanComparisonRow(
+                  _PlanComparisonRow(
                     label: 'Pro',
-                    value: '3 Postfächer · 14 Tage',
+                    value: AppLocalizations.of(context).settingsMailboxesPlanHint(3, 14),
                   ),
-                  const _PlanComparisonRow(
+                  _PlanComparisonRow(
                     label: 'Business',
-                    value: '10 Postfächer · 30 Tage',
+                    value: AppLocalizations.of(context).settingsMailboxesPlanHint(10, 30),
                   ),
-                  const _PlanComparisonRow(
+                  _PlanComparisonRow(
                     label: 'Ultimate',
-                    value: '15 Postfächer · 90 Tage',
+                    value: AppLocalizations.of(context).settingsMailboxesPlanHint(15, 90),
                   ),
                   const SizedBox(height: 18),
                   SizedBox(
@@ -2687,7 +2677,7 @@ class _MailboxFreePlanGate extends StatelessWidget {
                         ),
                       ),
                       icon: const Icon(Icons.upgrade),
-                      label: const Text('Plan upgraden'),
+                      label: Text(AppLocalizations.of(context).settingsUpgradePlan),
                     ),
                   ),
                 ],
@@ -2786,7 +2776,7 @@ class _ShippingTabState extends State<_ShippingTab> {
                 enableSuggestions: false,
                 autocorrect: false,
                 decoration: InputDecoration(
-                  labelText: 'API-Key',
+                  labelText: l10n.settingsApiKeyLabel,
                   hintText: existing?.masked,
                 ),
                 validator: (v) {

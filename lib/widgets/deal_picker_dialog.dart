@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/deal.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/status_l10n.dart';
 
 /// Reusable Picker für "Wähle einen bestehenden Deal aus". Wird vom Inbox-Tab
 /// genutzt, um Tracking/Mail-Inhalte einem Deal zuzuweisen. Filtert Live nach
@@ -56,6 +58,7 @@ class _DealPickerDialogState extends State<DealPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Consumer<InventoryProvider>(
       builder: (context, inventory, _) {
         final results = _filter(inventory.deals);
@@ -83,10 +86,10 @@ class _DealPickerDialogState extends State<DealPickerDialog> {
                 TextField(
                   controller: _ctrl,
                   autofocus: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Suche nach Produkt, Ticket, Shop oder Käufer …',
-                    prefixIcon: Icon(Icons.search, size: 18),
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    hintText: l10n.dealPickerSearchHint,
+                    prefixIcon: const Icon(Icons.search, size: 18),
+                    border: const OutlineInputBorder(),
                     isDense: true,
                   ),
                   onChanged: (v) => setState(() => _query = v),
@@ -113,7 +116,7 @@ class _DealPickerDialogState extends State<DealPickerDialog> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Abbrechen'),
+              child: Text(l10n.actionCancel),
             ),
           ],
         );
@@ -191,7 +194,7 @@ class _DealRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
-                deal.status,
+                localizeDealStatus(context, deal.status),
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,

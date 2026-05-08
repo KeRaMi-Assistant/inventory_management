@@ -237,7 +237,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.inventoryNoEan),
-        content: Text('EAN: $code'),
+        content: Text(l10n.inventoryEanCopied(code)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -500,6 +500,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   }
 
   Widget _buildCardList(BuildContext context, InventoryProvider provider, NumberFormat money, List<InventoryItem> items) {
+    final l10n = AppLocalizations.of(context);
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
       itemCount: items.length,
@@ -524,7 +525,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                     ),
                     if (item.ticketUrl != null)
                       IconButton(
-                        tooltip: 'Discord-Ticket öffnen',
+                        tooltip: l10n.inventoryDiscordTicketOpen,
                         icon: const Icon(Icons.open_in_new, size: 18, color: Color(0xFF5865F2)),
                         onPressed: () => openUrlWithFallback(context, resolveDiscordUrl(item.ticketUrl!)),
                         padding: EdgeInsets.zero,
@@ -543,7 +544,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                   children: [
                     Icon(Icons.circle, size: 10, color: color),
                     const SizedBox(width: 4),
-                    Text('${item.quantity} Stück', style: TextStyle(fontWeight: FontWeight.w800, color: color)),
+                    Text(AppLocalizations.of(context).inventorySoldBuyerItemsPlural(item.quantity), style: TextStyle(fontWeight: FontWeight.w800, color: color)),
                     const Spacer(),
                     Text(item.costPrice != null ? money.format(item.costPrice) : '-', style: const TextStyle(fontSize: 13)),
                   ],
@@ -637,13 +638,13 @@ class _InventoryScreenState extends State<InventoryScreen>
           child: DataTable(
             headingRowHeight: 42,
             columns: [
-              const DataColumn(label: Text('SKU')),
+              DataColumn(label: Text(l10n.inventoryColSku)),
               DataColumn(label: Text(l10n.inventoryColName)),
               DataColumn(label: Text(l10n.inventoryColLocationLong)),
               DataColumn(label: Text(l10n.inventoryColStock)),
               DataColumn(label: Text(l10n.inventoryColMin)),
               const DataColumn(label: Text('Ø EK')),
-              const DataColumn(label: Text('Deal / Ticket')),
+              DataColumn(label: Text(l10n.inventoryColDealOrTicket)),
               DataColumn(label: Text(l10n.dealColArrival)),
               DataColumn(label: Text(l10n.dealStatus)),
               DataColumn(label: Text(l10n.inventoryColActions)),
@@ -845,6 +846,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
   /// Returns the product name field: Autocomplete when a ticket with deals is
   /// selected, plain TextFormField otherwise.
   Widget _buildProductField(InventoryProvider provider) {
+    final l10n = AppLocalizations.of(context);
     final ticketDeals = _selectedTicketNumber.isNotEmpty
         ? (provider.ticketSummaries
                 .where((t) => t.ticketNumber == _selectedTicketNumber)
@@ -880,10 +882,10 @@ class _InventoryDialogState extends State<_InventoryDialog> {
           return TextFormField(
             controller: ctrl,
             focusNode: focusNode,
-            decoration: const InputDecoration(
-              labelText: 'Produkt *',
-              suffixIcon: Icon(Icons.arrow_drop_down, size: 20),
-              helperText: 'Aus Ticket auswählen oder frei eingeben',
+            decoration: InputDecoration(
+              labelText: l10n.inventoryProductRequiredLabel,
+              suffixIcon: const Icon(Icons.arrow_drop_down, size: 20),
+              helperText: l10n.inventoryProductHint,
             ),
             validator: (v) => v == null || v.trim().isEmpty ? 'Pflichtfeld' : null,
             onChanged: (v) => _name.text = v,
@@ -1146,7 +1148,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _sku,
-                      decoration: const InputDecoration(labelText: 'SKU'),
+                      decoration: InputDecoration(labelText: l10n.inventoryColSku),
                       maxLength: Validators.maxSku,
                       validator: (v) => Validators.validateSku(v),
                     ),
@@ -1156,7 +1158,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     child: TextFormField(
                       controller: _ean,
                       decoration: InputDecoration(
-                        labelText: 'EAN / GTIN',
+                        labelText: l10n.inventoryColEanGtin,
                         prefixIcon: const Icon(Icons.qr_code_2, size: 18),
                         suffixIcon: IconButton(
                           tooltip: l10n.inventoryScanBarcode,
@@ -1383,6 +1385,7 @@ class _LowStockBannerState extends State<_LowStockBanner> {
   @override
   Widget build(BuildContext context) {
     if (_dismissed) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
     return MaterialBanner(
       backgroundColor: AppTheme.dangerBgOf(context),
       leading: Icon(Icons.warning_amber_rounded,
@@ -1396,7 +1399,7 @@ class _LowStockBannerState extends State<_LowStockBanner> {
       actions: [
         TextButton(
           onPressed: () => setState(() => _dismissed = true),
-          child: Text('Schließen',
+          child: Text(l10n.actionClose,
               style: TextStyle(color: AppTheme.dangerTextOf(context))),
         ),
       ],

@@ -356,6 +356,7 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: TextField(
@@ -364,7 +365,7 @@ class _SearchField extends StatelessWidget {
         autofocus: true,
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.search, size: 20),
-          hintText: 'Suchen über Deals, Lager, Tickets, Käufer, Lieferanten…',
+          hintText: l10n.globalSearchHint,
           hintStyle: const TextStyle(fontSize: 14),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           contentPadding:

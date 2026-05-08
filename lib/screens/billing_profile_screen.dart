@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
@@ -100,7 +101,9 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
 
   String? _requiredValidator(String? v) {
     if (!_isPaidContext) return null;
-    if ((v ?? '').trim().isEmpty) return 'Pflichtfeld für kostenpflichtige Pläne';
+    if ((v ?? '').trim().isEmpty) {
+      return AppLocalizations.of(context).billingProfileRequiredForPaid;
+    }
     return null;
   }
 
@@ -109,6 +112,7 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
     if (form == null) return;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final l10n = AppLocalizations.of(context);
     if (!form.validate()) return;
 
     setState(() => _saving = true);
@@ -133,13 +137,13 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
       await billing.save(updated);
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('Rechnungsdaten gespeichert.')),
+        SnackBar(content: Text(l10n.billingProfileSaved)),
       );
       navigator.pop(true);
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Speichern fehlgeschlagen: $e')),
+        SnackBar(content: Text(l10n.billingProfileSaveFailed(e.toString()))),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -148,6 +152,7 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final billing = context.watch<BillingProvider>();
     if (!_initialised && billing.profile != null) {
       _hydrate(billing.profile);
@@ -156,7 +161,7 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rechnungsdaten'),
+        title: Text(l10n.billingProfileTitle),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -166,7 +171,7 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Speichern'),
+                : Text(l10n.actionSave),
           ),
         ],
       ),
@@ -188,16 +193,13 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                             color: const Color(0xFFFFE082),
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.info_outline, size: 20),
-                            SizedBox(width: 10),
+                            const Icon(Icons.info_outline, size: 20),
+                            const SizedBox(width: 10),
                             Expanded(
-                              child: Text(
-                                'Für kostenpflichtige Pläne benötigen wir eine '
-                                'vollständige Rechnungsadresse (Pflichtfelder mit *).',
-                              ),
+                              child: Text(l10n.billingProfileIntroBody),
                             ),
                           ],
                         ),
@@ -208,7 +210,7 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                     const SizedBox(height: 8),
                     _Field(
                       controller: _fullName,
-                      label: 'Vollständiger Name',
+                      label: l10n.billingProfileFullName,
                       required: paidContext,
                       validator: _requiredValidator,
                       textCapitalization: TextCapitalization.words,
@@ -243,7 +245,7 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                     const SizedBox(height: 8),
                     _Field(
                       controller: _addr1,
-                      label: 'Straße & Hausnummer',
+                      label: l10n.billingProfileStreet,
                       required: paidContext,
                       validator: _requiredValidator,
                     ),
@@ -330,13 +332,14 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: Text(_saving ? 'Speichern...' : 'Speichern'),
+                        child: Text(_saving
+                            ? l10n.billingProfileSavingDots
+                            : l10n.actionSave),
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Diese Daten werden ausschließlich für Rechnungen und '
-                      'gesetzlich vorgeschriebene Pflichtangaben verwendet.',
+                      l10n.billingProfilePrivacyHint,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.black54,
                           ),

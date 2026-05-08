@@ -639,7 +639,7 @@ class InboxProvider extends ChangeNotifier {
     required int dealId,
   }) async {
     if (suggestion.tracking == null || suggestion.tracking!.isEmpty) {
-      throw StateError('Suggestion enthält kein Tracking.');
+      throw StateError('Suggestion has no tracking.');
     }
     await _repository.applyTrackingToDeal(
       parsedMessageId: suggestion.parsedMessageId,

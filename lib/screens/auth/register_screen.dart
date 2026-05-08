@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/auth_error_l10n.dart';
 import '../../utils/validators.dart';
 import '../../widgets/password_strength_indicator.dart';
 import 'verify_email_screen.dart';
@@ -33,6 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _busy) return;
     setState(() => _busy = true);
+    final l10n = AppLocalizations.of(context);
     final auth = context.read<AuthProvider>();
     final error = await auth.signUp(
       email: _emailCtrl.text,
@@ -40,9 +42,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
     if (!mounted) return;
     setState(() => _busy = false);
-    final needsVerification =
-        error != null && error.toLowerCase().contains('bestätige');
-    if (needsVerification) {
+    if (error != null && error.isConfirmEmail) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) =>
@@ -54,7 +54,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error),
+          content: Text(localizeAuthError(l10n, error)),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(16),
         ),

@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
 
 /// Linien-Chart mit zwei Linien: Umsatz (blau) und Profit (grün).
@@ -19,9 +20,9 @@ class ProfitLineChart extends StatelessWidget {
     if (series.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(
-          child: Text('Keine Daten im Zeitraum.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+        child: Center(
+          child: Text(AppLocalizations.of(context).statsNoDataInPeriod,
+              style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
         ),
       );
     }

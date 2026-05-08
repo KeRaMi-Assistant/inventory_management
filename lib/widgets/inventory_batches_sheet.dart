@@ -160,7 +160,7 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (b.serialNumber != null)
-                                Text('SN: ${b.serialNumber}',
+                                Text(l10n.inventoryBatchSnPrefix(b.serialNumber!),
                                     style: const TextStyle(fontSize: 12)),
                               Row(
                                 children: [
@@ -273,7 +273,7 @@ class _BatchFormDialogState extends State<_BatchFormDialog> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _serialCtrl,
-                decoration: const InputDecoration(labelText: 'SN'),
+                decoration: InputDecoration(labelText: l10n.inventoryBatchSnLabel),
                 maxLength: 100,
               ),
               const SizedBox(height: 8),
@@ -297,7 +297,7 @@ class _BatchFormDialogState extends State<_BatchFormDialog> {
                     child: InkWell(
                       onTap: _pickMhd,
                       child: InputDecorator(
-                        decoration: const InputDecoration(labelText: 'MHD'),
+                        decoration: InputDecoration(labelText: l10n.inventoryBatchExpiryLabel),
                         child: Text(_mhd != null
                             ? dateFmt.format(_mhd!)
                             : l10n.commonNotSet),

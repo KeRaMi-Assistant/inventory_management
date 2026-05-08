@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/mailbox_account.dart';
 import '../providers/inbox_provider.dart';
 
@@ -119,6 +120,7 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
       title: Text(_isEdit ? 'Postfach bearbeiten' : 'IMAP-Konto hinzufügen'),
       content: SizedBox(
@@ -130,10 +132,10 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
             children: [
               TextField(
                 controller: _label,
-                decoration: const InputDecoration(
-                  labelText: 'Label',
+                decoration: InputDecoration(
+                  labelText: l10n.mailboxLabel,
                   hintText: 'z. B. "Gmail Reseller"',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
@@ -143,9 +145,9 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
                     flex: 3,
                     child: TextField(
                       controller: _host,
-                      decoration: const InputDecoration(
-                        labelText: 'IMAP-Server',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.mailboxImapServer,
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                   ),
@@ -154,9 +156,9 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
                     child: TextField(
                       controller: _port,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Port',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.mailboxPort,
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                   ),
@@ -165,9 +167,9 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
               const SizedBox(height: 12),
               TextField(
                 controller: _username,
-                decoration: const InputDecoration(
-                  labelText: 'Benutzername / Mail-Adresse',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.mailboxUsername,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
@@ -187,22 +189,22 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
               const SizedBox(height: 12),
               TextField(
                 controller: _folder,
-                decoration: const InputDecoration(
-                  labelText: 'Ordner',
-                  hintText: 'INBOX',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.mailboxFolder,
+                  hintText: l10n.mailboxFolderHint,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('SSL/TLS verwenden'),
+                title: Text(l10n.mailboxUseSsl),
                 value: _ssl,
                 onChanged: (v) => setState(() => _ssl = v),
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Polling aktiv'),
+                title: Text(l10n.mailboxPollingActive),
                 subtitle: const Text(
                     'Wird alle 5 Minuten von der Edge Function abgefragt.'),
                 value: _enabled,
@@ -222,7 +224,7 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
       actions: [
         TextButton(
           onPressed: _saving ? null : () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(l10n.actionCancel),
         ),
         ElevatedButton(
           onPressed: _saving ? null : _save,
@@ -232,7 +234,7 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Speichern'),
+              : Text(l10n.actionSave),
         ),
       ],
     );

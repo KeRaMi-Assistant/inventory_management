@@ -189,6 +189,7 @@ class _AmazonCountryDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final current = controller.text.trim().toLowerCase();
     final value = amazonCountryOptions.containsKey(current) ? current : null;
     return DropdownButtonFormField<String>(
@@ -199,7 +200,7 @@ class _AmazonCountryDropdown extends StatelessWidget {
         for (final entry in amazonCountryOptions.entries)
           DropdownMenuItem(
             value: entry.key,
-            child: Text('Amazon · ${entry.value}'),
+            child: Text(l10n.shopAmazonRegion(entry.value)),
           ),
       ],
       onChanged: (v) {
@@ -224,11 +225,12 @@ class _AmazonSuffixCountryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final name = amazonCountryOptions[country] ?? country;
     return InputDecorator(
       decoration: InputDecoration(
         labelText: label,
-        helperText: 'Aus Shop-Namen abgeleitet',
+        helperText: l10n.shopDerivedFromName,
       ),
       child: Row(
         children: [

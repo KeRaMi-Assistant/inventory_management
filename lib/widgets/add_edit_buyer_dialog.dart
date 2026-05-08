@@ -298,7 +298,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                           child: TextFormField(
                             controller: _serverIdCtrls[i],
                             decoration: InputDecoration(
-                              labelText: 'Server ID ${i + 1}',
+                              labelText: l10n.buyerServerIdN(i + 1),
                               isDense: true,
                             ),
                             keyboardType: TextInputType.number,

@@ -135,6 +135,77 @@ klassischen "Tokens hinzugefügt aber Widgets lesen statisch"-Bug.
 **Wenn dieses Szenario `failed` zurückgibt: Caller darf NICHT mergen.**
 Der Bug ist reproduzierbar und sichtbar — nicht "97% sind dark, also OK".
 
+### `smoke-language-switch`
+
+**Pflicht-Szenario nach jeder l10n-/i18n-Änderung.** Stellt sicher, dass
+der Sprach-Toggle (Settings → Allgemein → Sprache) auf alle Top-Level-
+Screens durchschlägt und kein deutscher String mehr sichtbar ist.
+
+**Pflicht-Routen (gleiche 10 wie smoke-theme-toggle):**
+1. `/dashboard`, 2. `/deals`, 3. `/tickets`, 4. `/inbox`,
+5. `/inventory`, 6. `/suppliers`, 7. `/statistics`, 8. `/activity`,
+9. `/help`, 10. `/settings`.
+
+**Pflicht-Dialoge** (ad-hoc öffnen, je 1 Screenshot):
+- "Neuer Deal" (FAB auf /deals)
+- "Mailbox hinzufügen" (Settings → Postfach)
+- Account-Menü (Avatar oben rechts)
+
+**Workflow:**
+1. Login (smoke-login Schritte 1-3) im aktuellen Default-Locale (DE).
+2. **DE-Pass:** Alle 10 Routen besuchen, je Screenshot `de-XX-<route>.png`.
+   Pro Route ARIA-Snapshot lesen — sammle die sichtbaren Texte.
+3. Settings → "Allgemein"-Tab → Sprache-Dropdown → "English" wählen.
+   Wait 500ms — App soll re-rendern, kein Reload nötig.
+4. **EN-Pass:** Wieder alle 10 Routen besuchen, je Screenshot
+   `en-XX-<route>.png`. ARIA-Snapshot pro Route.
+5. **Diff-Audit:** Für jede Route — sammle alle sichtbaren Texte aus
+   dem Snapshot. Filtere User-Content (z.B. Käufer-Namen, Deal-Produkte,
+   Shop-Labels die DE-Daten enthalten können). Suche nach **deutschen
+   Indikator-Wörtern** im Rest:
+   - Umlaute: `ä`, `ö`, `ü`, `ß`
+   - Stopwörter: `mit`, `der`, `die`, `und`, `oder`, `nicht`,
+     `werden`, `wurde`, `kein`, `keine`, `noch`, `unter`, `bei`,
+     `Speichern`, `Abbrechen`, `Löschen`, `Verwerfen`, `Bestellt`,
+     `Angekommen`, `Unterwegs`, `Hinzufügen`, `Bearbeiten`, `Schließen`,
+     `Aktualisieren`, `Zurücksetzen`, `Käufer`, `Lieferant`,
+     `Versand`, `Postfach`, `Vorschlag`, `Vorschläge`,
+     `Aktualisiert`, `Unklassifiziert`.
+   - Whitelist (erlaubt, sind Markennamen oder Statusvalues):
+     `Amazon`, `Supabase`, `Discord`, `Stripe`, `Paddle`, `DATEV`,
+     `IMAP`, `SSL`, `TLS`, `Free`, `Starter`, `Pro`, `Business`,
+     `Ultimate`, `Owner`, `Admin`, `EAN`, `SKU`, `MHD`, `SN`, `EK`,
+     `VK`, `INBOX`, `Bestellt`/`Unterwegs`/`Angekommen` als Status-Badge
+     (DB-Werte — Display-Layer rendert sie via `localizeDealStatus`).
+6. **Pflicht-Dialoge:** öffne sie im EN-Pass, screenshot, snapshot — auch
+   hier Diff-Audit.
+7. **Reverse-Test:** zurück zu Settings → Sprache "Deutsch". 1 Routen-
+   Pass, screenshots `de-back-XX.png`. Sammle alle sichtbaren Texte —
+   mit den OBEN gleichen Indikatoren in **English** suchen
+   (`with`, `the`, `and`, `or`, `not`, `Save`, `Cancel`, `Delete`,
+   `Discard`, `Add`, `Edit`, `Close`, `Refresh`, `Reset`, `Buyer`,
+   `Supplier`). Wenn welche da: Bug.
+8. Toggle zurück auf "English" für Cleanup (oder DE — egal, Hauptsache
+   dokumentiert).
+
+**Failure-Kriterien (jedes alleine reicht für `Result: failed`):**
+- Auf einer der 10 EN-Routen wird ein deutsches Indikator-Wort gefunden,
+  das nicht in der Whitelist steht.
+- Reverse-Pass: englisches Indikator-Wort auf DE-Route ohne Whitelist-
+  Begründung.
+- Screen rendert gar nicht (Loading-Spinner > 5s, leerer State, Crash).
+- Console-Error mit `Localization`/`AppLocalizations`/`MissingStub` etc.
+
+**Report-Sektion "Untranslated Strings" muss konkret sein:**
+```
+## Untranslated Strings (EN-Pass)
+- /deals: "Filter zurücksetzen" → erwartet "Reset filters"
+- /inbox dialog: "Mail verwerfen?" → erwartet "Discard mail?"
+- /settings → Postfach-Tab: "Pflichtangaben unvollständig" → fehlt
+```
+
+**Wenn dieses Szenario `failed` zurückgibt: Caller darf NICHT mergen.**
+
 ### `smoke-<custom>`
 Caller gibt freie Anweisung als Klartext. Du übersetzt sie in obige
 Snapshot/Action/Wait-Sequenz.

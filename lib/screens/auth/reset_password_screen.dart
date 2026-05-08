@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/auth_error_l10n.dart';
 import '../../utils/validators.dart';
 import '../../widgets/password_strength_indicator.dart';
 
@@ -38,7 +39,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     if (error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error),
+          content: Text(localizeAuthError(l10n, error)),
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFFC0392B),
           margin: const EdgeInsets.all(16),

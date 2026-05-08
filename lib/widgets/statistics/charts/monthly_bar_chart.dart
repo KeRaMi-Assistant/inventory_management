@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
 
 /// Bar-Chart für Profit pro Bucket (Tag/Woche/Monat). Optional zwei Bars
@@ -22,9 +23,9 @@ class MonthlyBarChart extends StatelessWidget {
     if (series.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(
-          child: Text('Keine Daten im Zeitraum.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+        child: Center(
+          child: Text(AppLocalizations.of(context).statsNoDataInPeriod,
+              style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
         ),
       );
     }
@@ -189,9 +190,9 @@ class MarginLineChart extends StatelessWidget {
     if (series.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(
-          child: Text('Keine Daten.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+        child: Center(
+          child: Text(AppLocalizations.of(context).statsNoData,
+              style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
         ),
       );
     }

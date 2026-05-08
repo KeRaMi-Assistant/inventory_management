@@ -4,6 +4,8 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils/auth_error_l10n.dart';
+
 /// Wraps `Supabase.instance.client.auth` in a ChangeNotifier so the rest of
 /// the app can react to sign-in / sign-out without depending on the SDK
 /// directly.
@@ -37,8 +39,9 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoggedIn => currentUser != null;
   String? get userEmail => currentUser?.email;
 
-  /// Returns `null` on success or a human-readable error otherwise.
-  Future<String?> signIn({
+  /// Returns `null` on success or a structured [AuthError] otherwise.
+  /// The UI maps the error to a localized string via `localizeAuthError`.
+  Future<AuthError?> signIn({
     required String email,
     required String password,
   }) async {
@@ -50,8 +53,8 @@ class AuthProvider extends ChangeNotifier {
       return null;
     } on AuthException catch (e) {
       return _humanizeAuthError(e);
-    } catch (e) {
-      return 'Anmeldung fehlgeschlagen. Bitte Internetverbindung prüfen.';
+    } catch (_) {
+      return const AuthError.code(AuthErrorCode.loginNetworkError);
     }
   }
 
@@ -74,7 +77,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<String?> signUp({
+  Future<AuthError?> signUp({
     required String email,
     required String password,
   }) async {
@@ -86,17 +89,17 @@ class AuthProvider extends ChangeNotifier {
       // If "Confirm email" is enabled in Supabase, signUp returns a user
       // without an active session. Surface that as a hint, not an error.
       if (res.session == null && res.user != null) {
-        return 'Bitte bestätige zuerst deine E-Mail-Adresse.';
+        return const AuthError.code(AuthErrorCode.confirmEmailFirst);
       }
       return null;
     } on AuthException catch (e) {
       return _humanizeAuthError(e);
-    } catch (e) {
-      return 'Registrierung fehlgeschlagen. Bitte Internetverbindung prüfen.';
+    } catch (_) {
+      return const AuthError.code(AuthErrorCode.registerNetworkError);
     }
   }
 
-  Future<String?> sendPasswordReset(String email) async {
+  Future<AuthError?> sendPasswordReset(String email) async {
     try {
       await _client.auth.resetPasswordForEmail(
         email.trim(),
@@ -105,26 +108,26 @@ class AuthProvider extends ChangeNotifier {
       return null;
     } on AuthException catch (e) {
       return _humanizeAuthError(e);
-    } catch (e) {
-      return 'Reset-Link konnte nicht gesendet werden.';
+    } catch (_) {
+      return const AuthError.code(AuthErrorCode.resetLinkFailed);
     }
   }
 
   /// Setzt das Passwort des aktuell eingeloggten Users (i.d.R. nach
   /// passwordRecovery-Deep-Link).
-  Future<String?> updatePassword(String newPassword) async {
+  Future<AuthError?> updatePassword(String newPassword) async {
     try {
       await _client.auth.updateUser(UserAttributes(password: newPassword));
       return null;
     } on AuthException catch (e) {
       return _humanizeAuthError(e);
     } catch (_) {
-      return 'Passwort konnte nicht geändert werden.';
+      return const AuthError.code(AuthErrorCode.passwordChangeFailed);
     }
   }
 
   /// Schickt die Bestätigungsmail erneut.
-  Future<String?> resendConfirmation(String email) async {
+  Future<AuthError?> resendConfirmation(String email) async {
     try {
       await _client.auth.resend(
         type: OtpType.signup,
@@ -134,21 +137,21 @@ class AuthProvider extends ChangeNotifier {
     } on AuthException catch (e) {
       return _humanizeAuthError(e);
     } catch (_) {
-      return 'E-Mail konnte nicht erneut gesendet werden.';
+      return const AuthError.code(AuthErrorCode.resendFailed);
     }
   }
 
   // ── OAuth ────────────────────────────────────────────────────────────────
 
-  Future<String?> signInWithGoogle() async {
+  Future<AuthError?> signInWithGoogle() async {
     return _oauth(OAuthProvider.google);
   }
 
-  Future<String?> signInWithApple() async {
+  Future<AuthError?> signInWithApple() async {
     return _oauth(OAuthProvider.apple);
   }
 
-  Future<String?> _oauth(OAuthProvider provider) async {
+  Future<AuthError?> _oauth(OAuthProvider provider) async {
     _busy = true;
     notifyListeners();
     try {
@@ -159,8 +162,11 @@ class AuthProvider extends ChangeNotifier {
       return null;
     } on AuthException catch (e) {
       return _humanizeAuthError(e);
-    } catch (e) {
-      return 'Anmeldung mit ${_providerLabel(provider)} fehlgeschlagen.';
+    } catch (_) {
+      return AuthError.code(
+        AuthErrorCode.providerLoginFailed,
+        providerLabel: _providerLabel(provider),
+      );
     } finally {
       _busy = false;
       notifyListeners();
@@ -209,19 +215,19 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Löscht den Account vollständig via Edge Function (nutzt service_role intern).
-  /// Gibt `null` bei Erfolg zurück, sonst eine Fehlermeldung.
-  Future<String?> deleteAccount() async {
+  /// Gibt `null` bei Erfolg zurück, sonst eine [AuthError]-Beschreibung.
+  Future<AuthError?> deleteAccount() async {
     try {
       final response = await _client.functions.invoke('delete-account');
       if (response.status != 200) {
-        return 'Konto konnte nicht gelöscht werden.';
+        return const AuthError.code(AuthErrorCode.deleteAccountFailed);
       }
       await _client.auth.signOut();
       return null;
     } on AuthException catch (e) {
       return _humanizeAuthError(e);
     } catch (_) {
-      return 'Konto konnte nicht gelöscht werden. Bitte Internetverbindung prüfen.';
+      return const AuthError.code(AuthErrorCode.deleteAccountNetworkError);
     }
   }
 
@@ -236,48 +242,56 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Wandelt Supabase-Fehler in deutschsprachige, benutzerfreundliche Texte.
-  static String _humanizeAuthError(AuthException e) {
+  /// Mappt Supabase-`AuthException`s auf strukturierte [AuthError]-Codes.
+  /// Für Fehler ohne dedizierten i18n-Schlüssel (z.B. Rate-Limit,
+  /// "already registered") wird die rohe `AuthException.message` (englisch)
+  /// als Passthrough zurückgegeben — besser als eine irreführende
+  /// Übersetzung.
+  static AuthError _humanizeAuthError(AuthException e) {
     final raw = e.message.toLowerCase();
     final code = e.statusCode;
 
     if (code == '429' ||
         raw.contains('rate limit') ||
         raw.contains('too many')) {
-      return 'Zu viele Versuche. Bitte in 15 Minuten erneut probieren.';
+      // No dedicated l10n key for rate-limit yet — pass through.
+      return AuthError.raw(e.message);
     }
     if (raw.contains('invalid login credentials') ||
         raw.contains('invalid_credentials')) {
-      return 'E-Mail oder Passwort ist falsch.';
+      return const AuthError.code(AuthErrorCode.emailOrPasswordWrong);
     }
     if (raw.contains('email not confirmed')) {
-      return 'Bitte bestätige zuerst deine E-Mail-Adresse.';
+      return const AuthError.code(AuthErrorCode.confirmEmailFirst);
     }
     if (raw.contains('user already registered') ||
         raw.contains('already been registered')) {
-      return 'Es existiert bereits ein Konto mit dieser E-Mail.';
+      // No dedicated l10n key yet — pass through Supabase message.
+      return AuthError.raw(e.message);
     }
     if (raw.contains('password should be at least')) {
-      return 'Passwort ist zu kurz.';
+      // No dedicated "too short" key — fall back to "too weak", which is
+      // semantically the closest existing message.
+      return const AuthError.code(AuthErrorCode.passwordTooWeak);
     }
     if (raw.contains('weak password') ||
         raw.contains('password is too weak')) {
-      return 'Passwort ist zu schwach. Bitte stärkeres Passwort wählen.';
+      return const AuthError.code(AuthErrorCode.passwordTooWeak);
     }
     if (raw.contains('network') || raw.contains('failed host lookup')) {
-      return 'Keine Verbindung. Internetverbindung prüfen.';
+      return const AuthError.code(AuthErrorCode.noConnection);
     }
     if (raw.contains('user not found')) {
-      return 'Kein Konto mit dieser E-Mail gefunden.';
+      return const AuthError.code(AuthErrorCode.noAccountForEmail);
     }
     if (raw.contains('signups not allowed') ||
         raw.contains('signup is disabled')) {
-      return 'Registrierung ist derzeit deaktiviert.';
+      return const AuthError.code(AuthErrorCode.registrationDisabled);
     }
     if (raw.contains('provider is not enabled')) {
-      return 'Dieser Anmeldeweg ist im Backend nicht aktiviert.';
+      return const AuthError.code(AuthErrorCode.providerNotEnabled);
     }
-    return e.message;
+    return AuthError.raw(e.message);
   }
 
   @override

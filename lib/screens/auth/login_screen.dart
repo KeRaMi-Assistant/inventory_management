@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/active_workspace_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/auth_error_l10n.dart';
 import '../../utils/validators.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
@@ -59,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (error != null) {
       setState(() => _busy = false);
-      _showSnack(error, isError: true);
+      _showSnack(localizeAuthError(l10n, error), isError: true);
       return;
     }
 
@@ -82,13 +83,16 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _socialSignIn(_Provider provider) async {
     if (_busy) return;
     setState(() => _busy = true);
+    final l10n = AppLocalizations.of(context);
     final auth = context.read<AuthProvider>();
     final error = provider == _Provider.google
         ? await auth.signInWithGoogle()
         : await auth.signInWithApple();
     if (!mounted) return;
     setState(() => _busy = false);
-    if (error != null) _showSnack(error, isError: true);
+    if (error != null) {
+      _showSnack(localizeAuthError(l10n, error), isError: true);
+    }
   }
 
   void _showSnack(String msg, {bool isError = false}) {

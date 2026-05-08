@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/auth_error_l10n.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   final String email;
@@ -17,13 +18,16 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
   Future<void> _resend() async {
     setState(() => _busy = true);
+    final l10n = AppLocalizations.of(context);
     final auth = context.read<AuthProvider>();
     final error = await auth.resendConfirmation(widget.email);
     if (!mounted) return;
     setState(() => _busy = false);
+    final message =
+        error != null ? localizeAuthError(l10n, error) : l10n.verifyResend;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(error ?? AppLocalizations.of(context).verifyResend),
+        content: Text(message),
         behavior: SnackBarBehavior.floating,
         backgroundColor: error != null ? const Color(0xFFC0392B) : null,
         margin: const EdgeInsets.all(16),

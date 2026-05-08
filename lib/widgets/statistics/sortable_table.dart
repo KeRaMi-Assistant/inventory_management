@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Spaltendefinition für [SortableTable]. [valueOf] liefert den Sortier-Wert.
 class SortableColumn<T> {
   final String label;
@@ -53,10 +55,10 @@ class _SortableTableState<T> extends State<SortableTable<T>> {
   @override
   Widget build(BuildContext context) {
     if (widget.rows.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Text('Keine Daten vorhanden.',
-            style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text(AppLocalizations.of(context).statsNoDataAvailable,
+            style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
       );
     }
 
