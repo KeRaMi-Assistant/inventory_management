@@ -795,5 +795,15 @@
   "publicProfileItemPrice": "Price",
   "publicProfileItemQuantity": "Available: {count}",
   "@publicProfileItemQuantity": { "placeholders": { "count": { "type": "int" } } },
-  "publicProfileFooter": "Built with InventoryOS"
+  "publicProfileFooter": "Built with InventoryOS",
+
+  "settingsDemoSection": "Demo / data",
+  "settingsDemoReloadTitle": "Reload demo data",
+  "settingsDemoReloadDescription": "Resets this workspace and fills it with 30–50 realistic sample deals from your mail of the last 90 days. All current data will be lost.",
+  "settingsDemoReload": "Reload demo",
+  "settingsDemoReloadConfirmTitle": "Reload demo data?",
+  "settingsDemoReloadConfirm": "This workspace will be wiped and re-populated with fresh demo data. All current deals, buyers, shops and inventory items will be lost. Continue?",
+  "settingsDemoReloadSuccess": "Demo data reloaded.",
+  "settingsDemoReloadError": "Demo reload failed: {error}",
+  "@settingsDemoReloadError": { "placeholders": { "error": {} } }
 }
