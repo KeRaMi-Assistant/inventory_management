@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
+import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../providers/onboarding_provider.dart';
 import '../widgets/kpi_card.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -16,11 +18,16 @@ class DashboardScreen extends StatelessWidget {
     final fmt = NumberFormat.currency(locale: localeTag, symbol: '€');
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
+        final isEmpty = provider.deals.isEmpty &&
+            provider.inventoryItems.isEmpty &&
+            provider.buyers.isEmpty;
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (isEmpty) const _EmptyStateCard(),
+              if (isEmpty) const SizedBox(height: 24),
               _KpiGrid(provider: provider, fmt: fmt),
               const SizedBox(height: 24),
               LayoutBuilder(
@@ -49,6 +56,120 @@ class DashboardScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ─── Empty-State (Erst-Login ohne Daten) ──────────────────────────────────
+
+class _EmptyStateCard extends StatefulWidget {
+  const _EmptyStateCard();
+
+  @override
+  State<_EmptyStateCard> createState() => _EmptyStateCardState();
+}
+
+class _EmptyStateCardState extends State<_EmptyStateCard> {
+  bool _loading = false;
+
+  Future<void> _loadDemo() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final ob = context.read<OnboardingProvider>();
+    final activeWs = context.read<ActiveWorkspaceProvider>();
+    final inv = context.read<InventoryProvider>();
+    final wsId = activeWs.active?.id;
+    if (wsId == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.onboardingErrorNoWorkspace)),
+      );
+      return;
+    }
+    setState(() => _loading = true);
+    final result = await ob.loadDemoData(wsId);
+    if (!mounted) return;
+    setState(() => _loading = false);
+    if (result == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.dashboardDemoLoadError(ob.lastError ?? ''))),
+      );
+      return;
+    }
+    await inv.loadData();
+    if (!mounted) return;
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.dashboardDemoLoadSuccess(result.total))),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.bgSurfaceOf(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.borderOf(context)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final phone = constraints.maxWidth < 520;
+          final info = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.lightbulb_outline,
+                      color: AppTheme.accent),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      l10n.dashboardEmptyTitle,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 16),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.dashboardEmptySubtitle,
+                style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textMutedOf(context)),
+              ),
+            ],
+          );
+          final cta = SizedBox(
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: _loading ? null : _loadDemo,
+              icon: _loading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.dataset_outlined),
+              label: Text(l10n.dashboardEmptyLoadDemo),
+            ),
+          );
+          if (phone) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [info, const SizedBox(height: 16), cta],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: info),
+              const SizedBox(width: 16),
+              cta,
+            ],
+          );
+        },
+      ),
     );
   }
 }

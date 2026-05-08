@@ -160,6 +160,21 @@ class WorkspaceService {
     );
   }
 
+  // ── Onboarding ────────────────────────────────────────────────────────
+
+  /// Setzt `workspaces.onboarded_at = now()`. Wird vom OnboardingScreen am
+  /// Ende des First-Time-Flows aufgerufen, damit der AuthGate beim nächsten
+  /// Login direkt auf MainScreen routet. RLS erlaubt das nur dem Owner.
+  Future<Workspace> markOnboarded(String workspaceId) async {
+    final row = await _client
+        .from('workspaces')
+        .update({'onboarded_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', workspaceId)
+        .select()
+        .single();
+    return Workspace.fromSupabase(row);
+  }
+
   // ── Public Profile ────────────────────────────────────────────────────
 
   /// Setzt Handle + öffentliche Sichtbarkeit. RLS lässt nur Owner schreiben.

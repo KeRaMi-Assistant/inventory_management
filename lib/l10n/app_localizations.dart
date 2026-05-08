@@ -4009,6 +4009,252 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Demo-Reload fehlgeschlagen: {error}'**
   String settingsDemoReloadError(Object error);
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In de, this message translates to:
+  /// **'Überspringen'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In de, this message translates to:
+  /// **'Weiter'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingBack.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurück'**
+  String get onboardingBack;
+
+  /// No description provided for @onboardingFinish.
+  ///
+  /// In de, this message translates to:
+  /// **'Fertig'**
+  String get onboardingFinish;
+
+  /// No description provided for @onboardingStepWelcomeTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Willkommen'**
+  String get onboardingStepWelcomeTitle;
+
+  /// No description provided for @onboardingStepWelcomeSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'InventoryOS hilft dir, Bestellungen, Lager und Käufer im Blick zu behalten. Wir richten dich in 6 kurzen Schritten ein.'**
+  String get onboardingStepWelcomeSubtitle;
+
+  /// No description provided for @onboardingStepWorkspaceTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Dein Workspace'**
+  String get onboardingStepWorkspaceTitle;
+
+  /// No description provided for @onboardingStepWorkspaceSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Daten landen in einem Workspace. Du kannst später Team-Mitglieder einladen oder weitere Workspaces anlegen.'**
+  String get onboardingStepWorkspaceSubtitle;
+
+  /// No description provided for @onboardingWorkspaceFallback.
+  ///
+  /// In de, this message translates to:
+  /// **'Mein Workspace'**
+  String get onboardingWorkspaceFallback;
+
+  /// No description provided for @onboardingWorkspaceReady.
+  ///
+  /// In de, this message translates to:
+  /// **'Bereit. Dieser Workspace gehört dir.'**
+  String get onboardingWorkspaceReady;
+
+  /// No description provided for @onboardingStepShopsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Welche Shops nutzt du?'**
+  String get onboardingStepShopsTitle;
+
+  /// No description provided for @onboardingStepShopsSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wähle die Shops, von denen du regelmäßig bestellst. Du kannst später jederzeit weitere hinzufügen.'**
+  String get onboardingStepShopsSubtitle;
+
+  /// No description provided for @onboardingStepSuppliersTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wer sind deine Lieferanten?'**
+  String get onboardingStepSuppliersTitle;
+
+  /// No description provided for @onboardingStepSuppliersSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Optional. Trage deine wichtigsten Lieferanten ein, damit Lagerartikel direkt zugeordnet werden können.'**
+  String get onboardingStepSuppliersSubtitle;
+
+  /// No description provided for @onboardingSuppliersHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferanten-Name'**
+  String get onboardingSuppliersHint;
+
+  /// No description provided for @onboardingSuppliersAdd.
+  ///
+  /// In de, this message translates to:
+  /// **'Hinzufügen'**
+  String get onboardingSuppliersAdd;
+
+  /// No description provided for @onboardingStepFirstTicketTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Erstes Ticket anlegen'**
+  String get onboardingStepFirstTicketTitle;
+
+  /// No description provided for @onboardingStepFirstTicketSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Optional. Lege gleich einen ersten Deal an, damit dein Dashboard nicht leer ist. Du kannst diesen Schritt überspringen.'**
+  String get onboardingStepFirstTicketSubtitle;
+
+  /// No description provided for @onboardingFirstTicketProductHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Produkt (z.B. AirPods Pro 2)'**
+  String get onboardingFirstTicketProductHint;
+
+  /// No description provided for @onboardingFirstTicketQuantity.
+  ///
+  /// In de, this message translates to:
+  /// **'Menge'**
+  String get onboardingFirstTicketQuantity;
+
+  /// No description provided for @onboardingFirstTicketShop.
+  ///
+  /// In de, this message translates to:
+  /// **'Shop'**
+  String get onboardingFirstTicketShop;
+
+  /// No description provided for @onboardingStepOutroTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Fast geschafft!'**
+  String get onboardingStepOutroTitle;
+
+  /// No description provided for @onboardingStepOutroSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Funktionen findest du in den Einstellungen — kein Stress, du musst sie nicht sofort einrichten:'**
+  String get onboardingStepOutroSubtitle;
+
+  /// No description provided for @onboardingOutroDiscord.
+  ///
+  /// In de, this message translates to:
+  /// **'Discord-Server verbinden, um Käufer-Bountys automatisch zuzuordnen.'**
+  String get onboardingOutroDiscord;
+
+  /// No description provided for @onboardingOutroInbox.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach verbinden — Bestellbestätigungen werden dann automatisch erkannt.'**
+  String get onboardingOutroInbox;
+
+  /// No description provided for @onboardingOutroDemo.
+  ///
+  /// In de, this message translates to:
+  /// **'Wenn du dich erstmal umsehen willst: \'Beispiel-Daten laden\' auf dem Dashboard.'**
+  String get onboardingOutroDemo;
+
+  /// No description provided for @onboardingErrorNoWorkspace.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein aktiver Workspace gefunden. Bitte ausloggen und erneut anmelden.'**
+  String get onboardingErrorNoWorkspace;
+
+  /// No description provided for @onboardingErrorGeneric.
+  ///
+  /// In de, this message translates to:
+  /// **'Onboarding fehlgeschlagen: {error}'**
+  String onboardingErrorGeneric(Object error);
+
+  /// No description provided for @dashboardEmptyTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Daten'**
+  String get dashboardEmptyTitle;
+
+  /// No description provided for @dashboardEmptySubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Lade ein paar Beispiel-Tickets, Käufer und Lagerartikel, um dich in der App zurechtzufinden.'**
+  String get dashboardEmptySubtitle;
+
+  /// No description provided for @dashboardEmptyLoadDemo.
+  ///
+  /// In de, this message translates to:
+  /// **'Beispiel-Daten laden'**
+  String get dashboardEmptyLoadDemo;
+
+  /// No description provided for @dashboardDemoLoadSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Beispiel-Einträge geladen.'**
+  String dashboardDemoLoadSuccess(int count);
+
+  /// No description provided for @dashboardDemoLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Beispiel-Daten konnten nicht geladen werden: {error}'**
+  String dashboardDemoLoadError(Object error);
+
+  /// No description provided for @settingsDemoWipeSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Beispiel-Daten'**
+  String get settingsDemoWipeSection;
+
+  /// No description provided for @settingsDemoWipeTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Demo-Daten löschen'**
+  String get settingsDemoWipeTitle;
+
+  /// No description provided for @settingsDemoWipeDescription.
+  ///
+  /// In de, this message translates to:
+  /// **'Entfernt nur die Einträge, die der \'Beispiel-Daten laden\'-Button erstellt hat. Eigene Daten bleiben unangetastet.'**
+  String get settingsDemoWipeDescription;
+
+  /// No description provided for @settingsDemoWipe.
+  ///
+  /// In de, this message translates to:
+  /// **'Demo-Daten löschen'**
+  String get settingsDemoWipe;
+
+  /// No description provided for @settingsDemoWipeConfirmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Demo-Daten löschen?'**
+  String get settingsDemoWipeConfirmTitle;
+
+  /// No description provided for @settingsDemoWipeConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Einträge, die als Beispiel-Daten markiert sind, werden entfernt. Fortfahren?'**
+  String get settingsDemoWipeConfirm;
+
+  /// No description provided for @settingsDemoWipeSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Demo-Einträge gelöscht.'**
+  String settingsDemoWipeSuccess(int count);
+
+  /// No description provided for @settingsDemoWipeError.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen: {error}'**
+  String settingsDemoWipeError(Object error);
 }
 
 class _AppLocalizationsDelegate

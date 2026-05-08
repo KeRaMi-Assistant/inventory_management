@@ -2124,4 +2124,150 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsDemoReloadError(Object error) {
     return 'Demo reload failed: $error';
   }
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String get onboardingBack => 'Back';
+
+  @override
+  String get onboardingFinish => 'Done';
+
+  @override
+  String get onboardingStepWelcomeTitle => 'Welcome';
+
+  @override
+  String get onboardingStepWelcomeSubtitle =>
+      'InventoryOS helps you keep track of orders, inventory, and buyers. Six quick steps and you\'re set up.';
+
+  @override
+  String get onboardingStepWorkspaceTitle => 'Your workspace';
+
+  @override
+  String get onboardingStepWorkspaceSubtitle =>
+      'All data lives inside a workspace. You can invite team members or create more workspaces later.';
+
+  @override
+  String get onboardingWorkspaceFallback => 'My workspace';
+
+  @override
+  String get onboardingWorkspaceReady => 'Ready. This workspace is yours.';
+
+  @override
+  String get onboardingStepShopsTitle => 'Which shops do you use?';
+
+  @override
+  String get onboardingStepShopsSubtitle =>
+      'Pick the shops you order from regularly. You can always add more later.';
+
+  @override
+  String get onboardingStepSuppliersTitle => 'Who are your suppliers?';
+
+  @override
+  String get onboardingStepSuppliersSubtitle =>
+      'Optional. Add your most important suppliers so inventory items can reference them right away.';
+
+  @override
+  String get onboardingSuppliersHint => 'Supplier name';
+
+  @override
+  String get onboardingSuppliersAdd => 'Add';
+
+  @override
+  String get onboardingStepFirstTicketTitle => 'Create your first ticket';
+
+  @override
+  String get onboardingStepFirstTicketSubtitle =>
+      'Optional. Add a first deal so your dashboard isn\'t empty. You can skip this step.';
+
+  @override
+  String get onboardingFirstTicketProductHint => 'Product (e.g. AirPods Pro 2)';
+
+  @override
+  String get onboardingFirstTicketQuantity => 'Quantity';
+
+  @override
+  String get onboardingFirstTicketShop => 'Shop';
+
+  @override
+  String get onboardingStepOutroTitle => 'Almost there!';
+
+  @override
+  String get onboardingStepOutroSubtitle =>
+      'Find these features in Settings — no rush, you don\'t have to set them up right away:';
+
+  @override
+  String get onboardingOutroDiscord =>
+      'Connect your Discord server to auto-assign buyer bounties.';
+
+  @override
+  String get onboardingOutroInbox =>
+      'Connect your inbox — order confirmations will be detected automatically.';
+
+  @override
+  String get onboardingOutroDemo =>
+      'Just want to look around? Use \'Load sample data\' on the dashboard.';
+
+  @override
+  String get onboardingErrorNoWorkspace =>
+      'No active workspace found. Please sign out and back in.';
+
+  @override
+  String onboardingErrorGeneric(Object error) {
+    return 'Onboarding failed: $error';
+  }
+
+  @override
+  String get dashboardEmptyTitle => 'No data yet';
+
+  @override
+  String get dashboardEmptySubtitle =>
+      'Load some sample tickets, buyers, and inventory items to find your way around.';
+
+  @override
+  String get dashboardEmptyLoadDemo => 'Load sample data';
+
+  @override
+  String dashboardDemoLoadSuccess(int count) {
+    return '$count sample entries loaded.';
+  }
+
+  @override
+  String dashboardDemoLoadError(Object error) {
+    return 'Sample data could not be loaded: $error';
+  }
+
+  @override
+  String get settingsDemoWipeSection => 'Sample data';
+
+  @override
+  String get settingsDemoWipeTitle => 'Delete demo data';
+
+  @override
+  String get settingsDemoWipeDescription =>
+      'Removes only the entries created by the \'Load sample data\' button. Your own data stays untouched.';
+
+  @override
+  String get settingsDemoWipe => 'Delete demo data';
+
+  @override
+  String get settingsDemoWipeConfirmTitle => 'Delete demo data?';
+
+  @override
+  String get settingsDemoWipeConfirm =>
+      'All entries marked as demo data will be removed. Continue?';
+
+  @override
+  String settingsDemoWipeSuccess(int count) {
+    return '$count demo entries deleted.';
+  }
+
+  @override
+  String settingsDemoWipeError(Object error) {
+    return 'Deletion failed: $error';
+  }
 }

@@ -20,14 +20,17 @@ import 'providers/filter_provider.dart';
 import 'providers/inbox_provider.dart';
 import 'providers/inventory_provider.dart';
 import 'providers/invites_provider.dart';
+import 'providers/onboarding_provider.dart';
 import 'providers/statistics_filter_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/splash_screen.dart';
 import 'screens/main_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/public_profile_screen.dart';
 import 'services/attachment_service.dart';
 import 'services/billing_service.dart';
+import 'services/demo_data_service.dart';
 import 'services/push_service.dart';
 import 'services/session_manager.dart';
 import 'services/supabase_repository.dart';
@@ -107,6 +110,9 @@ class InventoryApp extends StatelessWidget {
         Provider<BillingService>(
           create: (_) => BillingService(supabase),
         ),
+        Provider<DemoDataService>(
+          create: (_) => DemoDataService(supabase),
+        ),
         Provider<PushService>.value(value: pushService),
         Provider<NotificationPreferencesService>(
           create: (_) => NotificationPreferencesService(supabase),
@@ -160,6 +166,12 @@ class InventoryApp extends StatelessWidget {
           create: (ctx) => BillingProvider(ctx.read<BillingService>()),
           update: (_, service, previous) =>
               previous ?? BillingProvider(service),
+        ),
+        ChangeNotifierProvider<OnboardingProvider>(
+          create: (ctx) => OnboardingProvider(
+            workspaceService: ctx.read<WorkspaceService>(),
+            demoDataService: ctx.read<DemoDataService>(),
+          ),
         ),
       ],
       child: Consumer<AppPreferencesProvider>(
@@ -247,6 +259,16 @@ class _AuthGateState extends State<_AuthGate> {
         WidgetsBinding.instance.addPostFrameCallback((_) => _hydrate(user.id));
       }
       return const SplashScreen();
+    }
+
+    // First-Time-User-Routing: solange der Owner-Workspace `onboarded_at`
+    // NULL hat und der eingeloggte User auch dessen Owner ist, zeigt die App
+    // den Onboarding-Flow. Sobald `markOnboarded()` durchläuft, schaltet
+    // ActiveWorkspaceProvider den Wert um → AuthGate rebuildet → MainScreen.
+    final ws = context.watch<ActiveWorkspaceProvider>().active;
+    final isOwner = ws != null && ws.ownerId == user.id;
+    if (isOwner && ws.onboardedAt == null) {
+      return const OnboardingScreen();
     }
 
     return const MainScreen();

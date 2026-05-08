@@ -1,0 +1,108 @@
+{
+  "_comment": "Demo-Fixture für den Onboarding-Demo-Loader. Wird in jeden frisch angelegten Workspace per DemoDataService geseedet. Reihenfolge der Inserts: buyers → shops → suppliers → tickets → inventory_items → deals → activity_log. Alle Rows werden mit is_demo=true markiert, sodass der Wipe-Button sie sauber entfernen kann.",
+  "buyers": [
+    {
+      "name": "Reseller_DE_01",
+      "row_fill_color": -2103559,
+      "buyer_cell_color": -15163397,
+      "font_color": -1,
+      "sort_order": 0,
+      "active": true,
+      "discord_server_ids": [],
+      "payment_status": "OK"
+    },
+    {
+      "name": "Reseller_DE_02",
+      "row_fill_color": -3104,
+      "buyer_cell_color": -1107200,
+      "font_color": -1,
+      "sort_order": 1,
+      "active": true,
+      "discord_server_ids": [],
+      "payment_status": "OK"
+    },
+    {
+      "name": "Discord_BountyClient",
+      "row_fill_color": -793864,
+      "buyer_cell_color": -8634594,
+      "font_color": -1,
+      "sort_order": 2,
+      "active": true,
+      "discord_server_ids": [],
+      "payment_status": "OK"
+    }
+  ],
+  "shops": [
+    { "name": "Amazon", "region": "DE", "channel": "", "active": true },
+    { "name": "MediaMarkt", "region": "DE", "channel": "", "active": true },
+    { "name": "Saturn", "region": "DE", "channel": "", "active": true },
+    { "name": "Otto", "region": "DE", "channel": "", "active": true },
+    { "name": "Galeria", "region": "DE", "channel": "", "active": true }
+  ],
+  "suppliers": [
+    {
+      "name": "TechSupply GmbH",
+      "contact_name": "Demo-Kontakt",
+      "email": null,
+      "phone": null,
+      "website": null,
+      "note": "Demo-Lieferant",
+      "active": true
+    },
+    {
+      "name": "Reseller-Hub EU",
+      "contact_name": "Demo-Kontakt",
+      "email": null,
+      "phone": null,
+      "website": null,
+      "note": "Demo-Lieferant",
+      "active": true
+    },
+    {
+      "name": "Großhandel Müller",
+      "contact_name": "Demo-Kontakt",
+      "email": null,
+      "phone": null,
+      "website": null,
+      "note": "Demo-Lieferant",
+      "active": true
+    }
+  ],
+  "tickets": [
+    { "ticket_number": "TK-DEMO-001" },
+    { "ticket_number": "TK-DEMO-002" },
+    { "ticket_number": "TK-DEMO-003" },
+    { "ticket_number": "TK-DEMO-004" },
+    { "ticket_number": "TK-DEMO-005" }
+  ],
+  "inventory_items": [
+    { "name": "Apple AirPods Pro 2", "sku": "DEMO-001", "quantity": 4, "min_stock": 2, "location": "Lager A", "cost_price": 189.00, "supplier_idx": 0 },
+    { "name": "Sony WH-1000XM5", "sku": "DEMO-002", "quantity": 2, "min_stock": 1, "location": "Lager A", "cost_price": 279.00, "supplier_idx": 0 },
+    { "name": "Bose QuietComfort Ultra", "sku": "DEMO-003", "quantity": 3, "min_stock": 1, "location": "Lager A", "cost_price": 349.00, "supplier_idx": 1 },
+    { "name": "iPhone 15 Pro 256GB Titan", "sku": "DEMO-004", "quantity": 2, "min_stock": 1, "location": "Lager B", "cost_price": 1099.00, "supplier_idx": 1 },
+    { "name": "Samsung Galaxy S24 Ultra", "sku": "DEMO-005", "quantity": 1, "min_stock": 1, "location": "Lager B", "cost_price": 1149.00, "supplier_idx": 1 },
+    { "name": "Nintendo Switch OLED", "sku": "DEMO-006", "quantity": 5, "min_stock": 2, "location": "Lager A", "cost_price": 299.00, "supplier_idx": 0 },
+    { "name": "PlayStation 5 Slim Disc", "sku": "DEMO-007", "quantity": 2, "min_stock": 1, "location": "Lager B", "cost_price": 489.00, "supplier_idx": 0 },
+    { "name": "Xbox Series X 1TB", "sku": "DEMO-008", "quantity": 1, "min_stock": 1, "location": "Lager B", "cost_price": 459.00, "supplier_idx": 2 },
+    { "name": "Apple Watch Series 9 GPS", "sku": "DEMO-009", "quantity": 3, "min_stock": 1, "location": "Lager A", "cost_price": 389.00, "supplier_idx": 0 },
+    { "name": "Garmin Fenix 7", "sku": "DEMO-010", "quantity": 2, "min_stock": 1, "location": "Lager A", "cost_price": 599.00, "supplier_idx": 1 },
+    { "name": "Dyson V15 Detect", "sku": "DEMO-011", "quantity": 1, "min_stock": 1, "location": "Lager B", "cost_price": 549.00, "supplier_idx": 2 },
+    { "name": "Philips Hue Starter Kit", "sku": "DEMO-012", "quantity": 4, "min_stock": 2, "location": "Lager A", "cost_price": 149.00, "supplier_idx": 1 },
+    { "name": "GoPro HERO12 Black", "sku": "DEMO-013", "quantity": 2, "min_stock": 1, "location": "Lager B", "cost_price": 379.00, "supplier_idx": 0 },
+    { "name": "DJI Mini 4 Pro", "sku": "DEMO-014", "quantity": 1, "min_stock": 1, "location": "Lager B", "cost_price": 759.00, "supplier_idx": 2 },
+    { "name": "Logitech MX Master 3S", "sku": "DEMO-015", "quantity": 6, "min_stock": 3, "location": "Lager A", "cost_price": 89.00, "supplier_idx": 1 },
+    { "name": "Kindle Paperwhite 11. Gen", "sku": "DEMO-016", "quantity": 3, "min_stock": 1, "location": "Lager A", "cost_price": 129.00, "supplier_idx": 0 },
+    { "name": "iPad Air 11\" M2 128GB", "sku": "DEMO-017", "quantity": 2, "min_stock": 1, "location": "Lager B", "cost_price": 699.00, "supplier_idx": 1 },
+    { "name": "MacBook Air 13\" M3 256GB", "sku": "DEMO-018", "quantity": 1, "min_stock": 1, "location": "Lager B", "cost_price": 1199.00, "supplier_idx": 1 },
+    { "name": "Samsung 990 Pro 2TB SSD", "sku": "DEMO-019", "quantity": 8, "min_stock": 3, "location": "Lager A", "cost_price": 159.00, "supplier_idx": 2 },
+    { "name": "LEGO Star Wars Millennium Falcon", "sku": "DEMO-020", "quantity": 2, "min_stock": 1, "location": "Lager A", "cost_price": 749.00, "supplier_idx": 2 }
+  ],
+  "deals": [
+    { "product": "Apple AirPods Pro 2", "quantity": 2, "is_dropship": false, "shop_idx": 0, "order_offset_days": -28, "ek_brutto": 189.00, "vk": 229.00, "buyer_idx": 0, "ticket_idx": 0, "status": "Done", "has_receipt": true, "tax_rate": 0.19, "currency": "EUR", "note": "Demo-Deal" },
+    { "product": "Sony WH-1000XM5", "quantity": 1, "is_dropship": false, "shop_idx": 1, "order_offset_days": -21, "ek_brutto": 279.00, "vk": 339.00, "buyer_idx": 0, "ticket_idx": 1, "status": "Rechnung gestellt", "has_receipt": true, "tax_rate": 0.19, "currency": "EUR", "note": "Demo-Deal" },
+    { "product": "iPhone 15 Pro 256GB Titan", "quantity": 1, "is_dropship": false, "shop_idx": 0, "order_offset_days": -14, "ek_brutto": 1099.00, "vk": 1249.00, "buyer_idx": 1, "ticket_idx": 2, "status": "Angekommen", "has_receipt": false, "tax_rate": 0.19, "currency": "EUR", "note": "Demo-Deal" },
+    { "product": "PlayStation 5 Slim Disc", "quantity": 1, "is_dropship": false, "shop_idx": 2, "order_offset_days": -7, "ek_brutto": 489.00, "vk": 569.00, "buyer_idx": 2, "ticket_idx": 3, "status": "Unterwegs", "has_receipt": false, "tax_rate": 0.19, "currency": "EUR", "note": "Demo-Deal" },
+    { "product": "Nintendo Switch OLED", "quantity": 2, "is_dropship": true, "shop_idx": 3, "order_offset_days": -3, "ek_brutto": 299.00, "vk": 359.00, "buyer_idx": 1, "ticket_idx": 4, "status": "Bestellt", "has_receipt": false, "tax_rate": 0.19, "currency": "EUR", "note": "Demo-Deal (Dropship)" },
+    { "product": "Apple Watch Series 9 GPS", "quantity": 1, "is_dropship": false, "shop_idx": 4, "order_offset_days": -1, "ek_brutto": 389.00, "vk": 459.00, "buyer_idx": 0, "ticket_idx": 0, "status": "Bestellt", "has_receipt": false, "tax_rate": 0.19, "currency": "EUR", "note": "Demo-Deal" }
+  ]
+}

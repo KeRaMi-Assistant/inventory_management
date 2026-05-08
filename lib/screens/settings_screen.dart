@@ -20,6 +20,7 @@ import '../providers/billing_provider.dart';
 import '../providers/carrier_credentials_provider.dart';
 import '../providers/inbox_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../providers/onboarding_provider.dart';
 import '../services/push_service.dart';
 import '../services/workspace_service.dart';
 import '../widgets/add_edit_buyer_dialog.dart';
@@ -651,6 +652,7 @@ class _GeneralTab extends StatelessWidget {
             const SizedBox(height: 12),
             const _LowStockThresholdCard(),
             const _DemoReloadSection(),
+            const _DemoWipeSection(),
             const SizedBox(height: 32),
             const Divider(),
             const SizedBox(height: 16),
@@ -812,6 +814,168 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
           },
         ),
       ),
+    );
+  }
+}
+
+// ── Demo-Daten löschen (jeder User mit is_demo-Rows) ──────────────────────
+
+class _DemoWipeSection extends StatefulWidget {
+  const _DemoWipeSection();
+
+  @override
+  State<_DemoWipeSection> createState() => _DemoWipeSectionState();
+}
+
+class _DemoWipeSectionState extends State<_DemoWipeSection> {
+  bool? _hasDemo;
+  bool _checking = false;
+  bool _wiping = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  Future<void> _refresh() async {
+    final ws = context.read<ActiveWorkspaceProvider>().active;
+    if (ws == null) return;
+    if (_checking) return;
+    setState(() => _checking = true);
+    final has = await context.read<OnboardingProvider>().hasDemoData(ws.id);
+    if (!mounted) return;
+    setState(() {
+      _hasDemo = has;
+      _checking = false;
+    });
+  }
+
+  Future<void> _wipe() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final ob = context.read<OnboardingProvider>();
+    final activeWs = context.read<ActiveWorkspaceProvider>();
+    final inv = context.read<InventoryProvider>();
+    final wsId = activeWs.active?.id;
+    if (wsId == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.settingsDemoWipeConfirmTitle),
+        content: Text(l10n.settingsDemoWipeConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.actionCancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.settingsDemoWipe),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _wiping = true);
+    final result = await ob.wipeDemoData(wsId);
+    if (!mounted) return;
+    setState(() => _wiping = false);
+    if (result == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(
+          l10n.settingsDemoWipeError(ob.lastError ?? ''),
+        )),
+      );
+      return;
+    }
+    await inv.loadData();
+    if (!mounted) return;
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.settingsDemoWipeSuccess(result.total))),
+    );
+    await _refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasDemo != true) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 24),
+        _SectionHeader(title: l10n.settingsDemoWipeSection),
+        const SizedBox(height: 8),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final stack = constraints.maxWidth < 480;
+                final info = Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.delete_sweep_outlined,
+                        color: Color(0xFFD97706)),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.settingsDemoWipeTitle,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            l10n.settingsDemoWipeDescription,
+                            style: const TextStyle(
+                                fontSize: 12, color: Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+                final button = SizedBox(
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: _wiping ? null : _wipe,
+                    icon: _wiping
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.delete_outline, size: 18),
+                    label: Text(l10n.settingsDemoWipe),
+                  ),
+                );
+                if (stack) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      info,
+                      const SizedBox(height: 12),
+                      button,
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(child: info),
+                    const SizedBox(width: 12),
+                    button,
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
