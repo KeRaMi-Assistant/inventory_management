@@ -135,6 +135,54 @@ klassischen "Tokens hinzugefügt aber Widgets lesen statisch"-Bug.
 **Wenn dieses Szenario `failed` zurückgibt: Caller darf NICHT mergen.**
 Der Bug ist reproduzierbar und sichtbar — nicht "97% sind dark, also OK".
 
+### `smoke-help`
+**Pflicht-Szenario nach jeder Änderung an `lib/screens/help_screen.dart`
+oder an Help-bezogenen ARB-Keys (`help*`).** Verifiziert, dass die
+In-App-Hilfeseite suchbar bleibt, alle 12 Sektionen rendert und auf
+Phone-Viewport ohne horizontalen Scroll auskommt.
+
+1. Login (smoke-login Schritte 1-3) — Default-Viewport 1440×900.
+2. Navigiere zu `/help` (Bottom-Nav „Hilfe" oder Drawer-Eintrag,
+   abhängig von Viewport-Breite). Bestätige per Snapshot, dass
+   das Suchfeld + mindestens **5 Sektionen** sichtbar sind
+   (z. B. „Schnellstart", „Postfach (E-Mail-Import)", „Deals",
+   „Lager (Inventory)", „Häufige Fragen (FAQ)").
+3. **Suchfunktion:** ins Suchfeld „Postfach" tippen. Wait 300 ms.
+   Snapshot — die Sektion „Postfach (E-Mail-Import)" muss sichtbar
+   und expanded sein. Andere irrelevante Sektionen (z. B.
+   „Tickets") dürfen nicht in der Treffer-Liste erscheinen.
+   Counter-Label `helpResultsLabel` muss > 0 anzeigen.
+4. Suchfeld leeren via Clear-Button (Suffix-Icon) → alle Sektionen
+   wieder sichtbar.
+5. **FAQ-Klick:** Sektion „Häufige Fragen (FAQ)" anklicken (falls
+   noch nicht expanded). Snapshot — mindestens **15 Q/A-Items**
+   müssen gerendert sein. Click auf das erste Q-Item → Antwort
+   bleibt sichtbar (FAQ-Items sind als Cards immer ausgeklappt).
+6. **Phone-Viewport:** `browser_resize` → 390×844. Re-Snapshot der
+   Hilfeseite. Prüfe via `browser_evaluate`:
+   - `document.documentElement.scrollWidth` ≤ `window.innerWidth`
+     (kein horizontaler Scroll).
+   - Die Sektions-Karten sind volle Breite (kein abgeschnittener
+     Text). Expansion-Tile-Header sind tap-bar (≥ 44dp).
+7. **Theme-Toggle:** Settings → Theme → „Dunkel" klicken.
+   Zurück zu `/help`. Per-Region-Visual-Audit (siehe
+   `smoke-theme-toggle`) für die Sektions-Cards: alle müssen
+   Dark-Mode-Surfaces zeigen, kein hardcoded `0xFFEFF6FF`-Highlight.
+   Theme zurück auf „Hell".
+8. **Sprache EN:** Settings → Allgemein → Language → English.
+   Zurück zu `/help`. Snapshot — Sektionsüberschriften müssen
+   englisch sein (z. B. „Quick start", „Mailbox (email import)",
+   „Frequently asked questions (FAQ)"). Suchfeld-Hint:
+   „Search help…".
+
+**Failure-Kriterien (`Result: failed`):**
+- Suche „Postfach" liefert keine oder mehr als 3 Sektionen
+  (Filter ist kaputt).
+- FAQ-Sektion zeigt < 15 Items.
+- Phone-Viewport hat horizontalen Scroll oder abgeschnittenen Text.
+- EN-Modus zeigt deutsche Strings (l10n-Drift) oder umgekehrt.
+- Console-Errors während Navigation/Suche.
+
 ### `smoke-<custom>`
 Caller gibt freie Anweisung als Klartext. Du übersetzt sie in obige
 Snapshot/Action/Wait-Sequenz.
@@ -175,6 +223,63 @@ Schreibe `.claude/test-runs/<timestamp>/report.md`:
   manuell).
 - **Hard-Block:** Wenn `.env.test` fehlt oder Port 8123 belegt ist,
   brich sofort ab mit klarer Anweisung an den Caller.
+
+## Auto-Requeue bei `Result: failed` — PFLICHT
+
+Wenn dein Lauf in `Result: failed` endet (Visual-Bug, Pixel-Overflow,
+Pump-Stop, Console-Error, gesperrte Aktion, …), legst du **zusätzlich
+zum Report** ein neues Backlog-Item ins Inbox, das der Headless-Runner
+**vorzieht**:
+
+**Datei:** `.claude/backlog/inbox/00-followup-<short-slug>-<UTC-timestamp>.md`
+
+Der `00-`-Prefix bewirkt durch das alphabetische Sort, dass das Item
+in der **nächsten** Drain-Iteration als erstes gepickt wird — egal
+welche Tasks sonst im Inbox liegen ("drängelt sich vor").
+
+**Body-Format:**
+```markdown
+---
+slug: followup-<slug>
+priority: 0
+plan: false
+test_scenario: <Smoke-Szenario das den Fix verifizieren soll>
+---
+
+## Auto-Requeue von Browser-Tester
+
+- **Test-Run:** `.claude/test-runs/<timestamp>/`
+- **Failed-Szenario:** `<scenario>`
+- **Befund (1 Satz):** <was kaputt war>
+
+## Konkretes Repro
+1. <Schritt>
+2. <Schritt>
+3. **Erwartung vs. Beobachtung**
+
+## Vermuteter Code-Hotspot
+- `<file:line>` — kurze Begründung.
+
+## Akzeptanz für den Fix
+- ✅ <Test-Szenario> Result: passed nach Re-Run.
+- ✅ <konkrete weitere Bedingung, z.B. RGB-Summe-Check, kein Console-Error, …>
+- Browser-Tester wird nach Fix automatisch erneut über genau dieses
+  Szenario laufen — wenn es wieder failed, drängelt sich der nächste
+  Followup vor (kann mehrfach loopen, max via Failure-Counter im
+  Run-Log).
+```
+
+**Pflicht-Felder im Body:**
+- `priority: 0` (drängelt vor allen `01-`/`02-`/…-Items).
+- `test_scenario:` MUSS gesetzt sein, sonst läuft der Verify-Run nicht.
+- Konkretes Repro (kein "irgendwo ist was kaputt").
+- Vermuteter Code-Hotspot (zumindest 1 File:Line-Kandidat).
+
+**Wenn der gleiche Bug 3× hintereinander auftaucht** (gleicher Slug
+in `failed/` 3× innerhalb eines Tages): markiere die Followup-Task
+mit `## Stop-Loop` Sentinel im Body — der Runner bricht dann den
+Auto-Requeue-Loop ab und meldet dem User per ntfy. Verhindert
+Endlos-Pingpong wenn der Fix systemisch unmöglich ist.
 
 ## Was du NICHT tust
 

@@ -262,6 +262,55 @@ Strukturproblemen (veraltetes Kapitel, falsche Sektionen) meldet er
 das im Schluss-Block — die Überarbeitung macht ein `planner` →
 `flutter-coder`-Workflow.
 
+## Hilfeseite pflegen
+
+Die User-sichtbare Hilfeseite liegt in
+[`lib/screens/help_screen.dart`](lib/screens/help_screen.dart) +
+`lib/l10n/app_*.arb`. Sie ist die **erste Anlaufstelle für neue Nutzer**
+— alles, was ein Anwender wissen muss, soll dort findbar sein, ohne in
+interne Dev-Doku abzudriften. Pendant zum Handbuch (Entwickler-Sicht)
+ist die Hilfeseite die User-Sicht.
+
+**Was triggert ein Update:**
+
+- Neuer Screen (`lib/screens/<x>_screen.dart`) → eigene Hilfe-Sektion +
+  ggf. Quick-Start-Eintrag.
+- Neuer Setting/Toggle in `settings_screen.dart` → FAQ-Eintrag.
+- Geänderte Status-/Pipeline-Logik (`lib/services/inbox_*`,
+  `tracking_*`, `push_*`) → passende Sektion (Postfach/Deals/Push)
+  + Troubleshooting.
+- Neue Edge-Function mit User-Wirkung
+  (`supabase/functions/<name>/`) → passende Sektion.
+- Neuer User-sichtbarer ARB-Key, der ein Feature dokumentiert →
+  Erwähnung in der zugehörigen Sektion.
+- Pricing-/Limits-Änderung (`lib/screens/pricing_screen.dart`,
+  Billing-Provider) → Sektion Workspace + FAQ Downgrade.
+
+**Aufruf:**
+
+- `/update-help` — Dry-Run, listet Plan + geplante ARB-Keys + geplante
+  Screen-Edits.
+- `/update-help --apply` — schreibt die Edits durch (inkrementell, kein
+  Rewrite). DE+EN-ARBs bleiben symmetrisch.
+- `/update-help --from origin/main --apply --strict` — strenge Variante
+  für CI-Gates (exit 1, wenn unklassifizierte Pfade übrig bleiben).
+
+**Wann ausführen:**
+
+- Vor `/ship`, sobald der PR User-sichtbares Verhalten ändert (neuer
+  Screen, neuer Toggle, neue Status-Logik, neue Edge-Function mit
+  UI-Wirkung). Bugfixes ohne UI-Änderung brauchen kein Help-Update.
+- Im Headless-Loop optional als eigenes Backlog-Item, damit die
+  Hilfe nicht still veraltet.
+- Periodisch: `/update-help --from <letzter-Hilfe-Sync> --apply`.
+
+**Grenzen:** Der Agent schreibt nicht alles um, sondern ergänzt
+inkrementell. Übersetzungen für DE+EN macht der Agent idiomatisch
+selbst (keine maschinelle Übersetzung). Bei strukturellen Problemen
+(z. B. „Sektion X ist komplett veraltet") meldet er das im
+Schluss-Block — die Überarbeitung übernimmt ein `planner` →
+`flutter-coder`-Workflow.
+
 ## Referenzen
 
 - Plan-Archiv: [`plans/`](plans/)
