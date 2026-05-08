@@ -164,19 +164,24 @@ async function pollAccount(
     await client.connect()
     const lock = await client.getMailboxLock(account.folder)
     try {
-      // Bootstrap: beim allerersten Poll laden wir NICHTS herunter, sondern
-      // setzen last_uid auf den aktuellen Höchststand. Erst ab dem nächsten
-      // Tick fließen neue Mails rein. Verhindert, dass ein voller Inbox-Archiv
-      // die Edge Function kippt.
+      // Bootstrap: beim allerersten Poll laden wir die letzten
+      // BOOTSTRAP_LOOKBACK Mails (statt 0). Damit sieht der User direkt
+      // historische Bestellungen, nicht erst beim 2. Cron-Tick.
+      // 100 matcht MAX_FETCH_PER_RUN — alles in einem Run für sofortiges
+      // Feedback. Wer mehr Historie braucht, kriegt das beim nächsten Tick.
+      const BOOTSTRAP_LOOKBACK = 100
       if (account.last_uid === null) {
         const status = await client.status(account.folder, { uidNext: true })
-        const baseline = Math.max(0, (status.uidNext ?? 1) - 1)
+        const uidNext = status.uidNext ?? 1
+        const baseline = Math.max(0, uidNext - 1 - BOOTSTRAP_LOOKBACK)
         await admin
           .from('mailbox_accounts')
           .update({ last_uid: baseline })
           .eq('id', account.id)
+        // Update local copy so the existing fetch-loop below kicks in
+        // for the lookback range.
+        account.last_uid = baseline
         stat.bootstrapped = true
-        return stat
       }
 
       // UID-Range = (last_uid + 1) bis "*" (= aktueller Höchststand).
