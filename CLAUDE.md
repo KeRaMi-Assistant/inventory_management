@@ -180,6 +180,43 @@ um Regressionen zu finden, die `flutter analyze` + `flutter test` nicht sehen.
 
 **Selector-Regel:** Browser-Tester nutzt Accessibility-Names / Roles / Tooltips, keine brittle CSS-Selektoren. Wenn ein Widget keinen erkennbaren Anker hat, schlägt der Tester eine `Key('...')`-Ergänzung in `lib/...` vor — Implementer fügt sie nachträglich ein.
 
+## Ressourcen-Check
+
+Statische Validierung von Projekt-Ressourcen (Strings, künftig auch Assets/
+Theme-Tokens). Dient als Sicherheitsnetz gegen schleichende Inkonsistenzen,
+die `flutter analyze` nicht sieht.
+
+### l10n-Konsistenz
+
+**Was geprüft wird:**
+- Schlüssel-Symmetrie zwischen `lib/l10n/app_de.arb` und `lib/l10n/app_en.arb`.
+- Platzhalter-Symmetrie pro Key (`{name}`, `{count}` etc. müssen identisch sein).
+- ARB-JSON-Validität + `@key`-Metadata-Sanity.
+- Hardcoded deutsche UI-Strings in `lib/` (Heuristik: `Text('…')`,
+  `tooltip:`, `hintText:`, … mit Umlauten oder typischen DE-Tokens).
+
+**Aufruf:**
+- `/check-l10n` — Audit-Pass (read-only Markdown-Report).
+- `/check-l10n --fix` — ergänzt fehlende EN-Keys mit `[TODO en] <DE>`-Markern,
+  die der Agent anschließend idiomatisch übersetzt.
+- `/check-l10n --json` — JSON-Output für Pipelines.
+- `/check-l10n --no-hardcoded` — nur ARB-Symmetrie, ohne lib-Scan.
+
+**Direkt ohne Agent:**
+```bash
+python3 .claude/scripts/check-l10n.py [--fix] [--json] [--no-hardcoded]
+```
+Exit-Codes: `0` = clean, `1` = Findings, `2` = ARB-IO/Parse-Fehler.
+
+**Wann ausführen:**
+- Vor jedem `/ship` einer UI-Änderung (gehört zur PFLICHT-Mobile-First-Checkliste).
+- Nach jedem Refactor, der ARBs anfasst.
+- Periodisch im Headless-Loop (separates Backlog-Item ist sinnvoll).
+
+**Grenzen:** Hardcoded-Strings werden nur gemeldet, nicht refaktoriert —
+das übernimmt ein `flutter-coder`-Agent. Übersetzungen für `[TODO en]`-
+Marker macht der `l10n-checker` selbst (nicht maschinell, idiomatisch).
+
 ## Referenzen
 
 - Plan-Archiv: [`plans/`](plans/)
