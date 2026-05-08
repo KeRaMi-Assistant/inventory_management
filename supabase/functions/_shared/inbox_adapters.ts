@@ -289,6 +289,61 @@ const isOrderishSubject = (subject: string): boolean => {
   return /\b(bestell|order|auftrag|versand|lieferung|tracking|zustell|sendung|paket|stornier|widerruf|erstattung|gutschrift|rechnung|invoice|frankierung|shipping|shipped|delivery|envío|zamówieni|wysył|dostaw)/i.test(s)
 }
 
+// Carrier-Direkt-Mails (DPD, GLS, Hermes, DHL, MyHermes etc.). Das sind
+// reine Tracking-Status-Updates und keine Order-Mails. Wenn ein Deal
+// aktiv getrackt wird, kommt der Status ohnehin via tracking-poll rein —
+// die direkten Carrier-Mails würden dann nur als "Unklassifiziert"
+// herumliegen, weil sie weder Order-ID noch Produktname enthalten.
+//
+// Wichtig: NICHT für DHL-Frankierungs-Bestätigungen ("Online Frankierung
+// QMBZ…") — das sind Versand-Belege, die der User für seine Buchhaltung
+// nutzt. Die fangen wir gesondert über das `frankierung`-Subject ab.
+//
+// noreply@dhl.com bleibt erlaubt, weil DHL auch Bestellbestätigungen
+// für Frankierungs-Online-Käufe von dort verschickt — Subject-Filter
+// bestimmt dann ob "Auftragsbestätigung Online Frankierung" oder
+// reine Tracking-Mail. Tracking-Mails von DHL kommen i.d.R. von
+// noreply@track.dhlecommerce.com / noreply@dhl.de mit Subjects ohne
+// "Bestellung"/"Auftrag".
+const CARRIER_DOMAINS = [
+  /(@|\.)service\.dpd\.de\b/i,
+  /(@|\.)feedback\.dpd\.de\b/i,
+  /(@|\.)gls-pakete\.de\b/i,
+  /(@|\.)gls-group\.com\b/i,
+  /(@|\.)paketankuendigung\.myhermes\.de\b/i,
+  /(@|\.)myhermes\.de\b/i,
+  /(@|\.)hermesworld\.com\b/i,
+]
+
+/// True wenn die Mail von einem Carrier kommt UND keine Frankierungs-/
+/// Bestell-Bestätigung ist (DHL verschickt z.B. auch Frankierungs-
+/// Belege, die wir behalten wollen).
+export const isCarrierOnly = (ctx: MailContext): boolean => {
+  // DHL gesondert: nur skippen wenn Subject NICHT nach Frankierung/
+  // Bestellung aussieht.
+  if (/(@|\.)dhl\.(com|de)\b/i.test(ctx.from)) {
+    if (/\b(frankierung|auftragsbest|bestell|order|invoice|rechnung)\b/i
+      .test(ctx.subject)) return false
+    return true
+  }
+  return CARRIER_DOMAINS.some((re) => re.test(ctx.from))
+}
+
+// Accounting-Service-Mails (eigene Buchhaltung — Lexware/Lexoffice/
+// Datev). Das sind Rechnungen für die SaaS-Subscription des Users
+// und Kopien selbst-versendeter Belege. Sie sind weder Bestellung
+// noch Versand noch Erstattung; sie würden nur den Inbox-Tab
+// zumüllen, wenn wir sie aufnehmen.
+const ACCOUNTING_DOMAINS = [
+  /(@|\.)lexware\.de\b/i,
+  /(@|\.)lexoffice\.de\b/i,
+  /(@|\.)datev\.de\b/i,
+  /(@|\.)sevdesk\.de\b/i,
+]
+
+export const isAccountingMail = (ctx: MailContext): boolean =>
+  ACCOUNTING_DOMAINS.some((re) => re.test(ctx.from))
+
 // Boilerplate-Phrasen, die KEIN echter Produktname sind. Trifft regelmäßig
 // auf Amazon-AGB-Disclaimer in Versandbestätigungs-Mails (Widerrufsrecht etc.)
 // und auf Service-Anrede-Texte ("Sie erhalten…", "Vielen Dank…").
@@ -378,12 +433,16 @@ const productFromSubject = (subject: string): string | undefined => {
 }
 
 // ── Amazon (DE/COM/UK/FR/IT/ES) ────────────────────────────────────────
+// Business-Subdomain wird zugelassen für Order-/Versand-Mailflows
+// (`shipment-tracking@business.amazon.de`, `auto-confirm@business.amazon.de`).
+// Werbe-Newsletter `no-reply@business.amazon.de` ("Amazon Business
+// Analytics") werden via Subject-Promo-Filter (isOrderishSubject)
+// abgefangen — nicht via from-Domain-Block.
 const amazon: Adapter = {
   key: 'amazon',
   label: 'Amazon',
   matches: (ctx) =>
-    /(@|\.)amazon\.(de|com|co\.uk|fr|it|es)\b/i.test(ctx.from)
-    && !/business\.amazon/i.test(ctx.from), // Business-Werbung ausschließen
+    /(@|\.)amazon\.(de|com|co\.uk|fr|it|es)\b/i.test(ctx.from),
   looksLikeOrder: (ctx) => isOrderishSubject(ctx.subject),
   parse: (ctx) => {
     const s = haystack(ctx)
@@ -593,6 +652,175 @@ const xkom: Adapter = {
   },
 }
 
+// ── LEGO (Hauptshop + CRM-Notifications) ───────────────────────────────
+// LEGO splittet seine Order-Mails über drei Sender:
+//   - `order-acknowledged@m.lego.com`     → Bestelleingang
+//   - `DoNotReply@lego.com`               → Bestellinfo (PDF-Mail)
+//   - `Noreply@t.crm.lego.com`            → Bestätigung + Versand-Updates
+// Order-IDs haben das Format `T<8-12 Ziffern>(-E\d)?` und stehen
+// regelmäßig direkt im Subject. Wir parsen primär aus dem Subject und
+// nur als Fallback aus dem Body, weil LEGO-Mails sehr Marketing-lastig
+// sind (viele Promo-Phrasen, die `productFromSubject` durcheinander
+// bringen würden).
+const lego: Adapter = {
+  key: 'lego',
+  label: 'LEGO',
+  matches: (ctx) => /(@|\.)(?:[a-z0-9.-]+\.)?lego\.com\b/i.test(ctx.from),
+  looksLikeOrder: (ctx) => isOrderishSubject(ctx.subject),
+  parse: (ctx) => {
+    const s = haystack(ctx)
+    const orderId = findFirst(s, [
+      // Subject-Form: "#T492568051-E9", "Bestellung T491469977", "T492…"
+      /\b(T\d{8,12}(?:-E\d)?)\b/,
+      /Bestellnummer\s*[:#]?\s*([A-Z0-9-]{6,25})/i,
+      /Order\s*number\s*[:#]?\s*([A-Z0-9-]{6,25})/i,
+    ])
+    const product = sanitizeProduct(findFirst(s, [
+      /Artikel\s*[:=]\s*([^\n]{4,140})/i,
+      /Produkt\s*[:=]\s*([^\n]{4,140})/i,
+      /Item\s*[:=]\s*([^\n]{4,140})/i,
+    ])) ?? productFromSubject(ctx.subject)
+    const totalSrc = /(?:Gesamtsumme|Summe|Total|Gesamtbetrag|Order Total)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
+    const { total, currency } = parseMoney(totalSrc)
+    const rawShip = findAllTrackings(s, ctx.html)
+    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
+    const { tracking, trackings, carrier } = gateTracking(
+      status, rawShip.trackings, rawShip.carrier)
+    if (!orderId && !tracking) return null
+    return {
+      shopKey: 'lego', shopLabel: 'LEGO',
+      orderId, product, quantity: 1,
+      total, currency, tracking, trackings, carrier, status,
+    }
+  },
+}
+
+// ── Tink (Smart Home Reseller) ─────────────────────────────────────────
+// Tink schickt klassische Lifecycle-Mails:
+//   - "Deine Bestellung ist eingegangen"
+//   - "Deine Bestellung wurde verpackt"
+//   - "Die Lieferung ist auf dem Weg." / "wird noch heute zugestellt"
+//   - "Die Lieferung wurde der Empfängerin … zugestellt"
+// Order-IDs haben Format `\d{6,10}` und stehen typischerweise nur im
+// Body, nicht im Subject. Carrier ist meist DHL/Hermes — Tracking-Nrn
+// kommen aus dem Body via `findAllTrackings`.
+const tink: Adapter = {
+  key: 'tink',
+  label: 'tink',
+  matches: (ctx) => /(@|\.)tink\.de\b/i.test(ctx.from),
+  looksLikeOrder: (ctx) => {
+    const s = ctx.subject.toLowerCase()
+    if (isOrderishSubject(ctx.subject)) return true
+    // Tinks Versand-Subjects nutzen "Lieferung" + Verb-Phrase, die unser
+    // Standard-Whitelist abdeckt. Zusätzlich: "Deine Bestellung wurde
+    // verpackt" → wird ebenfalls abgedeckt.
+    return /\b(lieferung|bestellung|paket|versand|zustell)/i.test(s)
+  },
+  parse: (ctx) => {
+    const s = haystack(ctx)
+    const orderId = findFirst(s, [
+      /Bestellnummer\s*[:#=]?\s*(\d{5,12})/i,
+      /Auftrags?nummer\s*[:#=]?\s*(\d{5,12})/i,
+      /Order(?:\s*number)?\s*[:#=]?\s*([A-Z0-9-]{5,15})/i,
+    ])
+    const product = sanitizeProduct(findFirst(s, [
+      /Artikel\s*[:=]\s*([^\n]{4,140})/i,
+      /Produkt\s*[:=]\s*([^\n]{4,140})/i,
+    ])) ?? productFromSubject(ctx.subject)
+    const totalSrc = /(?:Gesamtsumme|Summe|Total|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
+    const { total, currency } = parseMoney(totalSrc)
+    const rawShip = findAllTrackings(s, ctx.html)
+    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
+    const { tracking, trackings, carrier } = gateTracking(
+      status, rawShip.trackings, rawShip.carrier)
+    if (!orderId && !tracking) return null
+    return {
+      shopKey: 'tink', shopLabel: 'tink',
+      orderId, product, quantity: 1,
+      total, currency, tracking, trackings, carrier, status,
+    }
+  },
+}
+
+// ── Anker (Direkt-Shop) ────────────────────────────────────────────────
+// Anker-Order-IDs: `R\d{12,15}S?` (z.B. `R030101520991S`). Stehen
+// fast immer direkt im Subject. Sender:
+//   - `noreply-service@anker.com`  → Bestätigung
+//   - `support@anker.com`          → Versand + Zustellung
+const anker: Adapter = {
+  key: 'anker',
+  label: 'Anker',
+  matches: (ctx) => /(@|\.)anker\.com\b/i.test(ctx.from),
+  looksLikeOrder: (ctx) => isOrderishSubject(ctx.subject),
+  parse: (ctx) => {
+    const s = haystack(ctx)
+    const orderId = findFirst(s, [
+      // Anker R-Format: 12-15 Ziffern + optionales S-Suffix.
+      /\b(R\d{12,15}S?)\b/,
+      /Bestellung\s+([A-Z0-9-]{8,20})/i,
+      /Bestellnummer\s*[:#=]?\s*([A-Z0-9-]{6,20})/i,
+      /Order\s*(?:number|#)?\s*[:#=]?\s*([A-Z0-9-]{6,20})/i,
+    ])
+    const product = sanitizeProduct(findFirst(s, [
+      /Artikel\s*[:=]\s*([^\n]{4,140})/i,
+      /Produkt\s*[:=]\s*([^\n]{4,140})/i,
+      /Item\s*[:=]\s*([^\n]{4,140})/i,
+    ])) ?? productFromSubject(ctx.subject)
+    const totalSrc = /(?:Gesamtsumme|Summe|Total|Gesamtbetrag|Order Total)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
+    const { total, currency } = parseMoney(totalSrc)
+    const rawShip = findAllTrackings(s, ctx.html)
+    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
+    const { tracking, trackings, carrier } = gateTracking(
+      status, rawShip.trackings, rawShip.carrier)
+    if (!orderId && !tracking) return null
+    return {
+      shopKey: 'anker', shopLabel: 'Anker',
+      orderId, product, quantity: 1,
+      total, currency, tracking, trackings, carrier, status,
+    }
+  },
+}
+
+// ── Euronics (Hauptshop + Filial-Subdomains) ───────────────────────────
+// Euronics betreibt sowohl die Plattform-Domain `euronics.de` als auch
+// individuelle Händler-Subdomains nach Schema `euronics-<filiale>.de`
+// (z.B. `online@euronics-buecker.de`). Beide werden vom selben Adapter
+// abgedeckt. Order-IDs sind kurze Numbers (6-8 Ziffern), die direkt
+// im Subject stehen ("Ihre Bestellung 4250432 ist eingegangen").
+const euronics: Adapter = {
+  key: 'euronics',
+  label: 'Euronics',
+  matches: (ctx) => /(@|\.)(?:[a-z0-9-]+\.)?euronics(?:-[a-z0-9-]+)?\.de\b/i.test(ctx.from),
+  looksLikeOrder: (ctx) => isOrderishSubject(ctx.subject),
+  parse: (ctx) => {
+    const s = haystack(ctx)
+    const orderId = findFirst(s, [
+      // Subject-Form: "Ihre Bestellung 4250432 ist eingegangen"
+      /Bestellung\s+(\d{6,12})\b/i,
+      /Bestellnummer\s*[:#=]?\s*([A-Z0-9-]{4,15})/i,
+      /Auftrags?nummer\s*[:#=]?\s*([A-Z0-9-]{4,15})/i,
+      /Order\s*number\s*[:#=]?\s*([A-Z0-9-]{4,15})/i,
+    ])
+    const product = sanitizeProduct(findFirst(s, [
+      /Artikel\s*[:=]\s*([^\n]{4,140})/i,
+      /Produkt\s*[:=]\s*([^\n]{4,140})/i,
+      /Bezeichnung\s*[:=]\s*([^\n]{4,140})/i,
+    ])) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
+    const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Gesamtbetrag|Endbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
+    const { total, currency } = parseMoney(totalSrc)
+    const rawShip = findAllTrackings(s, ctx.html)
+    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
+    const { tracking, trackings, carrier } = gateTracking(
+      status, rawShip.trackings, rawShip.carrier)
+    if (!orderId && !tracking) return null
+    return {
+      shopKey: 'euronics', shopLabel: 'Euronics',
+      orderId, product, quantity: 1,
+      total, currency, tracking, trackings, carrier, status,
+    }
+  },
+}
+
 // ── Kaufland (Marketplace + Onlineshop) ────────────────────────────────
 // Marketplace-Mails kommen oft von `<random>@kaufland-marktplatz.de` oder
 // `noreply@kaufland-marktplatz.de`, der Hauptshop von `kaufland.de`.
@@ -653,6 +881,7 @@ const kaufland: Adapter = {
 
 const REGISTRY: Adapter[] = [
   amazon, mediamarkt, saturn, pccomponentes, xkom, kaufland,
+  lego, tink, anker, euronics,
 ]
 
 export function detectAndParse(ctx: MailContext): ParsedOrder | null {
@@ -683,12 +912,18 @@ export function detectShop(ctx: MailContext): { key: string; label: string } | n
 /// Vom inbox-poll als Whitelist + Promo-Filter genutzt.
 ///
 /// Logik:
+///   0. Carrier-Direkt-Mails (DPD/GLS/Hermes-Tracking) → skippen.
+///      Status-Updates bekommen Deals via tracking-poll, nicht via Mail.
+///   0a. Eigene Buchhaltungs-Mails (Lexware/Lexoffice) → skippen.
+///       Sind Rechnungen für die SaaS-Subscription, nicht für Bestellungen.
 ///   1. Bekannter Shop + Order-Subject → speichern (Adapter parst später).
 ///   2. Bekannter Shop + Promo-Subject → skippen.
 ///   3. Unbekannter Shop + Order-Subject → speichern, landet als
 ///      "unclassified" (User kann manuell daraus einen Deal machen).
 ///   4. Unbekannter Shop + generisches Subject → skippen (Newsletter etc.).
 export function shouldStore(ctx: MailContext): boolean {
+  if (isCarrierOnly(ctx)) return false
+  if (isAccountingMail(ctx)) return false
   for (const adapter of REGISTRY) {
     if (adapter.matches(ctx)) {
       return adapter.looksLikeOrder(ctx)

@@ -18,7 +18,13 @@
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { detectAndParse, detectShop, type ParsedOrder } from '../_shared/inbox_adapters.ts'
+import {
+  detectAndParse,
+  detectShop,
+  isAccountingMail,
+  isCarrierOnly,
+  type ParsedOrder,
+} from '../_shared/inbox_adapters.ts'
 
 interface PendingMessage {
   id: string
@@ -77,10 +83,41 @@ Deno.serve(async (req) => {
     authHeader === `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
   if (!isCron && !isService) return jsonResp({ error: 'Unauthorized' }, 401)
 
+  let body: { reparse_unclassified?: boolean } = {}
+  if (req.method === 'POST') {
+    try {
+      const text = await req.text()
+      if (text.trim().length > 0) body = JSON.parse(text)
+    } catch {
+      return jsonResp({ error: 'Invalid JSON body' }, 400)
+    }
+  }
+  const reparse = body.reparse_unclassified === true
+
   const admin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   )
+
+  if (reparse) {
+    // Re-Parse-Mode für die History: alte unklassifizierte Mails gegen die
+    // neue Adapter-Registry laufen lassen.
+    //
+    // Limitierung: Bodies werden nach Erstprocessing gestrippt (siehe
+    // processOne unten — `parsed_payload: { from, subject, shop_label }`).
+    // D.h. wir können hier nur from + subject neu auswerten:
+    //   - Carrier-/Accounting-Mails, die VOR dem neuen `shouldStore`-Filter
+    //     reingerutscht sind, werden jetzt auf `dismissed` gesetzt
+    //     (verschwinden aus dem Inbox-Tab).
+    //   - shop_key wird neu zugeordnet, falls jetzt ein Adapter matcht
+    //     (LEGO/Tink/Anker/Euronics — vorher unknown).
+    //
+    // Für eine echte Re-Klassifizierung in eine Suggestion müsste der Body
+    // erhalten geblieben sein. Neue Mails, die ab jetzt reinkommen, werden
+    // korrekt gegen die neue Registry geparst.
+    const result = await reparseUnclassified(admin)
+    return jsonResp({ ok: true, mode: 'reparse_unclassified', ...result })
+  }
 
   const { data: pending, error } = await admin
     .from('parsed_messages')
@@ -109,6 +146,91 @@ Deno.serve(async (req) => {
     unclassified,
   })
 })
+
+interface ReparseStats {
+  scanned: number
+  dismissed_carrier: number
+  dismissed_accounting: number
+  reshopped: number
+}
+
+/// Sweep über alle status='unclassified' Mails:
+///   - Carrier-/Accounting-Sender → status='dismissed' (Inbox-Cleanup).
+///   - Sender, der jetzt in der Adapter-Registry existiert → shop_key
+///     aktualisieren, Mail bleibt 'unclassified' (Body ist weg).
+async function reparseUnclassified(
+  admin: ReturnType<typeof createClient>,
+): Promise<ReparseStats> {
+  const stats: ReparseStats = {
+    scanned: 0,
+    dismissed_carrier: 0,
+    dismissed_accounting: 0,
+    reshopped: 0,
+  }
+  // Pagination via received_at-Cursor — bei großen History-Volumen
+  // wichtig, sonst sprengen wir das 30-s-Function-Limit.
+  let cursor: string | null = null
+  const PAGE = 200
+  for (let i = 0; i < 25; i++) {
+    let q = admin
+      .from('parsed_messages')
+      .select('id, from_address, subject, shop_key, received_at')
+      .eq('status', 'unclassified')
+      .order('received_at', { ascending: true })
+      .limit(PAGE)
+    if (cursor) q = q.gt('received_at', cursor)
+    const { data, error } = await q
+    if (error) {
+      console.error('reparse select failed', error)
+      break
+    }
+    const rows = (data ?? []) as Array<{
+      id: string
+      from_address: string | null
+      subject: string | null
+      shop_key: string | null
+      received_at: string
+    }>
+    if (rows.length === 0) break
+
+    for (const row of rows) {
+      stats.scanned++
+      cursor = row.received_at
+      const ctx = {
+        from: row.from_address ?? '',
+        subject: row.subject ?? '',
+        text: '',
+        html: '',
+      }
+      if (isCarrierOnly(ctx)) {
+        await admin
+          .from('parsed_messages')
+          .update({ status: 'dismissed' })
+          .eq('id', row.id)
+        stats.dismissed_carrier++
+        continue
+      }
+      if (isAccountingMail(ctx)) {
+        await admin
+          .from('parsed_messages')
+          .update({ status: 'dismissed' })
+          .eq('id', row.id)
+        stats.dismissed_accounting++
+        continue
+      }
+      const shop = detectShop(ctx)
+      if (shop && shop.key !== row.shop_key) {
+        await admin
+          .from('parsed_messages')
+          .update({ shop_key: shop.key })
+          .eq('id', row.id)
+        stats.reshopped++
+      }
+    }
+    if (rows.length < PAGE) break
+  }
+  return stats
+}
 
 async function processOne(
   admin: ReturnType<typeof createClient>,
