@@ -2232,7 +2232,9 @@ class _MailboxTabState extends State<_MailboxTab> {
         title: const Text('Postfach entfernen'),
         content: Text(
             'Soll das IMAP-Konto "${account.label}" wirklich gelöscht werden? '
-            'Bereits importierte Mails bleiben in der Inbox erhalten.'),
+            'Auch alle aus diesem Postfach importierten Mails (Vorschläge + '
+            'Unklassifizierte) werden gelöscht. Bereits in Deals übernommene '
+            'Bestellungen bleiben unberührt.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

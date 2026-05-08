@@ -211,16 +211,25 @@ class _InboxHeader extends StatelessWidget {
                 : () => _confirmMarkAllRead(context, provider),
           ),
           IconButton(
-            tooltip: hasAccount
-                ? 'Jetzt pollen (statt 5 min warten)'
-                : 'Erst Postfach in den Einstellungen verbinden',
-            icon: const Icon(Icons.cloud_download_outlined),
-            color: hasAccount && !provider.isLoading
+            tooltip: provider.isPumping
+                ? 'Importiere Mails… (${provider.pumpStored} bisher)'
+                : hasAccount
+                    ? 'Jetzt pollen (statt 5 min warten)'
+                    : 'Erst Postfach in den Einstellungen verbinden',
+            icon: provider.isPumping
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.cloud_download_outlined),
+            color: hasAccount && !provider.isLoading && !provider.isPumping
                 ? null
                 : AppTheme.textMutedOf(context),
-            onPressed: !hasAccount || provider.isLoading
-                ? null
-                : () => _triggerPoll(context, provider),
+            onPressed:
+                !hasAccount || provider.isLoading || provider.isPumping
+                    ? null
+                    : () => _triggerPoll(context, provider),
           ),
           IconButton(
             tooltip: 'Aktualisieren',
