@@ -211,6 +211,18 @@ class _InboxHeader extends StatelessWidget {
                 : () => _confirmMarkAllRead(context, provider),
           ),
           IconButton(
+            tooltip: hasAccount
+                ? 'Jetzt pollen (statt 5 min warten)'
+                : 'Erst Postfach in den Einstellungen verbinden',
+            icon: const Icon(Icons.cloud_download_outlined),
+            color: hasAccount && !provider.isLoading
+                ? null
+                : AppTheme.textMutedOf(context),
+            onPressed: !hasAccount || provider.isLoading
+                ? null
+                : () => _triggerPoll(context, provider),
+          ),
+          IconButton(
             tooltip: 'Aktualisieren',
             icon: provider.isLoading
                 ? const SizedBox(
@@ -528,6 +540,33 @@ Future<void> _confirmMarkAllRead(
     messenger.showSnackBar(SnackBar(
       content: Text(l10n.inboxMarkAllReadFailure(e.toString())),
       behavior: SnackBarBehavior.floating,
+    ));
+  }
+}
+
+Future<void> _triggerPoll(BuildContext context, InboxProvider provider) async {
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.showSnackBar(const SnackBar(
+    content: Text('Pollt das Postfach…'),
+    behavior: SnackBarBehavior.floating,
+    duration: Duration(seconds: 2),
+  ));
+  final result = await provider.pollNow();
+  if (result != null) {
+    final msg = result.fetched == 0
+        ? 'Keine neuen Mails. Postfach ist aktuell.'
+        : '${result.fetched} Mail${result.fetched == 1 ? "" : "s"} geholt, '
+            '${result.stored} klassifiziert.';
+    messenger.showSnackBar(SnackBar(
+      content: Text(msg),
+      behavior: SnackBarBehavior.floating,
+    ));
+  } else if (provider.lastError != null) {
+    messenger.showSnackBar(SnackBar(
+      content: Text('Polling fehlgeschlagen: ${provider.lastError}'),
+      backgroundColor: AppTheme.danger,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 8),
     ));
   }
 }
