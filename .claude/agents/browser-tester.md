@@ -176,6 +176,63 @@ Schreibe `.claude/test-runs/<timestamp>/report.md`:
 - **Hard-Block:** Wenn `.env.test` fehlt oder Port 8123 belegt ist,
   brich sofort ab mit klarer Anweisung an den Caller.
 
+## Auto-Requeue bei `Result: failed` — PFLICHT
+
+Wenn dein Lauf in `Result: failed` endet (Visual-Bug, Pixel-Overflow,
+Pump-Stop, Console-Error, gesperrte Aktion, …), legst du **zusätzlich
+zum Report** ein neues Backlog-Item ins Inbox, das der Headless-Runner
+**vorzieht**:
+
+**Datei:** `.claude/backlog/inbox/00-followup-<short-slug>-<UTC-timestamp>.md`
+
+Der `00-`-Prefix bewirkt durch das alphabetische Sort, dass das Item
+in der **nächsten** Drain-Iteration als erstes gepickt wird — egal
+welche Tasks sonst im Inbox liegen ("drängelt sich vor").
+
+**Body-Format:**
+```markdown
+---
+slug: followup-<slug>
+priority: 0
+plan: false
+test_scenario: <Smoke-Szenario das den Fix verifizieren soll>
+---
+
+## Auto-Requeue von Browser-Tester
+
+- **Test-Run:** `.claude/test-runs/<timestamp>/`
+- **Failed-Szenario:** `<scenario>`
+- **Befund (1 Satz):** <was kaputt war>
+
+## Konkretes Repro
+1. <Schritt>
+2. <Schritt>
+3. **Erwartung vs. Beobachtung**
+
+## Vermuteter Code-Hotspot
+- `<file:line>` — kurze Begründung.
+
+## Akzeptanz für den Fix
+- ✅ <Test-Szenario> Result: passed nach Re-Run.
+- ✅ <konkrete weitere Bedingung, z.B. RGB-Summe-Check, kein Console-Error, …>
+- Browser-Tester wird nach Fix automatisch erneut über genau dieses
+  Szenario laufen — wenn es wieder failed, drängelt sich der nächste
+  Followup vor (kann mehrfach loopen, max via Failure-Counter im
+  Run-Log).
+```
+
+**Pflicht-Felder im Body:**
+- `priority: 0` (drängelt vor allen `01-`/`02-`/…-Items).
+- `test_scenario:` MUSS gesetzt sein, sonst läuft der Verify-Run nicht.
+- Konkretes Repro (kein "irgendwo ist was kaputt").
+- Vermuteter Code-Hotspot (zumindest 1 File:Line-Kandidat).
+
+**Wenn der gleiche Bug 3× hintereinander auftaucht** (gleicher Slug
+in `failed/` 3× innerhalb eines Tages): markiere die Followup-Task
+mit `## Stop-Loop` Sentinel im Body — der Runner bricht dann den
+Auto-Requeue-Loop ab und meldet dem User per ntfy. Verhindert
+Endlos-Pingpong wenn der Fix systemisch unmöglich ist.
+
 ## Was du NICHT tust
 
 - Keine Code-Änderungen in `lib/` — du bist Tester, kein Implementer.
