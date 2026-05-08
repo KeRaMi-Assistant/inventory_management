@@ -1454,6 +1454,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inventoryClose => 'Close';
 
   @override
+  String get inventoryTabStock => 'Stock';
+
+  @override
+  String get inventoryTabSold => 'Sold';
+
+  @override
+  String get inventorySoldEmpty => 'No sold items yet.';
+
+  @override
+  String get inventorySoldKpiCount => 'Items sold';
+
+  @override
+  String get inventorySoldKpiProfit => 'Total profit';
+
+  @override
+  String get inventorySoldKpiTopBuyers => 'Top 3 buyers';
+
+  @override
+  String get inventorySoldNoBuyer => 'No buyer data yet';
+
+  @override
+  String inventorySoldBuyerItems(int count) {
+    return '$count pcs';
+  }
+
+  @override
   String get supplierAddTitle => 'Add supplier';
 
   @override

@@ -11,6 +11,7 @@ import '../models/inventory_item.dart';
 import '../models/mailbox_account.dart';
 import '../models/shop.dart';
 import '../models/supplier.dart';
+import '../models/ticket.dart';
 
 /// Snapshot of all data for the currently signed-in user, used to seed the
 /// in-memory provider after login.
@@ -22,6 +23,7 @@ class CloudSnapshot {
   final List<InventoryItem> inventoryItems;
   final List<InventoryMovement> movements;
   final List<ActivityEntry> activities;
+  final List<Ticket> tickets;
 
   const CloudSnapshot({
     required this.deals,
@@ -31,6 +33,7 @@ class CloudSnapshot {
     required this.inventoryItems,
     required this.movements,
     required this.activities,
+    this.tickets = const [],
   });
 
   bool get isEmpty =>
@@ -40,7 +43,8 @@ class CloudSnapshot {
       suppliers.isEmpty &&
       inventoryItems.isEmpty &&
       movements.isEmpty &&
-      activities.isEmpty;
+      activities.isEmpty &&
+      tickets.isEmpty;
 }
 
 /// Single point of contact with the Supabase backend. All RLS-scoped tables
@@ -116,6 +120,7 @@ class SupabaseRepository {
         inventoryItems: [],
         movements: [],
         activities: [],
+        tickets: [],
       );
     }
     final results = await Future.wait([
@@ -160,6 +165,11 @@ class SupabaseRepository {
           .eq('workspace_id', ws)
           .order('date', ascending: false)
           .limit(50),
+      _client
+          .from('tickets')
+          .select()
+          .eq('workspace_id', ws)
+          .order('created_at', ascending: false),
     ]);
 
     final dealRows = (results[0] as List).cast<Map<String, dynamic>>();
@@ -169,6 +179,7 @@ class SupabaseRepository {
     final itemRows = (results[4] as List).cast<Map<String, dynamic>>();
     final movementRows = (results[5] as List).cast<Map<String, dynamic>>();
     final activityRows = (results[6] as List).cast<Map<String, dynamic>>();
+    final ticketRows = (results[7] as List).cast<Map<String, dynamic>>();
 
     final inventoryItems =
         itemRows.map(InventoryItem.fromSupabase).toList();
@@ -197,6 +208,7 @@ class SupabaseRepository {
       movements:
           movementRows.map(InventoryMovement.fromSupabase).toList(),
       activities: activityRows.map(ActivityEntry.fromSupabase).toList(),
+      tickets: ticketRows.map(Ticket.fromSupabase).toList(),
     );
   }
 
@@ -293,6 +305,61 @@ class SupabaseRepository {
         .from('deals')
         .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
         .inFilter('id', ids.toList());
+  }
+
+  // ── Tickets ───────────────────────────────────────────────────────────────
+
+  /// Lädt Tickets eines Workspace, optional gefiltert nach Archiv-Status.
+  /// `archived = null` lädt alle, `true` nur archivierte, `false` nur aktive.
+  Future<List<Ticket>> loadTickets({bool? archived}) async {
+    final ws = _workspaceId;
+    if (ws == null) return const [];
+    final query =
+        _client.from('tickets').select().eq('workspace_id', ws);
+    final filtered = switch (archived) {
+      null => query,
+      true => query.not('archived_at', 'is', null),
+      false => query.filter('archived_at', 'is', null),
+    };
+    final rows = await filtered.order('created_at', ascending: false);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(Ticket.fromSupabase)
+        .toList();
+  }
+
+  /// Manuelles Archivieren. Trigger setzen `archived_at` automatisch via
+  /// reasons `all_done` / `all_shipped` / `inventory_sold`; dieser Pfad
+  /// nutzt zwingend `manual` und ist für User-Aktionen gedacht.
+  Future<Ticket> archiveTicket(int ticketId, {String reason = 'manual'}) async {
+    final row = await _client
+        .from('tickets')
+        .update({
+          'archived_at': DateTime.now().toUtc().toIso8601String(),
+          'archived_reason': reason,
+          'archived_by': _userId,
+        })
+        .eq('id', ticketId)
+        .select()
+        .single();
+    return Ticket.fromSupabase(row);
+  }
+
+  /// Reopen: setzt archived_at + archived_reason + archived_by zurück. Der
+  /// CHECK-Constraint `tickets_archived_pair_chk` verlangt, dass beide
+  /// Felder gemeinsam null werden.
+  Future<Ticket> reopenTicket(int ticketId) async {
+    final row = await _client
+        .from('tickets')
+        .update({
+          'archived_at': null,
+          'archived_reason': null,
+          'archived_by': null,
+        })
+        .eq('id', ticketId)
+        .select()
+        .single();
+    return Ticket.fromSupabase(row);
   }
 
   // ── Buyers ────────────────────────────────────────────────────────────────

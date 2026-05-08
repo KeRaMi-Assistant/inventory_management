@@ -20,8 +20,25 @@ class InventoryScreen extends StatefulWidget {
   State<InventoryScreen> createState() => _InventoryScreenState();
 }
 
-class _InventoryScreenState extends State<InventoryScreen> {
+class _InventoryScreenState extends State<InventoryScreen>
+    with SingleTickerProviderStateMixin {
   String _search = '';
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  static bool _isSold(InventoryItem i) =>
+      i.status == 'Verkauft' || i.status == 'Versandt';
 
   @override
   Widget build(BuildContext context) {
@@ -36,35 +53,134 @@ class _InventoryScreenState extends State<InventoryScreen> {
             final money =
                 NumberFormat.currency(locale: localeTag, symbol: '€');
             final query = _search.trim().toLowerCase();
-            final items = query.isEmpty
-                ? provider.inventoryItems
-                : provider.inventoryItems
-                    .where((i) =>
-                        i.name.toLowerCase().contains(query) ||
-                        (i.sku?.toLowerCase().contains(query) ?? false))
-                    .toList();
+            List<InventoryItem> applySearch(List<InventoryItem> src) =>
+                query.isEmpty
+                    ? src
+                    : src
+                        .where((i) =>
+                            i.name.toLowerCase().contains(query) ||
+                            (i.sku?.toLowerCase().contains(query) ?? false))
+                        .toList();
+            final allStock = provider.inventoryItems
+                .where((i) => !_isSold(i))
+                .toList();
+            final allSold =
+                provider.inventoryItems.where(_isSold).toList();
+            final stockItems = applySearch(allStock);
+            final soldItems = applySearch(allSold);
+
             return Column(
               children: [
-                _buildHeader(context, provider, isNarrow, money, constraints.maxWidth),
-                if (provider.criticalStockCount > 0)
-                  _LowStockBanner(count: provider.criticalStockCount),
+                Material(
+                  color: Theme.of(context).colorScheme.surface,
+                  child: TabBar(
+                    controller: _tabController,
+                    tabs: [
+                      Tab(
+                        icon: const Icon(Icons.inventory_2_outlined, size: 18),
+                        text: l10n.inventoryTabStock,
+                      ),
+                      Tab(
+                        icon: const Icon(Icons.sell_outlined, size: 18),
+                        text: l10n.inventoryTabSold,
+                      ),
+                    ],
+                  ),
+                ),
                 _buildSearchBar(),
                 Expanded(
-                  child: items.isEmpty
-                      ? Center(
-                          child: provider.inventoryItems.isEmpty
-                              ? _EmptyInventoryState(provider: provider)
-                              : Text(l10n.dealsEmpty),
-                        )
-                      : isNarrow
-                          ? _buildCardList(context, provider, money, items)
-                          : _buildTable(context, provider, money, items),
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildStockTab(
+                        context: context,
+                        provider: provider,
+                        items: stockItems,
+                        allStockEmpty: allStock.isEmpty,
+                        isNarrow: isNarrow,
+                        money: money,
+                        width: constraints.maxWidth,
+                        l10n: l10n,
+                      ),
+                      _buildSoldTab(
+                        context: context,
+                        provider: provider,
+                        items: soldItems,
+                        allSoldEmpty: allSold.isEmpty,
+                        isNarrow: isNarrow,
+                        money: money,
+                        width: constraints.maxWidth,
+                        l10n: l10n,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildStockTab({
+    required BuildContext context,
+    required InventoryProvider provider,
+    required List<InventoryItem> items,
+    required bool allStockEmpty,
+    required bool isNarrow,
+    required NumberFormat money,
+    required double width,
+    required AppLocalizations l10n,
+  }) {
+    return Column(
+      children: [
+        _buildHeader(context, provider, isNarrow, money, width),
+        if (provider.criticalStockCount > 0)
+          _LowStockBanner(count: provider.criticalStockCount),
+        Expanded(
+          child: items.isEmpty
+              ? Center(
+                  child: allStockEmpty
+                      ? _EmptyInventoryState(provider: provider)
+                      : Text(l10n.dealsEmpty),
+                )
+              : isNarrow
+                  ? _buildCardList(context, provider, money, items)
+                  : _buildTable(context, provider, money, items),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSoldTab({
+    required BuildContext context,
+    required InventoryProvider provider,
+    required List<InventoryItem> items,
+    required bool allSoldEmpty,
+    required bool isNarrow,
+    required NumberFormat money,
+    required double width,
+    required AppLocalizations l10n,
+  }) {
+    return Column(
+      children: [
+        _buildSoldHeader(context, provider, isNarrow, money, width),
+        Expanded(
+          child: items.isEmpty
+              ? Center(
+                  child: Text(
+                    allSoldEmpty
+                        ? l10n.inventorySoldEmpty
+                        : l10n.dealsEmpty,
+                    style: TextStyle(color: AppTheme.textMutedOf(context)),
+                  ),
+                )
+              : isNarrow
+                  ? _buildCardList(context, provider, money, items)
+                  : _buildTable(context, provider, money, items),
+        ),
+      ],
     );
   }
 
@@ -222,6 +338,165 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ),
       );
     });
+  }
+
+  Widget _buildSoldHeader(
+    BuildContext context,
+    InventoryProvider provider,
+    bool isNarrow,
+    NumberFormat money,
+    double width,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    final soldItems =
+        provider.inventoryItems.where(_isSold).toList(growable: false);
+    final dealsById = {for (final d in provider.deals) d.id: d};
+
+    int totalQuantity = 0;
+    double totalProfit = 0;
+    final buyerCounts = <String, int>{};
+
+    for (final item in soldItems) {
+      totalQuantity += item.quantity;
+      final deal = item.dealId != null ? dealsById[item.dealId!] : null;
+      if (deal != null) {
+        final ek = item.costPrice ?? deal.ekBrutto;
+        if (deal.vk != null && ek != null) {
+          totalProfit += (deal.vk! - ek) * item.quantity;
+        }
+        final buyer = deal.buyer?.trim();
+        if (buyer != null && buyer.isNotEmpty) {
+          buyerCounts.update(buyer, (v) => v + item.quantity,
+              ifAbsent: () => item.quantity);
+        }
+      }
+    }
+
+    final topBuyers = buyerCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final top3 = topBuyers.take(3).toList();
+
+    final countCard = _kpi(
+      l10n.inventorySoldKpiCount,
+      '$totalQuantity',
+      Icons.sell_outlined,
+      const Color(0xFF2563EB),
+    );
+    final profitCard = _kpi(
+      l10n.inventorySoldKpiProfit,
+      money.format(totalProfit),
+      Icons.trending_up,
+      totalProfit >= 0
+          ? const Color(0xFF059669)
+          : const Color(0xFFDC2626),
+    );
+    final buyersCard = _topBuyersCard(context, top3, l10n);
+
+    final cards = [countCard, profitCard, buyersCard];
+
+    if (isNarrow) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+        child: SizedBox(
+          height: 110,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: cards.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (_, i) => SizedBox(width: 240, child: cards[i]),
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: countCard),
+          const SizedBox(width: 12),
+          Expanded(child: profitCard),
+          const SizedBox(width: 12),
+          Expanded(child: buyersCard),
+        ],
+      ),
+    );
+  }
+
+  Widget _topBuyersCard(
+    BuildContext context,
+    List<MapEntry<String, int>> top,
+    AppLocalizations l10n,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.emoji_events_outlined,
+                    color: Color(0xFFD97706), size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.inventorySoldKpiTopBuyers,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textMutedOf(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            if (top.isEmpty)
+              Text(
+                l10n.inventorySoldNoBuyer,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textMutedOf(context),
+                ),
+              )
+            else
+              ...top.map(
+                (e) => Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          e.key,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimaryOf(context),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        l10n.inventorySoldBuyerItems(e.value),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textMutedOf(context),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildCardList(BuildContext context, InventoryProvider provider, NumberFormat money, List<InventoryItem> items) {

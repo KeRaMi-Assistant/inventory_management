@@ -1456,6 +1456,32 @@ class AppLocalizationsDe extends AppLocalizations {
   String get inventoryClose => 'Schließen';
 
   @override
+  String get inventoryTabStock => 'Lager';
+
+  @override
+  String get inventoryTabSold => 'Verkauft';
+
+  @override
+  String get inventorySoldEmpty => 'Noch keine verkauften Artikel.';
+
+  @override
+  String get inventorySoldKpiCount => 'Verkaufte Items';
+
+  @override
+  String get inventorySoldKpiProfit => 'Gesamt-Profit';
+
+  @override
+  String get inventorySoldKpiTopBuyers => 'Top 3 Käufer';
+
+  @override
+  String get inventorySoldNoBuyer => 'Noch keine Käufer-Daten';
+
+  @override
+  String inventorySoldBuyerItems(int count) {
+    return '$count Stück';
+  }
+
+  @override
   String get supplierAddTitle => 'Lieferant anlegen';
 
   @override
