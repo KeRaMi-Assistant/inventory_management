@@ -24,6 +24,7 @@ DONE="$BACKLOG/done"
 FAILED="$BACKLOG/failed"
 RUNS="$BACKLOG/runs"
 LOCK="$BACKLOG/.lock"
+STATE="$BACKLOG/.current_task"
 NOTIFY="$ROOT/.claude/scripts/notify.sh"
 
 mkdir -p "$INBOX" "$DONE" "$FAILED" "$RUNS"
@@ -56,7 +57,7 @@ if [ -f "$LOCK" ]; then
   rm -f "$LOCK"
 fi
 echo "$$" > "$LOCK"
-trap 'rm -f "$LOCK"' EXIT INT TERM
+trap 'rm -f "$LOCK" "$STATE"' EXIT INT TERM
 
 # Find next item
 NEXT_ITEM="$(find "$INBOX" -maxdepth 1 -type f -name '*.md' ! -name '.gitkeep' 2>/dev/null | sort | head -n 1)"
@@ -84,6 +85,15 @@ if [ "$CURRENT_BRANCH" = "main" ] || [ -z "$CURRENT_BRANCH" ]; then
 fi
 
 log "starting item: $SLUG (branch=$(git branch --show-current))"
+
+# State-File für Heartbeat: enthält aktuelle Task + Startzeit (epoch).
+# Wird vom heartbeat.sh gelesen, um alle 10 Min via ntfy zu pushen.
+{
+  echo "slug=$SLUG"
+  echo "started=$(date -u +%s)"
+  echo "branch=$(git branch --show-current)"
+  echo "log=$RUN_LOG"
+} > "$STATE"
 
 # Build prompt: read content (frontmatter optional) and prepend repo-context note.
 ITEM_CONTENT="$(cat "$NEXT_ITEM")"
