@@ -217,6 +217,51 @@ Exit-Codes: `0` = clean, `1` = Findings, `2` = ARB-IO/Parse-Fehler.
 das übernimmt ein `flutter-coder`-Agent. Übersetzungen für `[TODO en]`-
 Marker macht der `l10n-checker` selbst (nicht maschinell, idiomatisch).
 
+## Handbook pflegen
+
+Das Handbuch liegt in [`docs/handbook/`](docs/handbook/) und ist die
+verbindliche Referenz zu Stack, Konzepten, Screens, Pipelines und Schema.
+Bei Code-Änderungen muss es synchron bleiben — sonst veraltet die
+Quelle, an der neue Entwickler:innen einsteigen.
+
+**Was triggert ein Update:**
+
+- Neuer Screen (`lib/screens/<x>_screen.dart`) → `03-screens-walkthrough.md`.
+- Neuer Provider (`lib/providers/`) oder neuer Service (`lib/services/`,
+  außer `inbox_*`) → `05-architecture.md`.
+- Inbox-Pipeline-Änderung (`lib/services/inbox_*`,
+  `supabase/functions/_shared/inbox_adapters.ts`,
+  `supabase/functions/_shared/tracking_adapters.ts`) →
+  `04-inbox-mail-pipeline.md`.
+- Neue Tabelle / Migration → `06-database.md` + Glossar (`10-glossary.md`).
+- Neue Edge-Function → `07-edge-functions.md` + Glossar.
+- Neuer Subagent (`.claude/agents/`) → `05-architecture.md` (Subagenten-
+  Tabelle).
+- CI-/Workflow-Änderung (`.github/workflows/`) → `08-deployment.md`.
+- Neuer Domain-Begriff im Code (Klassen-/Modellname, der mehrfach
+  auftaucht) → Eintrag in `10-glossary.md`, alphabetisch + verlinkt.
+
+**Aufruf:**
+
+- `/update-docs` — Dry-Run, listet Plan + geplante Diff-Snippets.
+- `/update-docs --apply` — schreibt die Edits durch (inkrementell, kein
+  Rewrite).
+- `/update-docs --from origin/main --apply --strict` — strenge Variante
+  für CI-Gates (exit 1, wenn unklassifizierte Pfade übrig bleiben).
+
+**Wann ausführen:**
+
+- Vor `/ship`, sobald der PR über reine Bugfixes hinausgeht (neues
+  Feature, neue Tabelle, neue Function, neuer Agent).
+- Im Headless-Loop optional als eigenes Backlog-Item (`/queue ...`),
+  damit Doku-Drift nicht stillschweigend wächst.
+- Periodisch: `/update-docs --from <letzter-Doku-Sync> --apply`.
+
+**Grenzen:** Der Agent schreibt nicht alles um, sondern ergänzt. Bei
+Strukturproblemen (veraltetes Kapitel, falsche Sektionen) meldet er
+das im Schluss-Block — die Überarbeitung macht ein `planner` →
+`flutter-coder`-Workflow.
+
 ## Referenzen
 
 - Plan-Archiv: [`plans/`](plans/)
