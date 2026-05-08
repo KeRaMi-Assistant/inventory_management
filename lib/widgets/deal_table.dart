@@ -460,8 +460,8 @@ class _BulkActionBar extends StatelessWidget {
             },
             icon: const Icon(Icons.delete_outline, size: 16),
             label: Text(l10n.actionDelete),
-            style:
-                TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+            style: TextButton.styleFrom(
+                foregroundColor: AppTheme.dangerTextOf(context)),
           ),
           IconButton(
             tooltip: l10n.actionDeselect,
@@ -775,7 +775,7 @@ class _DealRowState extends State<_DealRow> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: buyer?.buyerCellColor ?? const Color(0xFF64748B),
+        color: buyer?.buyerCellColor ?? AppTheme.textMutedOf(context),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -983,8 +983,8 @@ class _DealRowState extends State<_DealRow> {
               provider.deleteDeal(deal.id);
               Navigator.pop(context);
             },
-            style:
-                ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.dangerTextOf(context)),
             child: Text(l10n.actionDelete,
                 style: const TextStyle(color: Colors.white)),
           ),

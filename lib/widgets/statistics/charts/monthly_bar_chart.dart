@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app_theme.dart';
 import '../../../services/statistics_service.dart';
 
 /// Bar-Chart für Profit pro Bucket (Tag/Woche/Monat). Optional zwei Bars
@@ -22,9 +23,10 @@ class MonthlyBarChart extends StatelessWidget {
     if (series.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(
+        child: Center(
           child: Text('Keine Daten im Zeitraum.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+              style: TextStyle(
+                  color: AppTheme.textDisabledOf(context), fontSize: 13)),
         ),
       );
     }
@@ -60,8 +62,8 @@ class MonthlyBarChart extends StatelessWidget {
           BarChartRodData(
             toY: b.profit,
             color: b.profit >= 0
-                ? const Color(0xFF059669)
-                : const Color(0xFFDC2626),
+                ? AppTheme.successTextOf(context)
+                : AppTheme.dangerTextOf(context),
             width: hasCompare ? 8 : 14,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(3),
@@ -71,7 +73,7 @@ class MonthlyBarChart extends StatelessWidget {
           if (compVal != null)
             BarChartRodData(
               toY: compVal,
-              color: const Color(0xFFCBD5E1),
+              color: AppTheme.borderStrongOf(context),
               width: 8,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(3),
@@ -95,8 +97,8 @@ class MonthlyBarChart extends StatelessWidget {
             drawVerticalLine: false,
             horizontalInterval:
                 ((maxY - minY) / 4).abs().clamp(1, double.infinity),
-            getDrawingHorizontalLine: (_) => const FlLine(
-              color: Color(0xFFEEF2F7),
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: AppTheme.borderOf(context),
               strokeWidth: 1,
             ),
           ),
@@ -113,8 +115,9 @@ class MonthlyBarChart extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 6),
                   child: Text(
                     money.format(v),
-                    style: const TextStyle(
-                        fontSize: 10, color: Color(0xFF9CA3AF)),
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: AppTheme.textMutedOf(context)),
                     textAlign: TextAlign.right,
                   ),
                 ),
@@ -133,8 +136,9 @@ class MonthlyBarChart extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
                       dateFmt.format(series[i].date),
-                      style: const TextStyle(
-                          fontSize: 10, color: Color(0xFF9CA3AF)),
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.textMutedOf(context)),
                     ),
                   );
                 },
@@ -144,7 +148,8 @@ class MonthlyBarChart extends StatelessWidget {
           borderData: FlBorderData(show: false),
           barTouchData: BarTouchData(
             touchTooltipData: BarTouchTooltipData(
-              getTooltipColor: (_) => const Color(0xFF111827),
+              // Tooltip stays dark in both themes (high contrast).
+              getTooltipColor: (_) => AppTheme.navBg,
               tooltipRoundedRadius: 8,
               getTooltipItem: (group, gIdx, rod, rIdx) {
                 if (group.x < 0 || group.x >= series.length) return null;
@@ -189,9 +194,10 @@ class MarginLineChart extends StatelessWidget {
     if (series.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(
+        child: Center(
           child: Text('Keine Daten.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+              style: TextStyle(
+                  color: AppTheme.textDisabledOf(context), fontSize: 13)),
         ),
       );
     }

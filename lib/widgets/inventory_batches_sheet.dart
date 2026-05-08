@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
@@ -67,7 +68,7 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFC0392B)),
+                backgroundColor: AppTheme.dangerTextOf(context)),
             child: Text(l10n.actionDelete),
           ),
         ],
@@ -106,8 +107,9 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
                             style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w800)),
                         Text(widget.item.name,
-                            style: const TextStyle(
-                                fontSize: 12, color: Color(0xFF64748B))),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textMutedOf(context))),
                       ],
                     ),
                   ),
@@ -146,10 +148,10 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
                       itemBuilder: (context, i) {
                         final b = batches[i];
                         final mhdColor = b.isExpired
-                            ? const Color(0xFFC0392B)
+                            ? AppTheme.dangerTextOf(context)
                             : b.isExpiringSoon()
-                                ? const Color(0xFFD97706)
-                                : const Color(0xFF334155);
+                                ? AppTheme.warningTextOf(context)
+                                : AppTheme.textSecondaryOf(context);
                         return ListTile(
                           contentPadding:
                               const EdgeInsets.symmetric(horizontal: 8),
@@ -179,8 +181,8 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
                             ],
                           ),
                           trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline,
-                                color: Color(0xFFC0392B)),
+                            icon: Icon(Icons.delete_outline,
+                                color: AppTheme.dangerTextOf(context)),
                             onPressed: () => _deleteBatch(b),
                           ),
                         );

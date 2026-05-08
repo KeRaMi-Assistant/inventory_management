@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
@@ -301,9 +302,9 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
             // ── Header ──────────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
-                  bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                  bottom: BorderSide(color: AppTheme.borderOf(context)),
                 ),
               ),
               child: Row(
@@ -311,14 +312,14 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: AppTheme.accentLightOf(context),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       widget.deal != null
                           ? Icons.edit_outlined
                           : Icons.add_circle_outline,
-                      color: const Color(0xFF2563EB),
+                      color: AppTheme.accentTextOf(context),
                       size: 20,
                     ),
                   ),
@@ -326,16 +327,16 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                   Expanded(
                     child: Text(
                       widget.deal != null ? l10n.dealEdit : l10n.dealNew,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: AppTheme.textPrimaryOf(context),
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 18,
-                        color: Color(0xFF64748B)),
+                    icon: Icon(Icons.close,
+                        size: 18, color: AppTheme.textMutedOf(context)),
                     onPressed: () => Navigator.pop(context),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -418,10 +419,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                         Row(
                           children: [
                             Text(l10n.dealEkPriceLabel,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF475569))),
+                                    color: AppTheme.textSecondaryOf(context))),
                             const SizedBox(width: 12),
                             _radioOption('Netto', l10n.dealPriceTypeNet),
                             const SizedBox(width: 12),
@@ -663,9 +664,9 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
             // ── Actions ──────────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: Color(0xFFE2E8F0)),
+                  top: BorderSide(color: AppTheme.borderOf(context)),
                 ),
               ),
               child: Row(
@@ -727,10 +728,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       children: [
         Text(
           text.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF64748B),
+            color: AppTheme.textMutedOf(context),
             letterSpacing: 0.7,
           ),
         ),
@@ -761,8 +762,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
           ),
           const SizedBox(width: 4),
           Text(label,
-              style: const TextStyle(
-                  fontSize: 13, color: Color(0xFF334155))),
+              style: TextStyle(
+                  fontSize: 13, color: AppTheme.textSecondaryOf(context))),
         ],
       ),
     );

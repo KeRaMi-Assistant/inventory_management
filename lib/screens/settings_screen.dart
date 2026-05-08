@@ -206,7 +206,7 @@ class _BuyersTab extends StatelessWidget {
                             IconButton(
                               icon:
                                   const Icon(Icons.edit_outlined, size: 20),
-                              color: const Color(0xFF64748B),
+                              color: AppTheme.textMutedOf(context),
                               onPressed: () => showDialog(
                                 context: context,
                                 builder: (_) =>
@@ -339,12 +339,13 @@ class _ShopsTab extends StatelessWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.store_outlined,
-                                size: 52, color: Color(0xFFCBD5E1)),
+                            Icon(Icons.store_outlined,
+                                size: 52,
+                                color: AppTheme.borderStrongOf(context)),
                             const SizedBox(height: 12),
                             Text(l10n.shopsEmpty,
-                                style:
-                                    const TextStyle(color: Color(0xFF94A3B8))),
+                                style: TextStyle(
+                                    color: AppTheme.textMutedOf(context))),
                           ],
                         ),
                       )
@@ -758,7 +759,7 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
             final info = Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.refresh, color: Color(0xFF2563EB)),
+                Icon(Icons.refresh, color: AppTheme.accentTextOf(context)),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -771,8 +772,9 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
                       const SizedBox(height: 6),
                       Text(
                         l10n.settingsDemoReloadDescription,
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF64748B)),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textMutedOf(context)),
                       ),
                     ],
                   ),
@@ -916,8 +918,8 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
                 final info = Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.delete_sweep_outlined,
-                        color: Color(0xFFD97706)),
+                    Icon(Icons.delete_sweep_outlined,
+                        color: AppTheme.warningTextOf(context)),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -931,8 +933,9 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
                           const SizedBox(height: 6),
                           Text(
                             l10n.settingsDemoWipeDescription,
-                            style: const TextStyle(
-                                fontSize: 12, color: Color(0xFF64748B)),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textMutedOf(context)),
                           ),
                         ],
                       ),
@@ -997,7 +1000,7 @@ class _LogoutCard extends StatelessWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD97706)),
+                backgroundColor: AppTheme.warning),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.accountMenuSignOut),
           ),
@@ -1017,7 +1020,7 @@ class _LogoutCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(Icons.logout, color: Color(0xFFD97706)),
+            Icon(Icons.logout, color: AppTheme.warningTextOf(context)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1025,16 +1028,17 @@ class _LogoutCard extends StatelessWidget {
                 children: [
                   Text(
                     l10n.accountMenuSignOut,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFFB45309),
+                      color: AppTheme.warningTextOf(context),
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     '${l10n.accountMenuSignedInAs} $email',
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMutedOf(context)),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -1044,8 +1048,8 @@ class _LogoutCard extends StatelessWidget {
             OutlinedButton(
               onPressed: () => _confirmLogout(context),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFD97706),
-                side: const BorderSide(color: Color(0xFFD97706)),
+                foregroundColor: AppTheme.warningTextOf(context),
+                side: BorderSide(color: AppTheme.warningTextOf(context)),
               ),
               child: Text(l10n.accountMenuSignOut),
             ),
@@ -1066,10 +1070,10 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF6B7280),
+          color: AppTheme.textMutedOf(context),
           letterSpacing: 0.7,
         ),
       ),

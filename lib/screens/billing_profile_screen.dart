@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../app_theme.dart';
 import '../models/billing_profile.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
@@ -182,21 +183,28 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF8E1),
+                          color: AppTheme.warningBgOf(context),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFFFFE082),
+                            color: AppTheme.warningBorderOf(context),
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.info_outline, size: 20),
-                            SizedBox(width: 10),
+                            Icon(
+                              Icons.info_outline,
+                              size: 20,
+                              color: AppTheme.warningTextOf(context),
+                            ),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 'Für kostenpflichtige Pläne benötigen wir eine '
                                 'vollständige Rechnungsadresse (Pflichtfelder mit *).',
+                                style: TextStyle(
+                                  color: AppTheme.warningTextOf(context),
+                                ),
                               ),
                             ),
                           ],
@@ -338,7 +346,7 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                       'Diese Daten werden ausschließlich für Rechnungen und '
                       'gesetzlich vorgeschriebene Pflichtangaben verwendet.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.black54,
+                            color: AppTheme.textMutedOf(context),
                           ),
                     ),
                   ],

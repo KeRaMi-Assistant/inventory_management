@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../app_theme.dart';
 import '../models/billing_profile.dart';
 import '../models/pricing_plan.dart';
 import '../providers/billing_provider.dart';
@@ -57,7 +58,7 @@ class _PricingScreenState extends State<PricingScreen> {
                     'Free bleibt dauerhaft kostenlos. Upgrades schalten Quotas, '
                     'Team-Plätze und Analyse-Features frei.',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.black54,
+                      color: AppTheme.textMutedOf(context),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -184,7 +185,7 @@ class _BillingCycleToggle extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.black.withAlpha(10),
+        color: AppTheme.bgSubtleOf(context),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -233,7 +234,7 @@ class _ToggleChip extends StatelessWidget {
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
+          color: selected ? AppTheme.bgSurfaceOf(context) : Colors.transparent,
           borderRadius: BorderRadius.circular(999),
           boxShadow: selected
               ? [
@@ -249,7 +250,9 @@ class _ToggleChip extends StatelessWidget {
           label,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            color: selected ? (accent ?? Colors.black87) : Colors.black54,
+            color: selected
+                ? (accent ?? AppTheme.textPrimaryOf(context))
+                : AppTheme.textMutedOf(context),
           ),
         ),
       ),
@@ -287,12 +290,12 @@ class _PlanCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: plan.mostPopular
               ? accent.withAlpha(120)
-              : Colors.black.withAlpha(20),
+              : AppTheme.borderOf(context),
           width: plan.mostPopular ? 2 : 1,
         ),
         boxShadow: [
@@ -329,8 +332,8 @@ class _PlanCard extends StatelessWidget {
                   if (plan.mostPopular) const SizedBox(width: 6),
                   _Pill(
                     text: 'Aktueller Plan',
-                    bg: Colors.black.withAlpha(15),
-                    fg: Colors.black87,
+                    bg: AppTheme.bgSubtleOf(context),
+                    fg: AppTheme.textPrimaryOf(context),
                   ),
                 ],
               ],
@@ -339,7 +342,7 @@ class _PlanCard extends StatelessWidget {
             Text(
               plan.tagline,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: Colors.black54,
+                color: AppTheme.textMutedOf(context),
               ),
             ),
             const SizedBox(height: 14),
@@ -354,7 +357,7 @@ class _PlanCard extends StatelessWidget {
                 child: Text(
                   '≈ ${_fmtEur(price / 12)} / Monat',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.black54,
+                    color: AppTheme.textMutedOf(context),
                   ),
                 ),
               ),
@@ -451,7 +454,7 @@ class _LegalFootnote extends StatelessWidget {
       'vollständige Rechnungsadresse. Diese kann unter „Rechnungsdaten" '
       'jederzeit aktualisiert werden.',
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.black54,
+            color: AppTheme.textMutedOf(context),
           ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/active_workspace_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -96,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFC0392B) : const Color(0xFF059669),
+            isError ? AppTheme.dangerTextOf(context) : AppTheme.successTextOf(context),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
       ),
@@ -107,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppTheme.bgAppOf(context),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -117,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                side: BorderSide(color: AppTheme.borderOf(context)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(28),
@@ -133,12 +134,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
+                              color: AppTheme.accentLightOf(context),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.inventory_2_rounded,
-                              color: Color(0xFF2563EB),
+                              color: AppTheme.accentTextOf(context),
                               size: 28,
                             ),
                           ),
@@ -148,18 +149,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         l10n.appTitle,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
+                          color: AppTheme.textPrimaryOf(context),
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         l10n.loginSubtitle,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 13, color: Color(0xFF64748B)),
+                        style: TextStyle(
+                            fontSize: 13, color: AppTheme.textMutedOf(context)),
                       ),
                       const SizedBox(height: 20),
                       // ── Mode toggle ────────────────────────────────────
@@ -276,19 +277,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          const Expanded(
-                              child: Divider(color: Color(0xFFE2E8F0))),
+                          Expanded(
+                              child: Divider(color: AppTheme.borderOf(context))),
                           Padding(
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
                               l10n.loginContinueWith,
-                              style: const TextStyle(
-                                  fontSize: 12, color: Color(0xFF64748B)),
+                              style: TextStyle(
+                                  fontSize: 12, color: AppTheme.textMutedOf(context)),
                             ),
                           ),
-                          const Expanded(
-                              child: Divider(color: Color(0xFFE2E8F0))),
+                          Expanded(
+                              child: Divider(color: AppTheme.borderOf(context))),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -310,7 +311,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(l10n.loginNoAccount,
-                              style: const TextStyle(color: Color(0xFF64748B))),
+                              style: TextStyle(color: AppTheme.textMutedOf(context))),
                           TextButton(
                             onPressed: _busy
                                 ? null

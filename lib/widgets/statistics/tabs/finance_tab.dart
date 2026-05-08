@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app_theme.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
 import '../charts/heatmap.dart';
@@ -41,7 +42,7 @@ class FinanceTab extends StatelessWidget {
                         child: _CashStat(
                           label: l10n.statsReceived,
                           value: money.format(cf.received),
-                          color: const Color(0xFF059669),
+                          color: AppTheme.successTextOf(context),
                           icon: Icons.arrow_downward,
                         ),
                       ),
@@ -50,7 +51,7 @@ class FinanceTab extends StatelessWidget {
                         child: _CashStat(
                           label: l10n.statsOutstanding,
                           value: money.format(cf.totalOpen),
-                          color: const Color(0xFFD97706),
+                          color: AppTheme.warningTextOf(context),
                           icon: Icons.hourglass_empty,
                         ),
                       ),
@@ -59,10 +60,10 @@ class FinanceTab extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     l10n.statsAgingHeading,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF374151),
+                      color: AppTheme.textSecondaryOf(context),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -74,7 +75,7 @@ class FinanceTab extends StatelessWidget {
                         child: _CashStat(
                           label: 'Ø',
                           value: cf.avgPaymentDays.toStringAsFixed(1),
-                          color: const Color(0xFF2563EB),
+                          color: AppTheme.accentTextOf(context),
                           icon: Icons.timer_outlined,
                         ),
                       ),
@@ -84,14 +85,14 @@ class FinanceTab extends StatelessWidget {
                             ? _CashStat(
                                 label: l10n.statsOldestOpen,
                                 value: '—',
-                                color: const Color(0xFF6B7280),
+                                color: AppTheme.textMutedOf(context),
                                 icon: Icons.event_outlined,
                               )
                             : _CashStat(
                                 label: l10n.statsOldestOpen,
                                 value:
                                     '${cf.oldestDaysOpen} · ${money.format(cf.oldestDeal!.zuBekommen ?? 0)}',
-                                color: const Color(0xFFDC2626),
+                                color: AppTheme.dangerTextOf(context),
                                 icon: Icons.event_outlined,
                                 subtitle:
                                     '${cf.oldestDeal!.buyer ?? '—'} · ${dateFmt.format(cf.oldestDeal!.orderDate)}',
@@ -140,7 +141,7 @@ class FinanceTab extends StatelessWidget {
             icon: const Icon(Icons.file_download_outlined, size: 16),
             label: Text(l10n.statsExportCsvTitle),
             style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF2563EB)),
+                foregroundColor: AppTheme.accentTextOf(context)),
           ),
           child: SortableTable<TaxQuarterReport>(
             rows: stats.taxReports,
@@ -175,8 +176,8 @@ class FinanceTab extends StatelessWidget {
                 label: l10n.statsTax,
                 numeric: true,
                 builder: (r) => Text(_format(localeTag, r.tax, r.currency),
-                    style: const TextStyle(
-                        color: Color(0xFFD97706),
+                    style: TextStyle(
+                        color: AppTheme.warningTextOf(context),
                         fontWeight: FontWeight.w700)),
                 valueOf: (r) => r.tax,
               ),
@@ -238,9 +239,9 @@ class _CashStat extends StatelessWidget {
               Expanded(
                 child: Text(label,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF6B7280),
+                        color: AppTheme.textMutedOf(context),
                         fontWeight: FontWeight.w600)),
               ),
             ],
@@ -256,8 +257,8 @@ class _CashStat extends StatelessWidget {
           if (subtitle != null) ...[
             const SizedBox(height: 2),
             Text(subtitle!,
-                style: const TextStyle(
-                    fontSize: 10, color: Color(0xFF9CA3AF))),
+                style: TextStyle(
+                    fontSize: 10, color: AppTheme.textDisabledOf(context))),
           ],
         ],
       ),
@@ -279,14 +280,17 @@ class _AgingBars extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text(l10n.dealCommentEmpty,
-            style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+            style: TextStyle(
+                color: AppTheme.textDisabledOf(context), fontSize: 12)),
       );
     }
+    // Aging-Bars: ordinal severity (success → warning → orange → danger).
+    // Orange (0xFFEA580C) bleibt konstant — semantischer Mittelschritt.
     final segments = [
-      ('0–7', cf.bucket0_7, const Color(0xFF059669)),
-      ('8–30', cf.bucket8_30, const Color(0xFFD97706)),
+      ('0–7', cf.bucket0_7, AppTheme.successTextOf(context)),
+      ('8–30', cf.bucket8_30, AppTheme.warningTextOf(context)),
       ('31–60', cf.bucket31_60, const Color(0xFFEA580C)),
-      ('> 60', cf.bucket60p, const Color(0xFFDC2626)),
+      ('> 60', cf.bucket60p, AppTheme.dangerTextOf(context)),
     ];
     return Column(
       children: [
@@ -327,8 +331,9 @@ class _AgingBars extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     '${s.$1}: ${money.format(s.$2)}',
-                    style: const TextStyle(
-                        fontSize: 11, color: Color(0xFF374151)),
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondaryOf(context)),
                   ),
                 ],
               ),
@@ -366,13 +371,13 @@ class _GoalsContent extends StatelessWidget {
                   child: CircularProgressIndicator(
                     value: progress.clamp(0.0, 1.0),
                     strokeWidth: 12,
-                    backgroundColor: const Color(0xFFF1F5F9),
+                    backgroundColor: AppTheme.bgSubtleOf(context),
                     valueColor: AlwaysStoppedAnimation(
                       progress >= 1.0
-                          ? const Color(0xFF059669)
+                          ? AppTheme.successTextOf(context)
                           : progress >= 0.7
-                              ? const Color(0xFF2563EB)
-                              : const Color(0xFFD97706),
+                              ? AppTheme.accentTextOf(context)
+                              : AppTheme.warningTextOf(context),
                     ),
                   ),
                 ),
@@ -381,15 +386,16 @@ class _GoalsContent extends StatelessWidget {
                   children: [
                     Text(
                       '${goals.progressPct.toStringAsFixed(0)}%',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF111827)),
+                          color: AppTheme.textPrimaryOf(context)),
                     ),
                     Text(
                       l10n.statsCurrentMonth,
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF6B7280)),
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textMutedOf(context)),
                     ),
                   ],
                 ),
@@ -411,27 +417,28 @@ class _GoalsContent extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
+                color: AppTheme.warningBgOf(context),
                 borderRadius: BorderRadius.circular(6),
               ),
+              // Streak-Flame: Orange-Akzent semantisch konstant.
               child: const Icon(Icons.local_fire_department,
                   size: 18, color: Color(0xFFEA580C)),
             ),
             const SizedBox(width: 10),
             Text(
               '${goals.streak}',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827)),
+                  color: AppTheme.textPrimaryOf(context)),
             ),
             const Spacer(),
             Text(
               goals.streak == 0
                   ? l10n.statsGoalNotMet
                   : l10n.statsGoalsInRow,
-              style: const TextStyle(
-                  fontSize: 11, color: Color(0xFF9CA3AF)),
+              style: TextStyle(
+                  fontSize: 11, color: AppTheme.textDisabledOf(context)),
             ),
           ],
         ),
@@ -458,8 +465,9 @@ class _GoalRow extends StatelessWidget {
         children: [
           Expanded(
             child: Text(label,
-                style:
-                    const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textMutedOf(context))),
           ),
           Text(
             value,
@@ -467,8 +475,8 @@ class _GoalRow extends StatelessWidget {
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: highlight
-                  ? const Color(0xFF059669)
-                  : const Color(0xFF111827),
+                  ? AppTheme.successTextOf(context)
+                  : AppTheme.textPrimaryOf(context),
             ),
           ),
         ],

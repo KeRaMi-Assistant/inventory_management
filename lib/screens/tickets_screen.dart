@@ -346,7 +346,9 @@ class _MonthHeader extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.w800,
               fontSize: 12,
-              color: profitPositive ? AppTheme.success : AppTheme.danger,
+              color: profitPositive
+                  ? AppTheme.successTextOf(context)
+                  : AppTheme.dangerTextOf(context),
             ),
           ),
         ],
@@ -419,8 +421,8 @@ class _ArchivedTicketCard extends StatelessWidget {
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: ticket.totalProfit >= 0
-                          ? AppTheme.success
-                          : AppTheme.danger,
+                          ? AppTheme.successTextOf(context)
+                          : AppTheme.dangerTextOf(context),
                     ),
                   ),
                 ),
@@ -787,10 +789,10 @@ class _TicketCard extends StatelessWidget {
                 _badge(
                     ticket.buyer ??
                         AppLocalizations.of(context).ticketsNoBuyer,
-                    const Color(0xFF64748B)),
+                    AppTheme.textMutedOf(context)),
                 _badge(
                     '${ticket.totalQuantity} · ${ticket.dealCount}',
-                    const Color(0xFF2563EB)),
+                    AppTheme.accentTextOf(context)),
                 _badge(localizeDealStatus(context, ticket.worstStatus),
                     status),
                 _badge(ticket.arrivalSummary, const Color(0xFF0D9488)),
@@ -808,7 +810,9 @@ class _TicketCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
-                      color: ticket.totalProfit >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                      color: ticket.totalProfit >= 0
+                          ? AppTheme.successTextOf(context)
+                          : AppTheme.dangerTextOf(context),
                     ),
                   ),
                 ),
@@ -886,7 +890,7 @@ class _TicketDetail extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(ticket.buyer ?? l10n.ticketsNoBuyerAssigned,
-                  style: const TextStyle(color: Color(0xFF64748B))),
+                  style: TextStyle(color: AppTheme.textMutedOf(context))),
               const SizedBox(height: 16),
               Card(
                 child: SingleChildScrollView(
@@ -967,7 +971,7 @@ class _TicketDetail extends StatelessWidget {
                       if (ticket.items.isEmpty)
                         Text(l10n.dealCommentEmpty,
                             style:
-                                const TextStyle(color: Color(0xFF94A3B8)))
+                                TextStyle(color: AppTheme.textMutedOf(context)))
                       else
                         ...ticket.items.map((item) => ListTile(
                               contentPadding: EdgeInsets.zero,
@@ -1005,11 +1009,11 @@ class _TicketDetail extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppTheme.accentLight,
+                  color: AppTheme.accentLightOf(context),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.edit_outlined,
-                    color: AppTheme.accent, size: 20),
+                    color: AppTheme.accentTextOf(context), size: 20),
               ),
               const SizedBox(width: 12),
               Text(AppLocalizations.of(context).ticketsEditTitle),
@@ -1169,8 +1173,8 @@ class _Totals extends StatelessWidget {
                     color: good == null
                         ? AppTheme.textPrimaryOf(context)
                         : good
-                            ? AppTheme.success
-                            : AppTheme.danger,
+                            ? AppTheme.successTextOf(context)
+                            : AppTheme.dangerTextOf(context),
                   ),
                 ),
               ),

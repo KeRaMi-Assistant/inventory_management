@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../app_theme.dart';
 import '../models/deal.dart';
 import '../providers/inventory_provider.dart';
 
@@ -72,9 +73,9 @@ class _DealPickerDialogState extends State<DealPickerDialog> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       widget.hint!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF64748B),
+                        color: AppTheme.textMutedOf(context),
                       ),
                     ),
                   ),
@@ -94,10 +95,11 @@ class _DealPickerDialogState extends State<DealPickerDialog> {
                 const SizedBox(height: 12),
                 Expanded(
                   child: results.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
                             'Kein passender Deal gefunden.',
-                            style: TextStyle(color: Color(0xFF94A3B8)),
+                            style: TextStyle(
+                                color: AppTheme.textMutedOf(context)),
                           ),
                         )
                       : ListView.separated(
@@ -139,16 +141,16 @@ class _DealRow extends StatelessWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: AppTheme.bgSubtleOf(context),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 '#${deal.id}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF475569),
+                  color: AppTheme.textSecondaryOf(context),
                 ),
               ),
             ),
@@ -174,9 +176,9 @@ class _DealRow extends StatelessWidget {
                     ].join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: Color(0xFF64748B),
+                      color: AppTheme.textMutedOf(context),
                     ),
                   ),
                 ],

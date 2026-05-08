@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../app_theme.dart';
 import '../models/inbox_message.dart';
 
 /// Vollbild-fähiges Bottom-Sheet, das Header + extrahierte Felder einer
@@ -49,9 +50,9 @@ class InboxMessageDetails extends StatelessWidget {
       minChildSize: 0.4,
       maxChildSize: 0.95,
       builder: (context, scrollCtrl) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        decoration: BoxDecoration(
+          color: AppTheme.bgSurfaceOf(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
         child: ListView(
@@ -62,7 +63,7 @@ class InboxMessageDetails extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFCBD5E1),
+                  color: AppTheme.borderStrongOf(context),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -77,15 +78,15 @@ class InboxMessageDetails extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: AppTheme.accentLightOf(context),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
                       shopLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF2563EB),
+                        color: AppTheme.accentTextOf(context),
                       ),
                     ),
                   ),
@@ -108,16 +109,16 @@ class InboxMessageDetails extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Von: ${message.fromAddress ?? "—"}',
-              style: const TextStyle(fontSize: 12, color: Color(0xFF475569)),
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondaryOf(context)),
             ),
             Text(
               'Empfangen: ${df.format(message.receivedAt.toLocal())}',
-              style: const TextStyle(fontSize: 12, color: Color(0xFF475569)),
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondaryOf(context)),
             ),
             if (message.processedAt != null)
               Text(
                 'Verarbeitet: ${df.format(message.processedAt!.toLocal())}',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF475569)),
+                style: TextStyle(fontSize: 12, color: AppTheme.textSecondaryOf(context)),
               ),
             const SizedBox(height: 20),
             if (orderId != null || product != null || total != null) ...[
@@ -194,17 +195,17 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
       ParsedMessageStatus.matched =>
-        ('Aktualisiert', const Color(0xFF15803D)),
+        ('Aktualisiert', AppTheme.successTextOf(context)),
       ParsedMessageStatus.suggested =>
-        ('Vorschlag', const Color(0xFF2563EB)),
+        ('Vorschlag', AppTheme.accentTextOf(context)),
       ParsedMessageStatus.unclassified =>
-        ('Unklassifiziert', const Color(0xFFB45309)),
+        ('Unklassifiziert', AppTheme.warningTextOf(context)),
       ParsedMessageStatus.failed =>
-        ('Fehler', const Color(0xFFB91C1C)),
+        ('Fehler', AppTheme.dangerTextOf(context)),
       ParsedMessageStatus.dismissed =>
-        ('Verworfen', const Color(0xFF94A3B8)),
+        ('Verworfen', AppTheme.textMutedOf(context)),
       ParsedMessageStatus.pending =>
-        ('In Arbeit', const Color(0xFF64748B)),
+        ('In Arbeit', AppTheme.textMutedOf(context)),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -234,11 +235,11 @@ class _SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.7,
-          color: Color(0xFF6B7280),
+          color: AppTheme.textMutedOf(context),
         ),
       ),
     );
@@ -266,19 +267,19 @@ class _DetailRow extends StatelessWidget {
             width: 100,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF64748B),
+                color: AppTheme.textMutedOf(context),
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0F172A),
+                color: AppTheme.textPrimaryOf(context),
               ),
             ),
           ),

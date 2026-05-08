@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app_theme.dart';
 import '../../l10n/app_localizations.dart';
 
 class SplashScreen extends StatelessWidget {
@@ -11,7 +12,7 @@ class SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppTheme.bgAppOf(context),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -19,11 +20,11 @@ class SplashScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
+                color: AppTheme.accentLightOf(context),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(Icons.inventory_2_rounded,
-                  color: Color(0xFF2563EB), size: 32),
+              child: Icon(Icons.inventory_2_rounded,
+                  color: AppTheme.accentTextOf(context), size: 32),
             ),
             const SizedBox(height: 18),
             const SizedBox(
@@ -34,7 +35,7 @@ class SplashScreen extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               message ?? l10n.splashSyncing,
-              style: const TextStyle(color: Color(0xFF64748B)),
+              style: TextStyle(color: AppTheme.textMutedOf(context)),
             ),
           ],
         ),

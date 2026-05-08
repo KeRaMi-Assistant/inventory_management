@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/supplier.dart';
 import '../providers/inventory_provider.dart';
@@ -85,7 +86,7 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
         SnackBar(
           content: Text(l10n.pushSaveFailed('$e')),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFC0392B),
+          backgroundColor: AppTheme.dangerTextOf(context),
         ),
       );
     }

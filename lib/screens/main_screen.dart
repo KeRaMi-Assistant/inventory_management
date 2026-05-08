@@ -740,11 +740,11 @@ class _AccountMenu extends StatelessWidget {
           value: 'delete',
           child: Row(
             children: [
-              const Icon(Icons.delete_forever_outlined,
-                  size: 16, color: Color(0xFFC0392B)),
+              Icon(Icons.delete_forever_outlined,
+                  size: 16, color: AppTheme.dangerTextOf(context)),
               const SizedBox(width: 10),
               Text(l10n.accountMenuDeleteAccount,
-                  style: const TextStyle(color: Color(0xFFC0392B))),
+                  style: TextStyle(color: AppTheme.dangerTextOf(context))),
             ],
           ),
         ),
@@ -835,7 +835,7 @@ class _AccountMenu extends StatelessWidget {
                         ? () => Navigator.pop(ctx, true)
                         : null,
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFC0392B)),
+                        backgroundColor: AppTheme.danger),
                     child: Text(l10n.accountMenuDeleteAccount),
                   ),
                 ],
@@ -849,7 +849,7 @@ class _AccountMenu extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(error),
-                  backgroundColor: const Color(0xFFC0392B),
+                  backgroundColor: AppTheme.danger,
                   behavior: SnackBarBehavior.floating,
                 ),
               );
@@ -950,8 +950,10 @@ class _MobileNavList extends StatelessWidget {
                   children: [
                     Text(
                       l10n.accountMenuSignedInAs,
+                      // Drawer-Footer steht auf navBg (dunkel), daher
+                      // gedämpftes Hellgrau identisch zu textMutedDark.
                       style: const TextStyle(
-                          fontSize: 10, color: Color(0xFF94A3B8)),
+                          fontSize: 10, color: AppTheme.navIcon),
                     ),
                     Text(
                       email,
@@ -1052,7 +1054,7 @@ class _MobileNavList extends StatelessWidget {
                   ? () => Navigator.pop(ctx, true)
                   : null,
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFC0392B)),
+                  backgroundColor: AppTheme.danger),
               child: Text(l10n.accountMenuDeleteAccount),
             ),
           ],
@@ -1066,7 +1068,7 @@ class _MobileNavList extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(error),
-            backgroundColor: const Color(0xFFC0392B),
+            backgroundColor: AppTheme.danger,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -1089,7 +1091,10 @@ class _DrawerActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = danger ? const Color(0xFFEF4444) : Colors.white70;
+    // Drawer-Footer steht auf navBg (dunkel in beiden Modi). Daher harte
+    // Drawer-Foreground-Farben: gedämpftes Weiß für normal, Danger-Rot
+    // für destructive Actions.
+    final color = danger ? AppTheme.dangerTextDark : Colors.white70;
     return InkWell(
       onTap: onTap,
       child: Padding(
