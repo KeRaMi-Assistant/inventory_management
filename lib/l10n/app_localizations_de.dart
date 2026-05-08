@@ -2007,4 +2007,96 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsThemeSystem => 'System';
+
+  @override
+  String get publicProfileTab => 'Öffentliches Profil';
+
+  @override
+  String get publicProfileSectionTitle => 'Verkaufsseite';
+
+  @override
+  String get publicProfileSectionDesc =>
+      'Aktiviere eine öffentliche Seite mit deinem Lagerbestand. Anfragen erreichen dich per Mail.';
+
+  @override
+  String get publicProfileEnableLabel => 'Öffentliches Profil aktiv';
+
+  @override
+  String get publicProfileHandleLabel => 'Handle';
+
+  @override
+  String get publicProfileHandleHint => 'z.B. mein-laden';
+
+  @override
+  String get publicProfileHandleHelp =>
+      'Kleinbuchstaben, Zahlen und Bindestriche, 3–32 Zeichen. Erreichbar unter /u/<handle>.';
+
+  @override
+  String get publicProfileHandleInvalid =>
+      'Nur a-z, 0-9 und Bindestrich. 3–32 Zeichen, nicht mit \"-\" beginnen oder enden.';
+
+  @override
+  String get publicProfileHandleTaken => 'Handle bereits vergeben.';
+
+  @override
+  String get publicProfileSaved => 'Profil aktualisiert.';
+
+  @override
+  String publicProfileSaveFailed(Object error) {
+    return 'Speichern fehlgeschlagen: $error';
+  }
+
+  @override
+  String get publicProfileNeedsHandle =>
+      'Lege zuerst einen Handle fest, um das Profil zu aktivieren.';
+
+  @override
+  String get publicProfileLink => 'Öffentlicher Link';
+
+  @override
+  String get publicProfileCopyLink => 'Link kopieren';
+
+  @override
+  String get publicProfileLinkCopied => 'Link kopiert.';
+
+  @override
+  String get publicProfileItemsTitle => 'Sichtbare Artikel';
+
+  @override
+  String get publicProfileItemsHint =>
+      'Tippe einen Artikel an, um ihn auf der Verkaufsseite zu zeigen oder zu verstecken.';
+
+  @override
+  String get publicProfileItemPublic => 'Öffentlich';
+
+  @override
+  String get publicProfileNoEligibleItems =>
+      'Keine Artikel im Lager. Lege zuerst Bestand an.';
+
+  @override
+  String get publicProfileNotFoundTitle => 'Profil nicht gefunden';
+
+  @override
+  String get publicProfileNotFoundBody =>
+      'Diese Verkaufsseite existiert nicht oder ist nicht öffentlich.';
+
+  @override
+  String get publicProfileEmptyItems => 'Aktuell sind keine Artikel verfügbar.';
+
+  @override
+  String get publicProfileContact => 'Anfrage senden';
+
+  @override
+  String get publicProfileContactSubject => 'Anfrage zu deinem Angebot';
+
+  @override
+  String get publicProfileItemPrice => 'Preis';
+
+  @override
+  String publicProfileItemQuantity(int count) {
+    return 'Verfügbar: $count';
+  }
+
+  @override
+  String get publicProfileFooter => 'Erstellt mit InventoryOS';
 }

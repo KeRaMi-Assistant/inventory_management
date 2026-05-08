@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/public_profile.dart';
 import '../models/workspace.dart';
 
 /// Dünner Wrapper um die `workspaces`/`workspace_members`/`workspace_invites`-
@@ -157,5 +158,47 @@ class WorkspaceService {
       'decline_workspace_invite',
       params: {'_invite_id': inviteId},
     );
+  }
+
+  // ── Public Profile ────────────────────────────────────────────────────
+
+  /// Setzt Handle + öffentliche Sichtbarkeit. RLS lässt nur Owner schreiben.
+  /// Wirft, falls der Handle bereits vergeben ist.
+  Future<Workspace> updatePublicProfile({
+    required String workspaceId,
+    String? handle,
+    bool? publicProfileEnabled,
+  }) async {
+    final patch = <String, dynamic>{};
+    if (handle != null) {
+      final clean = handle.trim().toLowerCase();
+      patch['handle'] = clean.isEmpty ? null : clean;
+    }
+    if (publicProfileEnabled != null) {
+      patch['public_profile_enabled'] = publicProfileEnabled;
+    }
+    if (patch.isEmpty) {
+      throw ArgumentError('updatePublicProfile: nichts zu aktualisieren.');
+    }
+    final row = await _client
+        .from('workspaces')
+        .update(patch)
+        .eq('id', workspaceId)
+        .select()
+        .single();
+    return Workspace.fromSupabase(row);
+  }
+
+  /// Liefert das öffentliche Profil zu einem Handle. NULL, wenn der Handle
+  /// nicht existiert oder das Profil nicht öffentlich ist. Anonym aufrufbar
+  /// (nutzt SECURITY-DEFINER-RPC `get_public_profile`).
+  Future<PublicProfile?> fetchPublicProfile(String handle) async {
+    final res = await _client.rpc(
+      'get_public_profile',
+      params: {'handle_in': handle},
+    );
+    if (res == null) return null;
+    if (res is! Map) return null;
+    return PublicProfile.fromRpc(res.cast<String, dynamic>());
   }
 }

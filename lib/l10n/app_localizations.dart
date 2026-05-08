@@ -3799,6 +3799,168 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'System'**
   String get settingsThemeSystem;
+
+  /// No description provided for @publicProfileTab.
+  ///
+  /// In de, this message translates to:
+  /// **'Öffentliches Profil'**
+  String get publicProfileTab;
+
+  /// No description provided for @publicProfileSectionTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Verkaufsseite'**
+  String get publicProfileSectionTitle;
+
+  /// No description provided for @publicProfileSectionDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiviere eine öffentliche Seite mit deinem Lagerbestand. Anfragen erreichen dich per Mail.'**
+  String get publicProfileSectionDesc;
+
+  /// No description provided for @publicProfileEnableLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Öffentliches Profil aktiv'**
+  String get publicProfileEnableLabel;
+
+  /// No description provided for @publicProfileHandleLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Handle'**
+  String get publicProfileHandleLabel;
+
+  /// No description provided for @publicProfileHandleHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. mein-laden'**
+  String get publicProfileHandleHint;
+
+  /// No description provided for @publicProfileHandleHelp.
+  ///
+  /// In de, this message translates to:
+  /// **'Kleinbuchstaben, Zahlen und Bindestriche, 3–32 Zeichen. Erreichbar unter /u/<handle>.'**
+  String get publicProfileHandleHelp;
+
+  /// No description provided for @publicProfileHandleInvalid.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur a-z, 0-9 und Bindestrich. 3–32 Zeichen, nicht mit \"-\" beginnen oder enden.'**
+  String get publicProfileHandleInvalid;
+
+  /// No description provided for @publicProfileHandleTaken.
+  ///
+  /// In de, this message translates to:
+  /// **'Handle bereits vergeben.'**
+  String get publicProfileHandleTaken;
+
+  /// No description provided for @publicProfileSaved.
+  ///
+  /// In de, this message translates to:
+  /// **'Profil aktualisiert.'**
+  String get publicProfileSaved;
+
+  /// No description provided for @publicProfileSaveFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen: {error}'**
+  String publicProfileSaveFailed(Object error);
+
+  /// No description provided for @publicProfileNeedsHandle.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege zuerst einen Handle fest, um das Profil zu aktivieren.'**
+  String get publicProfileNeedsHandle;
+
+  /// No description provided for @publicProfileLink.
+  ///
+  /// In de, this message translates to:
+  /// **'Öffentlicher Link'**
+  String get publicProfileLink;
+
+  /// No description provided for @publicProfileCopyLink.
+  ///
+  /// In de, this message translates to:
+  /// **'Link kopieren'**
+  String get publicProfileCopyLink;
+
+  /// No description provided for @publicProfileLinkCopied.
+  ///
+  /// In de, this message translates to:
+  /// **'Link kopiert.'**
+  String get publicProfileLinkCopied;
+
+  /// No description provided for @publicProfileItemsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Sichtbare Artikel'**
+  String get publicProfileItemsTitle;
+
+  /// No description provided for @publicProfileItemsHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Tippe einen Artikel an, um ihn auf der Verkaufsseite zu zeigen oder zu verstecken.'**
+  String get publicProfileItemsHint;
+
+  /// No description provided for @publicProfileItemPublic.
+  ///
+  /// In de, this message translates to:
+  /// **'Öffentlich'**
+  String get publicProfileItemPublic;
+
+  /// No description provided for @publicProfileNoEligibleItems.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Artikel im Lager. Lege zuerst Bestand an.'**
+  String get publicProfileNoEligibleItems;
+
+  /// No description provided for @publicProfileNotFoundTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Profil nicht gefunden'**
+  String get publicProfileNotFoundTitle;
+
+  /// No description provided for @publicProfileNotFoundBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Verkaufsseite existiert nicht oder ist nicht öffentlich.'**
+  String get publicProfileNotFoundBody;
+
+  /// No description provided for @publicProfileEmptyItems.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktuell sind keine Artikel verfügbar.'**
+  String get publicProfileEmptyItems;
+
+  /// No description provided for @publicProfileContact.
+  ///
+  /// In de, this message translates to:
+  /// **'Anfrage senden'**
+  String get publicProfileContact;
+
+  /// No description provided for @publicProfileContactSubject.
+  ///
+  /// In de, this message translates to:
+  /// **'Anfrage zu deinem Angebot'**
+  String get publicProfileContactSubject;
+
+  /// No description provided for @publicProfileItemPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Preis'**
+  String get publicProfileItemPrice;
+
+  /// No description provided for @publicProfileItemQuantity.
+  ///
+  /// In de, this message translates to:
+  /// **'Verfügbar: {count}'**
+  String publicProfileItemQuantity(int count);
+
+  /// No description provided for @publicProfileFooter.
+  ///
+  /// In de, this message translates to:
+  /// **'Erstellt mit InventoryOS'**
+  String get publicProfileFooter;
 }
 
 class _AppLocalizationsDelegate
