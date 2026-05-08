@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
   let body: {
     reparse_unclassified?: boolean
     reparse_no_tracking?: boolean
+    reparse_forensics?: boolean
     workspace_id?: string
     shop_key?: string
   } = {}
@@ -71,6 +72,14 @@ Deno.serve(async (req) => {
       shopKey: body.shop_key,
     })
     return jsonResp({ ok: true, mode: 'reparse_no_tracking', ...result })
+  }
+
+  if (body.reparse_forensics === true) {
+    const result = await reparseForensics(admin, {
+      workspaceId: body.workspace_id,
+      shopKey: body.shop_key,
+    })
+    return jsonResp({ ok: true, mode: 'reparse_forensics', ...result })
   }
 
   const stats = await runParseSweep(admin, { limit: 200 })
@@ -257,6 +266,126 @@ async function reparseNoTracking(
         stats.rescued++
       } catch (e) {
         console.warn('reparseNoTracking row failed', row.id, e)
+        stats.errors++
+      }
+    }
+    if (rows.length < PAGE) break
+  }
+  return stats
+}
+
+interface ReparseForensicsStats {
+  scanned: number
+  enriched: number
+  unchanged: number
+  errors: number
+  byShop: Record<string, { enriched: number; unchanged: number }>
+}
+
+/// Sweep über ALLE Rows mit `_raw_html` (auch wenn `tracking` schon
+/// gesetzt ist). Re-parsed mit der aktuellen Adapter-Registry und
+/// patcht `parsed_payload` mit den neuen Forensik-Feldern (eta_date,
+/// shipped_at, order_total, items, tax_rate_pct, ...). Bestehende
+/// Tracking-Werte werden NICHT überschrieben — wir merge'n nur die
+/// neuen Felder rein, was die Migration nicht-destruktiv macht.
+async function reparseForensics(
+  admin: ReturnType<typeof createClient>,
+  options: { workspaceId?: string; shopKey?: string },
+): Promise<ReparseForensicsStats> {
+  const stats: ReparseForensicsStats = {
+    scanned: 0,
+    enriched: 0,
+    unchanged: 0,
+    errors: 0,
+    byShop: {},
+  }
+  let cursor: string | null = null
+  const PAGE = 100
+  for (let i = 0; i < 50; i++) {
+    let q = admin
+      .from('parsed_messages')
+      .select('id, workspace_id, from_address, subject, parsed_payload, shop_key, received_at')
+      .in('status', ['suggested', 'matched'])
+      .not('parsed_payload->_raw_html', 'is', null)
+      .order('received_at', { ascending: true })
+      .limit(PAGE)
+    if (options.workspaceId) q = q.eq('workspace_id', options.workspaceId)
+    if (options.shopKey) q = q.eq('shop_key', options.shopKey)
+    if (cursor) q = q.gt('received_at', cursor)
+    const { data, error } = await q
+    if (error) {
+      console.error('reparseForensics select failed', error)
+      break
+    }
+    const rows = (data ?? []) as Array<{
+      id: string
+      workspace_id: string
+      from_address: string | null
+      subject: string | null
+      shop_key: string | null
+      received_at: string
+      parsed_payload: Record<string, unknown> | null
+    }>
+    if (rows.length === 0) break
+    for (const row of rows) {
+      stats.scanned++
+      cursor = row.received_at
+      const shopKey = row.shop_key ?? 'unknown'
+      stats.byShop[shopKey] ??= { enriched: 0, unchanged: 0 }
+      try {
+        const payload = row.parsed_payload ?? {}
+        const html = (payload._raw_html as string | undefined) ?? ''
+        if (!html) {
+          stats.unchanged++
+          stats.byShop[shopKey].unchanged++
+          continue
+        }
+        const ctx = {
+          from: row.from_address ?? '',
+          subject: row.subject ?? '',
+          text: '',
+          html,
+        }
+        const parsed = detectAndParse(ctx)
+        if (!parsed) {
+          stats.unchanged++
+          stats.byShop[shopKey].unchanged++
+          continue
+        }
+        // Merge-Strategie: NEW > OLD nur für Forensik-Felder. Bestehende
+        // Felder (tracking, order_id, ...) bleiben unverändert.
+        const newFields = stripBody(parsed, html)
+        const merged: Record<string, unknown> = { ...payload }
+        const FORENSIK_KEYS = [
+          'eta_date', 'shipped_at', 'order_total', 'tax_rate_pct',
+          'shipping_address_country', 'items', 'delivery_method',
+          'cancellation_reason', 'seller',
+        ]
+        let changed = false
+        for (const k of FORENSIK_KEYS) {
+          if (newFields[k] !== undefined && newFields[k] !== null
+              && merged[k] === undefined) {
+            merged[k] = newFields[k]
+            changed = true
+          }
+        }
+        if (!changed) {
+          stats.unchanged++
+          stats.byShop[shopKey].unchanged++
+          continue
+        }
+        const { error: updErr } = await admin
+          .from('parsed_messages')
+          .update({ parsed_payload: merged })
+          .eq('id', row.id)
+        if (updErr) {
+          stats.errors++
+          continue
+        }
+        stats.enriched++
+        stats.byShop[shopKey].enriched++
+      } catch (e) {
+        console.warn('reparseForensics row failed', row.id, e)
         stats.errors++
       }
     }
