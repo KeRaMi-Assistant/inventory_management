@@ -42,6 +42,22 @@ interface PollStats {
 // erlaubt aber ein zügiges Backfill von >1k Mails in akzeptabler Zeit.
 const MAX_FETCH_PER_RUN = 100
 
+// Bootstrap-Lookback in Tagen: beim allerersten Poll eines Accounts ziehen
+// wir alle UIDs der letzten N Tage rein (IMAP SEARCH SINCE). Datums-basiert
+// statt UID-basiert, weil 100 UIDs für viel-Mail-Postfächer nur ~2 Tage,
+// für sparse-Postfächer 6 Monate sind — beides war vorher kaputt.
+// 90 entspricht dem Ultimate-Plan-Inbox-Verlauf; restliche UIDs holt der
+// nächste Cron-Tick incrementell (MAX_FETCH_PER_RUN-Cap pro Lauf).
+// Override per Secret: BOOTSTRAP_LOOKBACK_DAYS=<n>.
+const DEFAULT_BOOTSTRAP_DAYS = 90
+const BOOTSTRAP_LOOKBACK_DAYS = (() => {
+  const raw = Deno.env.get('BOOTSTRAP_LOOKBACK_DAYS')
+  if (!raw) return DEFAULT_BOOTSTRAP_DAYS
+  const n = Number.parseInt(raw, 10)
+  if (!Number.isFinite(n) || n < 1 || n > 365) return DEFAULT_BOOTSTRAP_DAYS
+  return n
+})()
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -137,31 +153,31 @@ Deno.serve(async (req) => {
       .eq('id', account.id)
   }
 
-  // Inline-Parse: direkt nach dem Polling die frisch eingefügten 'pending'-
-  // Rows durch die Adapter-Registry jagen. Kein HTTP-Roundtrip nach
-  // inbox-parse mehr — der separate Cross-Function-Call hatte chronische
-  // 401-Probleme (verify_jwt-Plattform-Layer rejected Service-Role-Key).
-  // Beim User-Poll scopen wir auf die Workspaces, die der User polled hat;
-  // Cron/Service-Calls verarbeiten alle Pending-Rows.
+  // Inline-Parse: direkt nach dem Polling die 'pending'-Rows durch die
+  // Adapter-Registry jagen. Kein HTTP-Roundtrip nach inbox-parse mehr —
+  // der separate Cross-Function-Call hatte chronische 401-Probleme
+  // (verify_jwt-Plattform-Layer rejected Service-Role-Key).
+  //
+  // Wir laufen IMMER (auch wenn totalStored=0), damit Pending-Rows aus
+  // einem vorherigen, timeout-bedingt abgebrochenen Poll nachgezogen
+  // werden. runParseSweep ist gegen leeren Pending-Set No-Op.
+  // Limit 100 schützt vor Wallclock-Timeout — verbleibende Pending
+  // werden vom nächsten Tick abgeholt.
   let parseStats: ParseRunStats = { processed: 0, matched: 0, suggested: 0, unclassified: 0 }
-  if (totalStored > 0 || allowedWorkspaceIds === null) {
-    try {
-      if (allowedWorkspaceIds && allowedWorkspaceIds.length > 0) {
-        // Pro User-Workspace einmal sweepen — Limit pro WS = 200, was den
-        // Bootstrap-Lookback (300) abdeckt, der über 2 Cron-Ticks reinkommt.
-        for (const ws of allowedWorkspaceIds) {
-          const partial = await runParseSweep(admin, { workspaceId: ws, limit: 200 })
-          parseStats.processed += partial.processed
-          parseStats.matched += partial.matched
-          parseStats.suggested += partial.suggested
-          parseStats.unclassified += partial.unclassified
-        }
-      } else {
-        parseStats = await runParseSweep(admin, { limit: 500 })
+  try {
+    if (allowedWorkspaceIds && allowedWorkspaceIds.length > 0) {
+      for (const ws of allowedWorkspaceIds) {
+        const partial = await runParseSweep(admin, { workspaceId: ws, limit: 100 })
+        parseStats.processed += partial.processed
+        parseStats.matched += partial.matched
+        parseStats.suggested += partial.suggested
+        parseStats.unclassified += partial.unclassified
       }
-    } catch (e) {
-      console.warn('inline parse failed', e)
+    } else {
+      parseStats = await runParseSweep(admin, { limit: 500 })
     }
+  } catch (e) {
+    console.warn('inline parse failed', e)
   }
 
   return jsonResp({
@@ -201,27 +217,44 @@ async function pollAccount(
     await client.connect()
     const lock = await client.getMailboxLock(account.folder)
     try {
-      // Bootstrap: beim allerersten Poll setzen wir last_uid auf
-      // (uidNext - 1 - BOOTSTRAP_LOOKBACK), damit nicht nur kommende Mails,
-      // sondern auch ein paar hundert historische in den Suchraum fallen.
-      // Realistische Inboxen sind oft voller Newsletter/Promo, die der
-      // shouldStore-Filter aussortiert; 300 stellt sicher, dass auch in
-      // werbungs-lastigen Postfächern genug Order-Mails übrig bleiben,
-      // um den UI-Tab zu füllen. MAX_FETCH_PER_RUN bleibt bei 100 — die
-      // restlichen UIDs holt der nächste Cron-Tick (oder ein erneuter
-      // "Jetzt pollen"-Klick) inkrementell.
-      const BOOTSTRAP_LOOKBACK = 300
+      // Bootstrap: beim allerersten Poll fragen wir IMAP per
+      // `SEARCH SINCE <date>` nach allen UIDs aus dem Lookback-Fenster.
+      // Datums-basiert statt UID-basiert: 90 Tage Mail sind für ein
+      // ult-Plan-Postfach garantiert >50 Order-Mails (Empirie aus
+      // dem zweiten Test-Account: 8 Monate ≈ 700 shop-relevante Mails).
+      //
+      // Fallback wenn SEARCH SINCE 0 UIDs liefert (sehr leeres oder
+      // brandneues Postfach): UID-Lookback von 100 — verhindert
+      // Endlosschleife auf last_uid=null bei sterilen Inboxen.
+      let bootstrapped = false
       if (account.last_uid === null) {
-        const status = await client.status(account.folder, { uidNext: true })
-        const uidNext = status.uidNext ?? 1
-        const baseline = Math.max(0, uidNext - 1 - BOOTSTRAP_LOOKBACK)
+        const sinceDate = new Date(
+          Date.now() - BOOTSTRAP_LOOKBACK_DAYS * 86_400_000,
+        )
+        let bootstrapUids: number[] = []
+        try {
+          bootstrapUids =
+            ((await client.search({ since: sinceDate }, { uid: true })) ??
+              []) as number[]
+        } catch (e) {
+          console.warn('SEARCH SINCE failed, falling back to UID lookback', e)
+        }
+        if (bootstrapUids.length > 0) {
+          const minUid = Math.min(...bootstrapUids)
+          // last_uid = minUid - 1, damit der reguläre Fetch-Loop unten
+          // alle bootstrapUids (UIDs > last_uid) liest.
+          account.last_uid = Math.max(0, minUid - 1)
+        } else {
+          // SINCE-Suche kam leer zurück → UID-Range fallback.
+          const status = await client.status(account.folder, { uidNext: true })
+          const uidNext = status.uidNext ?? 1
+          account.last_uid = Math.max(0, uidNext - 1 - 100)
+        }
         await admin
           .from('mailbox_accounts')
-          .update({ last_uid: baseline })
+          .update({ last_uid: account.last_uid })
           .eq('id', account.id)
-        // Update local copy so the existing fetch-loop below kicks in
-        // for the lookback range.
-        account.last_uid = baseline
+        bootstrapped = true
         stat.bootstrapped = true
       }
 
@@ -232,17 +265,52 @@ async function pollAccount(
       const sinceUid = account.last_uid + 1
       const rawUids =
         (await client.search({ uid: `${sinceUid}:*` }, { uid: true })) ?? []
-      const newUids = rawUids.filter((u: number) => u > account.last_uid!)
-      if (newUids.length === 0) return stat
+      // Aufsteigend sortieren: storeMessage + maxUid-Tracking gehen davon
+      // aus, dass wir von alt zu neu fetchen. Die meisten IMAP-Server
+      // liefern bereits sortiert, aber Belt-and-Suspenders.
+      const newUids = rawUids
+        .filter((u: number) => u > account.last_uid!)
+        .sort((a: number, b: number) => a - b)
+      if (newUids.length === 0) {
+        // Bootstrap kam ohne Hits zurück: das ist OK (leeres Postfach im
+        // Lookback-Fenster). Wir haben last_uid bereits gesetzt, der
+        // nächste Tick beginnt inkrementell ab dort.
+        if (bootstrapped) return stat
+        return stat
+      }
 
-      const slice = newUids.slice(0, MAX_FETCH_PER_RUN)
+      // Bootstrap pullt einen größeren Batch in einem Lauf, damit der
+      // User direkt nach dem "Jetzt pollen"-Klick eine sinnvolle
+      // Inbox-Population sieht. Hard-Cap 200 (≈20–35s mit Netz-/Parse-
+      // Overhead, gut unter dem 60s-Edge-Function-Timeout); zusätzliche
+      // Time-Budget-Bremse bricht raus bevor wir das Limit reißen.
+      // Reguläre Polls bleiben bei 100 (Memory-Schutz, schnelle Cron-Ticks).
+      const fetchCap = bootstrapped
+        ? Math.min(newUids.length, MAX_FETCH_PER_RUN * 2)
+        : Math.min(newUids.length, MAX_FETCH_PER_RUN)
+      const slice = newUids.slice(0, fetchCap)
       // Wichtig: maxUid wird PRO behandelter UID hochgezählt — auch wenn die
       // Mail durch den Whitelist/Promo-Filter rausfliegt oder fetchOne null
       // liefert. Sonst läuft der Poll in eine Endlosschleife auf derselben
       // Junk-Mail.
       let maxUid = account.last_uid
+      // Inkrementelles Persistieren von last_uid: alle 50 verarbeiteten
+      // UIDs schreiben wir den Fortschritt zurück. Wenn die Function
+      // zwischen den Batches gekillt wird (CPU/Memory/Timeout), ist der
+      // bisherige Fortschritt nicht verloren — der nächste Tick übernimmt.
+      const PERSIST_EVERY = 50
+      let processedSinceFlush = 0
+      // Hard-stop wenn das Edge-Function-Wallclock-Limit (60s) näher rückt.
+      // 45s lässt 15s Slack für inline-parse + finalen DB-Update + Logout.
+      const TIME_BUDGET_MS = 45_000
+      const startedAt = Date.now()
+      let timeBudgetExhausted = false
 
       for (const uid of slice) {
+        if (Date.now() - startedAt > TIME_BUDGET_MS) {
+          timeBudgetExhausted = true
+          break
+        }
         stat.fetched++
         if (uid > maxUid) maxUid = uid
         try {
@@ -251,12 +319,30 @@ async function pollAccount(
             { uid: true, envelope: true, source: true, internalDate: true },
             { uid: true },
           )
-          if (!msg || !msg.uid) continue
-          const stored = await storeMessage(admin, account, msg)
-          if (stored) stat.stored++
+          if (!msg || !msg.uid) {
+            // continue zählt trotzdem als processed (UID übersprungen),
+            // sonst kommt der nächste Lauf wieder hier vorbei.
+          } else {
+            const stored = await storeMessage(admin, account, msg)
+            if (stored) stat.stored++
+          }
         } catch (e) {
           console.warn('fetch/store failed', account.id, uid, e)
         }
+        processedSinceFlush++
+        if (processedSinceFlush >= PERSIST_EVERY && maxUid > account.last_uid) {
+          await admin
+            .from('mailbox_accounts')
+            .update({ last_uid: maxUid })
+            .eq('id', account.id)
+          account.last_uid = maxUid
+          processedSinceFlush = 0
+        }
+      }
+      if (timeBudgetExhausted) {
+        console.log(
+          `time-budget hit account=${account.id} fetched=${stat.fetched}/${slice.length} (rest holt nächster Tick)`,
+        )
       }
 
       if (maxUid > account.last_uid) {
