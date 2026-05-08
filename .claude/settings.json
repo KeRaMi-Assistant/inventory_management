@@ -9,7 +9,9 @@
       "Bash(curl *)",
       "Bash(npx *)",
       "Bash(deno *)",
-      "Bash(bash .claude/scripts/*)"
+      "Bash(bash .claude/scripts/*)",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__list_tables"
     ]
   },
   "hooks": {

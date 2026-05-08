@@ -146,6 +146,19 @@ Workflow (PFLICHT in dieser Reihenfolge):
   Vor exit: schreibe einen klaren Blocker-Report ins Run-Log
   (was fehlte, was zu tun ist, welcher Befehl).
 
+**MAIN-MUSS-IMMER-LAUFFÄHIG-BLEIBEN (KRITISCH):**
+- Wenn du nicht sicher bist dass deine Änderungen \`flutter analyze\` clean
+  + Tests grün haben → **KEIN /ship**. Lieber exit 1 mit Blocker-Report.
+- Wenn du mid-refactor bist (z.B. Service-Methode aufgerufen, aber noch
+  nicht definiert; neue Asset gelistet aber Datei fehlt; neuer Provider
+  importiert aber noch nicht implementiert) → KEIN /ship.
+- Vor JEDEM /ship: \`flutter analyze\` MUSS 0 issues sein, \`flutter test\`
+  MUSS grün. Wenn nicht: zurück zu Schritt 3, fixen oder revert.
+- Wenn Budget knapp wird und Code unfertig: nicht "halb committen + ship".
+  Stattdessen: dokumentiere im Blocker-Report wo du stehst, exit 1.
+  Der Runner wird die uncommitted Änderungen automatisch in einen Stash
+  packen + zu main switchen — main bleibt sauber.
+
 Hard-Constraints:
 - Niemals \`supabase db push\` gegen Prod.
 - Niemals direkt auf main committen.
@@ -203,6 +216,29 @@ if [ "$EXIT_CODE" -eq 0 ]; then
   "$NOTIFY" "Claude ✅ $SLUG" "Done. $SUMMARY" success
 else
   log "item failed (exit=$EXIT_CODE) — moving to failed/"
+  # PFLICHT: bei failed Item NICHTS Kaputtes auf der Maschine hinterlassen.
+  # Stash uncommitted (tracked + untracked) für spätere Diagnose.
+  STASH_MSG="auto-fail-${TIMESTAMP}-${ITEM_NAME%.md}"
+  if ! git -C "$ROOT" diff --quiet 2>/dev/null \
+     || [ -n "$(git -C "$ROOT" ls-files --others --exclude-standard 2>/dev/null)" ]; then
+    git -C "$ROOT" stash push --include-untracked -m "$STASH_MSG" >/dev/null 2>&1 || true
+    log "  stashed working tree changes (msg: $STASH_MSG)"
+  fi
+  # Switch zu main + lösche den failed feature-branch (sauberer Repo-State).
+  CURRENT_BRANCH="$(git -C "$ROOT" branch --show-current 2>/dev/null)"
+  if [[ "$CURRENT_BRANCH" =~ ^feature/headless- ]]; then
+    git -C "$ROOT" checkout main >/dev/null 2>&1 || true
+    git -C "$ROOT" branch -D "$CURRENT_BRANCH" >/dev/null 2>&1 || true
+    log "  switched to main, deleted failed branch $CURRENT_BRANCH"
+  fi
+  # Stash-Lifecycle: nur die letzten 5 auto-fail-Stashes behalten.
+  STASH_COUNT="$(git -C "$ROOT" stash list 2>/dev/null | grep -c 'auto-fail-' || echo 0)"
+  while [ "$STASH_COUNT" -gt 5 ]; do
+    OLDEST="$(git -C "$ROOT" stash list 2>/dev/null | grep 'auto-fail-' | tail -1 | cut -d: -f1)"
+    [ -n "$OLDEST" ] && git -C "$ROOT" stash drop "$OLDEST" >/dev/null 2>&1
+    STASH_COUNT="$(git -C "$ROOT" stash list 2>/dev/null | grep -c 'auto-fail-' || echo 0)"
+  done
+
   mv "$NEXT_ITEM" "$FAILED/${TIMESTAMP}-${ITEM_NAME}"
   cp "$RUN_LOG" "$FAILED/${TIMESTAMP}-${ITEM_NAME%.md}.log"
   "$NOTIFY" "Claude ❌ $SLUG" "Failed (exit $EXIT_CODE). $SUMMARY" failure
