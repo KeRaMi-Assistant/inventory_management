@@ -11,6 +11,7 @@ import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
 import '../models/shop.dart';
 import '../models/supplier.dart';
+import '../models/ticket.dart';
 import '../models/ticket_summary.dart';
 import '../services/carrier_service.dart';
 import '../services/csv_service.dart';
@@ -33,6 +34,7 @@ class InventoryProvider extends ChangeNotifier {
   List<InventoryItem> _inventoryItems = [];
   List<InventoryMovement> _movements = [];
   List<ActivityEntry> _activities = [];
+  List<Ticket> _tickets = [];
 
   bool _loading = false;
   Object? _lastError;
@@ -51,6 +53,7 @@ class InventoryProvider extends ChangeNotifier {
   List<InventoryItem> get inventoryItems => List.unmodifiable(_inventoryItems);
   List<InventoryMovement> get movements => List.unmodifiable(_movements);
   List<ActivityEntry> get activities => List.unmodifiable(_activities);
+  List<Ticket> get tickets => List.unmodifiable(_tickets);
 
   static const List<String> statusOptions = [
     'Bestellt',
@@ -115,7 +118,31 @@ class InventoryProvider extends ChangeNotifier {
       .map((d) => d.ticketNumber!)
       .toSet();
 
-  List<TicketSummary> get ticketSummaries {
+  /// Aktive Tickets (archived_at IS NULL) — bisheriges Default-Verhalten.
+  /// Für die Archiv-Liste siehe [archivedTicketSummaries].
+  List<TicketSummary> get ticketSummaries =>
+      _summariesByArchive(archived: false);
+
+  /// Archivierte Tickets (archived_at IS NOT NULL), gruppiert nach Monat
+  /// rendert das UI selbst — hier bekommt der Caller die flache, nach
+  /// `archivedAt DESC` sortierte Liste.
+  List<TicketSummary> get archivedTicketSummaries {
+    final list = _summariesByArchive(archived: true);
+    list.sort((a, b) {
+      final ad = a.archivedAt;
+      final bd = b.archivedAt;
+      if (ad == null && bd == null) return b.newestDate.compareTo(a.newestDate);
+      if (ad == null) return 1;
+      if (bd == null) return -1;
+      return bd.compareTo(ad);
+    });
+    return list;
+  }
+
+  List<TicketSummary> _summariesByArchive({required bool archived}) {
+    final ticketByNumber = <String, Ticket>{
+      for (final t in _tickets) t.ticketNumber: t,
+    };
     final grouped = <String, List<Deal>>{};
     for (final deal in _deals) {
       final key = (deal.ticketNumber == null || deal.ticketNumber!.trim().isEmpty)
@@ -123,18 +150,28 @@ class InventoryProvider extends ChangeNotifier {
           : deal.ticketNumber!.trim();
       grouped.putIfAbsent(key, () => []).add(deal);
     }
-    final summaries = grouped.entries.map((entry) {
+    final summaries = <TicketSummary>[];
+    for (final entry in grouped.entries) {
+      final ticketRow = ticketByNumber[entry.key];
+      final isArchived = ticketRow?.archivedAt != null;
+      // "Kein Ticket" hat keinen Row in der `tickets`-Tabelle und ist daher
+      // immer aktiv. Auf der Archiv-Seite wird es entsprechend ausgeblendet.
+      if (archived && !isArchived) continue;
+      if (!archived && isArchived) continue;
       final items = _inventoryItems
           .where((item) =>
               item.ticketNumber == entry.key ||
               entry.value.any((deal) => deal.inventoryItemIds.contains(item.id)))
           .toList();
-      return TicketSummary(
+      summaries.add(TicketSummary(
         ticketNumber: entry.key,
         deals: entry.value,
         items: items,
-      );
-    }).toList();
+        ticketId: ticketRow?.id,
+        archivedAt: ticketRow?.archivedAt,
+        archivedReason: ticketRow?.archivedReason,
+      ));
+    }
     summaries.sort((a, b) => b.newestDate.compareTo(a.newestDate));
     return summaries;
   }
@@ -184,6 +221,7 @@ class InventoryProvider extends ChangeNotifier {
     _inventoryItems = [];
     _movements = [];
     _activities = [];
+    _tickets = [];
     _lastError = null;
     _activeWorkspaceId = null;
     _repository.setActiveWorkspace(null);
@@ -203,6 +241,67 @@ class InventoryProvider extends ChangeNotifier {
       ..sort((a, b) => b.date.compareTo(a.date));
     _activities = List.of(snapshot.activities)
       ..sort((a, b) => b.date.compareTo(a.date));
+    _tickets = List.of(snapshot.tickets);
+  }
+
+  // ── TICKETS ───────────────────────────────────────────────────────────────
+
+  /// Refresh tickets aus der DB. Wird vom Tickets-Screen gerufen, wenn der
+  /// User zwischen Aktiv/Archiv wechselt — Auto-Archive-Trigger im
+  /// Backend könnten den Status nach einem Deal-Update verändert haben,
+  /// ohne dass der Client das mitbekommt.
+  Future<void> loadTickets({bool? archived}) async {
+    try {
+      final fetched = await _repository.loadTickets(archived: archived);
+      if (archived == null) {
+        _tickets = fetched;
+      } else {
+        // Teil-Refresh: alte Rows mit dem Filter überschreiben, andere
+        // (= Komplement) erhalten.
+        final keepIds = fetched.map((t) => t.id).toSet();
+        final retained = _tickets.where((t) {
+          final isArch = t.archivedAt != null;
+          // Drop only rows die im Filter waren — sonst behalten.
+          if (archived && isArch) return false;
+          if (!archived && !isArch) return false;
+          return !keepIds.contains(t.id);
+        }).toList();
+        _tickets = [...retained, ...fetched];
+      }
+      notifyListeners();
+    } catch (e) {
+      _lastError = e;
+      if (kDebugMode) debugPrint('InventoryProvider.loadTickets failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Manuelles Archivieren via UI. Auto-Triggers (`all_done`, `all_shipped`,
+  /// `inventory_sold`) sind separat — diese Methode hier setzt immer
+  /// `manual` und schreibt einen Activity-Log-Eintrag.
+  Future<void> archiveTicket(int ticketId, {String reason = 'manual'}) async {
+    final updated = await _repository.archiveTicket(ticketId, reason: reason);
+    final idx = _tickets.indexWhere((t) => t.id == ticketId);
+    if (idx == -1) {
+      _tickets.add(updated);
+    } else {
+      _tickets[idx] = updated;
+    }
+    _log('Ticket archiviert: ${updated.ticketNumber}', 'ticket');
+    notifyListeners();
+  }
+
+  /// Reopen: archived_at + archived_reason + archived_by zurücksetzen.
+  Future<void> reopenTicket(int ticketId) async {
+    final updated = await _repository.reopenTicket(ticketId);
+    final idx = _tickets.indexWhere((t) => t.id == ticketId);
+    if (idx == -1) {
+      _tickets.add(updated);
+    } else {
+      _tickets[idx] = updated;
+    }
+    _log('Ticket wieder geöffnet: ${updated.ticketNumber}', 'ticket');
+    notifyListeners();
   }
 
   // ── Activity helper ───────────────────────────────────────────────────────

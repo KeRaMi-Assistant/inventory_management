@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
@@ -20,17 +21,26 @@ class TicketsScreen extends StatefulWidget {
   State<TicketsScreen> createState() => _TicketsScreenState();
 }
 
-class _TicketsScreenState extends State<TicketsScreen> {
+class _TicketsScreenState extends State<TicketsScreen>
+    with SingleTickerProviderStateMixin {
   String _search = '';
   String? _buyer;
   String? _status;
   String _sort = 'Datum';
   String? _selectedTicket;
+  late final TabController _archiveTab;
 
   @override
   void initState() {
     super.initState();
     _selectedTicket = widget.initialTicket;
+    _archiveTab = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _archiveTab.dispose();
+    super.dispose();
   }
 
   @override
@@ -45,90 +55,59 @@ class _TicketsScreenState extends State<TicketsScreen> {
   Widget build(BuildContext context) {
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final money = NumberFormat.currency(locale: localeTag, symbol: '€');
+    final l10n = AppLocalizations.of(context);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
-        final tickets = _filtered(provider.ticketSummaries);
-        final selected = tickets.where((t) => t.ticketNumber == _selectedTicket).firstOrNull ??
-            tickets.firstOrNull;
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final narrow = constraints.maxWidth < 650;
-            if (narrow) {
-              return _TicketsMobileLayout(
-                tickets: tickets,
-                selected: selected,
-                money: money,
-                onSelectTicket: (t) => setState(() => _selectedTicket = t),
-                search: _search,
-                buyer: _buyer,
-                status: _status,
-                sort: _sort,
-                onSearch: (v) => setState(() => _search = v),
-                onBuyer: (v) => setState(() => _buyer = v),
-                onStatus: (v) => setState(() => _status = v),
-                onSort: (v) => setState(() => _sort = v ?? 'Datum'),
-                provider: provider,
-              );
-            }
-            return Row(
-              children: [
-                SizedBox(
-                  width: constraints.maxWidth > 1100 ? 440 : 360,
-                  child: Column(
-                    children: [
-                      _TicketFilters(
-                        provider: provider,
-                        search: _search,
-                        buyer: _buyer,
-                        status: _status,
-                        sort: _sort,
-                        onSearch: (v) => setState(() => _search = v),
-                        onBuyer: (v) => setState(() => _buyer = v),
-                        onStatus: (v) => setState(() => _status = v),
-                        onSort: (v) => setState(() => _sort = v ?? 'Datum'),
-                      ),
-                      Expanded(
-                        child: tickets.isEmpty
-                            ? Center(
-                                child: Text(AppLocalizations.of(context)
-                                    .ticketsEmpty),
-                              )
-                            : ListView.separated(
-                                padding: const EdgeInsets.all(12),
-                                itemCount: tickets.length,
-                                separatorBuilder: (context, index) => const SizedBox(height: 10),
-                                itemBuilder: (context, i) {
-                                  final ticket = tickets[i];
-                                  return _TicketCard(
-                                    ticket: ticket,
-                                    money: money,
-                                    selected: selected?.ticketNumber == ticket.ticketNumber,
-                                    onTap: () => setState(() => _selectedTicket = ticket.ticketNumber),
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
+        final activeTickets = _filteredActive(provider.ticketSummaries);
+        final selected =
+            activeTickets.where((t) => t.ticketNumber == _selectedTicket).firstOrNull ??
+                activeTickets.firstOrNull;
+        return Column(
+          children: [
+            Material(
+              color: AppTheme.bgSurfaceOf(context),
+              child: TabBar(
+                controller: _archiveTab,
+                tabs: [
+                  Tab(text: l10n.ticketsTabActive),
+                  Tab(text: l10n.ticketsTabArchive),
+                ],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _archiveTab,
+                children: [
+                  _ActiveTicketsView(
+                    tickets: activeTickets,
+                    selected: selected,
+                    money: money,
+                    provider: provider,
+                    search: _search,
+                    buyer: _buyer,
+                    status: _status,
+                    sort: _sort,
+                    onSearch: (v) => setState(() => _search = v),
+                    onBuyer: (v) => setState(() => _buyer = v),
+                    onStatus: (v) => setState(() => _status = v),
+                    onSort: (v) => setState(() => _sort = v ?? 'Datum'),
+                    onSelectTicket: (t) =>
+                        setState(() => _selectedTicket = t),
                   ),
-                ),
-                const VerticalDivider(width: 1),
-                Expanded(
-                  child: selected == null
-                      ? Center(
-                          child: Text(AppLocalizations.of(context)
-                              .ticketsSelect),
-                        )
-                      : _TicketDetail(ticket: selected, money: money),
-                ),
-              ],
-            );
-          },
+                  _ArchiveTicketsView(
+                    tickets: provider.archivedTicketSummaries,
+                    money: money,
+                  ),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
   }
 
-  List<TicketSummary> _filtered(List<TicketSummary> tickets) {
+  List<TicketSummary> _filteredActive(List<TicketSummary> tickets) {
     final query = _search.trim().toLowerCase();
     final filtered = tickets.where((ticket) {
       if (query.isNotEmpty && !ticket.ticketNumber.toLowerCase().contains(query)) {
@@ -146,6 +125,393 @@ class _TicketsScreenState extends State<TicketsScreen> {
       };
     });
     return filtered;
+  }
+}
+
+// ─── Active tickets view (was the old TicketsScreen body) ───────────────────
+class _ActiveTicketsView extends StatelessWidget {
+  final List<TicketSummary> tickets;
+  final TicketSummary? selected;
+  final NumberFormat money;
+  final InventoryProvider provider;
+  final String search;
+  final String? buyer;
+  final String? status;
+  final String sort;
+  final ValueChanged<String> onSearch;
+  final ValueChanged<String?> onBuyer;
+  final ValueChanged<String?> onStatus;
+  final ValueChanged<String?> onSort;
+  final ValueChanged<String> onSelectTicket;
+
+  const _ActiveTicketsView({
+    required this.tickets,
+    required this.selected,
+    required this.money,
+    required this.provider,
+    required this.search,
+    required this.buyer,
+    required this.status,
+    required this.sort,
+    required this.onSearch,
+    required this.onBuyer,
+    required this.onStatus,
+    required this.onSort,
+    required this.onSelectTicket,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 650;
+        if (narrow) {
+          return _TicketsMobileLayout(
+            tickets: tickets,
+            selected: selected,
+            money: money,
+            onSelectTicket: onSelectTicket,
+            search: search,
+            buyer: buyer,
+            status: status,
+            sort: sort,
+            onSearch: onSearch,
+            onBuyer: onBuyer,
+            onStatus: onStatus,
+            onSort: onSort,
+            provider: provider,
+          );
+        }
+        return Row(
+          children: [
+            SizedBox(
+              width: constraints.maxWidth > 1100 ? 440 : 360,
+              child: Column(
+                children: [
+                  _TicketFilters(
+                    provider: provider,
+                    search: search,
+                    buyer: buyer,
+                    status: status,
+                    sort: sort,
+                    onSearch: onSearch,
+                    onBuyer: onBuyer,
+                    onStatus: onStatus,
+                    onSort: onSort,
+                  ),
+                  Expanded(
+                    child: tickets.isEmpty
+                        ? Center(
+                            child: Text(
+                                AppLocalizations.of(context).ticketsEmpty),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.all(12),
+                            itemCount: tickets.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, i) {
+                              final ticket = tickets[i];
+                              return _TicketCard(
+                                ticket: ticket,
+                                money: money,
+                                selected: selected?.ticketNumber ==
+                                    ticket.ticketNumber,
+                                onTap: () => onSelectTicket(ticket.ticketNumber),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(
+              child: selected == null
+                  ? Center(
+                      child: Text(AppLocalizations.of(context).ticketsSelect),
+                    )
+                  : _TicketDetail(ticket: selected!, money: money),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ─── Archive view: tickets grouped by archived month ────────────────────────
+class _ArchiveTicketsView extends StatelessWidget {
+  final List<TicketSummary> tickets;
+  final NumberFormat money;
+  const _ArchiveTicketsView({required this.tickets, required this.money});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    if (tickets.isEmpty) {
+      return Center(child: Text(l10n.ticketsArchiveEmpty));
+    }
+    final groups = _groupByMonth(tickets);
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    final monthFmt = DateFormat.yMMMM(localeTag);
+    return SafeArea(
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+        itemCount: groups.length,
+        itemBuilder: (context, gIdx) {
+          final group = groups[gIdx];
+          final monthLabel = monthFmt.format(group.month);
+          final profit =
+              group.tickets.fold<double>(0, (sum, t) => sum + t.totalProfit);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _MonthHeader(
+                  label: monthLabel,
+                  profitLabel:
+                      l10n.ticketsArchiveMonthProfit(money.format(profit)),
+                  profitPositive: profit >= 0,
+                ),
+                const SizedBox(height: 8),
+                for (var i = 0; i < group.tickets.length; i++) ...[
+                  _ArchivedTicketCard(
+                    ticket: group.tickets[i],
+                    money: money,
+                  ),
+                  if (i < group.tickets.length - 1)
+                    const SizedBox(height: 10),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  List<_MonthGroup> _groupByMonth(List<TicketSummary> source) {
+    final byMonth = <DateTime, List<TicketSummary>>{};
+    for (final t in source) {
+      final at = t.archivedAt;
+      if (at == null) continue;
+      final month = DateTime(at.year, at.month);
+      byMonth.putIfAbsent(month, () => []).add(t);
+    }
+    final groups = byMonth.entries
+        .map((e) => _MonthGroup(month: e.key, tickets: e.value))
+        .toList();
+    groups.sort((a, b) => b.month.compareTo(a.month));
+    return groups;
+  }
+}
+
+class _MonthGroup {
+  final DateTime month;
+  final List<TicketSummary> tickets;
+  _MonthGroup({required this.month, required this.tickets});
+}
+
+class _MonthHeader extends StatelessWidget {
+  final String label;
+  final String profitLabel;
+  final bool profitPositive;
+  const _MonthHeader({
+    required this.label,
+    required this.profitLabel,
+    required this.profitPositive,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.bgSurfaceOf(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.borderOf(context)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+            ),
+          ),
+          Text(
+            profitLabel,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+              color: profitPositive ? AppTheme.success : AppTheme.danger,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArchivedTicketCard extends StatelessWidget {
+  final TicketSummary ticket;
+  final NumberFormat money;
+  const _ArchivedTicketCard({required this.ticket, required this.money});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onLongPress: () => _onLongPress(context),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.bgSurfaceOf(context),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.borderOf(context)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    ticket.ticketNumber,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                Icon(Icons.archive_outlined,
+                    size: 16, color: AppTheme.textMutedOf(context)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              ticket.buyer ?? l10n.ticketsNoBuyer,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.textMutedOf(context),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'EK ${money.format(ticket.totalEk)}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'VK ${money.format(ticket.totalVk)}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    money.format(ticket.totalProfit),
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: ticket.totalProfit >= 0
+                          ? AppTheme.success
+                          : AppTheme.danger,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              l10n.ticketsArchiveLongPressHint,
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.textMutedOf(context),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onLongPress(BuildContext context) async {
+    final ticketId = ticket.ticketId;
+    if (ticketId == null) return;
+    HapticFeedback.mediumImpact();
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppTheme.borderOf(context),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Text(
+                ticket.ticketNumber,
+                style: const TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.w900),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.ticketsArchiveReopenConfirm,
+                textAlign: TextAlign.center,
+                style:
+                    TextStyle(color: AppTheme.textMutedOf(context), fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  icon: const Icon(Icons.unarchive_outlined),
+                  label: Text(l10n.ticketsArchiveReopen),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 48,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(l10n.actionCancel),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<InventoryProvider>();
+    try {
+      await provider.reopenTicket(ticketId);
+      if (!context.mounted) return;
+      messenger.showSnackBar(SnackBar(
+          content: Text('${l10n.ticketsArchiveReopen} · ${ticket.ticketNumber}')));
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorPrefix('$e'))));
+    }
   }
 }
 
