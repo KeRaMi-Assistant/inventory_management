@@ -8,6 +8,7 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
+  id-token: write
 
 jobs:
   code-review:
@@ -18,6 +19,11 @@ jobs:
           fetch-depth: 0
 
       - name: Claude Code Review
+        # continue-on-error: das Action-Token-Exchange braucht den
+        # Claude-Code-GitHub-App auf dem Repo (https://github.com/apps/claude).
+        # Solange der nicht installiert ist, soll der Step zwar laufen, aber
+        # das Job-Ergebnis nicht blocken — sonst bleibt jeder PR hängen.
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
