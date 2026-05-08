@@ -2756,6 +2756,54 @@ abstract class AppLocalizations {
   /// **'Schließen'**
   String get inventoryClose;
 
+  /// No description provided for @inventoryTabStock.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager'**
+  String get inventoryTabStock;
+
+  /// No description provided for @inventoryTabSold.
+  ///
+  /// In de, this message translates to:
+  /// **'Verkauft'**
+  String get inventoryTabSold;
+
+  /// No description provided for @inventorySoldEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine verkauften Artikel.'**
+  String get inventorySoldEmpty;
+
+  /// No description provided for @inventorySoldKpiCount.
+  ///
+  /// In de, this message translates to:
+  /// **'Verkaufte Items'**
+  String get inventorySoldKpiCount;
+
+  /// No description provided for @inventorySoldKpiProfit.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamt-Profit'**
+  String get inventorySoldKpiProfit;
+
+  /// No description provided for @inventorySoldKpiTopBuyers.
+  ///
+  /// In de, this message translates to:
+  /// **'Top 3 Käufer'**
+  String get inventorySoldKpiTopBuyers;
+
+  /// No description provided for @inventorySoldNoBuyer.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Käufer-Daten'**
+  String get inventorySoldNoBuyer;
+
+  /// No description provided for @inventorySoldBuyerItems.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Stück'**
+  String inventorySoldBuyerItems(int count);
+
   /// No description provided for @supplierAddTitle.
   ///
   /// In de, this message translates to:
