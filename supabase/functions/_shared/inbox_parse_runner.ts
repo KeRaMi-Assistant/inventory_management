@@ -231,14 +231,14 @@ async function applyUpdateToDeal(
 ): Promise<void> {
   const { data: dealData, error: readErr } = await admin
     .from('deals')
-    .select('status, tracking, arrival_date')
+    .select('status, tracking, arrival_date, note')
     .eq('id', dealId)
     .maybeSingle()
   if (readErr || !dealData) {
     console.warn('deal read for update failed', dealId, readErr)
     return
   }
-  const before = dealData as DealRow
+  const before = dealData as DealRow & { note?: string | null }
   const update: Record<string, unknown> = {}
   const changes: string[] = []
 
@@ -254,13 +254,31 @@ async function applyUpdateToDeal(
     changes.push(`Status ${before.status} → ${targetStatus}`)
   }
 
-  let arrivalIso = parsed.eta
+  // ETA / Arrival-Date-Hierarchie: explizites `parsed.etaDate` (ISO-Date
+  // aus Forensik-Helpers) hat Vorrang vor altem `parsed.eta`-Free-Form-
+  // Feld; bei `delivered` fallback auf Mail-Empfangs-Zeitpunkt.
+  let arrivalIso: string | undefined = parsed.etaDate
+    ? `${parsed.etaDate}T00:00:00.000Z`
+    : parsed.eta
   if (parsed.status === 'delivered' && !arrivalIso) {
     arrivalIso = row.received_at ?? new Date().toISOString()
   }
   if (arrivalIso && !before.arrival_date) {
     update.arrival_date = arrivalIso
     changes.push(`Lieferdatum ${arrivalIso.slice(0, 10)}`)
+  }
+
+  // Storno-Grund in Deal-Note hängen — der User soll im Activity-Log
+  // sehen WARUM das gecancelt wurde.
+  if (parsed.status === 'cancelled' && parsed.cancellationReason) {
+    const noteLine = `Storniert: ${parsed.cancellationReason}`
+    const existing = (before.note ?? '').trim()
+    if (!existing.includes(noteLine)) {
+      update.note = existing.length > 0
+        ? `${existing}\n${noteLine}`
+        : noteLine
+      changes.push(`Storno-Grund: ${parsed.cancellationReason}`)
+    }
   }
 
   if (Object.keys(update).length === 0) return
@@ -327,6 +345,19 @@ export function stripBody(
     carrier: parsed.carrier,
     eta: parsed.eta,
     status: parsed.status,
+    // ── Forensik-Erweiterungen (alle optional). Ein leeres / undefined
+    //    Feld bleibt undefined und wird von Postgres als JSON-null
+    //    gespeichert — bestehende Konsumenten lesen diese Keys nicht
+    //    und sind davon nicht betroffen.
+    eta_date: parsed.etaDate,
+    shipped_at: parsed.shippedAt,
+    order_total: parsed.orderTotal,
+    tax_rate_pct: parsed.taxRatePct,
+    shipping_address_country: parsed.shippingAddressCountry,
+    items: parsed.items,
+    delivery_method: parsed.deliveryMethod,
+    cancellation_reason: parsed.cancellationReason,
+    seller: parsed.seller,
   }
   // Re-Parse-Quelle: nur wenn KEIN tracking extrahiert werden konnte und
   // die Mail aussieht wie ein Versand-Update. Sonst Speicher sparen.

@@ -14,6 +14,19 @@
 //                          die Mail im Unklassifiziert-Tab mit shop_key, der
 //                          User kann manuell daraus einen Deal machen.
 
+export interface ParsedOrderItem {
+  product: string
+  quantity: number
+  unitPrice?: number
+  currency?: string
+  seller?: string
+}
+
+export interface OrderTotal {
+  amount: number
+  currency: string
+}
+
 export interface ParsedOrder {
   shopKey: string
   shopLabel: string
@@ -32,6 +45,31 @@ export interface ParsedOrder {
   carrier?: string
   eta?: string
   status?: 'ordered' | 'shipped' | 'delivered' | 'cancelled' | 'refunded'
+
+  // ── Forensik-Erweiterungen (alle optional, additiv) ──────────────────
+  /// ISO-Date `YYYY-MM-DD`. Frühster im HTML genannter Liefertermin.
+  /// Wenn ein Range angegeben ist (z.B. "18.-21. März 2026"), nimmt
+  /// `eta_date` den Range-Start.
+  etaDate?: string
+  /// ISO-DateTime `YYYY-MM-DDTHH:mm:ssZ`. Aus Unix-Timestamp im
+  /// Tracking-URL (Amazon: `&shipmentDate=…`) oder explizitem
+  /// "versandt am …"-Block.
+  shippedAt?: string
+  /// Order-Total inkl. MwSt mit Currency.
+  orderTotal?: OrderTotal
+  /// MwSt-Satz in Prozent (PCComponentes / Marketplace zeigen explizit).
+  taxRatePct?: number
+  /// Ländercode der Versandadresse — kein Name/Straße (DSGVO).
+  shippingAddressCountry?: string
+  /// Item-Liste für Multi-Article-Bestellungen.
+  items?: ParsedOrderItem[]
+  /// Zustellart wenn explizit angegeben.
+  deliveryMethod?: 'standard' | 'express' | 'pickup' | 'partner'
+  /// Storno-Grund.
+  cancellationReason?: string
+  /// Verkäufer/Marketplace-Seller (Top-Level — bei Marketplace-Mails
+  /// häufig pro Item nochmal in `items[].seller`).
+  seller?: string
 }
 
 export interface MailContext {
@@ -444,6 +482,353 @@ const productFromSubject = (subject: string): string | undefined => {
   return undefined
 }
 
+// ── Forensik-Helper ────────────────────────────────────────────────────
+
+/// DE-Monatsnamen → Monatsindex.
+const DE_MONTHS: Record<string, number> = {
+  'januar': 1, 'jan': 1, 'februar': 2, 'feb': 2, 'märz': 3, 'maerz': 3,
+  'mär': 3, 'mar': 3, 'april': 4, 'apr': 4, 'mai': 5, 'juni': 6, 'jun': 6,
+  'juli': 7, 'jul': 7, 'august': 8, 'aug': 8, 'september': 9, 'sep': 9,
+  'sept': 9, 'oktober': 10, 'okt': 10, 'oct': 10, 'november': 11, 'nov': 11,
+  'dezember': 12, 'dez': 12, 'dec': 12,
+}
+/// EN-Monatsnamen → Monatsindex.
+const EN_MONTHS: Record<string, number> = {
+  'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5,
+  'june': 6, 'july': 7, 'august': 8, 'september': 9, 'october': 10,
+  'november': 11, 'december': 12,
+}
+/// ES-Monatsnamen.
+const ES_MONTHS: Record<string, number> = {
+  'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 'mayo': 5,
+  'junio': 6, 'julio': 7, 'agosto': 8, 'septiembre': 9, 'octubre': 10,
+  'noviembre': 11, 'diciembre': 12,
+}
+
+function monthIndex(name: string): number | null {
+  const k = name.toLowerCase().replace(/\.$/, '')
+  return DE_MONTHS[k] ?? EN_MONTHS[k] ?? ES_MONTHS[k] ?? null
+}
+
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : String(n)
+}
+
+function isoFromYmd(y: number, m: number, d: number): string | undefined {
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return undefined
+  if (m < 1 || m > 12 || d < 1 || d > 31) return undefined
+  return `${y}-${pad2(m)}-${pad2(d)}`
+}
+
+/// Extrahiert das frühste ETA-Datum aus dem Mail-Body. Versucht in
+/// dieser Reihenfolge:
+///   1. Unix-Timestamp im URL (`&latestArrivalDate=1778004000`).
+///   2. Numerisches DE-Format `15.05.2026`.
+///   3. EN-Format `March 15, 2026` / `Mar 15, 2026`.
+///   4. DE-Wort-Format `15. März 2026` oder `Donnerstag, 12.03.2026`.
+///   5. Wochentag + DE-Monat ohne Jahr → mit aktuellem Jahr (mit
+///      Roll-Over auf nächstes Jahr falls Datum > 4 Monate in
+///      Vergangenheit liegt).
+export function extractEtaDate(html: string, text: string): string | undefined {
+  // (1) Unix-Timestamp. Auch HTML-entity-coded URLs (&amp;) abfangen.
+  const decodedHtml = html.replace(/&amp;/g, '&')
+  const tsMatch = /[?&]latestArrivalDate=(\d{10})\b/.exec(decodedHtml)
+  if (tsMatch) {
+    const ts = Number(tsMatch[1])
+    if (Number.isFinite(ts)) {
+      const d = new Date(ts * 1000)
+      if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10)
+    }
+  }
+  const haystack = text.length > 0 ? text : stripHtml(html)
+
+  // (2) Numerisches DE-Format mit Wochentag-Prefix.
+  // "Lieferung bis Dienstag, 17.02.2026" / "Lieferdatum: 18.03.2026".
+  const numericDe = /(?:Lieferung\s+bis|Lieferdatum|Voraussichtliche?s?\s+(?:Lieferung|Liefertermin|Lieferdatum)|Geschätztes?\s+Lieferdatum|Voraussichtlicher?\s+Versand|Estimated\s+Delivery\s+Date)[\s:,]+(?:\w+,\s+)?(\d{1,2})\.(\d{1,2})\.(\d{4})/i.exec(haystack)
+  if (numericDe) {
+    return isoFromYmd(Number(numericDe[3]), Number(numericDe[2]), Number(numericDe[1]))
+  }
+
+  // (3) EN-Format: "March 15, 2026" / "Mar 15, 2026" / "March 15-17, 2026".
+  const enFormat = /(?:Estimated\s+(?:Delivery|delivery)|Delivery\s+Date)[:\s]+(\w+)\s+(\d{1,2})(?:-\d{1,2})?,?\s+(\d{4})/i.exec(haystack)
+  if (enFormat) {
+    const m = monthIndex(enFormat[1])
+    if (m !== null) return isoFromYmd(Number(enFormat[3]), m, Number(enFormat[2]))
+  }
+
+  // (4) DE-Wort-Format mit Tag.: "15. März 2026" / "Donnerstag, 18. März 2026".
+  const deWord = /(\d{1,2})\.\s+(\w+)\s+(\d{4})/.exec(haystack)
+  if (deWord) {
+    const m = monthIndex(deWord[2])
+    if (m !== null) return isoFromYmd(Number(deWord[3]), m, Number(deWord[1]))
+  }
+
+  // (4b) ES-Wort-Format: "Martes, 3 Marzo" → fallback ohne Jahr unten.
+  const esWord = /(?:Entrega|entrega).{0,40}?(\d{1,2})\s+(\w+)/i.exec(haystack)
+  if (esWord) {
+    const m = monthIndex(esWord[2])
+    if (m !== null) {
+      const year = pickYearForMonth(m)
+      return isoFromYmd(year, m, Number(esWord[1]))
+    }
+  }
+
+  // (5) Wochentag + DE-Monat ohne Jahr: "Dienstag, 5 Mai", "Montag, 9 Februar".
+  const dayMonth = /(?:Mon|Die|Mit|Don|Fre|Sam|Son|Mo|Di|Mi|Do|Fr|Sa|So)[a-zäöü]*,?\s+(\d{1,2})\.?\s+(\w+)/i.exec(haystack)
+  if (dayMonth) {
+    const m = monthIndex(dayMonth[2])
+    if (m !== null) {
+      const year = pickYearForMonth(m)
+      return isoFromYmd(year, m, Number(dayMonth[1]))
+    }
+  }
+
+  return undefined
+}
+
+/// Wähle das Jahr für ein gegebenes Monat: aktuelles Jahr, falls dieses
+/// Monat noch dieses Jahr kommt; sonst nächstes Jahr (für Roll-Over wenn
+/// die Mail erst ankommt nachdem das Datum-Year wechselte).
+function pickYearForMonth(month: number): number {
+  const now = new Date()
+  const curMonth = now.getUTCMonth() + 1
+  const curYear = now.getUTCFullYear()
+  // Wenn Mail-Datum mehr als 4 Monate in Vergangenheit → nächstes Jahr.
+  if (month + 4 < curMonth) return curYear + 1
+  return curYear
+}
+
+/// Shipped-At aus Body extrahieren — Unix-Timestamp im URL hat Vorrang.
+export function extractShippedAt(html: string, text: string): string | undefined {
+  const decodedHtml = html.replace(/&amp;/g, '&')
+  const tsMatch = /[?&]shipmentDate=(\d{10})\b/.exec(decodedHtml)
+  if (tsMatch) {
+    const ts = Number(tsMatch[1])
+    if (Number.isFinite(ts)) {
+      const d = new Date(ts * 1000)
+      if (!Number.isNaN(d.getTime())) return d.toISOString()
+    }
+  }
+  const haystack = text.length > 0 ? text : stripHtml(html)
+  const m = /(?:versandt\s+am|verpackt\s+am|am\s+(\d{1,2}\.\d{1,2}\.\d{4})\s+verpackt|shipped\s+on)[:\s]*(\d{1,2}\.\d{1,2}\.\d{4})?/i
+    .exec(haystack)
+  if (m && (m[1] || m[2])) {
+    const date = m[1] ?? m[2]
+    const parts = /(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec(date ?? '')
+    if (parts) {
+      const iso = isoFromYmd(Number(parts[3]), Number(parts[2]), Number(parts[1]))
+      if (iso) return `${iso}T00:00:00.000Z`
+    }
+  }
+  return undefined
+}
+
+/// Order-Total mit Currency aus Body — versucht mehrere Labels.
+/// Akzeptiert Currency vor ODER nach dem Betrag, plus
+/// CH-Format mit Apostroph-Tausender (1'248.95).
+export function extractOrderTotal(text: string): OrderTotal | undefined {
+  // Labels für die Total-Position. Das Label-Pattern wird gefolgt von
+  // optionalen Prä-Currency-Symbolen + Betrag + optionalen Post-Currency.
+  // Label-Block kann zwischen Hauptlabel und Suffix ein `:` enthalten
+  // ("Gesamtsumme: inkl. MwSt 269 Euro") — deshalb erlauben wir `[\s:.]+`
+  // zwischen Hauptlabel und optionalem `inkl. MwSt`-Anhängsel.
+  const labelRe = /(Gesamtbetrag(?:[\s:.]+der\s+Bestellung)?|Gesamtsumme(?:[\s:.]+inkl\.\s+MwSt)?|Endbetrag(?:[\s:.]+inkl\.\s+MwSt)?|Order\s+Total|Importe\s+total|Total\s+amount|Razem|Celkem(?:\s+k\s+úhrad[ěe])?|Bestellbetrag(?:\s*\(inkl\.\s*MwSt\))?|Total)\s*[:.]?\s*((?:€|EUR|\$|USD|GBP|£|CHF|PLN|zł|Kč|CZK|Ft|HUF|Euro)\s*)?([\d.,'\s]+)\s*(€|EUR|\$|USD|GBP|£|CHF|PLN|zł|Kč|CZK|Ft|HUF|Euro|Euro\b)?/i
+  const m = labelRe.exec(text)
+  if (!m) return undefined
+  const rawNum = (m[3] ?? '').replace(/['\s]/g, '')
+  const amount = normalizeAmount(rawNum)
+  if (amount === undefined) return undefined
+  const currencyHint = (m[2] ?? m[4] ?? text.slice(m.index, m.index + 100))
+    .trim()
+  return { amount, currency: detectCurrency(currencyHint, text) }
+}
+
+function detectCurrency(near: string, full: string): string {
+  if (/€|EUR|EURO/i.test(near)) return 'EUR'
+  if (/\$|USD/i.test(near)) return 'USD'
+  if (/£|GBP/i.test(near)) return 'GBP'
+  if (/CHF/i.test(near)) return 'CHF'
+  if (/PLN|ZŁ|ZL/i.test(near)) return 'PLN'
+  if (/Kč|CZK/i.test(near)) return 'CZK'
+  if (/Ft|HUF/i.test(near)) return 'HUF'
+  // Fallback: scan full text.
+  if (/CHF/i.test(full)) return 'CHF'
+  if (/£|GBP/i.test(full)) return 'GBP'
+  if (/\$|USD/i.test(full)) return 'USD'
+  if (/zł|PLN/i.test(full)) return 'PLN'
+  if (/Kč|CZK/i.test(full)) return 'CZK'
+  return 'EUR'
+}
+
+function normalizeAmount(raw: string): number | undefined {
+  // Handle DE/EU-Format (1.234,56) and EN-Format (1,234.56).
+  // Heuristik: wenn beide Trenner vorhanden und letzter ist ',' → DE.
+  // Wenn nur ',' → DE-Decimal. Wenn nur '.' und Position > 3 chars from
+  // end → EN-Thousands (drop). Sonst EN-Decimal.
+  const s = raw.replace(/\s/g, '')
+  if (!/[\d.,]+/.test(s)) return undefined
+  const lastComma = s.lastIndexOf(',')
+  const lastDot = s.lastIndexOf('.')
+  let cleaned: string
+  if (lastComma > lastDot) {
+    // DE: Komma als Dezimal, Punkt als Tausender.
+    cleaned = s.replace(/\./g, '').replace(',', '.')
+  } else if (lastDot > lastComma) {
+    // EN: Punkt als Dezimal, Komma als Tausender.
+    cleaned = s.replace(/,/g, '')
+  } else {
+    cleaned = s
+  }
+  const n = Number(cleaned)
+  return Number.isFinite(n) ? n : undefined
+}
+
+/// Tax-Rate (% inkl. ohne %-Suffix) aus expliziten Labels.
+export function extractTaxRatePct(text: string): number | undefined {
+  // "MwSt (19%)", "IVA (21%)", "VAT (20%)", "TVA (19,6%)", "MwSt 19%",
+  // "Sales Tax (8.875%)" (US-Kommunen mit 3 Decimal-Places).
+  const m = /(?:MwSt|Mehrwertsteuer|VAT|IVA|TVA|Sales\s+Tax)\s*\(?(\d{1,2}(?:[.,]\d{1,4})?)\s*%\)?/i.exec(text)
+  if (m && m[1]) {
+    const n = normalizeAmount(m[1])
+    if (n !== undefined && n > 0 && n < 50) return n
+  }
+  return undefined
+}
+
+/// Country-Code aus Lieferanschrift (DE/AT/CH/NL/...). Kein PII.
+export function extractShippingCountry(text: string): string | undefined {
+  const m = /(?:Lieferanschrift|Lieferadresse|Shipping\s+address|Dirección\s+de\s+envío)\s*:?[\s\S]{4,300}?\s+(DE|AT|CH|NL|ES|IT|FR|GB|UK|PL|CZ|SK|HU|BE|LU|DK|SE|FI|NO|US|CA)\b/i.exec(text)
+  if (m) return m[1].toUpperCase().replace('UK', 'GB')
+  return undefined
+}
+
+/// Lieferart-Detection. Heuristiken hierarchisch:
+///   1. Explizite "Versandart"-Labels.
+///   2. Spezial-Carrier (Schenker/Hellmann/Sperrgut → 'partner').
+///   3. "Express"/"Premium"/"Priority" → 'express'.
+///   4. "Click & Collect"/"Pickup"/"Selbstabholung"/"Paczkomat" → 'pickup'.
+///   5. Fallback: 'standard' wenn irgendein Versand-Hinweis im Text.
+export function extractDeliveryMethod(text: string): ParsedOrder['deliveryMethod'] {
+  if (/Sperrgut|Schenker|Hellmann\s+Worldwide|Speditionsversand|Versand\s+durch:\s*Schenker/i.test(text)) {
+    return 'partner'
+  }
+  if (/\b(Express|Priority|Premium\s+Versand|Same[- ]?Day|Prime\s+Express)\b/i.test(text)) {
+    return 'express'
+  }
+  if (/(Click\s*&\s*Collect|Selbstabholung|Pickup|Pickup\s+Point|Paczkomat|Filialabholung)/i.test(text)) {
+    return 'pickup'
+  }
+  if (/(Versand|Shipping|Standard\s+Versand|Post\s+Standard)/i.test(text)) {
+    return 'standard'
+  }
+  return undefined
+}
+
+/// Storno-Grund aus expliziten Labels (DE/EN/ES). Stoppt am ersten
+/// Sentence-Boundary (./!/?) oder am nächsten neuen-Satz-Anfang
+/// ("Der …", "Wir …", "Eine …", EUR-Block) — sonst greift `[^.]{4,160}`
+/// nach HTML-Strip oft die ganze Folge-Sentence mit ein.
+export function extractCancellationReason(text: string): string | undefined {
+  const m = /(?:Grund|Motivo|Reason|Razón)\s*:\s*([A-ZÄÖÜ][\wäöüÄÖÜß\- ]{2,80}?)(?=\s+(?:Der|Die|Das|Eine|Wir|Sie|Es|Ihre|Deine|Bei|EUR\b|USD\b|\$\d|GBP\b|CHF\b|Mit\s+freundlichen)|\s*[.!?,;]|\s*$|\s*\n)/i
+    .exec(text)
+  if (m && m[1]) return m[1].trim()
+  return undefined
+}
+
+/// Multi-Item-Extraktion. Adapter-spezifische Layouts haben eigene
+/// Parser, hier nur ein Generic-Fallback der nach 2+ Item-artigen
+/// Blöcken sucht (Brand-Word + Preis).
+export function extractGenericItems(text: string, fallbackCurrency = 'EUR'): ParsedOrderItem[] {
+  const items: ParsedOrderItem[] = []
+  // Sehr konservativ: matche Zeilen mit "<NAME mind. 2 Tokens> <Preis>".
+  // Keine "ASIN-IDs" o.ä. mitnehmen.
+  const re = /([A-Z][A-Za-z0-9 \-+./äöüÄÖÜß®™()]{6,80}(?:\s+[A-Z0-9][A-Za-z0-9 \-+./äöüÄÖÜß®™()]+){0,4})\s+(?:[\d.,]+\s*(?:€|EUR|\$|USD|GBP|£|CHF|PLN|zł)|EUR\s+[\d.,]+|\$[\d.,]+)/g
+  let m: RegExpExecArray | null
+  let count = 0
+  while ((m = re.exec(text)) !== null && count < 10) {
+    const name = m[1].trim()
+    if (name.split(/\s+/).length < 2) continue
+    if (/^(Versand|Total|Subtotal|Gesamt|Order|Mwst|VAT|IVA|Importe)/i.test(name)) continue
+    items.push({ product: name, quantity: 1, currency: fallbackCurrency })
+    count++
+  }
+  return items
+}
+
+/// Adapter-spezifischer MediaMarkt/Saturn-Item-Parser. Pattern:
+///   `<qty>  <sku>  <name>  Lieferung bis …  <unit>  Euro  <sum>  Euro`.
+export function extractMediaMarktItems(text: string): ParsedOrderItem[] {
+  const items: ParsedOrderItem[] = []
+  const re = /(\d{1,3})\s+(\d{6,9})\s+([A-Z][^\n]{4,140}?)\s+Lieferung\s+bis\s+\w+,\s*\d{1,2}\.\d{1,2}\.\d{4}\s+([\d.,]+)\s*Euro\s+([\d.,]+)\s*Euro/gi
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    const name = m[3].trim()
+    if (/Aktion\s+myMediaMarkt|Rabatt/i.test(name)) continue
+    const qty = Number(m[1])
+    const unit = normalizeAmount(m[4])
+    items.push({
+      product: name,
+      quantity: Number.isFinite(qty) ? qty : 1,
+      unitPrice: unit,
+      currency: 'EUR',
+    })
+  }
+  return items
+}
+
+/// PCComponentes-Item-Parser. Pattern: `<NAME> Einheiten: <N> ...`.
+/// Strategie: Wir splitten den Text bei `Einheiten:` (DE) und
+/// `Unidades:` (ES) und nehmen pro Split den letzten "name + price"-
+/// Block davor. Das umgeht das Header-Boilerplate ("Bestelldetails
+/// Produkt Stk. Preis") robust ohne hard-coded Filter-Liste.
+export function extractPcComponentesItems(text: string): ParsedOrderItem[] {
+  const items: ParsedOrderItem[] = []
+  const splitRe = /(Einheiten|Unidades)\s*:\s*(\d{1,3})(?:\s+([\d.,]+)\s*€)?/g
+  let m: RegExpExecArray | null
+  let lastIndex = 0
+  while ((m = splitRe.exec(text)) !== null) {
+    const before = text.slice(lastIndex, m.index)
+    // Nimm das letzte Stück bevor Einheiten: das nicht zur Header-Boilerplate
+    // gehört. Robustes Pattern: nimm bis zu 6 Tokens vor "Einheiten:".
+    const nameMatch = /([A-Z][A-Za-z0-9 \-+./äöüÄÖÜßáéíóúñ®™()]{4,140}?)$/
+      .exec(before.trim())
+    lastIndex = m.index + m[0].length
+    if (!nameMatch) continue
+    let name = nameMatch[1].trim()
+    // Header-Boilerplate ("Bestelldetails Produkt Stk. Preis") wegtrimmen.
+    name = name.replace(/^(?:.*?Bestelldetails(?:\s+Produkt\s+Stk\.?\s+Preis)?\s+)/i, '')
+      .replace(/^(?:.*?Detalles\s+del\s+pedido\s+)/i, '')
+      .trim()
+    if (name.length < 4) continue
+    if (/^(Bestelldetails|Produkt|Stk|Preis|Subtotal|Total|MwSt|IVA|Detalles)/i.test(name)) continue
+    const qty = Number(m[2])
+    items.push({
+      product: name,
+      quantity: Number.isFinite(qty) ? qty : 1,
+      unitPrice: m[3] ? normalizeAmount(m[3]) : undefined,
+      currency: 'EUR',
+    })
+  }
+  return items
+}
+
+/// Verkäufer (`seller`) aus expliziten Labels. Stoppt an Komma/Newline
+/// oder am nächsten Section-Keyword (Lieferung, Total, ...). Punkte
+/// innerhalb des Namens (S.a.r.L., S.A., GmbH.) werden NICHT als
+/// Boundary genutzt — sonst würde "Amazon EU S.a.r.L." auf "Amazon EU S"
+/// abgeschnitten.
+export function extractSeller(text: string): string | undefined {
+  const m = /(?:Verkauft\s+von|Sold\s+by|Vendido\s+por|Verkäufer)\s*[:\s]+([A-Za-z][\w.&\- ]{1,60}?)(?:\s+(?:Lieferung|Item\s+Number|Order\s+ID|Bestellnummer|EUR\s|USD\s|\$\s|MwSt|VAT|IVA|Quantity|Menge|Einheiten|Unidades|Total|Subtotal|Versand|Shipping|Address|Zwischensumme|Carrier|Estimated|Voraussichtlich)\b|\s*[,;\n]|\s*$)/i
+    .exec(text)
+  if (m && m[1]) {
+    const cleaned = m[1].trim().replace(/\s+/g, ' ')
+    // Header "Verkäufer Bestellnummer" überspringen.
+    if (/Bestellnummer/i.test(cleaned)) return undefined
+    return cleaned
+  }
+  return undefined
+}
+
 // ── Amazon (DE/COM/UK/FR/IT/ES) ────────────────────────────────────────
 // Business-Subdomain wird zugelassen für Order-/Versand-Mailflows
 // (`shipment-tracking@business.amazon.de`, `auto-confirm@business.amazon.de`).
@@ -483,11 +868,23 @@ const amazon: Adapter = {
     const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
+    const etaDate = extractEtaDate(ctx.html, s)
+    const shippedAt = extractShippedAt(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const taxRatePct = extractTaxRatePct(s)
+    const seller = extractSeller(s)
+    const deliveryMethod = /Amazon\s+Logistics/i.test(s)
+      ? 'partner' as const
+      : extractDeliveryMethod(s)
+    const cancellationReason = status === 'cancelled'
+      ? extractCancellationReason(s) : undefined
     if (!orderId && !product && !tracking) return null
     return {
       shopKey: 'amazon', shopLabel: 'Amazon',
       orderId, product, quantity: Math.max(1, qty),
       total, currency, tracking, trackings, carrier, status,
+      etaDate, shippedAt, orderTotal, taxRatePct, seller,
+      deliveryMethod, cancellationReason,
     }
   },
 }
@@ -516,10 +913,17 @@ const mediamarkt: Adapter = {
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
     if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const items = extractMediaMarktItems(s)
+    const shippingAddressCountry = extractShippingCountry(s)
+    const deliveryMethod = extractDeliveryMethod(s)
     return {
       shopKey: 'mediamarkt', shopLabel: 'MediaMarkt',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      etaDate, orderTotal, items: items.length > 0 ? items : undefined,
+      shippingAddressCountry, deliveryMethod,
     }
   },
 }
@@ -547,10 +951,17 @@ const saturn: Adapter = {
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
     if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const items = extractMediaMarktItems(s)
+    const shippingAddressCountry = extractShippingCountry(s)
+    const deliveryMethod = extractDeliveryMethod(s)
     return {
       shopKey: 'saturn', shopLabel: 'Saturn',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      etaDate, orderTotal, items: items.length > 0 ? items : undefined,
+      shippingAddressCountry, deliveryMethod,
     }
   },
 }
@@ -621,11 +1032,18 @@ const pccomponentes: Adapter = {
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
     if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const items = extractPcComponentesItems(s)
+    const taxRatePct = extractTaxRatePct(s)
+    const seller = extractSeller(s)
     return {
       shopKey: 'pccomponentes', shopLabel: 'PcComponentes',
       orderId, product, quantity: Math.max(1, qty),
       total, currency: currency === 'EUR' ? 'EUR' : currency,
       tracking, trackings, carrier, status,
+      etaDate, orderTotal, taxRatePct, seller,
+      items: items.length > 0 ? items : undefined,
     }
   },
 }
@@ -655,11 +1073,16 @@ const xkom: Adapter = {
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
     if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const deliveryMethod = /Paczkomat/i.test(s) ? 'pickup' as const
+      : extractDeliveryMethod(s)
     return {
       shopKey: 'xkom', shopLabel: 'x-kom',
       orderId, product, quantity: 1,
       total, currency: currency === 'EUR' ? 'PLN' : currency, // x-kom default PLN
       tracking, trackings, carrier, status,
+      etaDate, orderTotal, deliveryMethod,
     }
   },
 }
@@ -699,10 +1122,17 @@ const lego: Adapter = {
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
     if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const taxRatePct = extractTaxRatePct(s)
+    const items = extractGenericItems(s, currency)
+    const deliveryMethod = extractDeliveryMethod(s)
     return {
       shopKey: 'lego', shopLabel: 'LEGO',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      etaDate, orderTotal, taxRatePct, deliveryMethod,
+      items: items.length > 0 ? items : undefined,
     }
   },
 }
@@ -746,10 +1176,15 @@ const tink: Adapter = {
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
     if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const shippedAt = extractShippedAt(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const taxRatePct = extractTaxRatePct(s)
     return {
       shopKey: 'tink', shopLabel: 'tink',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      etaDate, shippedAt, orderTotal, taxRatePct,
     }
   },
 }
@@ -785,10 +1220,15 @@ const anker: Adapter = {
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
     if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const taxRatePct = extractTaxRatePct(s)
+    const deliveryMethod = extractDeliveryMethod(s)
     return {
       shopKey: 'anker', shopLabel: 'Anker',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      etaDate, orderTotal, taxRatePct, deliveryMethod,
     }
   },
 }
@@ -825,10 +1265,19 @@ const euronics: Adapter = {
     const { tracking, trackings, carrier } = gateTracking(
       status, rawShip.trackings, rawShip.carrier)
     if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const taxRatePct = extractTaxRatePct(s)
+    // Filiale aus Sender-Domain ableiten (euronics-buecker.de → "Euronics Bücker").
+    const subdomainMatch = /euronics-([a-z0-9-]+)\.de/i.exec(ctx.from)
+    const seller = subdomainMatch
+      ? `Euronics ${subdomainMatch[1].charAt(0).toUpperCase()}${subdomainMatch[1].slice(1)}`
+      : 'Euronics'
     return {
       shopKey: 'euronics', shopLabel: 'Euronics',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      etaDate, orderTotal, taxRatePct, seller,
     }
   },
 }
@@ -883,10 +1332,230 @@ const kaufland: Adapter = {
       (countSource.match(/Sendungsnummer\s*:\s*\d{6,}/gi) ?? []).length
     const quantity = Math.max(1, sendungsBlocks)
     if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const taxRatePct = extractTaxRatePct(s)
+    // Erster Verkäufer im "Verkäufer Bestellnummer …"-Block. Name darf
+    // keine Whitespace enthalten — sonst würden Multi-Verkäufer-Listen
+    // ("WGServices MK4ABCD TechHandel Berlin") komplett gegriffen.
+    const sellerMatch = /Verkäufer\s+Bestellnummer\s+(\w[\w\-]{1,40})\s+([A-Z0-9]{5,15})/i.exec(s)
+    const seller = sellerMatch ? sellerMatch[1].trim() : undefined
+    const deliveryMethod = extractDeliveryMethod(s)
     return {
       shopKey: 'kaufland', shopLabel: 'Kaufland',
       orderId, product, quantity,
       total, currency, tracking, trackings, carrier, status,
+      etaDate, orderTotal, taxRatePct, seller, deliveryMethod,
+    }
+  },
+}
+
+// ── Dell (Direct-Shop) ─────────────────────────────────────────────────
+// Dell-Order-IDs: 8-10 numerische Codes; Mails kommen von
+// `*@dell.com` und `*@order.dell.com`. EN/DE-Hybrid.
+const dell: Adapter = {
+  key: 'dell',
+  label: 'Dell',
+  matches: (ctx) => /(@|\.)(?:[a-z0-9.-]+\.)?dell\.com\b/i.test(ctx.from),
+  looksLikeOrder: (ctx) => isOrderishSubject(ctx.subject),
+  parse: (ctx) => {
+    const s = haystack(ctx)
+    const orderId = findFirst(s, [
+      /(?:Order\s+(?:Number|#)|Bestellnummer)\s*[:#]?\s*(\d{8,10})/i,
+      /\b(\d{9})\b/,
+    ])
+    const product = sanitizeProduct(findFirst(s, [
+      /(?:Item|Artikel|Produkt|Description)\s*[:=]\s*([^\n]{4,140})/i,
+    ])) ?? productFromSubject(ctx.subject)
+    const totalSrc = /(?:Order\s+Total|Bestellsumme|Gesamt)\s*[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
+    const { total, currency } = parseMoney(totalSrc)
+    const rawShip = findAllTrackings(s, ctx.html)
+    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
+    const { tracking, trackings, carrier } = gateTracking(
+      status, rawShip.trackings, rawShip.carrier)
+    if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const taxRatePct = extractTaxRatePct(s)
+    const items = extractGenericItems(s, currency)
+    return {
+      shopKey: 'dell', shopLabel: 'Dell',
+      orderId, product, quantity: 1,
+      total, currency, tracking, trackings, carrier, status,
+      etaDate, orderTotal, taxRatePct,
+      items: items.length > 0 ? items : undefined,
+    }
+  },
+}
+
+// ── eBay (Marketplace) ─────────────────────────────────────────────────
+// eBay-Mails sind seller-zentrisch. Order-ID-Format mit Bindestrichen
+// (17-12345-67890) oder reine Item-Nrn (12-stellig).
+const ebay: Adapter = {
+  key: 'ebay',
+  label: 'eBay',
+  matches: (ctx) =>
+    /(@|\.)(?:[a-z0-9.-]+\.)?ebay\.(com|de|co\.uk|fr|it|es|nl|at|ch)\b/i
+      .test(ctx.from),
+  looksLikeOrder: (ctx) => isOrderishSubject(ctx.subject),
+  parse: (ctx) => {
+    const s = haystack(ctx)
+    const orderId = findFirst(s, [
+      /Order\s+ID\s*:\s*(\d{2}-\d{5}-\d{5})/i,
+      /(?:Item\s+(?:Number|#)|Bestellnummer)\s*[:#]?\s*(\d{8,15})/i,
+      /\b(\d{2}-\d{5}-\d{5})\b/,
+    ])
+    const product = sanitizeProduct(findFirst(s, [
+      /(?:Item|Artikel|Produkt)\s*[:=]\s*([^\n]{4,140})/i,
+    ])) ?? productFromSubject(ctx.subject)
+    const seller = extractSeller(s)
+    const totalSrc = /(?:Total|Gesamt|Importe)\s*[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
+    const { total, currency } = parseMoney(totalSrc)
+    const rawShip = findAllTrackings(s, ctx.html)
+    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
+    const { tracking, trackings, carrier } = gateTracking(
+      status, rawShip.trackings, rawShip.carrier)
+    if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    return {
+      shopKey: 'ebay', shopLabel: 'eBay',
+      orderId, product, quantity: 1,
+      total, currency, tracking, trackings, carrier, status,
+      etaDate, orderTotal, seller,
+    }
+  },
+}
+
+// ── Galaxus (CH/DE) ────────────────────────────────────────────────────
+// Sender: `*@notifications.galaxus.de`. Order-ID: 8-12 numerisch.
+// CH-Format mit Apostroph als Tausender-Trenner; CHF-Default für CH.
+const galaxus: Adapter = {
+  key: 'galaxus',
+  label: 'Galaxus',
+  matches: (ctx) =>
+    /(@|\.)(?:[a-z0-9.-]+\.)?galaxus\.(de|ch|com|at)\b/i.test(ctx.from),
+  looksLikeOrder: (ctx) => isOrderishSubject(ctx.subject),
+  parse: (ctx) => {
+    const s = haystack(ctx)
+    const orderId = findFirst(s, [
+      /(?:Bestellung|Order|Bestellbest[äa]tigung)\s+(?:Nr\.?|#)?\s*(\d{8,12})/i,
+      /Bestellnummer\s*[:#=]?\s*(\d{6,15})/i,
+    ])
+    const product = sanitizeProduct(findFirst(s, [
+      /(?:Artikel|Produkt|Bezeichnung)\s*[:=]\s*([^\n]{4,140})/i,
+    ])) ?? productFromSubject(ctx.subject)
+    const totalSrc = /(?:Endbetrag(?:\s+inkl\.\s+MwSt)?|Gesamt|Total)\s*[:\s]+([^\n]{1,40})/i
+      .exec(s)?.[1] ?? ''
+    const { total, currency: parsedCurrency } = parseMoney(totalSrc)
+    // CHF default für galaxus.ch.
+    const isCh = /galaxus\.ch/i.test(ctx.from) || /CHF/i.test(s)
+    const currency = parsedCurrency === 'EUR' && isCh ? 'CHF' : parsedCurrency
+    const rawShip = findAllTrackings(s, ctx.html)
+    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
+    const { tracking, trackings, carrier } = gateTracking(
+      status, rawShip.trackings, rawShip.carrier)
+    if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const taxRatePct = extractTaxRatePct(s)
+    const items = extractGenericItems(s, currency)
+    const deliveryMethod = extractDeliveryMethod(s)
+    return {
+      shopKey: 'galaxus', shopLabel: 'Galaxus',
+      orderId, product, quantity: 1,
+      total, currency, tracking, trackings, carrier, status,
+      etaDate, orderTotal, taxRatePct, deliveryMethod,
+      items: items.length > 0 ? items : undefined,
+    }
+  },
+}
+
+// ── Alza (CZ/SK/DE/AT/HU/UK) ───────────────────────────────────────────
+const alza: Adapter = {
+  key: 'alza',
+  label: 'Alza',
+  matches: (ctx) =>
+    /(@|\.)(?:[a-z0-9.-]+\.)?alza\.(de|cz|sk|at|hu|co\.uk|com)\b/i
+      .test(ctx.from),
+  looksLikeOrder: (ctx) => isOrderishSubject(ctx.subject),
+  parse: (ctx) => {
+    const s = haystack(ctx)
+    const orderId = findFirst(s, [
+      /(?:Order\s+(?:Number|#)|Bestellnummer)\s*[:#]?\s*(\d{10,14})/i,
+      /\b(\d{12})\b/,
+    ])
+    const product = sanitizeProduct(findFirst(s, [
+      /(?:Description|Artikel|Produkt|Bezeichnung)\s*[:=]\s*([^\n]{4,140})/i,
+    ])) ?? productFromSubject(ctx.subject)
+    const totalSrc = /(?:Order\s+total|Celkem|Gesamtsumme|Total)\s*[:\s]+([^\n]{1,40})/i
+      .exec(s)?.[1] ?? ''
+    const { total, currency: parsedCurrency } = parseMoney(totalSrc)
+    // Currency aus Sender-Domain.
+    const currency = /alza\.cz/i.test(ctx.from) ? 'CZK'
+      : /alza\.co\.uk/i.test(ctx.from) ? 'GBP'
+      : /alza\.hu/i.test(ctx.from) ? 'HUF'
+      : parsedCurrency
+    const rawShip = findAllTrackings(s, ctx.html)
+    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
+    const { tracking, trackings, carrier } = gateTracking(
+      status, rawShip.trackings, rawShip.carrier)
+    if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const taxRatePct = extractTaxRatePct(s)
+    const items = extractGenericItems(s, currency)
+    return {
+      shopKey: 'alza', shopLabel: 'Alza',
+      orderId, product, quantity: 1,
+      total, currency, tracking, trackings, carrier, status,
+      etaDate, orderTotal, taxRatePct,
+      items: items.length > 0 ? items : undefined,
+    }
+  },
+}
+
+// ── XXXLutz (DE/AT) ────────────────────────────────────────────────────
+// Möbel-Marketplace mit Sperrgut-Versand via Speditionen.
+const xxxlutz: Adapter = {
+  key: 'xxxlutz',
+  label: 'XXXLutz',
+  matches: (ctx) =>
+    /(@|\.)(?:[a-z0-9.-]+\.)?(?:xxxlutz|xxxlgroup)\.(de|at|com|cz|sk|pl|hu)\b/i
+      .test(ctx.from),
+  looksLikeOrder: (ctx) => isOrderishSubject(ctx.subject),
+  parse: (ctx) => {
+    const s = haystack(ctx)
+    const orderId = findFirst(s, [
+      /(?:Auftrags?nummer|Bestellnummer)\s*[:#=]?\s*([A-Z0-9]{6,15})/i,
+      /\b(MP\d{8})\b/,
+      /\b(XXL\d{6,10})\b/,
+    ])
+    const product = sanitizeProduct(findFirst(s, [
+      /(?:Artikel|Produkt|Bezeichnung)\s*[:=]\s*([^\n]{4,140})/i,
+    ])) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
+    const totalSrc = /(?:Gesamtsumme(?:\s+inkl\.\s+MwSt)?|Gesamt|Endbetrag)\s*[:\s]+([^\n]{1,40})/i
+      .exec(s)?.[1] ?? ''
+    const { total, currency } = parseMoney(totalSrc)
+    const rawShip = findAllTrackings(s, ctx.html)
+    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
+    const { tracking, trackings, carrier: rawCarrier } = gateTracking(
+      status, rawShip.trackings, rawShip.carrier)
+    // Carrier-Override: wenn Spedition genannt, ist das wichtiger.
+    const speditionMatch = /Versand\s+durch:\s*([A-Z][A-Za-z\s]{2,40})/i.exec(s)
+    const carrier = speditionMatch
+      ? speditionMatch[1].trim().split(/\s/)[0]
+      : rawCarrier
+    if (!orderId && !tracking) return null
+    const etaDate = extractEtaDate(ctx.html, s)
+    const orderTotal = extractOrderTotal(s)
+    const taxRatePct = extractTaxRatePct(s)
+    const deliveryMethod = extractDeliveryMethod(s)
+    return {
+      shopKey: 'xxxlutz', shopLabel: 'XXXLutz',
+      orderId, product, quantity: 1,
+      total, currency, tracking, trackings, carrier, status,
+      etaDate, orderTotal, taxRatePct, deliveryMethod,
     }
   },
 }
@@ -894,6 +1563,7 @@ const kaufland: Adapter = {
 const REGISTRY: Adapter[] = [
   amazon, mediamarkt, saturn, pccomponentes, xkom, kaufland,
   lego, tink, anker, euronics,
+  dell, ebay, galaxus, alza, xxxlutz,
 ]
 
 export function detectAndParse(ctx: MailContext): ParsedOrder | null {
