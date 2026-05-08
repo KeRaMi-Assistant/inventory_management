@@ -7,6 +7,7 @@ class Workspace {
   final DateTime createdAt;
   final String? handle;
   final bool publicProfileEnabled;
+  final DateTime? onboardedAt;
 
   const Workspace({
     required this.id,
@@ -15,6 +16,7 @@ class Workspace {
     required this.createdAt,
     this.handle,
     this.publicProfileEnabled = false,
+    this.onboardedAt,
   });
 
   factory Workspace.fromSupabase(Map<String, dynamic> row) => Workspace(
@@ -25,6 +27,9 @@ class Workspace {
         handle: row['handle'] as String?,
         publicProfileEnabled:
             (row['public_profile_enabled'] as bool?) ?? false,
+        onboardedAt: row['onboarded_at'] != null
+            ? DateTime.parse(row['onboarded_at'] as String)
+            : null,
       );
 
   /// Label, das im UI angezeigt werden soll. Wenn der aktuelle User Owner

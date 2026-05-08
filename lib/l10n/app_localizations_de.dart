@@ -2127,4 +2127,150 @@ class AppLocalizationsDe extends AppLocalizations {
   String settingsDemoReloadError(Object error) {
     return 'Demo-Reload fehlgeschlagen: $error';
   }
+
+  @override
+  String get onboardingSkip => 'Überspringen';
+
+  @override
+  String get onboardingNext => 'Weiter';
+
+  @override
+  String get onboardingBack => 'Zurück';
+
+  @override
+  String get onboardingFinish => 'Fertig';
+
+  @override
+  String get onboardingStepWelcomeTitle => 'Willkommen';
+
+  @override
+  String get onboardingStepWelcomeSubtitle =>
+      'InventoryOS hilft dir, Bestellungen, Lager und Käufer im Blick zu behalten. Wir richten dich in 6 kurzen Schritten ein.';
+
+  @override
+  String get onboardingStepWorkspaceTitle => 'Dein Workspace';
+
+  @override
+  String get onboardingStepWorkspaceSubtitle =>
+      'Alle Daten landen in einem Workspace. Du kannst später Team-Mitglieder einladen oder weitere Workspaces anlegen.';
+
+  @override
+  String get onboardingWorkspaceFallback => 'Mein Workspace';
+
+  @override
+  String get onboardingWorkspaceReady => 'Bereit. Dieser Workspace gehört dir.';
+
+  @override
+  String get onboardingStepShopsTitle => 'Welche Shops nutzt du?';
+
+  @override
+  String get onboardingStepShopsSubtitle =>
+      'Wähle die Shops, von denen du regelmäßig bestellst. Du kannst später jederzeit weitere hinzufügen.';
+
+  @override
+  String get onboardingStepSuppliersTitle => 'Wer sind deine Lieferanten?';
+
+  @override
+  String get onboardingStepSuppliersSubtitle =>
+      'Optional. Trage deine wichtigsten Lieferanten ein, damit Lagerartikel direkt zugeordnet werden können.';
+
+  @override
+  String get onboardingSuppliersHint => 'Lieferanten-Name';
+
+  @override
+  String get onboardingSuppliersAdd => 'Hinzufügen';
+
+  @override
+  String get onboardingStepFirstTicketTitle => 'Erstes Ticket anlegen';
+
+  @override
+  String get onboardingStepFirstTicketSubtitle =>
+      'Optional. Lege gleich einen ersten Deal an, damit dein Dashboard nicht leer ist. Du kannst diesen Schritt überspringen.';
+
+  @override
+  String get onboardingFirstTicketProductHint => 'Produkt (z.B. AirPods Pro 2)';
+
+  @override
+  String get onboardingFirstTicketQuantity => 'Menge';
+
+  @override
+  String get onboardingFirstTicketShop => 'Shop';
+
+  @override
+  String get onboardingStepOutroTitle => 'Fast geschafft!';
+
+  @override
+  String get onboardingStepOutroSubtitle =>
+      'Diese Funktionen findest du in den Einstellungen — kein Stress, du musst sie nicht sofort einrichten:';
+
+  @override
+  String get onboardingOutroDiscord =>
+      'Discord-Server verbinden, um Käufer-Bountys automatisch zuzuordnen.';
+
+  @override
+  String get onboardingOutroInbox =>
+      'Postfach verbinden — Bestellbestätigungen werden dann automatisch erkannt.';
+
+  @override
+  String get onboardingOutroDemo =>
+      'Wenn du dich erstmal umsehen willst: \'Beispiel-Daten laden\' auf dem Dashboard.';
+
+  @override
+  String get onboardingErrorNoWorkspace =>
+      'Kein aktiver Workspace gefunden. Bitte ausloggen und erneut anmelden.';
+
+  @override
+  String onboardingErrorGeneric(Object error) {
+    return 'Onboarding fehlgeschlagen: $error';
+  }
+
+  @override
+  String get dashboardEmptyTitle => 'Noch keine Daten';
+
+  @override
+  String get dashboardEmptySubtitle =>
+      'Lade ein paar Beispiel-Tickets, Käufer und Lagerartikel, um dich in der App zurechtzufinden.';
+
+  @override
+  String get dashboardEmptyLoadDemo => 'Beispiel-Daten laden';
+
+  @override
+  String dashboardDemoLoadSuccess(int count) {
+    return '$count Beispiel-Einträge geladen.';
+  }
+
+  @override
+  String dashboardDemoLoadError(Object error) {
+    return 'Beispiel-Daten konnten nicht geladen werden: $error';
+  }
+
+  @override
+  String get settingsDemoWipeSection => 'Beispiel-Daten';
+
+  @override
+  String get settingsDemoWipeTitle => 'Demo-Daten löschen';
+
+  @override
+  String get settingsDemoWipeDescription =>
+      'Entfernt nur die Einträge, die der \'Beispiel-Daten laden\'-Button erstellt hat. Eigene Daten bleiben unangetastet.';
+
+  @override
+  String get settingsDemoWipe => 'Demo-Daten löschen';
+
+  @override
+  String get settingsDemoWipeConfirmTitle => 'Demo-Daten löschen?';
+
+  @override
+  String get settingsDemoWipeConfirm =>
+      'Alle Einträge, die als Beispiel-Daten markiert sind, werden entfernt. Fortfahren?';
+
+  @override
+  String settingsDemoWipeSuccess(int count) {
+    return '$count Demo-Einträge gelöscht.';
+  }
+
+  @override
+  String settingsDemoWipeError(Object error) {
+    return 'Löschen fehlgeschlagen: $error';
+  }
 }
