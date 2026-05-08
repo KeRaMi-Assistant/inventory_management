@@ -15,6 +15,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { ImapFlow } from 'npm:imapflow@1.0.156'
 import { shouldStore, detectShop } from '../_shared/inbox_adapters.ts'
+import { runParseSweep, type ParseRunStats } from '../_shared/inbox_parse_runner.ts'
 
 interface MailboxAccount {
   id: string
@@ -120,9 +121,13 @@ Deno.serve(async (req) => {
   }
 
   const stats: PollStats[] = []
+  let totalFetched = 0
+  let totalStored = 0
   for (const account of (rows ?? []) as MailboxAccount[]) {
     const stat = await pollAccount(admin, account)
     stats.push(stat)
+    totalFetched += stat.fetched
+    totalStored += stat.stored
     await admin
       .from('mailbox_accounts')
       .update({
@@ -132,10 +137,42 @@ Deno.serve(async (req) => {
       .eq('id', account.id)
   }
 
-  // Trigger parser sweep so users see results in the next UI tick.
-  triggerParse().catch((e) => console.warn('triggerParse failed', e))
+  // Inline-Parse: direkt nach dem Polling die frisch eingefügten 'pending'-
+  // Rows durch die Adapter-Registry jagen. Kein HTTP-Roundtrip nach
+  // inbox-parse mehr — der separate Cross-Function-Call hatte chronische
+  // 401-Probleme (verify_jwt-Plattform-Layer rejected Service-Role-Key).
+  // Beim User-Poll scopen wir auf die Workspaces, die der User polled hat;
+  // Cron/Service-Calls verarbeiten alle Pending-Rows.
+  let parseStats: ParseRunStats = { processed: 0, matched: 0, suggested: 0, unclassified: 0 }
+  if (totalStored > 0 || allowedWorkspaceIds === null) {
+    try {
+      if (allowedWorkspaceIds && allowedWorkspaceIds.length > 0) {
+        // Pro User-Workspace einmal sweepen — Limit pro WS = 200, was den
+        // Bootstrap-Lookback (300) abdeckt, der über 2 Cron-Ticks reinkommt.
+        for (const ws of allowedWorkspaceIds) {
+          const partial = await runParseSweep(admin, { workspaceId: ws, limit: 200 })
+          parseStats.processed += partial.processed
+          parseStats.matched += partial.matched
+          parseStats.suggested += partial.suggested
+          parseStats.unclassified += partial.unclassified
+        }
+      } else {
+        parseStats = await runParseSweep(admin, { limit: 500 })
+      }
+    } catch (e) {
+      console.warn('inline parse failed', e)
+    }
+  }
 
-  return jsonResp({ ok: true, accounts: stats.length, stats })
+  return jsonResp({
+    ok: true,
+    accounts: stats.length,
+    accounts_processed: stats.length,
+    total_fetched: totalFetched,
+    total_stored: totalStored,
+    parse: { ok: true, ...parseStats },
+    stats,
+  })
 })
 
 async function pollAccount(
@@ -164,12 +201,16 @@ async function pollAccount(
     await client.connect()
     const lock = await client.getMailboxLock(account.folder)
     try {
-      // Bootstrap: beim allerersten Poll laden wir die letzten
-      // BOOTSTRAP_LOOKBACK Mails (statt 0). Damit sieht der User direkt
-      // historische Bestellungen, nicht erst beim 2. Cron-Tick.
-      // 100 matcht MAX_FETCH_PER_RUN — alles in einem Run für sofortiges
-      // Feedback. Wer mehr Historie braucht, kriegt das beim nächsten Tick.
-      const BOOTSTRAP_LOOKBACK = 100
+      // Bootstrap: beim allerersten Poll setzen wir last_uid auf
+      // (uidNext - 1 - BOOTSTRAP_LOOKBACK), damit nicht nur kommende Mails,
+      // sondern auch ein paar hundert historische in den Suchraum fallen.
+      // Realistische Inboxen sind oft voller Newsletter/Promo, die der
+      // shouldStore-Filter aussortiert; 300 stellt sicher, dass auch in
+      // werbungs-lastigen Postfächern genug Order-Mails übrig bleiben,
+      // um den UI-Tab zu füllen. MAX_FETCH_PER_RUN bleibt bei 100 — die
+      // restlichen UIDs holt der nächste Cron-Tick (oder ein erneuter
+      // "Jetzt pollen"-Klick) inkrementell.
+      const BOOTSTRAP_LOOKBACK = 300
       if (account.last_uid === null) {
         const status = await client.status(account.folder, { uidNext: true })
         const uidNext = status.uidNext ?? 1
@@ -422,18 +463,6 @@ function extractTextAndHtml(raw: string): { text: string; html: string } {
     return { text: '', html: decoded.slice(0, 100_000) }
   }
   return { text: decoded.slice(0, 100_000), html: '' }
-}
-
-async function triggerParse(): Promise<void> {
-  const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/inbox-parse`
-  await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-      'Content-Type': 'application/json',
-    },
-    body: '{}',
-  })
 }
 
 async function sha256Hex(input: string): Promise<string> {
