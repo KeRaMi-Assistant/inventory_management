@@ -67,8 +67,13 @@ const STRONG_TRACKING_PATTERNS: Array<{ re: RegExp; carrier?: string }> = [
   { re: /\b(\d{20,22})\b/, carrier: 'DHL' },
 ]
 
+// Mehrsprachig: DE (Sendungsnummer / Tracking-Nr / Paketnummer),
+// EN (tracking number / tracking id / tracking #), FR (numéro de suivi),
+// IT (numero di tracciamento / numero tracciamento), ES (número de
+// seguimiento), PL (numer przesyłki). Bug-Fix: vorher `nr[uú]mero` —
+// das matchte "nrúmero", nicht das tatsächliche Spanisch "número".
 const CONTEXT_TRACKING_RE =
-  /(?:tracking(?:[-\s]?(?:nummer|nr\.?|number|no\.?|#))?|sendungs?(?:[-\s]?(?:nummer|nr\.?))|paket(?:[-\s]?(?:nummer|nr\.?))|nr[uú]mero\s+de\s+seguimiento|numer\s+przesy(?:ł|l)ki)\s*[:\s#=-]*\s*([A-Z0-9-]{8,30})/i
+  /(?:tracking(?:[-\s]?(?:id|nummer|nr\.?|number|no\.?|#))?|sendungs?(?:[-\s]?(?:nummer|nr\.?))|paket(?:[-\s]?(?:nummer|nr\.?))|n[uú]mero\s+de\s+seguimiento|num[eé]ro\s+de\s+suivi|numero\s+(?:di\s+)?tracciamento|numer\s+przesy(?:ł|l)ki)\s*[:\s#=-]*\s*([A-Z0-9-]{8,30})/i
 
 const stripHtml = (html: string): string =>
   html
@@ -152,15 +157,22 @@ function findTrackingsInHtml(html: string): { trackings: string[]; carrier?: str
     { re: /dhl\.[a-z.]+\/.*?\/track[^?]*\?(?:trackingNumber|tracking)=([A-Z0-9]{8,30})/i, carrier: 'DHL' },
     // UPS
     { re: /ups\.com\/.*?[?&]tracknum(?:s)?=(1Z[A-Z0-9]{16})/i, carrier: 'UPS' },
-    // DPD
+    // DPD: parcelno-Param (DE) UND /parcels/<nr> Pfad (UK / track.dpd.co.uk).
     { re: /dpd\.[a-z.]+\/.*?[?&]parcelno(?:r)?=(\d{10,20})/i, carrier: 'DPD' },
     { re: /tracking\.dpd\.[a-z.]+\/.*?\/(\d{10,20})/i, carrier: 'DPD' },
+    { re: /(?:track\.)?dpd\.[a-z.]+\/parcels?\/(\d{10,20})/i, carrier: 'DPD' },
     // GLS
     { re: /gls-?(?:pakete|group)\.[a-z.]+\/.*?[?&]match=([A-Z0-9]{8,30})/i, carrier: 'GLS' },
     // Hermes
     { re: /hermesworld\.[a-z.]+\/.*?[?&]Barcode=([A-Z0-9]{8,30})/i, carrier: 'Hermes' },
+    // Chronopost (FR): /tracking-no-cms/suivi-page?listeNumerosLT=...
+    { re: /chronopost\.[a-z.]+\/.*?[?&]listeNumerosLT=([A-Z0-9]{8,30})/i, carrier: 'Chronopost' },
+    // SEUR (ES): /livetracking/?segOnLine=...
+    { re: /seur\.[a-z.]+\/.*?[?&]segOnLine=([A-Z0-9]{8,30})/i, carrier: 'SEUR' },
+    // GLS variant (US/UK)
+    { re: /gls-?[a-z]*\.[a-z.]+\/.*?[?&]trackingNumber=([A-Z0-9]{8,30})/i, carrier: 'GLS' },
     // Generic: any tracknum/tracking/trk parameter (last resort)
-    { re: /[?&](?:trk|tracking_number|trackingnumber|tracknum)=([A-Z0-9-]{8,30})/i },
+    { re: /[?&](?:trk|tracking_?number|tracknum|tracking_id|trackingnr)=([A-Z0-9-]{8,30})/i },
   ]
 
   // Erst spezifische URL-Patterns, dann generische tracking-Wörter im Pfad.
