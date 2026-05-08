@@ -206,6 +206,12 @@ abstract class AppLocalizations {
   /// **'Suchen'**
   String get actionSearch;
 
+  /// No description provided for @actionClear.
+  ///
+  /// In de, this message translates to:
+  /// **'Leeren'**
+  String get actionClear;
+
   /// No description provided for @actionFilter.
   ///
   /// In de, this message translates to:
@@ -2059,6 +2065,912 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Beschreibe das Problem so genau wie möglich. Screenshots helfen.'**
   String get helpContactReportDesc;
+
+  /// No description provided for @helpSearchHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Hilfe durchsuchen…'**
+  String get helpSearchHint;
+
+  /// No description provided for @helpSearchEmptyTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Nichts gefunden'**
+  String get helpSearchEmptyTitle;
+
+  /// No description provided for @helpSearchEmptyDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Versuche andere Begriffe, prüfe die Schreibweise oder lösche das Suchfeld, um alle Sektionen zu sehen.'**
+  String get helpSearchEmptyDesc;
+
+  /// No description provided for @helpExpandAll.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle ausklappen'**
+  String get helpExpandAll;
+
+  /// No description provided for @helpCollapseAll.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle einklappen'**
+  String get helpCollapseAll;
+
+  /// No description provided for @helpResultsLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Keine Treffer} =1{1 Sektion gefunden} other{{count} Sektionen gefunden}}'**
+  String helpResultsLabel(int count);
+
+  /// No description provided for @helpEntryWord.
+  ///
+  /// In de, this message translates to:
+  /// **'Eintrag'**
+  String get helpEntryWord;
+
+  /// No description provided for @helpEntriesWord.
+  ///
+  /// In de, this message translates to:
+  /// **'Einträge'**
+  String get helpEntriesWord;
+
+  /// No description provided for @helpStepLoginTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto anlegen & einloggen'**
+  String get helpStepLoginTitle;
+
+  /// No description provided for @helpStepLoginDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Registriere dich mit E-Mail oder logge dich per Google/Apple ein. Bestätige bei Bedarf deine E-Mail über den zugesandten Link, dann kannst du sofort starten.'**
+  String get helpStepLoginDesc;
+
+  /// No description provided for @helpStepWorkspaceTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Workspace einrichten'**
+  String get helpStepWorkspaceTitle;
+
+  /// No description provided for @helpStepWorkspaceDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Beim ersten Login wird automatisch ein Workspace für dich angelegt. Über das Workspace-Menü oben rechts kannst du weitere Workspaces erstellen oder Mitglieder einladen.'**
+  String get helpStepWorkspaceDesc;
+
+  /// No description provided for @helpStepInboxTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach verbinden'**
+  String get helpStepInboxTitle;
+
+  /// No description provided for @helpStepInboxDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Hänge dein Bestell-Postfach (Gmail/Outlook/IONOS) unter Einstellungen → Postfach an. Bestellbestätigungen, Versand- und Liefermails werden danach automatisch erkannt.'**
+  String get helpStepInboxDesc;
+
+  /// No description provided for @helpStepInventoryTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Lagerbestand pflegen'**
+  String get helpStepInventoryTitle;
+
+  /// No description provided for @helpStepInventoryDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege im Lager-Tab Artikel mit Stückzahl und Mindestbestand an. Verkaufte Stück verschwinden automatisch aus dem Bestand und tauchen im „Verkauft\"-Tab auf.'**
+  String get helpStepInventoryDesc;
+
+  /// No description provided for @helpInboxSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach (E-Mail-Import)'**
+  String get helpInboxSection;
+
+  /// No description provided for @helpInboxIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Die App liest dein Mail-Postfach via IMAP, erkennt Bestellbestätigungen und Versandmails und schlägt sie als Deals vor. Es werden keine Mails verschickt.'**
+  String get helpInboxIntro;
+
+  /// No description provided for @helpInboxGmailTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Gmail / Google Workspace verbinden'**
+  String get helpInboxGmailTitle;
+
+  /// No description provided for @helpInboxGmailDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Gmail erlaubt keinen Login mit deinem normalen Passwort. Du brauchst ein App-Passwort:\n• Aktiviere die 2-Faktor-Authentifizierung unter myaccount.google.com → Sicherheit.\n• Öffne myaccount.google.com/apppasswords, vergib einen Namen (z. B. „Lager-App\") und kopiere das 16-stellige App-Passwort.\n• In der App: Einstellungen → Postfach → IMAP-Server „imap.gmail.com\", Port 993, SSL, Benutzername = deine Mail, Passwort = das App-Passwort.'**
+  String get helpInboxGmailDesc;
+
+  /// No description provided for @helpInboxOutlookTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Outlook.com / Microsoft 365 verbinden'**
+  String get helpInboxOutlookTitle;
+
+  /// No description provided for @helpInboxOutlookDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Outlook und Microsoft 365 nutzen ebenfalls App-Passwörter:\n• Logge dich in account.microsoft.com ein → Sicherheit → Erweiterte Sicherheitsoptionen → App-Passwort erstellen.\n• In der App: IMAP-Server „outlook.office365.com\", Port 993, SSL, Benutzername = deine Mail, Passwort = App-Passwort.\n• Hinweis: Schul-/Geschäftskonten erfordern oft eine Freigabe durch den Admin.'**
+  String get helpInboxOutlookDesc;
+
+  /// No description provided for @helpInboxIonosTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'IONOS / 1&1 verbinden'**
+  String get helpInboxIonosTitle;
+
+  /// No description provided for @helpInboxIonosDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Bei IONOS funktioniert der normale Mail-Login direkt:\n• IMAP-Server „imap.ionos.de\" (oder „.com\" je nach Region), Port 993, SSL.\n• Benutzername = vollständige Mail-Adresse, Passwort = dein Postfach-Passwort.\n• Falls Login scheitert: in der IONOS-Webmail unter „Einstellungen → Sicherheit\" prüfen, ob IMAP aktiviert ist.'**
+  String get helpInboxIonosDesc;
+
+  /// No description provided for @helpInboxTabsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Die drei Inbox-Tabs'**
+  String get helpInboxTabsTitle;
+
+  /// No description provided for @helpInboxTabsDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Eingehende Mails landen in drei Tabs, je nachdem wie eindeutig die App sie zuordnen kann.'**
+  String get helpInboxTabsDesc;
+
+  /// No description provided for @helpInboxTabSuggestions.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschläge — Bestellbestätigungen, die noch nicht zu einem Deal gehören. Tippe auf eine Mail, prüfe die erkannten Daten und übernimm sie als neuen Deal.'**
+  String get helpInboxTabSuggestions;
+
+  /// No description provided for @helpInboxTabUpdated.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktualisiert — Mails, die einen bestehenden Deal verändern (z. B. Versand-Update, Stornierung). Hier siehst du, was die Pipeline automatisch eingespielt hat.'**
+  String get helpInboxTabUpdated;
+
+  /// No description provided for @helpInboxTabUnclassified.
+  ///
+  /// In de, this message translates to:
+  /// **'Unklassifiziert — Mails, die nicht eindeutig zugeordnet werden konnten. Du kannst sie manuell einem Deal zuweisen oder als irrelevant markieren.'**
+  String get helpInboxTabUnclassified;
+
+  /// No description provided for @helpInboxWhitelistTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Warum sehe ich manche Mails nicht?'**
+  String get helpInboxWhitelistTitle;
+
+  /// No description provided for @helpInboxWhitelistDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Die App liest nur Mails von bekannten Shops/Carriern (Whitelist). Werbe-Newsletter, persönliche Mails und unbekannte Absender werden ignoriert. Wenn ein Shop fehlt, melde ihn über „Probleme melden\" — neue Adapter werden serverseitig nachgepflegt.'**
+  String get helpInboxWhitelistDesc;
+
+  /// No description provided for @helpDealsSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Deals'**
+  String get helpDealsSection;
+
+  /// No description provided for @helpDealsStatusFlow.
+  ///
+  /// In de, this message translates to:
+  /// **'Jeder Deal durchläuft fünf Status — du kannst ihn manuell weiterschalten oder die Mail-Pipeline macht es automatisch.'**
+  String get helpDealsStatusFlow;
+
+  /// No description provided for @helpDealsStatusOrdered.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellt — der Deal ist angelegt, aber noch nicht versandt. Setze diesen Status, sobald du die Bestellung getätigt hast.'**
+  String get helpDealsStatusOrdered;
+
+  /// No description provided for @helpDealsStatusInTransit.
+  ///
+  /// In de, this message translates to:
+  /// **'Unterwegs — Versandbestätigung erkannt oder manuell gesetzt. Tracking-Nummer wird alle paar Stunden gepollt.'**
+  String get helpDealsStatusInTransit;
+
+  /// No description provided for @helpDealsStatusArrived.
+  ///
+  /// In de, this message translates to:
+  /// **'Angekommen — Carrier meldet Zustellung beim Absender (dir). Der Artikel ist bereit zum Listen/Versenden.'**
+  String get helpDealsStatusArrived;
+
+  /// No description provided for @helpDealsStatusSold.
+  ///
+  /// In de, this message translates to:
+  /// **'Verkauft — Käufer steht fest, Verkaufspreis ist erfasst. Der Deal zählt jetzt in die Statistiken.'**
+  String get helpDealsStatusSold;
+
+  /// No description provided for @helpDealsStatusDelivered.
+  ///
+  /// In de, this message translates to:
+  /// **'Geliefert — Endkunde hat den Artikel erhalten. Letzter Status, Deal ist abgeschlossen.'**
+  String get helpDealsStatusDelivered;
+
+  /// No description provided for @helpDealsTrackingTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Auto-Tracking aus Mails'**
+  String get helpDealsTrackingTitle;
+
+  /// No description provided for @helpDealsTrackingDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Sobald eine Versandmail mit Tracking-Nummer eintrifft (Amazon, DHL, DPD, UPS, Hermes, GLS), wird der passende Deal automatisch auf „Unterwegs\" gesetzt. Sobald der Carrier die Zustellung meldet, springt der Deal auf „Angekommen\".'**
+  String get helpDealsTrackingDesc;
+
+  /// No description provided for @helpDealsDropShipTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Multi-Drop-Ship'**
+  String get helpDealsDropShipTitle;
+
+  /// No description provided for @helpDealsDropShipDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Wenn ein Deal aus mehreren Shops besteht (Drop-Ship), kannst du beim Anlegen mehrere Bezugsquellen samt Einkaufspreisen hinterlegen. Der Profit wird über alle Quellen summiert. Die Statistik zählt den Deal als einen Verkauf.'**
+  String get helpDealsDropShipDesc;
+
+  /// No description provided for @helpInventorySection.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager (Inventory)'**
+  String get helpInventorySection;
+
+  /// No description provided for @helpInventoryAddTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel anlegen'**
+  String get helpInventoryAddTitle;
+
+  /// No description provided for @helpInventoryAddDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager-Tab → „Artikel hinzufügen\". Pflicht: Name + Stückzahl. Optional: Einkaufspreis, Mindestbestand, Verkaufskanal, Foto. Mehrfach-Stück desselben Artikels: Stückzahl erhöhen statt neu anlegen.'**
+  String get helpInventoryAddDesc;
+
+  /// No description provided for @helpInventoryStockTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Stückzahlen aktualisieren'**
+  String get helpInventoryStockTitle;
+
+  /// No description provided for @helpInventoryStockDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Tippe einen Artikel an und nutze die +/- Buttons, oder bearbeite das Mengenfeld direkt. Beim Verkauf wird die Stückzahl automatisch um 1 reduziert, wenn du den Artikel im Deal-Form auswählst.'**
+  String get helpInventoryStockDesc;
+
+  /// No description provided for @helpInventoryMinStockTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestbestand & Warnungen'**
+  String get helpInventoryMinStockTitle;
+
+  /// No description provided for @helpInventoryMinStockDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Setze einen Mindestbestand pro Artikel (z. B. 2). Sobald die Stückzahl darunter fällt, erscheint im Dashboard und im Lager-Tab eine gelbe Warnung — und optional eine Push-Notification.'**
+  String get helpInventoryMinStockDesc;
+
+  /// No description provided for @helpInventorySoldTabTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Verkauft-Tab'**
+  String get helpInventorySoldTabTitle;
+
+  /// No description provided for @helpInventorySoldTabDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Verkaufte Artikel verschwinden aus dem Bestand und tauchen im Tab „Verkauft\" auf. Dort siehst du Käufer, Verkaufspreis und Profit pro Stück. Filterbar nach Datum und Käufer.'**
+  String get helpInventorySoldTabDesc;
+
+  /// No description provided for @helpInventoryStockValueTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Lagerwert berechnen'**
+  String get helpInventoryStockValueTitle;
+
+  /// No description provided for @helpInventoryStockValueDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Lagerwert oben im Tab summiert (Stückzahl × Einkaufspreis) für alle Artikel mit Einkaufspreis. Artikel ohne Einkaufspreis fließen mit 0 ein — bitte nachpflegen, sonst stimmt die Statistik nicht.'**
+  String get helpInventoryStockValueDesc;
+
+  /// No description provided for @helpEntitiesSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Käufer, Shops & Lieferanten'**
+  String get helpEntitiesSection;
+
+  /// No description provided for @helpEntitiesBuyersTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Käufer (Buyers)'**
+  String get helpEntitiesBuyersTitle;
+
+  /// No description provided for @helpEntitiesBuyersDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Personen oder Plattformen, an die du verkaufst (z. B. „Tobias\", „eBay-Kleinanzeigen\", „Vinted\"). Beim Deal-Form pflichtfeldartig auswählbar — ohne Käufer kein Verkauf.'**
+  String get helpEntitiesBuyersDesc;
+
+  /// No description provided for @helpEntitiesShopsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Shops'**
+  String get helpEntitiesShopsTitle;
+
+  /// No description provided for @helpEntitiesShopsDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Online-/Offline-Quellen, bei denen du einkaufst (z. B. „Amazon\", „Saturn\", „Otto\"). Bei Versand-Mails ordnet die App die Mail automatisch dem passenden Shop zu, sofern der Adapter den Absender kennt.'**
+  String get helpEntitiesShopsDesc;
+
+  /// No description provided for @helpEntitiesSuppliersTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferanten (Suppliers)'**
+  String get helpEntitiesSuppliersTitle;
+
+  /// No description provided for @helpEntitiesSuppliersDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Spezialfall für B2B-Bezugsquellen mit Zahlungsfrist (Net 30, Net 60). Lieferanten werden im eigenen Tab geführt und im Deal als Quelle verlinkt — die Fälligkeitsstatistik zeigt dann offene Beträge.'**
+  String get helpEntitiesSuppliersDesc;
+
+  /// No description provided for @helpEntitiesBuyerColorTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Farb-Kodierung der Käufer'**
+  String get helpEntitiesBuyerColorTitle;
+
+  /// No description provided for @helpEntitiesBuyerColorDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Jedem Käufer kannst du eine Farbe zuweisen (Käufer-Karte → Farbe wählen). In der Deal-Tabelle und in den Statistiken erscheint diese Farbe, sodass du auf einen Blick siehst, an wen ein Deal ging.'**
+  String get helpEntitiesBuyerColorDesc;
+
+  /// No description provided for @helpTicketsSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Tickets'**
+  String get helpTicketsSection;
+
+  /// No description provided for @helpTicketsWhatTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Was ist ein Ticket?'**
+  String get helpTicketsWhatTitle;
+
+  /// No description provided for @helpTicketsWhatDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Ein Ticket bündelt mehrere Deals, die zusammen an einen Käufer gehen — z. B. eine Sammelbestellung mit fünf Artikeln. Das Ticket sieht den Gesamtpreis, alle Tracking-Nummern und einen einzigen Versand-Status.'**
+  String get helpTicketsWhatDesc;
+
+  /// No description provided for @helpTicketsArchiveTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiv vs. Archiv'**
+  String get helpTicketsArchiveTitle;
+
+  /// No description provided for @helpTicketsArchiveDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktive Tickets sind noch nicht abgeschlossen. Sobald alle Deals im Ticket auf „Geliefert\" stehen, kannst du das Ticket archivieren — es verschwindet aus der Hauptansicht, bleibt aber in den Statistiken sichtbar.'**
+  String get helpTicketsArchiveDesc;
+
+  /// No description provided for @helpStatsSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Statistiken'**
+  String get helpStatsSection;
+
+  /// No description provided for @helpStatsKpiTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'KPI-Cards'**
+  String get helpStatsKpiTitle;
+
+  /// No description provided for @helpStatsKpiDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Oben siehst du Umsatz, Profit, Anzahl Deals und Cashflow für den gewählten Zeitraum. Tippe eine Card an, um auf die zugehörige Detail-Ansicht zu wechseln.'**
+  String get helpStatsKpiDesc;
+
+  /// No description provided for @helpStatsChartsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Diagramme'**
+  String get helpStatsChartsTitle;
+
+  /// No description provided for @helpStatsChartsDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Linien-Diagramm für Umsatz/Profit über Zeit, Balken-Diagramm für Top-Käufer und Top-Shops. Tippe auf einen Balken, um nach diesem Käufer/Shop zu filtern.'**
+  String get helpStatsChartsDesc;
+
+  /// No description provided for @helpStatsFiltersTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Filter (Käufer/Shop/Datum)'**
+  String get helpStatsFiltersTitle;
+
+  /// No description provided for @helpStatsFiltersDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Über das Filter-Icon oben rechts kannst du Käufer, Shops und Datumsbereich kombinieren. Die Filter werden in allen Cards und Diagrammen synchron angewendet.'**
+  String get helpStatsFiltersDesc;
+
+  /// No description provided for @helpStatsTaxTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Steuer-/MwSt-Reports'**
+  String get helpStatsTaxTitle;
+
+  /// No description provided for @helpStatsTaxDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Statistiken → Reiter „Steuer\" zeigt Quartals-Umsätze + MwSt-Schätzung (Klein- oder Regelunternehmer). CSV-Export pro Quartal über das Download-Icon. Die Schätzung ersetzt keine Steuerberatung.'**
+  String get helpStatsTaxDesc;
+
+  /// No description provided for @helpWorkspaceSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Workspace & Team'**
+  String get helpWorkspaceSection;
+
+  /// No description provided for @helpWorkspaceWhatTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Was ist ein Workspace?'**
+  String get helpWorkspaceWhatTitle;
+
+  /// No description provided for @helpWorkspaceWhatDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Ein Workspace ist ein abgeschotteter Daten-Container — alle Deals, Käufer, Shops und Lager-Artikel gehören zu genau einem Workspace. Du kannst mehrere Workspaces parallel pflegen (z. B. „Privat\" und „Geschäft\").'**
+  String get helpWorkspaceWhatDesc;
+
+  /// No description provided for @helpWorkspaceInviteTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Mitglieder einladen'**
+  String get helpWorkspaceInviteTitle;
+
+  /// No description provided for @helpWorkspaceInviteDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstellungen → Team → „Mitglied einladen\". Gib eine Mail-Adresse und eine Rolle an. Der Eingeladene bekommt eine Mail mit Link; sobald er sich registriert, taucht der Workspace bei ihm auf.'**
+  String get helpWorkspaceInviteDesc;
+
+  /// No description provided for @helpWorkspaceRolesTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Rollen'**
+  String get helpWorkspaceRolesTitle;
+
+  /// No description provided for @helpWorkspaceRoleOwner.
+  ///
+  /// In de, this message translates to:
+  /// **'Owner — kann alles, inklusive Workspace löschen, Mitglieder kicken und Plan ändern.'**
+  String get helpWorkspaceRoleOwner;
+
+  /// No description provided for @helpWorkspaceRoleAdmin.
+  ///
+  /// In de, this message translates to:
+  /// **'Admin — kann Daten lesen/schreiben, Mitglieder einladen, Carrier-Keys pflegen. Kann den Workspace nicht löschen.'**
+  String get helpWorkspaceRoleAdmin;
+
+  /// No description provided for @helpWorkspaceRoleMember.
+  ///
+  /// In de, this message translates to:
+  /// **'Member — kann Daten lesen/schreiben, aber keine Team- oder Carrier-Einstellungen ändern.'**
+  String get helpWorkspaceRoleMember;
+
+  /// No description provided for @helpWorkspacePricingTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Pricing-Tier-Limits'**
+  String get helpWorkspacePricingTitle;
+
+  /// No description provided for @helpWorkspacePricingDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Free, Pro und Business unterscheiden sich vor allem in der Anzahl Mitglieder, der Anzahl Postfächer und ob Carrier-Polling aktiv ist. Aktuelle Limits findest du auf dem Pricing-Screen.'**
+  String get helpWorkspacePricingDesc;
+
+  /// No description provided for @helpPushSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Push-Notifications'**
+  String get helpPushSection;
+
+  /// No description provided for @helpPushIosTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'iOS aktivieren'**
+  String get helpPushIosTitle;
+
+  /// No description provided for @helpPushIosDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Beim ersten Start fragt iOS, ob die App Mitteilungen senden darf — bestätige mit „Erlauben\". Falls du es abgelehnt hast: iOS-Einstellungen → Mitteilungen → Lager-App → Mitteilungen erlauben.'**
+  String get helpPushIosDesc;
+
+  /// No description provided for @helpPushAndroidTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Android aktivieren'**
+  String get helpPushAndroidTitle;
+
+  /// No description provided for @helpPushAndroidDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Android 13+ fragt explizit nach Push-Erlaubnis. Falls du sie abgelehnt hast: Android-Einstellungen → Apps → Lager-App → Benachrichtigungen → aktivieren.'**
+  String get helpPushAndroidDesc;
+
+  /// No description provided for @helpPushWhenTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wann werden Pushs verschickt?'**
+  String get helpPushWhenTitle;
+
+  /// No description provided for @helpPushWhenDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'• Neue Bestellbestätigung im Postfach\n• Tracking-Update (Versandt / Angekommen)\n• Mindestbestand unterschritten (falls aktiviert)\n• Workspace-Einladung\nÜber Einstellungen → Push kannst du einzelne Kategorien deaktivieren.'**
+  String get helpPushWhenDesc;
+
+  /// No description provided for @helpFaqSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Häufige Fragen (FAQ)'**
+  String get helpFaqSection;
+
+  /// No description provided for @helpFaqQ1.
+  ///
+  /// In de, this message translates to:
+  /// **'Warum sehe ich keine Mails nach dem Postfach-Add?'**
+  String get helpFaqQ1;
+
+  /// No description provided for @helpFaqA1.
+  ///
+  /// In de, this message translates to:
+  /// **'Die erste Synchronisation läuft im Hintergrund und kann je nach Postfach-Größe 1–10 Minuten dauern. Außerdem werden nur Mails von bekannten Shops/Carriern eingelesen — Werbung und persönliche Mails werden ignoriert.'**
+  String get helpFaqA1;
+
+  /// No description provided for @helpFaqQ2.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie ändere ich die Sprache?'**
+  String get helpFaqQ2;
+
+  /// No description provided for @helpFaqA2.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstellungen → Allgemein → Sprache. Aktuell verfügbar: Deutsch, Englisch. Die Änderung greift sofort.'**
+  String get helpFaqA2;
+
+  /// No description provided for @helpFaqQ3.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie lösche ich meine Daten?'**
+  String get helpFaqQ3;
+
+  /// No description provided for @helpFaqA3.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstellungen → Allgemein → „Konto löschen\". Du musst das Wort LÖSCHEN tippen, um zu bestätigen. Alle Workspaces, Deals und das Postfach werden unwiderruflich entfernt — Stand sofort.'**
+  String get helpFaqA3;
+
+  /// No description provided for @helpFaqQ4.
+  ///
+  /// In de, this message translates to:
+  /// **'Was passiert, wenn ich downgrade?'**
+  String get helpFaqQ4;
+
+  /// No description provided for @helpFaqA4.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestehende Daten bleiben erhalten. Funktionen über dem Downgrade-Limit (z. B. zusätzliche Mitglieder, Carrier-Polling) werden pausiert, bis du wieder upgradest oder die Limits aktiv reduzierst.'**
+  String get helpFaqA4;
+
+  /// No description provided for @helpFaqQ5.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie setze ich mein Passwort zurück?'**
+  String get helpFaqQ5;
+
+  /// No description provided for @helpFaqA5.
+  ///
+  /// In de, this message translates to:
+  /// **'Login-Screen → „Passwort vergessen\". Gib deine Mail an, du bekommst einen Reset-Link. Klick im Link öffnet die App und du kannst ein neues Passwort setzen.'**
+  String get helpFaqA5;
+
+  /// No description provided for @helpFaqQ6.
+  ///
+  /// In de, this message translates to:
+  /// **'Warum stimmt der Lagerwert nicht?'**
+  String get helpFaqQ6;
+
+  /// No description provided for @helpFaqA6.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Lagerwert zählt nur Artikel mit hinterlegtem Einkaufspreis. Öffne den Lager-Tab und filtere nach „Ohne Einkaufspreis\" — pflege die fehlenden Werte nach, dann passt die Summe.'**
+  String get helpFaqA6;
+
+  /// No description provided for @helpFaqQ7.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking aktualisiert sich nicht — was tun?'**
+  String get helpFaqQ7;
+
+  /// No description provided for @helpFaqA7.
+  ///
+  /// In de, this message translates to:
+  /// **'Carrier-Polling läuft alle 4 Stunden. Prüfe in Einstellungen → Versand, ob der Carrier-API-Key hinterlegt ist. Ohne Key kann die App den Status nicht abfragen — die Mail-Pipeline ergänzt das ggf. parallel über Versandmails.'**
+  String get helpFaqA7;
+
+  /// No description provided for @helpFaqQ8.
+  ///
+  /// In de, this message translates to:
+  /// **'Kann ich mehrere Workspaces nutzen?'**
+  String get helpFaqQ8;
+
+  /// No description provided for @helpFaqA8.
+  ///
+  /// In de, this message translates to:
+  /// **'Ja. Tippe oben rechts auf den Workspace-Namen → „Neuer Workspace\". Du wechselst per Tap zwischen Workspaces; Daten sind strikt getrennt.'**
+  String get helpFaqA8;
+
+  /// No description provided for @helpFaqQ9.
+  ///
+  /// In de, this message translates to:
+  /// **'Discord-Buttons fehlen beim Deal — warum?'**
+  String get helpFaqQ9;
+
+  /// No description provided for @helpFaqA9.
+  ///
+  /// In de, this message translates to:
+  /// **'Buttons erscheinen nur, wenn der Käufer mindestens eine Discord-Server-ID hinterlegt hat. Einstellungen → Käufer → Käufer bearbeiten → Discord-Server-IDs ergänzen.'**
+  String get helpFaqA9;
+
+  /// No description provided for @helpFaqQ10.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie exportiere ich meine Daten als CSV?'**
+  String get helpFaqQ10;
+
+  /// No description provided for @helpFaqA10.
+  ///
+  /// In de, this message translates to:
+  /// **'Statistiken → Steuer-Reiter → Download-Icon (pro Quartal). Vollständiger Daten-Export ist in Vorbereitung — bis dahin auf Anfrage über „Probleme melden\".'**
+  String get helpFaqA10;
+
+  /// No description provided for @helpFaqQ11.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie erstelle ich einen Steuerreport?'**
+  String get helpFaqQ11;
+
+  /// No description provided for @helpFaqA11.
+  ///
+  /// In de, this message translates to:
+  /// **'Statistiken → Steuer-Reiter → Quartal wählen → CSV herunterladen. Die App zeigt Brutto, Netto und MwSt-Anteil; je nach Steuermodell (Klein- oder Regelunternehmer) wird die MwSt unterschiedlich aufbereitet.'**
+  String get helpFaqA11;
+
+  /// No description provided for @helpFaqQ12.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie aktiviere ich den Dunkelmodus?'**
+  String get helpFaqQ12;
+
+  /// No description provided for @helpFaqA12.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstellungen → Allgemein → Theme → „Dunkel\". Optional „System\" — folgt dann der iOS/Android-Systemeinstellung.'**
+  String get helpFaqA12;
+
+  /// No description provided for @helpFaqQ13.
+  ///
+  /// In de, this message translates to:
+  /// **'Kann ich mein Konto temporär deaktivieren?'**
+  String get helpFaqQ13;
+
+  /// No description provided for @helpFaqA13.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktuell nicht — es gibt nur „Konto löschen\". Wenn du Push und Mail-Sync pausieren willst: Postfach in den Einstellungen entfernen und Push-Kategorien deaktivieren. Daten bleiben dann unverändert liegen.'**
+  String get helpFaqA13;
+
+  /// No description provided for @helpFaqQ14.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie deaktiviere ich Push-Mitteilungen?'**
+  String get helpFaqQ14;
+
+  /// No description provided for @helpFaqA14.
+  ///
+  /// In de, this message translates to:
+  /// **'Entweder pro Kategorie in Einstellungen → Push, oder komplett über die OS-Einstellungen (iOS-Mitteilungen / Android-Benachrichtigungen → Lager-App).'**
+  String get helpFaqA14;
+
+  /// No description provided for @helpFaqQ15.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie suche ich gezielt in der Inbox?'**
+  String get helpFaqQ15;
+
+  /// No description provided for @helpFaqA15.
+  ///
+  /// In de, this message translates to:
+  /// **'Inbox-Tab → Suchsymbol oben rechts. Du kannst nach Absender, Betreff oder Tracking-Nummer suchen. Die Suche filtert alle drei Tabs (Vorschläge / Aktualisiert / Unklassifiziert) gleichzeitig.'**
+  String get helpFaqA15;
+
+  /// No description provided for @helpFaqQ16.
+  ///
+  /// In de, this message translates to:
+  /// **'Warum sehe ich Deals anderer Mitglieder nicht?'**
+  String get helpFaqQ16;
+
+  /// No description provided for @helpFaqA16.
+  ///
+  /// In de, this message translates to:
+  /// **'Du bist möglicherweise im falschen Workspace. Prüfe oben rechts den Workspace-Namen und wechsle ggf. Auch Filter (Käufer/Shop/Datum) können Deals ausblenden — Filter zurücksetzen mit dem „Filter leeren\"-Button.'**
+  String get helpFaqA16;
+
+  /// No description provided for @helpTroubleSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehlerbehebung'**
+  String get helpTroubleSection;
+
+  /// No description provided for @helpTroubleConnectionTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'„Keine Verbindung zum Server\"'**
+  String get helpTroubleConnectionTitle;
+
+  /// No description provided for @helpTroubleConnectionDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Prüfe deine Internet-Verbindung und versuche „Aktualisieren\" (Pull-to-Refresh). Wenn das Problem bleibt: Status-Seite über die Webseite prüfen, ggf. ein paar Minuten warten — Supabase-Restarts brauchen kurz.'**
+  String get helpTroubleConnectionDesc;
+
+  /// No description provided for @helpTroubleImapAuthTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'„IMAP-Login fehlgeschlagen\"'**
+  String get helpTroubleImapAuthTitle;
+
+  /// No description provided for @helpTroubleImapAuthDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Bei Gmail/Outlook: stelle sicher, dass du ein App-Passwort verwendest, kein normales Login-Passwort. Bei IONOS prüfen, ob IMAP serverseitig aktiviert ist. Tippfehler im Server-Hostname sind die häufigste Ursache.'**
+  String get helpTroubleImapAuthDesc;
+
+  /// No description provided for @helpTroubleSyncStuckTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach-Sync hängt'**
+  String get helpTroubleSyncStuckTitle;
+
+  /// No description provided for @helpTroubleSyncStuckDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstellungen → Postfach → Mailbox auswählen → „Re-Sync\". Falls weiterhin keine Mails kommen: Postfach entfernen und neu hinzufügen — der Bootstrap-Pump zieht dann erneut alle Mails der letzten 60 Tage.'**
+  String get helpTroubleSyncStuckDesc;
+
+  /// No description provided for @helpTroubleNotifMissingTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Push-Mitteilungen kommen nicht an'**
+  String get helpTroubleNotifMissingTitle;
+
+  /// No description provided for @helpTroubleNotifMissingDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'OS-Einstellungen prüfen (Mitteilungen erlaubt?). Anschließend Einstellungen → Push → „Test-Push senden\". Wenn der Test-Push ankommt, aber Mail-/Tracking-Pushs nicht: prüfe, ob die Kategorie in den App-Einstellungen aktiviert ist.'**
+  String get helpTroubleNotifMissingDesc;
+
+  /// No description provided for @helpTroubleStatsEmptyTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Statistiken sind leer'**
+  String get helpTroubleStatsEmptyTitle;
+
+  /// No description provided for @helpTroubleStatsEmptyDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Statistiken zählen nur Deals mit Status „Verkauft\" oder „Geliefert\" und Verkaufspreis > 0. Prüfe deinen Datumsfilter (oben rechts), eventuell ist er auf einen leeren Zeitraum gesetzt.'**
+  String get helpTroubleStatsEmptyDesc;
+
+  /// No description provided for @helpTroubleLoginFailedTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Login funktioniert nicht'**
+  String get helpTroubleLoginFailedTitle;
+
+  /// No description provided for @helpTroubleLoginFailedDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Stelle sicher, dass die Mail bestätigt ist (Link aus Willkommens-Mail). Bei Google/Apple-Sign-In: hilf der App, den Browser-Tab zu öffnen — manche In-App-Browser blocken den Callback. Notfalls Passwort zurücksetzen.'**
+  String get helpTroubleLoginFailedDesc;
+
+  /// No description provided for @helpTroubleUploadFailedTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Foto-Upload schlägt fehl'**
+  String get helpTroubleUploadFailedTitle;
+
+  /// No description provided for @helpTroubleUploadFailedDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Bilder über 10 MB werden abgelehnt. Reduziere Größe/Qualität, oder erlaube der App in den OS-Einstellungen Zugriff auf Fotos/Mediathek. Bei sehr langsamer Verbindung kann der Upload nach 60 s timeoutten — erneut versuchen.'**
+  String get helpTroubleUploadFailedDesc;
+
+  /// No description provided for @helpTroubleSlowTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'App ist plötzlich langsam'**
+  String get helpTroubleSlowTitle;
+
+  /// No description provided for @helpTroubleSlowDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Sehr lange Deal-/Inbox-Listen? Filter setzen (Datum, Status), das reduziert die Render-Last. Cache leeren: Einstellungen → Allgemein → „Cache zurücksetzen\". Oder App neu starten.'**
+  String get helpTroubleSlowDesc;
+
+  /// No description provided for @helpPrivacySection.
+  ///
+  /// In de, this message translates to:
+  /// **'Datenschutz & Kontakt'**
+  String get helpPrivacySection;
+
+  /// No description provided for @helpPrivacyDataTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Welche Daten werden gespeichert?'**
+  String get helpPrivacyDataTitle;
+
+  /// No description provided for @helpPrivacyDataDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Stammdaten (Workspace, Deals, Käufer), Postfach-Konfiguration (verschlüsselt) und Foto-Uploads. Mail-Inhalte werden nur kurz analysiert und nicht dauerhaft gespeichert. Details siehe Datenschutz-Erklärung im Settings → Allgemein.'**
+  String get helpPrivacyDataDesc;
+
+  /// No description provided for @helpPrivacySupportTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie erreiche ich den Support?'**
+  String get helpPrivacySupportTitle;
+
+  /// No description provided for @helpPrivacySupportDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Über „Probleme melden\" wird eine Mail mit App-Version, OS und Workspace-ID generiert (keine Passwörter). Antwortzeit in der Regel < 48 h.'**
+  String get helpPrivacySupportDesc;
+
+  /// No description provided for @helpPrivacyNoteTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wichtige Hinweise'**
+  String get helpPrivacyNoteTitle;
+
+  /// No description provided for @helpPrivacyNoteDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Die App ersetzt keine Buchhaltung oder Steuerberatung — die Statistiken sind Schätzungen. Vor dem ersten Quartalsabschluss bitte mit einem Steuerberater sprechen.'**
+  String get helpPrivacyNoteDesc;
 
   /// No description provided for @ticketsEmpty.
   ///

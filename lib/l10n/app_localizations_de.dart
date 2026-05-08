@@ -63,6 +63,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get actionSearch => 'Suchen';
 
   @override
+  String get actionClear => 'Leeren';
+
+  @override
   String get actionFilter => 'Filter';
 
   @override
@@ -1094,6 +1097,542 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get helpContactReportDesc =>
       'Beschreibe das Problem so genau wie möglich. Screenshots helfen.';
+
+  @override
+  String get helpSearchHint => 'Hilfe durchsuchen…';
+
+  @override
+  String get helpSearchEmptyTitle => 'Nichts gefunden';
+
+  @override
+  String get helpSearchEmptyDesc =>
+      'Versuche andere Begriffe, prüfe die Schreibweise oder lösche das Suchfeld, um alle Sektionen zu sehen.';
+
+  @override
+  String get helpExpandAll => 'Alle ausklappen';
+
+  @override
+  String get helpCollapseAll => 'Alle einklappen';
+
+  @override
+  String helpResultsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Sektionen gefunden',
+      one: '1 Sektion gefunden',
+      zero: 'Keine Treffer',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get helpEntryWord => 'Eintrag';
+
+  @override
+  String get helpEntriesWord => 'Einträge';
+
+  @override
+  String get helpStepLoginTitle => 'Konto anlegen & einloggen';
+
+  @override
+  String get helpStepLoginDesc =>
+      'Registriere dich mit E-Mail oder logge dich per Google/Apple ein. Bestätige bei Bedarf deine E-Mail über den zugesandten Link, dann kannst du sofort starten.';
+
+  @override
+  String get helpStepWorkspaceTitle => 'Workspace einrichten';
+
+  @override
+  String get helpStepWorkspaceDesc =>
+      'Beim ersten Login wird automatisch ein Workspace für dich angelegt. Über das Workspace-Menü oben rechts kannst du weitere Workspaces erstellen oder Mitglieder einladen.';
+
+  @override
+  String get helpStepInboxTitle => 'Postfach verbinden';
+
+  @override
+  String get helpStepInboxDesc =>
+      'Hänge dein Bestell-Postfach (Gmail/Outlook/IONOS) unter Einstellungen → Postfach an. Bestellbestätigungen, Versand- und Liefermails werden danach automatisch erkannt.';
+
+  @override
+  String get helpStepInventoryTitle => 'Lagerbestand pflegen';
+
+  @override
+  String get helpStepInventoryDesc =>
+      'Lege im Lager-Tab Artikel mit Stückzahl und Mindestbestand an. Verkaufte Stück verschwinden automatisch aus dem Bestand und tauchen im „Verkauft\"-Tab auf.';
+
+  @override
+  String get helpInboxSection => 'Postfach (E-Mail-Import)';
+
+  @override
+  String get helpInboxIntro =>
+      'Die App liest dein Mail-Postfach via IMAP, erkennt Bestellbestätigungen und Versandmails und schlägt sie als Deals vor. Es werden keine Mails verschickt.';
+
+  @override
+  String get helpInboxGmailTitle => 'Gmail / Google Workspace verbinden';
+
+  @override
+  String get helpInboxGmailDesc =>
+      'Gmail erlaubt keinen Login mit deinem normalen Passwort. Du brauchst ein App-Passwort:\n• Aktiviere die 2-Faktor-Authentifizierung unter myaccount.google.com → Sicherheit.\n• Öffne myaccount.google.com/apppasswords, vergib einen Namen (z. B. „Lager-App\") und kopiere das 16-stellige App-Passwort.\n• In der App: Einstellungen → Postfach → IMAP-Server „imap.gmail.com\", Port 993, SSL, Benutzername = deine Mail, Passwort = das App-Passwort.';
+
+  @override
+  String get helpInboxOutlookTitle => 'Outlook.com / Microsoft 365 verbinden';
+
+  @override
+  String get helpInboxOutlookDesc =>
+      'Outlook und Microsoft 365 nutzen ebenfalls App-Passwörter:\n• Logge dich in account.microsoft.com ein → Sicherheit → Erweiterte Sicherheitsoptionen → App-Passwort erstellen.\n• In der App: IMAP-Server „outlook.office365.com\", Port 993, SSL, Benutzername = deine Mail, Passwort = App-Passwort.\n• Hinweis: Schul-/Geschäftskonten erfordern oft eine Freigabe durch den Admin.';
+
+  @override
+  String get helpInboxIonosTitle => 'IONOS / 1&1 verbinden';
+
+  @override
+  String get helpInboxIonosDesc =>
+      'Bei IONOS funktioniert der normale Mail-Login direkt:\n• IMAP-Server „imap.ionos.de\" (oder „.com\" je nach Region), Port 993, SSL.\n• Benutzername = vollständige Mail-Adresse, Passwort = dein Postfach-Passwort.\n• Falls Login scheitert: in der IONOS-Webmail unter „Einstellungen → Sicherheit\" prüfen, ob IMAP aktiviert ist.';
+
+  @override
+  String get helpInboxTabsTitle => 'Die drei Inbox-Tabs';
+
+  @override
+  String get helpInboxTabsDesc =>
+      'Eingehende Mails landen in drei Tabs, je nachdem wie eindeutig die App sie zuordnen kann.';
+
+  @override
+  String get helpInboxTabSuggestions =>
+      'Vorschläge — Bestellbestätigungen, die noch nicht zu einem Deal gehören. Tippe auf eine Mail, prüfe die erkannten Daten und übernimm sie als neuen Deal.';
+
+  @override
+  String get helpInboxTabUpdated =>
+      'Aktualisiert — Mails, die einen bestehenden Deal verändern (z. B. Versand-Update, Stornierung). Hier siehst du, was die Pipeline automatisch eingespielt hat.';
+
+  @override
+  String get helpInboxTabUnclassified =>
+      'Unklassifiziert — Mails, die nicht eindeutig zugeordnet werden konnten. Du kannst sie manuell einem Deal zuweisen oder als irrelevant markieren.';
+
+  @override
+  String get helpInboxWhitelistTitle => 'Warum sehe ich manche Mails nicht?';
+
+  @override
+  String get helpInboxWhitelistDesc =>
+      'Die App liest nur Mails von bekannten Shops/Carriern (Whitelist). Werbe-Newsletter, persönliche Mails und unbekannte Absender werden ignoriert. Wenn ein Shop fehlt, melde ihn über „Probleme melden\" — neue Adapter werden serverseitig nachgepflegt.';
+
+  @override
+  String get helpDealsSection => 'Deals';
+
+  @override
+  String get helpDealsStatusFlow =>
+      'Jeder Deal durchläuft fünf Status — du kannst ihn manuell weiterschalten oder die Mail-Pipeline macht es automatisch.';
+
+  @override
+  String get helpDealsStatusOrdered =>
+      'Bestellt — der Deal ist angelegt, aber noch nicht versandt. Setze diesen Status, sobald du die Bestellung getätigt hast.';
+
+  @override
+  String get helpDealsStatusInTransit =>
+      'Unterwegs — Versandbestätigung erkannt oder manuell gesetzt. Tracking-Nummer wird alle paar Stunden gepollt.';
+
+  @override
+  String get helpDealsStatusArrived =>
+      'Angekommen — Carrier meldet Zustellung beim Absender (dir). Der Artikel ist bereit zum Listen/Versenden.';
+
+  @override
+  String get helpDealsStatusSold =>
+      'Verkauft — Käufer steht fest, Verkaufspreis ist erfasst. Der Deal zählt jetzt in die Statistiken.';
+
+  @override
+  String get helpDealsStatusDelivered =>
+      'Geliefert — Endkunde hat den Artikel erhalten. Letzter Status, Deal ist abgeschlossen.';
+
+  @override
+  String get helpDealsTrackingTitle => 'Auto-Tracking aus Mails';
+
+  @override
+  String get helpDealsTrackingDesc =>
+      'Sobald eine Versandmail mit Tracking-Nummer eintrifft (Amazon, DHL, DPD, UPS, Hermes, GLS), wird der passende Deal automatisch auf „Unterwegs\" gesetzt. Sobald der Carrier die Zustellung meldet, springt der Deal auf „Angekommen\".';
+
+  @override
+  String get helpDealsDropShipTitle => 'Multi-Drop-Ship';
+
+  @override
+  String get helpDealsDropShipDesc =>
+      'Wenn ein Deal aus mehreren Shops besteht (Drop-Ship), kannst du beim Anlegen mehrere Bezugsquellen samt Einkaufspreisen hinterlegen. Der Profit wird über alle Quellen summiert. Die Statistik zählt den Deal als einen Verkauf.';
+
+  @override
+  String get helpInventorySection => 'Lager (Inventory)';
+
+  @override
+  String get helpInventoryAddTitle => 'Artikel anlegen';
+
+  @override
+  String get helpInventoryAddDesc =>
+      'Lager-Tab → „Artikel hinzufügen\". Pflicht: Name + Stückzahl. Optional: Einkaufspreis, Mindestbestand, Verkaufskanal, Foto. Mehrfach-Stück desselben Artikels: Stückzahl erhöhen statt neu anlegen.';
+
+  @override
+  String get helpInventoryStockTitle => 'Stückzahlen aktualisieren';
+
+  @override
+  String get helpInventoryStockDesc =>
+      'Tippe einen Artikel an und nutze die +/- Buttons, oder bearbeite das Mengenfeld direkt. Beim Verkauf wird die Stückzahl automatisch um 1 reduziert, wenn du den Artikel im Deal-Form auswählst.';
+
+  @override
+  String get helpInventoryMinStockTitle => 'Mindestbestand & Warnungen';
+
+  @override
+  String get helpInventoryMinStockDesc =>
+      'Setze einen Mindestbestand pro Artikel (z. B. 2). Sobald die Stückzahl darunter fällt, erscheint im Dashboard und im Lager-Tab eine gelbe Warnung — und optional eine Push-Notification.';
+
+  @override
+  String get helpInventorySoldTabTitle => 'Verkauft-Tab';
+
+  @override
+  String get helpInventorySoldTabDesc =>
+      'Verkaufte Artikel verschwinden aus dem Bestand und tauchen im Tab „Verkauft\" auf. Dort siehst du Käufer, Verkaufspreis und Profit pro Stück. Filterbar nach Datum und Käufer.';
+
+  @override
+  String get helpInventoryStockValueTitle => 'Lagerwert berechnen';
+
+  @override
+  String get helpInventoryStockValueDesc =>
+      'Der Lagerwert oben im Tab summiert (Stückzahl × Einkaufspreis) für alle Artikel mit Einkaufspreis. Artikel ohne Einkaufspreis fließen mit 0 ein — bitte nachpflegen, sonst stimmt die Statistik nicht.';
+
+  @override
+  String get helpEntitiesSection => 'Käufer, Shops & Lieferanten';
+
+  @override
+  String get helpEntitiesBuyersTitle => 'Käufer (Buyers)';
+
+  @override
+  String get helpEntitiesBuyersDesc =>
+      'Personen oder Plattformen, an die du verkaufst (z. B. „Tobias\", „eBay-Kleinanzeigen\", „Vinted\"). Beim Deal-Form pflichtfeldartig auswählbar — ohne Käufer kein Verkauf.';
+
+  @override
+  String get helpEntitiesShopsTitle => 'Shops';
+
+  @override
+  String get helpEntitiesShopsDesc =>
+      'Online-/Offline-Quellen, bei denen du einkaufst (z. B. „Amazon\", „Saturn\", „Otto\"). Bei Versand-Mails ordnet die App die Mail automatisch dem passenden Shop zu, sofern der Adapter den Absender kennt.';
+
+  @override
+  String get helpEntitiesSuppliersTitle => 'Lieferanten (Suppliers)';
+
+  @override
+  String get helpEntitiesSuppliersDesc =>
+      'Spezialfall für B2B-Bezugsquellen mit Zahlungsfrist (Net 30, Net 60). Lieferanten werden im eigenen Tab geführt und im Deal als Quelle verlinkt — die Fälligkeitsstatistik zeigt dann offene Beträge.';
+
+  @override
+  String get helpEntitiesBuyerColorTitle => 'Farb-Kodierung der Käufer';
+
+  @override
+  String get helpEntitiesBuyerColorDesc =>
+      'Jedem Käufer kannst du eine Farbe zuweisen (Käufer-Karte → Farbe wählen). In der Deal-Tabelle und in den Statistiken erscheint diese Farbe, sodass du auf einen Blick siehst, an wen ein Deal ging.';
+
+  @override
+  String get helpTicketsSection => 'Tickets';
+
+  @override
+  String get helpTicketsWhatTitle => 'Was ist ein Ticket?';
+
+  @override
+  String get helpTicketsWhatDesc =>
+      'Ein Ticket bündelt mehrere Deals, die zusammen an einen Käufer gehen — z. B. eine Sammelbestellung mit fünf Artikeln. Das Ticket sieht den Gesamtpreis, alle Tracking-Nummern und einen einzigen Versand-Status.';
+
+  @override
+  String get helpTicketsArchiveTitle => 'Aktiv vs. Archiv';
+
+  @override
+  String get helpTicketsArchiveDesc =>
+      'Aktive Tickets sind noch nicht abgeschlossen. Sobald alle Deals im Ticket auf „Geliefert\" stehen, kannst du das Ticket archivieren — es verschwindet aus der Hauptansicht, bleibt aber in den Statistiken sichtbar.';
+
+  @override
+  String get helpStatsSection => 'Statistiken';
+
+  @override
+  String get helpStatsKpiTitle => 'KPI-Cards';
+
+  @override
+  String get helpStatsKpiDesc =>
+      'Oben siehst du Umsatz, Profit, Anzahl Deals und Cashflow für den gewählten Zeitraum. Tippe eine Card an, um auf die zugehörige Detail-Ansicht zu wechseln.';
+
+  @override
+  String get helpStatsChartsTitle => 'Diagramme';
+
+  @override
+  String get helpStatsChartsDesc =>
+      'Linien-Diagramm für Umsatz/Profit über Zeit, Balken-Diagramm für Top-Käufer und Top-Shops. Tippe auf einen Balken, um nach diesem Käufer/Shop zu filtern.';
+
+  @override
+  String get helpStatsFiltersTitle => 'Filter (Käufer/Shop/Datum)';
+
+  @override
+  String get helpStatsFiltersDesc =>
+      'Über das Filter-Icon oben rechts kannst du Käufer, Shops und Datumsbereich kombinieren. Die Filter werden in allen Cards und Diagrammen synchron angewendet.';
+
+  @override
+  String get helpStatsTaxTitle => 'Steuer-/MwSt-Reports';
+
+  @override
+  String get helpStatsTaxDesc =>
+      'Statistiken → Reiter „Steuer\" zeigt Quartals-Umsätze + MwSt-Schätzung (Klein- oder Regelunternehmer). CSV-Export pro Quartal über das Download-Icon. Die Schätzung ersetzt keine Steuerberatung.';
+
+  @override
+  String get helpWorkspaceSection => 'Workspace & Team';
+
+  @override
+  String get helpWorkspaceWhatTitle => 'Was ist ein Workspace?';
+
+  @override
+  String get helpWorkspaceWhatDesc =>
+      'Ein Workspace ist ein abgeschotteter Daten-Container — alle Deals, Käufer, Shops und Lager-Artikel gehören zu genau einem Workspace. Du kannst mehrere Workspaces parallel pflegen (z. B. „Privat\" und „Geschäft\").';
+
+  @override
+  String get helpWorkspaceInviteTitle => 'Mitglieder einladen';
+
+  @override
+  String get helpWorkspaceInviteDesc =>
+      'Einstellungen → Team → „Mitglied einladen\". Gib eine Mail-Adresse und eine Rolle an. Der Eingeladene bekommt eine Mail mit Link; sobald er sich registriert, taucht der Workspace bei ihm auf.';
+
+  @override
+  String get helpWorkspaceRolesTitle => 'Rollen';
+
+  @override
+  String get helpWorkspaceRoleOwner =>
+      'Owner — kann alles, inklusive Workspace löschen, Mitglieder kicken und Plan ändern.';
+
+  @override
+  String get helpWorkspaceRoleAdmin =>
+      'Admin — kann Daten lesen/schreiben, Mitglieder einladen, Carrier-Keys pflegen. Kann den Workspace nicht löschen.';
+
+  @override
+  String get helpWorkspaceRoleMember =>
+      'Member — kann Daten lesen/schreiben, aber keine Team- oder Carrier-Einstellungen ändern.';
+
+  @override
+  String get helpWorkspacePricingTitle => 'Pricing-Tier-Limits';
+
+  @override
+  String get helpWorkspacePricingDesc =>
+      'Free, Pro und Business unterscheiden sich vor allem in der Anzahl Mitglieder, der Anzahl Postfächer und ob Carrier-Polling aktiv ist. Aktuelle Limits findest du auf dem Pricing-Screen.';
+
+  @override
+  String get helpPushSection => 'Push-Notifications';
+
+  @override
+  String get helpPushIosTitle => 'iOS aktivieren';
+
+  @override
+  String get helpPushIosDesc =>
+      'Beim ersten Start fragt iOS, ob die App Mitteilungen senden darf — bestätige mit „Erlauben\". Falls du es abgelehnt hast: iOS-Einstellungen → Mitteilungen → Lager-App → Mitteilungen erlauben.';
+
+  @override
+  String get helpPushAndroidTitle => 'Android aktivieren';
+
+  @override
+  String get helpPushAndroidDesc =>
+      'Android 13+ fragt explizit nach Push-Erlaubnis. Falls du sie abgelehnt hast: Android-Einstellungen → Apps → Lager-App → Benachrichtigungen → aktivieren.';
+
+  @override
+  String get helpPushWhenTitle => 'Wann werden Pushs verschickt?';
+
+  @override
+  String get helpPushWhenDesc =>
+      '• Neue Bestellbestätigung im Postfach\n• Tracking-Update (Versandt / Angekommen)\n• Mindestbestand unterschritten (falls aktiviert)\n• Workspace-Einladung\nÜber Einstellungen → Push kannst du einzelne Kategorien deaktivieren.';
+
+  @override
+  String get helpFaqSection => 'Häufige Fragen (FAQ)';
+
+  @override
+  String get helpFaqQ1 => 'Warum sehe ich keine Mails nach dem Postfach-Add?';
+
+  @override
+  String get helpFaqA1 =>
+      'Die erste Synchronisation läuft im Hintergrund und kann je nach Postfach-Größe 1–10 Minuten dauern. Außerdem werden nur Mails von bekannten Shops/Carriern eingelesen — Werbung und persönliche Mails werden ignoriert.';
+
+  @override
+  String get helpFaqQ2 => 'Wie ändere ich die Sprache?';
+
+  @override
+  String get helpFaqA2 =>
+      'Einstellungen → Allgemein → Sprache. Aktuell verfügbar: Deutsch, Englisch. Die Änderung greift sofort.';
+
+  @override
+  String get helpFaqQ3 => 'Wie lösche ich meine Daten?';
+
+  @override
+  String get helpFaqA3 =>
+      'Einstellungen → Allgemein → „Konto löschen\". Du musst das Wort LÖSCHEN tippen, um zu bestätigen. Alle Workspaces, Deals und das Postfach werden unwiderruflich entfernt — Stand sofort.';
+
+  @override
+  String get helpFaqQ4 => 'Was passiert, wenn ich downgrade?';
+
+  @override
+  String get helpFaqA4 =>
+      'Bestehende Daten bleiben erhalten. Funktionen über dem Downgrade-Limit (z. B. zusätzliche Mitglieder, Carrier-Polling) werden pausiert, bis du wieder upgradest oder die Limits aktiv reduzierst.';
+
+  @override
+  String get helpFaqQ5 => 'Wie setze ich mein Passwort zurück?';
+
+  @override
+  String get helpFaqA5 =>
+      'Login-Screen → „Passwort vergessen\". Gib deine Mail an, du bekommst einen Reset-Link. Klick im Link öffnet die App und du kannst ein neues Passwort setzen.';
+
+  @override
+  String get helpFaqQ6 => 'Warum stimmt der Lagerwert nicht?';
+
+  @override
+  String get helpFaqA6 =>
+      'Der Lagerwert zählt nur Artikel mit hinterlegtem Einkaufspreis. Öffne den Lager-Tab und filtere nach „Ohne Einkaufspreis\" — pflege die fehlenden Werte nach, dann passt die Summe.';
+
+  @override
+  String get helpFaqQ7 => 'Tracking aktualisiert sich nicht — was tun?';
+
+  @override
+  String get helpFaqA7 =>
+      'Carrier-Polling läuft alle 4 Stunden. Prüfe in Einstellungen → Versand, ob der Carrier-API-Key hinterlegt ist. Ohne Key kann die App den Status nicht abfragen — die Mail-Pipeline ergänzt das ggf. parallel über Versandmails.';
+
+  @override
+  String get helpFaqQ8 => 'Kann ich mehrere Workspaces nutzen?';
+
+  @override
+  String get helpFaqA8 =>
+      'Ja. Tippe oben rechts auf den Workspace-Namen → „Neuer Workspace\". Du wechselst per Tap zwischen Workspaces; Daten sind strikt getrennt.';
+
+  @override
+  String get helpFaqQ9 => 'Discord-Buttons fehlen beim Deal — warum?';
+
+  @override
+  String get helpFaqA9 =>
+      'Buttons erscheinen nur, wenn der Käufer mindestens eine Discord-Server-ID hinterlegt hat. Einstellungen → Käufer → Käufer bearbeiten → Discord-Server-IDs ergänzen.';
+
+  @override
+  String get helpFaqQ10 => 'Wie exportiere ich meine Daten als CSV?';
+
+  @override
+  String get helpFaqA10 =>
+      'Statistiken → Steuer-Reiter → Download-Icon (pro Quartal). Vollständiger Daten-Export ist in Vorbereitung — bis dahin auf Anfrage über „Probleme melden\".';
+
+  @override
+  String get helpFaqQ11 => 'Wie erstelle ich einen Steuerreport?';
+
+  @override
+  String get helpFaqA11 =>
+      'Statistiken → Steuer-Reiter → Quartal wählen → CSV herunterladen. Die App zeigt Brutto, Netto und MwSt-Anteil; je nach Steuermodell (Klein- oder Regelunternehmer) wird die MwSt unterschiedlich aufbereitet.';
+
+  @override
+  String get helpFaqQ12 => 'Wie aktiviere ich den Dunkelmodus?';
+
+  @override
+  String get helpFaqA12 =>
+      'Einstellungen → Allgemein → Theme → „Dunkel\". Optional „System\" — folgt dann der iOS/Android-Systemeinstellung.';
+
+  @override
+  String get helpFaqQ13 => 'Kann ich mein Konto temporär deaktivieren?';
+
+  @override
+  String get helpFaqA13 =>
+      'Aktuell nicht — es gibt nur „Konto löschen\". Wenn du Push und Mail-Sync pausieren willst: Postfach in den Einstellungen entfernen und Push-Kategorien deaktivieren. Daten bleiben dann unverändert liegen.';
+
+  @override
+  String get helpFaqQ14 => 'Wie deaktiviere ich Push-Mitteilungen?';
+
+  @override
+  String get helpFaqA14 =>
+      'Entweder pro Kategorie in Einstellungen → Push, oder komplett über die OS-Einstellungen (iOS-Mitteilungen / Android-Benachrichtigungen → Lager-App).';
+
+  @override
+  String get helpFaqQ15 => 'Wie suche ich gezielt in der Inbox?';
+
+  @override
+  String get helpFaqA15 =>
+      'Inbox-Tab → Suchsymbol oben rechts. Du kannst nach Absender, Betreff oder Tracking-Nummer suchen. Die Suche filtert alle drei Tabs (Vorschläge / Aktualisiert / Unklassifiziert) gleichzeitig.';
+
+  @override
+  String get helpFaqQ16 => 'Warum sehe ich Deals anderer Mitglieder nicht?';
+
+  @override
+  String get helpFaqA16 =>
+      'Du bist möglicherweise im falschen Workspace. Prüfe oben rechts den Workspace-Namen und wechsle ggf. Auch Filter (Käufer/Shop/Datum) können Deals ausblenden — Filter zurücksetzen mit dem „Filter leeren\"-Button.';
+
+  @override
+  String get helpTroubleSection => 'Fehlerbehebung';
+
+  @override
+  String get helpTroubleConnectionTitle => '„Keine Verbindung zum Server\"';
+
+  @override
+  String get helpTroubleConnectionDesc =>
+      'Prüfe deine Internet-Verbindung und versuche „Aktualisieren\" (Pull-to-Refresh). Wenn das Problem bleibt: Status-Seite über die Webseite prüfen, ggf. ein paar Minuten warten — Supabase-Restarts brauchen kurz.';
+
+  @override
+  String get helpTroubleImapAuthTitle => '„IMAP-Login fehlgeschlagen\"';
+
+  @override
+  String get helpTroubleImapAuthDesc =>
+      'Bei Gmail/Outlook: stelle sicher, dass du ein App-Passwort verwendest, kein normales Login-Passwort. Bei IONOS prüfen, ob IMAP serverseitig aktiviert ist. Tippfehler im Server-Hostname sind die häufigste Ursache.';
+
+  @override
+  String get helpTroubleSyncStuckTitle => 'Postfach-Sync hängt';
+
+  @override
+  String get helpTroubleSyncStuckDesc =>
+      'Einstellungen → Postfach → Mailbox auswählen → „Re-Sync\". Falls weiterhin keine Mails kommen: Postfach entfernen und neu hinzufügen — der Bootstrap-Pump zieht dann erneut alle Mails der letzten 60 Tage.';
+
+  @override
+  String get helpTroubleNotifMissingTitle =>
+      'Push-Mitteilungen kommen nicht an';
+
+  @override
+  String get helpTroubleNotifMissingDesc =>
+      'OS-Einstellungen prüfen (Mitteilungen erlaubt?). Anschließend Einstellungen → Push → „Test-Push senden\". Wenn der Test-Push ankommt, aber Mail-/Tracking-Pushs nicht: prüfe, ob die Kategorie in den App-Einstellungen aktiviert ist.';
+
+  @override
+  String get helpTroubleStatsEmptyTitle => 'Statistiken sind leer';
+
+  @override
+  String get helpTroubleStatsEmptyDesc =>
+      'Statistiken zählen nur Deals mit Status „Verkauft\" oder „Geliefert\" und Verkaufspreis > 0. Prüfe deinen Datumsfilter (oben rechts), eventuell ist er auf einen leeren Zeitraum gesetzt.';
+
+  @override
+  String get helpTroubleLoginFailedTitle => 'Login funktioniert nicht';
+
+  @override
+  String get helpTroubleLoginFailedDesc =>
+      'Stelle sicher, dass die Mail bestätigt ist (Link aus Willkommens-Mail). Bei Google/Apple-Sign-In: hilf der App, den Browser-Tab zu öffnen — manche In-App-Browser blocken den Callback. Notfalls Passwort zurücksetzen.';
+
+  @override
+  String get helpTroubleUploadFailedTitle => 'Foto-Upload schlägt fehl';
+
+  @override
+  String get helpTroubleUploadFailedDesc =>
+      'Bilder über 10 MB werden abgelehnt. Reduziere Größe/Qualität, oder erlaube der App in den OS-Einstellungen Zugriff auf Fotos/Mediathek. Bei sehr langsamer Verbindung kann der Upload nach 60 s timeoutten — erneut versuchen.';
+
+  @override
+  String get helpTroubleSlowTitle => 'App ist plötzlich langsam';
+
+  @override
+  String get helpTroubleSlowDesc =>
+      'Sehr lange Deal-/Inbox-Listen? Filter setzen (Datum, Status), das reduziert die Render-Last. Cache leeren: Einstellungen → Allgemein → „Cache zurücksetzen\". Oder App neu starten.';
+
+  @override
+  String get helpPrivacySection => 'Datenschutz & Kontakt';
+
+  @override
+  String get helpPrivacyDataTitle => 'Welche Daten werden gespeichert?';
+
+  @override
+  String get helpPrivacyDataDesc =>
+      'Stammdaten (Workspace, Deals, Käufer), Postfach-Konfiguration (verschlüsselt) und Foto-Uploads. Mail-Inhalte werden nur kurz analysiert und nicht dauerhaft gespeichert. Details siehe Datenschutz-Erklärung im Settings → Allgemein.';
+
+  @override
+  String get helpPrivacySupportTitle => 'Wie erreiche ich den Support?';
+
+  @override
+  String get helpPrivacySupportDesc =>
+      'Über „Probleme melden\" wird eine Mail mit App-Version, OS und Workspace-ID generiert (keine Passwörter). Antwortzeit in der Regel < 48 h.';
+
+  @override
+  String get helpPrivacyNoteTitle => 'Wichtige Hinweise';
+
+  @override
+  String get helpPrivacyNoteDesc =>
+      'Die App ersetzt keine Buchhaltung oder Steuerberatung — die Statistiken sind Schätzungen. Vor dem ersten Quartalsabschluss bitte mit einem Steuerberater sprechen.';
 
   @override
   String get ticketsEmpty => 'Keine Tickets gefunden';

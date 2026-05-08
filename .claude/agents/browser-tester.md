@@ -135,6 +135,54 @@ klassischen "Tokens hinzugefügt aber Widgets lesen statisch"-Bug.
 **Wenn dieses Szenario `failed` zurückgibt: Caller darf NICHT mergen.**
 Der Bug ist reproduzierbar und sichtbar — nicht "97% sind dark, also OK".
 
+### `smoke-help`
+**Pflicht-Szenario nach jeder Änderung an `lib/screens/help_screen.dart`
+oder an Help-bezogenen ARB-Keys (`help*`).** Verifiziert, dass die
+In-App-Hilfeseite suchbar bleibt, alle 12 Sektionen rendert und auf
+Phone-Viewport ohne horizontalen Scroll auskommt.
+
+1. Login (smoke-login Schritte 1-3) — Default-Viewport 1440×900.
+2. Navigiere zu `/help` (Bottom-Nav „Hilfe" oder Drawer-Eintrag,
+   abhängig von Viewport-Breite). Bestätige per Snapshot, dass
+   das Suchfeld + mindestens **5 Sektionen** sichtbar sind
+   (z. B. „Schnellstart", „Postfach (E-Mail-Import)", „Deals",
+   „Lager (Inventory)", „Häufige Fragen (FAQ)").
+3. **Suchfunktion:** ins Suchfeld „Postfach" tippen. Wait 300 ms.
+   Snapshot — die Sektion „Postfach (E-Mail-Import)" muss sichtbar
+   und expanded sein. Andere irrelevante Sektionen (z. B.
+   „Tickets") dürfen nicht in der Treffer-Liste erscheinen.
+   Counter-Label `helpResultsLabel` muss > 0 anzeigen.
+4. Suchfeld leeren via Clear-Button (Suffix-Icon) → alle Sektionen
+   wieder sichtbar.
+5. **FAQ-Klick:** Sektion „Häufige Fragen (FAQ)" anklicken (falls
+   noch nicht expanded). Snapshot — mindestens **15 Q/A-Items**
+   müssen gerendert sein. Click auf das erste Q-Item → Antwort
+   bleibt sichtbar (FAQ-Items sind als Cards immer ausgeklappt).
+6. **Phone-Viewport:** `browser_resize` → 390×844. Re-Snapshot der
+   Hilfeseite. Prüfe via `browser_evaluate`:
+   - `document.documentElement.scrollWidth` ≤ `window.innerWidth`
+     (kein horizontaler Scroll).
+   - Die Sektions-Karten sind volle Breite (kein abgeschnittener
+     Text). Expansion-Tile-Header sind tap-bar (≥ 44dp).
+7. **Theme-Toggle:** Settings → Theme → „Dunkel" klicken.
+   Zurück zu `/help`. Per-Region-Visual-Audit (siehe
+   `smoke-theme-toggle`) für die Sektions-Cards: alle müssen
+   Dark-Mode-Surfaces zeigen, kein hardcoded `0xFFEFF6FF`-Highlight.
+   Theme zurück auf „Hell".
+8. **Sprache EN:** Settings → Allgemein → Language → English.
+   Zurück zu `/help`. Snapshot — Sektionsüberschriften müssen
+   englisch sein (z. B. „Quick start", „Mailbox (email import)",
+   „Frequently asked questions (FAQ)"). Suchfeld-Hint:
+   „Search help…".
+
+**Failure-Kriterien (`Result: failed`):**
+- Suche „Postfach" liefert keine oder mehr als 3 Sektionen
+  (Filter ist kaputt).
+- FAQ-Sektion zeigt < 15 Items.
+- Phone-Viewport hat horizontalen Scroll oder abgeschnittenen Text.
+- EN-Modus zeigt deutsche Strings (l10n-Drift) oder umgekehrt.
+- Console-Errors während Navigation/Suche.
+
 ### `smoke-<custom>`
 Caller gibt freie Anweisung als Klartext. Du übersetzt sie in obige
 Snapshot/Action/Wait-Sequenz.
