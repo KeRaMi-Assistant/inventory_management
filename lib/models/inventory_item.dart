@@ -15,6 +15,9 @@ class InventoryItem {
   final String? note;
   final String status;
   final List<String> attachmentPaths;
+  final bool isPublic;
+  final double? publicPrice;
+  final String? publicDescription;
 
   const InventoryItem({
     required this.id,
@@ -33,6 +36,9 @@ class InventoryItem {
     this.note,
     this.status = 'Im Lager',
     this.attachmentPaths = const [],
+    this.isPublic = false,
+    this.publicPrice,
+    this.publicDescription,
   });
 
   bool get isCritical => quantity < minStock;
@@ -57,6 +63,9 @@ class InventoryItem {
         'note': note,
         'status': status,
         'attachmentPaths': attachmentPaths,
+        'isPublic': isPublic,
+        'publicPrice': publicPrice,
+        'publicDescription': publicDescription,
       };
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) => InventoryItem(
@@ -81,6 +90,9 @@ class InventoryItem {
                 ?.map((e) => e as String)
                 .toList() ??
             const [],
+        isPublic: json['isPublic'] as bool? ?? false,
+        publicPrice: (json['publicPrice'] as num?)?.toDouble(),
+        publicDescription: json['publicDescription'] as String?,
       );
 
   // ── Supabase (snake_case) ─────────────────────────────────────────────────
@@ -102,6 +114,9 @@ class InventoryItem {
         'note': note,
         'status': status,
         'attachment_paths': attachmentPaths,
+        'is_public': isPublic,
+        'public_price': publicPrice,
+        'public_description': publicDescription,
       };
 
   factory InventoryItem.fromSupabase(Map<String, dynamic> row) {
@@ -126,6 +141,9 @@ class InventoryItem {
       note: row['note'] as String?,
       status: row['status'] as String? ?? 'Im Lager',
       attachmentPaths: paths,
+      isPublic: (row['is_public'] as bool?) ?? false,
+      publicPrice: (row['public_price'] as num?)?.toDouble(),
+      publicDescription: row['public_description'] as String?,
     );
   }
 
@@ -146,6 +164,9 @@ class InventoryItem {
     Object? note = _sentinel,
     String? status,
     List<String>? attachmentPaths,
+    bool? isPublic,
+    Object? publicPrice = _sentinel,
+    Object? publicDescription = _sentinel,
   }) =>
       InventoryItem(
         id: id ?? this.id,
@@ -173,6 +194,13 @@ class InventoryItem {
         note: note == _sentinel ? this.note : note as String?,
         status: status ?? this.status,
         attachmentPaths: attachmentPaths ?? this.attachmentPaths,
+        isPublic: isPublic ?? this.isPublic,
+        publicPrice: publicPrice == _sentinel
+            ? this.publicPrice
+            : publicPrice as double?,
+        publicDescription: publicDescription == _sentinel
+            ? this.publicDescription
+            : publicDescription as String?,
       );
 }
 

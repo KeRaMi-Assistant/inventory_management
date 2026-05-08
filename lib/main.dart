@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -24,6 +25,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/splash_screen.dart';
 import 'screens/main_screen.dart';
+import 'screens/public_profile_screen.dart';
 import 'services/attachment_service.dart';
 import 'services/billing_service.dart';
 import 'services/push_service.dart';
@@ -39,6 +41,10 @@ Future<void> main() async {
     anonKey: SupabaseConfig.anonKey,
   );
 
+  // Web-only: `/u/<handle>` öffnet das öffentliche Verkaufsprofil.
+  // Funktioniert sowohl mit Hash- als auch Path-URL-Strategie.
+  final publicHandle = kIsWeb ? publicProfileHandleFromUri(Uri.base) : null;
+
   final prefs = AppPreferencesProvider();
   await prefs.load();
 
@@ -46,7 +52,28 @@ Future<void> main() async {
   // Best-effort: läuft auch ohne Firebase-Config still durch.
   await pushService.init();
 
-  runApp(InventoryApp(preferences: prefs, pushService: pushService));
+  runApp(InventoryApp(
+    preferences: prefs,
+    pushService: pushService,
+    publicProfileHandle: publicHandle,
+  ));
+}
+
+/// Extrahiert einen Workspace-Handle aus `/u/<handle>` (Path-Strategie)
+/// oder `/#/u/<handle>` (Hash-Strategie). Liefert null, wenn nichts passt.
+@visibleForTesting
+String? publicProfileHandleFromUri(Uri base) {
+  final pattern = RegExp(r'^/?u/([a-z0-9][a-z0-9-]{1,30}[a-z0-9])/?$');
+  // Path-Strategie: base.path enthält /u/<handle>
+  final pathMatch = pattern.firstMatch(base.path);
+  if (pathMatch != null) return pathMatch.group(1);
+  // Hash-Strategie: base.fragment enthält /u/<handle>
+  final frag = base.fragment;
+  if (frag.isNotEmpty) {
+    final fragMatch = pattern.firstMatch(frag);
+    if (fragMatch != null) return fragMatch.group(1);
+  }
+  return null;
 }
 
 final GlobalKey<NavigatorState> _rootNavigator =
@@ -55,10 +82,12 @@ final GlobalKey<NavigatorState> _rootNavigator =
 class InventoryApp extends StatelessWidget {
   final AppPreferencesProvider preferences;
   final PushService pushService;
+  final String? publicProfileHandle;
   const InventoryApp({
     super.key,
     required this.preferences,
     required this.pushService,
+    this.publicProfileHandle,
   });
 
   @override
@@ -148,9 +177,11 @@ class InventoryApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          home: const _ActivityListener(
-            child: _RecoveryListener(child: _AuthGate()),
-          ),
+          home: publicProfileHandle != null
+              ? PublicProfileScreen(handle: publicProfileHandle!)
+              : const _ActivityListener(
+                  child: _RecoveryListener(child: _AuthGate()),
+                ),
           debugShowCheckedModeBanner: false,
         ),
       ),

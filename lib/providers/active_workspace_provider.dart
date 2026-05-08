@@ -86,4 +86,19 @@ class ActiveWorkspaceProvider extends ChangeNotifier {
     _role = null;
     notifyListeners();
   }
+
+  /// Ersetzt einen Workspace in der Liste (z.B. nach `updatePublicProfile`).
+  /// Wenn er gerade aktiv ist, wird auch `_active` aktualisiert.
+  void applyUpdate(Workspace updated) {
+    final idx = _workspaces.indexWhere((w) => w.id == updated.id);
+    if (idx >= 0) {
+      _workspaces[idx] = updated;
+    } else {
+      _workspaces = [..._workspaces, updated];
+    }
+    if (_active?.id == updated.id) {
+      _active = updated;
+    }
+    notifyListeners();
+  }
 }

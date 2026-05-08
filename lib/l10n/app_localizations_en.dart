@@ -2005,4 +2005,95 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsThemeSystem => 'System';
+
+  @override
+  String get publicProfileTab => 'Public profile';
+
+  @override
+  String get publicProfileSectionTitle => 'Sales page';
+
+  @override
+  String get publicProfileSectionDesc =>
+      'Publish a read-only page with your in-stock items. Inquiries arrive by email.';
+
+  @override
+  String get publicProfileEnableLabel => 'Public profile enabled';
+
+  @override
+  String get publicProfileHandleLabel => 'Handle';
+
+  @override
+  String get publicProfileHandleHint => 'e.g. my-shop';
+
+  @override
+  String get publicProfileHandleHelp =>
+      'Lowercase letters, digits and dashes, 3–32 chars. Reachable at /u/<handle>.';
+
+  @override
+  String get publicProfileHandleInvalid =>
+      'Use a-z, 0-9 and dash. 3–32 chars, must not start or end with \"-\".';
+
+  @override
+  String get publicProfileHandleTaken => 'Handle already taken.';
+
+  @override
+  String get publicProfileSaved => 'Profile updated.';
+
+  @override
+  String publicProfileSaveFailed(Object error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String get publicProfileNeedsHandle =>
+      'Set a handle first to enable the profile.';
+
+  @override
+  String get publicProfileLink => 'Public link';
+
+  @override
+  String get publicProfileCopyLink => 'Copy link';
+
+  @override
+  String get publicProfileLinkCopied => 'Link copied.';
+
+  @override
+  String get publicProfileItemsTitle => 'Visible items';
+
+  @override
+  String get publicProfileItemsHint =>
+      'Tap an item to show or hide it on the public page.';
+
+  @override
+  String get publicProfileItemPublic => 'Public';
+
+  @override
+  String get publicProfileNoEligibleItems => 'No items in stock yet.';
+
+  @override
+  String get publicProfileNotFoundTitle => 'Profile not found';
+
+  @override
+  String get publicProfileNotFoundBody =>
+      'This sales page does not exist or is not public.';
+
+  @override
+  String get publicProfileEmptyItems => 'No items available right now.';
+
+  @override
+  String get publicProfileContact => 'Send inquiry';
+
+  @override
+  String get publicProfileContactSubject => 'Inquiry about your listing';
+
+  @override
+  String get publicProfileItemPrice => 'Price';
+
+  @override
+  String publicProfileItemQuantity(int count) {
+    return 'Available: $count';
+  }
+
+  @override
+  String get publicProfileFooter => 'Built with InventoryOS';
 }

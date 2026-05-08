@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:intl/intl.dart';
@@ -6,6 +7,7 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
 import '../models/carrier_credential.dart';
+import '../models/inventory_item.dart';
 import '../models/pricing_plan.dart';
 import '../models/shop.dart';
 import '../models/workspace.dart';
@@ -33,7 +35,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final tabs = DefaultTabController(
-      length: 7,
+      length: 8,
       child: Column(
         children: [
           if (!embedded)
@@ -51,6 +53,7 @@ class SettingsScreen extends StatelessWidget {
                   Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
                   const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
                   Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
+                  Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
                   Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
                 ],
               ),
@@ -71,6 +74,7 @@ class SettingsScreen extends StatelessWidget {
                   Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
                   const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
                   Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
+                  Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
                   Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
                 ],
               ),
@@ -84,6 +88,7 @@ class SettingsScreen extends StatelessWidget {
                 _NotificationsTab(),
                 _MailboxTab(),
                 _ShippingTab(),
+                _PublicProfileTab(),
                 _GeneralTab(),
               ],
             ),
@@ -2761,6 +2766,354 @@ class _CarrierTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Public Profile Tab ─────────────────────────────────────────────────────
+
+class _PublicProfileTab extends StatefulWidget {
+  const _PublicProfileTab();
+
+  @override
+  State<_PublicProfileTab> createState() => _PublicProfileTabState();
+}
+
+class _PublicProfileTabState extends State<_PublicProfileTab> {
+  final TextEditingController _handleCtrl = TextEditingController();
+  bool _saving = false;
+  String? _handleError;
+
+  static final RegExp _handlePattern =
+      RegExp(r'^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?$');
+
+  @override
+  void initState() {
+    super.initState();
+    final ws = context.read<ActiveWorkspaceProvider>().active;
+    _handleCtrl.text = ws?.handle ?? '';
+  }
+
+  @override
+  void dispose() {
+    _handleCtrl.dispose();
+    super.dispose();
+  }
+
+  String? _validateHandle(String raw, AppLocalizations l10n) {
+    final clean = raw.trim().toLowerCase();
+    if (clean.isEmpty) return null;
+    if (!_handlePattern.hasMatch(clean)) {
+      return l10n.publicProfileHandleInvalid;
+    }
+    return null;
+  }
+
+  Future<void> _save({
+    required AppLocalizations l10n,
+    String? handle,
+    bool? enabled,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final wsProv = context.read<ActiveWorkspaceProvider>();
+    final svc = context.read<WorkspaceService>();
+    final active = wsProv.active;
+    if (active == null) return;
+    setState(() => _saving = true);
+    try {
+      final updated = await svc.updatePublicProfile(
+        workspaceId: active.id,
+        handle: handle,
+        publicProfileEnabled: enabled,
+      );
+      wsProv.applyUpdate(updated);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.publicProfileSaved)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final msg = _isUniqueViolation(e)
+          ? l10n.publicProfileHandleTaken
+          : l10n.publicProfileSaveFailed(e.toString());
+      messenger.showSnackBar(SnackBar(content: Text(msg)));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  bool _isUniqueViolation(Object e) {
+    final s = e.toString();
+    return s.contains('23505') || s.contains('duplicate key');
+  }
+
+  String? _publicUrl(Workspace ws) {
+    final h = ws.handle;
+    if (h == null || h.isEmpty) return null;
+    if (!kIsWeb) return '/u/$h';
+    final origin = Uri.base.origin;
+    return '$origin/#/u/$h';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      backgroundColor: AppTheme.bgAppOf(context),
+      body: Consumer2<ActiveWorkspaceProvider, InventoryProvider>(
+        builder: (context, wsProv, inv, _) {
+          final ws = wsProv.active;
+          if (ws == null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(l10n.publicProfileSectionDesc,
+                    textAlign: TextAlign.center),
+              ),
+            );
+          }
+          final publicUrl = _publicUrl(ws);
+          final eligibleItems = inv.inventoryItems
+              .where((i) => i.status == 'Im Lager' && i.quantity > 0)
+              .toList();
+          eligibleItems.sort((a, b) => a.name.compareTo(b.name));
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _SectionCard(
+                title: l10n.publicProfileSectionTitle,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.publicProfileSectionDesc,
+                      style:
+                          TextStyle(color: AppTheme.textMutedOf(context)),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _handleCtrl,
+                      enabled: !_saving,
+                      decoration: InputDecoration(
+                        labelText: l10n.publicProfileHandleLabel,
+                        hintText: l10n.publicProfileHandleHint,
+                        helperText: l10n.publicProfileHandleHelp,
+                        helperMaxLines: 3,
+                        errorText: _handleError,
+                        prefixText: '/u/',
+                      ),
+                      onChanged: (v) {
+                        setState(() {
+                          _handleError = _validateHandle(v, l10n);
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton.icon(
+                        onPressed: _saving || _handleError != null
+                            ? null
+                            : () async {
+                                final v = _handleCtrl.text.trim().toLowerCase();
+                                final err = _validateHandle(v, l10n);
+                                if (err != null) {
+                                  setState(() => _handleError = err);
+                                  return;
+                                }
+                                await _save(l10n: l10n, handle: v);
+                              },
+                        icon: const Icon(Icons.save_outlined),
+                        label: Text(l10n.actionSave),
+                      ),
+                    ),
+                    const Divider(height: 32),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: ws.publicProfileEnabled,
+                      onChanged: _saving
+                          ? null
+                          : (v) {
+                              if (v && (ws.handle == null || ws.handle!.isEmpty)) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text(l10n.publicProfileNeedsHandle),
+                                  ),
+                                );
+                                return;
+                              }
+                              _save(l10n: l10n, enabled: v);
+                            },
+                      title: Text(l10n.publicProfileEnableLabel),
+                    ),
+                    if (publicUrl != null && ws.publicProfileEnabled) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SelectableText(
+                              publicUrl,
+                              style: TextStyle(
+                                color: AppTheme.accentTextOf(context),
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: l10n.publicProfileCopyLink,
+                            icon: const Icon(Icons.copy_outlined),
+                            onPressed: () async {
+                              await Clipboard.setData(
+                                  ClipboardData(text: publicUrl));
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content:
+                                      Text(l10n.publicProfileLinkCopied),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: l10n.publicProfileItemsTitle,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.publicProfileItemsHint,
+                      style:
+                          TextStyle(color: AppTheme.textMutedOf(context)),
+                    ),
+                    const SizedBox(height: 12),
+                    if (eligibleItems.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          l10n.publicProfileNoEligibleItems,
+                          style: TextStyle(
+                              color: AppTheme.textMutedOf(context)),
+                        ),
+                      )
+                    else
+                      ...eligibleItems.map(
+                        (item) => _PublicItemTile(
+                          item: item,
+                          onChanged: (next) async {
+                            try {
+                              await inv.updateInventoryItem(
+                                item.copyWith(isPublic: next),
+                              );
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      l10n.publicProfileSaveFailed(
+                                          e.toString())),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PublicItemTile extends StatelessWidget {
+  final InventoryItem item;
+  final ValueChanged<bool> onChanged;
+  const _PublicItemTile({required this.item, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.bgSurfaceOf(context),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.borderOf(context)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  item.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  l10n.publicProfileItemQuantity(item.quantity),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textMutedOf(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch.adaptive(
+            value: item.isPublic,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final Widget child;
+  const _SectionCard({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.bgSurfaceOf(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.borderOf(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
       ),
     );
   }
