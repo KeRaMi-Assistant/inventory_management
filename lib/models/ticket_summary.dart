@@ -5,14 +5,21 @@ class TicketSummary {
   final String ticketNumber;
   final List<Deal> deals;
   final List<InventoryItem> items;
+  final int? ticketId;
+  final DateTime? archivedAt;
+  final String? archivedReason;
 
   const TicketSummary({
     required this.ticketNumber,
     required this.deals,
     required this.items,
+    this.ticketId,
+    this.archivedAt,
+    this.archivedReason,
   });
 
   bool get hasTicket => ticketNumber != 'Kein Ticket';
+  bool get isArchived => archivedAt != null;
   int get dealCount => deals.length;
   int get totalQuantity => deals.fold(0, (sum, d) => sum + d.quantity);
   double get totalEk =>

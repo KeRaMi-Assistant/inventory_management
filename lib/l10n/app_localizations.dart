@@ -2492,6 +2492,48 @@ abstract class AppLocalizations {
   /// **'Kein Käufer'**
   String get ticketsNoBuyer;
 
+  /// No description provided for @ticketsTabActive.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiv'**
+  String get ticketsTabActive;
+
+  /// No description provided for @ticketsTabArchive.
+  ///
+  /// In de, this message translates to:
+  /// **'Archiv'**
+  String get ticketsTabArchive;
+
+  /// No description provided for @ticketsArchiveEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine archivierten Tickets'**
+  String get ticketsArchiveEmpty;
+
+  /// No description provided for @ticketsArchiveReopen.
+  ///
+  /// In de, this message translates to:
+  /// **'Wieder öffnen'**
+  String get ticketsArchiveReopen;
+
+  /// No description provided for @ticketsArchiveReopenConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieses Ticket wieder öffnen? Archiv-Zeitpunkt und Grund werden zurückgesetzt.'**
+  String get ticketsArchiveReopenConfirm;
+
+  /// No description provided for @ticketsArchiveMonthProfit.
+  ///
+  /// In de, this message translates to:
+  /// **'Profit: {profit}'**
+  String ticketsArchiveMonthProfit(Object profit);
+
+  /// No description provided for @ticketsArchiveLongPressHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lang drücken zum Wiedereröffnen'**
+  String get ticketsArchiveLongPressHint;
+
   /// No description provided for @inventoryTitle.
   ///
   /// In de, this message translates to:

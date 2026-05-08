@@ -1318,6 +1318,30 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ticketsNoBuyer => 'Kein Käufer';
 
   @override
+  String get ticketsTabActive => 'Aktiv';
+
+  @override
+  String get ticketsTabArchive => 'Archiv';
+
+  @override
+  String get ticketsArchiveEmpty => 'Keine archivierten Tickets';
+
+  @override
+  String get ticketsArchiveReopen => 'Wieder öffnen';
+
+  @override
+  String get ticketsArchiveReopenConfirm =>
+      'Dieses Ticket wieder öffnen? Archiv-Zeitpunkt und Grund werden zurückgesetzt.';
+
+  @override
+  String ticketsArchiveMonthProfit(Object profit) {
+    return 'Profit: $profit';
+  }
+
+  @override
+  String get ticketsArchiveLongPressHint => 'Lang drücken zum Wiedereröffnen';
+
+  @override
   String get inventoryTitle => 'Lager';
 
   @override
