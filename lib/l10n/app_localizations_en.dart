@@ -1457,7 +1457,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpFaqA3 =>
-      'Settings → General → \"Delete account\". You must type the word DELETE to confirm. All workspaces, deals and the mailbox are removed irreversibly — effective immediately.';
+      'Settings → General → \"Delete account\". You must type the word DELETE to confirm. Account, workspaces and mailbox configuration are deleted immediately; mail metadata and stored images are removed from the database and storage within 30 days.';
 
   @override
   String get helpFaqQ4 => 'What happens if I downgrade?';
@@ -1579,7 +1579,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpTroubleNotifMissingDesc =>
-      'Check OS settings (notifications allowed?). Then Settings → Push → \"Send test push\". If the test push arrives but mail/tracking pushes don\'t: verify the category is enabled in app settings.';
+      'First check the OS notification settings (iOS Notifications / Android notifications → Inventory app → notifications allowed?). Then in the app under Settings → Push verify the individual categories are enabled. If everything is set to \"allowed\" and still nothing arrives, sign out and back in — that re-registers the push token.';
 
   @override
   String get helpTroubleStatsEmptyTitle => 'Statistics are empty';
@@ -1607,7 +1607,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpTroubleSlowDesc =>
-      'Very long deal/inbox lists? Apply filters (date, status) to reduce render load. Clear cache: Settings → General → \"Reset cache\". Or restart the app.';
+      'Very long deal/inbox lists? Apply filters (date, status, buyer) to reduce render load. Fully quitting and restarting the app clears volatile in-memory caches. On older devices, archiving old tickets also helps.';
 
   @override
   String get helpPrivacySection => 'Privacy & contact';
@@ -1617,7 +1617,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpPrivacyDataDesc =>
-      'Master data (workspace, deals, buyers), mailbox config (encrypted) and photo uploads. Mail bodies are only briefly analysed and not stored permanently. Details in the privacy policy under Settings → General.';
+      'What is stored: master data (workspace, deals, buyers), mailbox config (password encrypted) and photo uploads. From parsed mails we store headers (sender, subject, date) and a normalised JSON extract (order ID, tracking number, totals, product); the full mail body is not retained. Mail metadata is auto-deleted after 100 days. Details in the privacy policy under Settings → General.';
 
   @override
   String get helpPrivacySupportTitle => 'How do I reach support?';

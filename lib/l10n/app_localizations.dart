@@ -2669,7 +2669,7 @@ abstract class AppLocalizations {
   /// No description provided for @helpFaqA3.
   ///
   /// In de, this message translates to:
-  /// **'Einstellungen → Allgemein → „Konto löschen\". Du musst das Wort LÖSCHEN tippen, um zu bestätigen. Alle Workspaces, Deals und das Postfach werden unwiderruflich entfernt — Stand sofort.'**
+  /// **'Einstellungen → Allgemein → „Konto löschen\". Du musst das Wort LÖSCHEN tippen, um zu bestätigen. Account, Workspaces und Postfach-Konfiguration werden sofort gelöscht; Mail-Metadaten und gespeicherte Bilder werden innerhalb von 30 Tagen aus der Datenbank und dem Storage entfernt.'**
   String get helpFaqA3;
 
   /// No description provided for @helpFaqQ4.
@@ -2879,7 +2879,7 @@ abstract class AppLocalizations {
   /// No description provided for @helpTroubleNotifMissingDesc.
   ///
   /// In de, this message translates to:
-  /// **'OS-Einstellungen prüfen (Mitteilungen erlaubt?). Anschließend Einstellungen → Push → „Test-Push senden\". Wenn der Test-Push ankommt, aber Mail-/Tracking-Pushs nicht: prüfe, ob die Kategorie in den App-Einstellungen aktiviert ist.'**
+  /// **'Prüfe zuerst die OS-Mitteilungseinstellungen (iOS-Mitteilungen / Android-Benachrichtigungen → Lager-App → Mitteilungen erlaubt?). Dann in der App Einstellungen → Push: prüfe, ob die einzelnen Kategorien aktiviert sind. Wenn alles auf „erlaubt\" steht und trotzdem nichts kommt, einmal aus- und wieder einloggen — dabei wird der Push-Token neu registriert.'**
   String get helpTroubleNotifMissingDesc;
 
   /// No description provided for @helpTroubleStatsEmptyTitle.
@@ -2927,7 +2927,7 @@ abstract class AppLocalizations {
   /// No description provided for @helpTroubleSlowDesc.
   ///
   /// In de, this message translates to:
-  /// **'Sehr lange Deal-/Inbox-Listen? Filter setzen (Datum, Status), das reduziert die Render-Last. Cache leeren: Einstellungen → Allgemein → „Cache zurücksetzen\". Oder App neu starten.'**
+  /// **'Sehr lange Deal-/Inbox-Listen? Filter setzen (Datum, Status, Käufer), das reduziert die Render-Last. App komplett beenden und neu starten leert flüchtige Caches im Speicher. Auf älteren Geräten kann es helfen, alte Tickets zu archivieren.'**
   String get helpTroubleSlowDesc;
 
   /// No description provided for @helpPrivacySection.
@@ -2945,7 +2945,7 @@ abstract class AppLocalizations {
   /// No description provided for @helpPrivacyDataDesc.
   ///
   /// In de, this message translates to:
-  /// **'Stammdaten (Workspace, Deals, Käufer), Postfach-Konfiguration (verschlüsselt) und Foto-Uploads. Mail-Inhalte werden nur kurz analysiert und nicht dauerhaft gespeichert. Details siehe Datenschutz-Erklärung im Settings → Allgemein.'**
+  /// **'Gespeichert werden: Stammdaten (Workspace, Deals, Käufer), Postfach-Konfiguration (Passwort verschlüsselt) und Foto-Uploads. Aus eingelesenen Mails werden Header (Absender, Betreff, Datum) und ein normalisierter JSON-Auszug (Bestellnummer, Tracking-Nummer, Beträge, Produkt) gespeichert; der vollständige Mail-Body bleibt nicht dauerhaft liegen. Mail-Metadaten werden nach 100 Tagen automatisch gelöscht. Details siehe Datenschutz-Erklärung in Einstellungen → Allgemein.'**
   String get helpPrivacyDataDesc;
 
   /// No description provided for @helpPrivacySupportTitle.

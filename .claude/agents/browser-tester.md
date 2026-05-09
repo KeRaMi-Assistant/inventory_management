@@ -73,10 +73,17 @@ Du testest die Flutter-Web-App `inventory_management` im echten Chrome
 1. Login (smoke-login Schritte 1-3)
 2. Auf Inbox-Tab klicken (Bottom-Nav)
 3. Snapshot — prüfe `unreadCount`-Badge falls vorhanden
-4. "Alle als gelesen markieren"-Button klicken
-5. Confirm im Dialog
-6. Warte auf SnackBar
-7. Snapshot — Badge soll 0 / weg sein
+4. **Tracking-Chip-Check (PFLICHT):** im Tab "Vorschläge" muss
+   mindestens ein `_TrackingPill` (Key `tracking-pill-<nr>`) sichtbar
+   sein. Für den Test-Workspace `test@test.com` seedet
+   `seed-demo-workspace` 5 Amazon-Logistics-Suggestions — die UI
+   filtert evtl. auf 3 herunter, ≥ 1 reicht für `passed`. Wenn 0:
+   `Result: failed` (Demo-Seed nicht durchgelaufen oder Render-Pfad
+   defekt).
+5. "Alle als gelesen markieren"-Button klicken
+6. Confirm im Dialog
+7. Warte auf SnackBar
+8. Snapshot — Badge soll 0 / weg sein
 
 ### `smoke-theme-toggle`
 **Pflicht-Szenario nach jeder Theme-/Color-/Style-Änderung.** Findet den
