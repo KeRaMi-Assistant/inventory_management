@@ -190,6 +190,196 @@ Phone-Viewport ohne horizontalen Scroll auskommt.
 - EN-Modus zeigt deutsche Strings (l10n-Drift) oder umgekehrt.
 - Console-Errors während Navigation/Suche.
 
+### `smoke-full-app-audit`
+
+**Mega-Szenario.** Läuft pro Eintrag in
+[`.claude/agents/_page-registry.md`](_page-registry.md) einen Audit-
+Block durch (Top-Level + Auth + relevante Sub-Routes), sammelt alle
+Befunde, generiert pro Befund einen Auto-Requeue-Task im Inbox.
+Pflicht-Test vor jedem `/ship` einer User-sichtbaren UI-Änderung
+(siehe CLAUDE.md → Pre-Ship-Pflicht).
+
+**Voraussetzungen / Hard-Block:**
+
+- `.claude/agents/_page-registry.md` muss existieren. Wenn nicht,
+  `Result: failed` mit Hinweis "Page-Registry fehlt — Task #03 erst".
+- Login-Konto: `test@test.com / passwort`. Auth-Routes werden im
+  ausgeloggten Pre-Pass abgedeckt (siehe Workflow Schritt 2).
+- Run-Ordner: `.claude/test-runs/<timestamp>/audit/` — Screenshots,
+  `findings.json`, `findings.md`. Pro Route ≥ 4 Screenshots
+  (light/dark × desktop/phone).
+
+**Workflow:**
+
+1. **Init.** Lies `_page-registry.md` und parse die drei Tabellen
+   (Top-Level, Auth/First-Run, Sub-Routes). Sammle pro Eintrag
+   `route`, `file`, `pflicht-tests`. Reihenfolge wie in der Datei.
+2. **Auth-Pre-Pass (ausgeloggt).** Vor dem Login: für jede
+   Auth-Route (`/login`, `/register`, `/forgot-password`,
+   `/reset-password`, `/verify-email`, `/splash`) je ein
+   Light-Desktop- + Light-Phone-Screenshot machen. Dark-Pass
+   überspringen wenn die Route den Theme-Toggle nicht erreicht
+   (Toggle liegt hinter Login). Console-Errors sammeln und mit
+   `route:<x>` taggen.
+3. **Login.** `test@test.com / passwort`. Warte auf
+   Dashboard-Marker.
+4. **Pro eingeloggter Route** (Top-Level + Sub-Routes):
+   a. **Navigate.** Bei Top-Level: Tab/Side-Nav-Click. Bei
+      Sub-Routes: dokumentierten Trigger ausführen (Button-Klick
+      o. ä.).
+   b. **Anker abwarten.** `browser_wait_for` auf Route-spezifisches
+      Marker-Element (z. B. AppBar-Title, Tab-Bar, Empty-State-Text).
+      Wenn nach 5 s nichts da → `route-404`-Befund.
+   c. **Light-Pass.**
+      - `browser_resize` 1440×900 → `audit/light-desktop-<route>.png`.
+      - `browser_resize` 390×844  → `audit/light-phone-<route>.png`.
+      - **Pixel-Overflow-Check (Code, nicht visuell):**
+        ```js
+        browser_evaluate: () => {
+          const docW = document.documentElement.scrollWidth;
+          const winW = window.innerWidth;
+          const offenders = [...document.querySelectorAll('*')]
+            .filter(el => {
+              const r = el.getBoundingClientRect();
+              return r.right > winW + 1 && r.width > 0 && r.height > 0;
+            })
+            .slice(0, 20)
+            .map(el => ({
+              tag: el.tagName,
+              cls: (el.className || '').toString().slice(0, 80),
+              right: el.getBoundingClientRect().right,
+              text: (el.innerText || '').slice(0, 60),
+            }));
+          return { docW, winW, overflow: docW > winW + 1, offenders };
+        }
+        ```
+        `overflow:true` ⇒ `pixel-overflow`-Befund.
+      - **Per-Region-Visual-Audit** (siehe `smoke-theme-toggle`):
+        Page-BG, AppBar, Sidebar/Bottom-Nav, Cards, FAB. Pro
+        Region `getComputedStyle().backgroundColor` lesen.
+      - **Mobile-Bottom-Nav-Check** (nur Phone-Pass): wenn
+        `window.innerWidth < 600` und keine `BottomNavigationBar`-
+        Region erkennbar (oder eine Sidebar mit `width > 200`
+        sichtbar) ⇒ `mobile-no-bottom-nav`-Befund.
+      - **Touch-Target-Audit** (nur Phone-Pass): alle `button`,
+        `[role="button"]`, `a` durchgehen — wenn
+        `min(width, height) < 44` ⇒ `touch-target-too-small`-Befund
+        (max 5 pro Route loggen).
+   d. **Dark-Pass.** Beim ersten Eintrag der Schleife:
+      `Settings → Allgemein → Theme → Dunkel` toggeln, Wait 500 ms,
+      zurück zur Route. Ab dann bleibt Dark aktiv für alle weiteren
+      Routen. Erneut Desktop- + Phone-Screenshot:
+      `audit/dark-desktop-<route>.png`,
+      `audit/dark-phone-<route>.png`. Per-Region-Visual-Audit:
+      Region mit RGB-Summe > 600 ⇒ `theme-leak`-Befund.
+   e. **Console-Errors-Check.** `browser_console_messages` lesen,
+      neue Error/Warning-Zeilen mit `route:<route>` taggen, in
+      globaler Liste sammeln. ⇒ `console-error`-Befund (ein Befund
+      pro Route, nicht pro Zeile).
+   f. **Sub-Routes-Trigger** (nur Top-Level mit Modal-Triggern in
+      der Registry): den Modal/Dialog/Sheet einmal öffnen, einen
+      Light-Desktop- + Light-Phone-Screenshot
+      (`audit/light-desktop-<route>__<sub>.png`), Pixel-Overflow-
+      Check, dann Modal schließen. Sub-Route-Befunde tauchen mit
+      Route `<parent>__<sub>` in der globalen Liste auf.
+5. **Theme-Cleanup.** Theme-Toggle zurück auf "Hell".
+6. **Aggregation.** `findings.json` schreiben:
+   ```json
+   {
+     "scenario": "smoke-full-app-audit",
+     "started": "<iso>",
+     "routes": [
+       { "route": "/dashboard", "ok": true, "findings": [] },
+       { "route": "/deals", "ok": false,
+         "findings": [
+           { "category": "theme-leak",
+             "summary": "Card-BG #FFFFFF im Dark-Mode",
+             "hotspot": "lib/screens/deals_screen.dart:312" }
+         ] }
+     ],
+     "auto_requeue_files": ["00-followup-deals-theme-leak-..."],
+     "stop_loop_triggered": false,
+     "cap_hit": false
+   }
+   ```
+
+**Failure-Kategorien (jede einzelne reicht für `Result: failed`):**
+
+- `theme-leak`: Region im Dark-Mode mit RGB-Summe > 600 (= hell).
+- `pixel-overflow`: `scrollWidth > innerWidth` oder Element-rechts >
+  `viewport.width` auf Phone- oder Desktop-Viewport.
+- `text-on-bg`: Text-RGB-Summe < 300 auf Background mit
+  RGB-Summe > 600 (oder umgekehrt) — Kontrast < 4.5:1.
+- `console-error`: ≥ 1 Error oder Severe-Warning während
+  Route-Besuch (Info/Debug ignorieren).
+- `route-404`: Route lädt nicht oder zeigt White-Screen > 5 s
+  (Anker-Element nicht gefunden).
+- `mobile-no-bottom-nav`: Phone-Viewport zeigt Sidebar statt
+  Bottom-Nav oder gar keine Top-Level-Nav.
+- `touch-target-too-small`: Tap-Target < 44 dp im Phone-Pass.
+
+**Auto-Requeue pro Befund (PFLICHT):**
+
+Pro Befund **eine** Datei in `.claude/backlog/inbox/`:
+
+- **Datei-Naming:** `00-followup-<route-slug>-<category>-<UTC-ts>.md`.
+  Beispiel: `00-followup-deals-theme-leak-20260509T140312Z.md`.
+  Slashes in der Route durch `-` ersetzen, führendes `-`
+  entfernen. UTC-Timestamp mit `Z`-Suffix.
+- **Body:** identisch zur "Auto-Requeue bei `Result: failed`"-
+  Sektion oben (`priority: 0`, `test_scenario: <Re-Test>`,
+  konkretes Repro, vermuteter Code-Hotspot, Akzeptanz). Als
+  Re-Test wählst du das engste passende Smoke-Szenario aus
+  `_page-registry.md` Spalte "Pflicht-Tests" — z. B. bei
+  `theme-leak` auf `/deals` ⇒ `smoke-theme-toggle` (Re-Run testet
+  alle 10 Routes inkl. der gefixten); bei `pixel-overflow` auf
+  einer Sub-Route ⇒ `smoke-full-app-audit` selbst (kompletter
+  Re-Run, weil engerer Scope nicht existiert).
+
+**Stop-Loop-Schutz (PFLICHT):**
+
+- **Same-Bug-Detection.** Vor jedem Auto-Requeue: prüfe
+  `.claude/backlog/failed/` auf Files mit gleicher Route +
+  gleicher Category in den letzten 24 h (`mtime`-basiert). Wenn
+  ≥ 3 Treffer ⇒ `## Stop-Loop`-Sentinel als erste Zeile **nach**
+  dem YAML-Frontmatter im Body einfügen + ntfy-Notification
+  "Auto-Requeue-Loop für `<route>` `<category>` 3× failed —
+  systemischer Bug, manuelle Diagnose nötig". Der Headless-Runner
+  bricht den Auto-Requeue-Loop ab, sobald er den Sentinel sieht
+  (siehe `.claude/scripts/headless-runner.sh`).
+- **Cap pro Run.** Maximal **20** Auto-Requeue-Files pro
+  `smoke-full-app-audit`-Run. Wenn die Befunde-Liste mehr ergibt:
+  schreibe nur die ersten 20 (priorisiert in dieser Reihenfolge:
+  `route-404` > `console-error` > `theme-leak` > `pixel-overflow`
+  > `text-on-bg` > `mobile-no-bottom-nav` >
+  `touch-target-too-small`), notiere `cap_hit: true` in
+  `findings.json` + setze ein einziges Sammel-Followup-File
+  `00-followup-audit-cap-hit-<ts>.md` mit kompletter
+  Befunde-Tabelle und ntfy-Notification "Audit produzierte
+  Findings-Flut, manuelles Triage nötig".
+- **Run-Log-Eintrag.** In `.claude/test-runs/<ts>/report.md`
+  Sektion `## Stop-Loop & Cap` schreiben (auch wenn nicht
+  getriggert): `triggered: false, reason: under thresholds`.
+  So ist die Logik im Run-Log greifbar — auch im ersten
+  Pass-Run.
+
+**Result-Logik:**
+
+- ≥ 1 Befund einer der Kategorien
+  `theme-leak` / `pixel-overflow` / `text-on-bg` / `console-error` /
+  `route-404` / `mobile-no-bottom-nav` ⇒ **`Result: failed`**.
+  Auto-Requeue-Tasks geschrieben (mit Cap- und Stop-Loop-Logik).
+- 0 Befunde ⇒ **`Result: passed`**. Vollständiger Pass-Report
+  mit Screenshot-Pfaden pro Route + leerer `auto_requeue_files`-
+  Liste in `findings.json`.
+- `touch-target-too-small` allein zählt als Warning (im Report
+  unter `## Warnings`), nicht als `failed` — Phone-Tap-Target-
+  Detection ist heuristisch und erzeugt sonst False-Positives.
+
+**Laufzeit-Erwartung:** ~30 s pro Top-Level-Route, ~10 s pro
+Sub-Route — bei 14 Top-Level + 6–8 ausgewählten Sub-Routes
+~10–15 min Gesamtlauf. Das ist OK; Quality > Speed.
+
 ### `smoke-<custom>`
 Caller gibt freie Anweisung als Klartext. Du übersetzt sie in obige
 Snapshot/Action/Wait-Sequenz.
