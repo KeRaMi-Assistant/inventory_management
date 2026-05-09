@@ -176,6 +176,11 @@ Deno.serve(async (req) => {
 
   try {
     const schema = await detectSchema(admin)
+    // Demo-Amazon-Inbox VOR cleanup einsetzen — parsed_messages bleiben
+    // erhalten (kein cleanup-Eintrag), pending_deal_suggestions schreibt
+    // runSeed selbst. So sieht der Browser-Tester nach jedem Re-Seed
+    // verlässlich Tracking-Chips auf den Mail-Cards (Inbox-Vorschläge).
+    const inbox = await ensureDemoAmazonInbox(admin, workspaceId, user.id)
     const cleanup = await runCleanup(admin, workspaceId, schema)
     const seed = await runSeed(admin, workspaceId, user.id, schema)
     return jsonResp({
@@ -185,6 +190,7 @@ Deno.serve(async (req) => {
       schema,
       cleanup,
       seed,
+      demo_inbox: inbox,
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -242,6 +248,186 @@ async function probeColumn(
 ): Promise<boolean> {
   const { error } = await admin.from(table).select(column).limit(0)
   return !error
+}
+
+// --------------------------------------------------------------------------
+// Demo Amazon Inbox
+// --------------------------------------------------------------------------
+//
+// Stellt sicher, dass die Demo-Workspace mindestens 5 realistische
+// Amazon-Versandbestätigungen als parsed_messages hat. Das ist nötig,
+// damit der Browser-Tester (`smoke-inbox`) nach jedem Re-Seed verlässlich
+// Tracking-Chips in Mail-Cards sieht — sonst wäre das Demo-Workspace
+// inbox leer und die Tracking-Render-Pfade unverifizierbar.
+//
+// Die Mails enthalten ein realistisches `_raw_html` mit dem echten
+// Amazon-Click-Tracker-URL-Format
+// (`amazon.<tld>/gp/f.html?C=...&U=...%26orderingShipmentId%3D...`),
+// damit der Adapter (`inbox_adapters.ts`) sie ohne Sonderbehandlung
+// als Amazon-Logistics-Tracking erkennt.
+
+interface DemoAmazonFixture {
+  orderId: string
+  shipmentId: string
+  product: string
+  tld: string
+  fromAddress: string
+  subject: string
+}
+
+const DEMO_AMAZON_FIXTURES: DemoAmazonFixture[] = [
+  {
+    orderId: '306-4234293-3555528',
+    shipmentId: '106121425175302',
+    product: 'Samsung 870 EVO SSD 1TB',
+    tld: 'de',
+    fromAddress: 'versandbestaetigung@amazon.de',
+    subject: 'Deine Amazon.de-Bestellung mit "Samsung 870 EVO SSD..." wurde versandt!',
+  },
+  {
+    orderId: '306-5580998-3956325',
+    shipmentId: '108834567890123',
+    product: 'Samsung 9100 PRO NVMe M.2 SSD 2TB',
+    tld: 'de',
+    fromAddress: 'versandbestaetigung@amazon.de',
+    subject: 'Deine Amazon.de-Bestellung mit 2 x "Samsung 9100 PRO NVMe..." wurde versandt!',
+  },
+  {
+    orderId: '404-5127739-1289903',
+    shipmentId: '109555111222333',
+    product: 'Samsung 990 PRO NVMe SSD 1TB',
+    tld: 'it',
+    fromAddress: 'conferma-spedizione@amazon.it',
+    subject: 'Your Amazon.it order of "Samsung 990 PRO NVMe..." has been dispatched!',
+  },
+  {
+    orderId: '405-4447968-7281969',
+    shipmentId: '110123456789012',
+    product: 'Seagate BarraCuda 2TB HDD',
+    tld: 'es',
+    fromAddress: 'confirmar-envio@amazon.es',
+    subject: 'Your Amazon.es order of "Seagate BarraCuda 2TB..." has been dispatched!',
+  },
+  {
+    orderId: '402-4004849-1316335',
+    shipmentId: '111777888999000',
+    product: '2 x Samsung SSD 870 EVO 500GB',
+    tld: 'fr',
+    fromAddress: 'confirmation-commande@amazon.fr',
+    subject: 'Your Amazon.fr order of 2 x "Samsung SSD 870 EVO..." has been dispatched!',
+  },
+]
+
+interface DemoInboxResult {
+  mailbox_account_id: string
+  parsed_messages_inserted: number
+  parsed_messages_existed: number
+}
+
+function buildDemoAmazonHtml(f: DemoAmazonFixture): string {
+  // Realistisches Amazon-Click-Tracker-Format, das echten Live-Mails
+  // entspricht: doppelt URL-encoded Ziel-URL mit `orderingShipmentId%3D`.
+  // Wenn der Adapter dieses Pattern matchen kann, matcht er auch echte
+  // Live-Mails (siehe test/fixtures/amazon_live/*).
+  return [
+    '<!DOCTYPE html>',
+    '<html><body><table><tr><td>',
+    '<span class="rio_sc_headline">Versandbestätigung</span>',
+    `<p><span>Bestellung <a href="https://www.amazon.${f.tld}/gp/f.html?C=AAAA000AAAA&K=BBBB000BBBB&M=urn:rtn:msg:demo&R=CCCC000CCCC&T=C&U=https%3A%2F%2Fbusiness.amazon.${f.tld}%2Fabredir%2Fgp%2Fcss%2Fsummary%2Fedit.html%3Fie%3DUTF8%26orderID%3D${f.orderId}&H=DDDDDDDDDDDD" class="rio_link">${f.orderId}</a></span></p>`,
+    `<p><span>Item(s): ${f.product}</span></p>`,
+    `<a class="rio_btn rio_bg_yellow" href="https://www.amazon.${f.tld}/gp/f.html?C=AAAA000AAAA&K=BBBB000BBBB&M=urn:rtn:msg:demo&R=DDDD000DDDD&T=C&U=https%3A%2F%2Fbusiness.amazon.${f.tld}%2Fabredir%2Fgp%2Fcss%2Fshiptrack%2Fview.html%2Fref%3Dpe_demo%3Fie%3DUTF8%26addressID%3DREDACTED%26orderID%3D${f.orderId}%26shipmentDate%3D1770594703%26orderingShipmentId%3D${f.shipmentId}%26packageId%3D1&H=EEEEEEEEEEEE">Lieferung verfolgen</a>`,
+    '<p><span>Voraussichtlich in 2-3 Tagen.</span></p>',
+    '</td></tr></table></body></html>',
+  ].join('\n')
+}
+
+async function ensureDemoAmazonInbox(
+  admin: ReturnType<typeof createClient>,
+  workspaceId: string,
+  userId: string,
+): Promise<DemoInboxResult> {
+  // 1) Sicherstellen, dass ein mailbox_account existiert (FK-Pflicht).
+  const { data: existingAccount, error: accSelErr } = await admin
+    .from('mailbox_accounts')
+    .select('id')
+    .eq('workspace_id', workspaceId)
+    .limit(1)
+    .maybeSingle()
+  if (accSelErr) throw new Error(`mailbox_account select failed: ${accSelErr.message}`)
+  let accountId = (existingAccount as { id: string } | null)?.id ?? null
+  if (!accountId) {
+    const { data: created, error: accInsErr } = await admin
+      .from('mailbox_accounts')
+      .insert({
+        workspace_id: workspaceId,
+        user_id: userId,
+        label: 'Demo-Inbox (Amazon-Fixtures)',
+        imap_host: 'demo.local',
+        imap_port: 993,
+        use_ssl: true,
+        username: 'demo-inbox@amazon-fixtures.local',
+        folder: 'INBOX',
+        enabled: false,
+      })
+      .select('id')
+      .single()
+    if (accInsErr) throw new Error(`mailbox_account insert failed: ${accInsErr.message}`)
+    accountId = (created as { id: string }).id
+  }
+
+  // 2) Pro Fixture: nur einfügen, wenn message_hash noch nicht existiert.
+  let inserted = 0
+  let existed = 0
+  const baseUid = 8000000000n // bigint message_uid platzhalter
+  const now = new Date()
+  for (let i = 0; i < DEMO_AMAZON_FIXTURES.length; i++) {
+    const f = DEMO_AMAZON_FIXTURES[i]
+    const hash = `demo-amazon-${f.shipmentId}`
+    const { data: existing, error: existErr } = await admin
+      .from('parsed_messages')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('message_hash', hash)
+      .limit(1)
+      .maybeSingle()
+    if (existErr) throw new Error(`parsed_messages probe failed: ${existErr.message}`)
+    if (existing) { existed++; continue }
+    const html = buildDemoAmazonHtml(f)
+    const receivedAt = new Date(now.getTime() - (i + 1) * 24 * 3600 * 1000).toISOString()
+    const { error: insErr } = await admin.from('parsed_messages').insert({
+      workspace_id: workspaceId,
+      account_id: accountId,
+      message_uid: Number(baseUid + BigInt(i)),
+      message_hash: hash,
+      from_address: f.fromAddress,
+      subject: f.subject,
+      received_at: receivedAt,
+      shop_key: 'amazon',
+      status: 'suggested',
+      processed_at: receivedAt,
+      parsed_payload: {
+        shop_key: 'amazon',
+        shop_label: 'Amazon',
+        order_id: f.orderId,
+        product: f.product,
+        quantity: 1,
+        currency: 'EUR',
+        status: 'shipped',
+        tracking: f.shipmentId,
+        trackings: [f.shipmentId],
+        carrier: 'Amazon Logistics',
+        _raw_html: html,
+      },
+    })
+    if (insErr) throw new Error(`parsed_messages insert failed: ${insErr.message}`)
+    inserted++
+  }
+
+  return {
+    mailbox_account_id: accountId,
+    parsed_messages_inserted: inserted,
+    parsed_messages_existed: existed,
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -510,6 +696,55 @@ async function runSeed(
   const deals = (dealsInserted ?? []) as Array<{
     id: number; product: string; ek_brutto: number | null; shop: string
   }>
+
+  // ---- pending_deal_suggestions für die Demo-Amazon-Inbox ---------------
+  // Cleanup wipes pending_deal_suggestions, daher müssen wir sie pro
+  // Re-Seed neu erzeugen. Quelle: die parsed_messages, die
+  // ensureDemoAmazonInbox angelegt hat (status='suggested', shop_key='amazon').
+  // Diese Suggestions zeigt der Inbox-Tab "Vorschläge" mit Tracking-Chip.
+  const { data: amazonInbox } = await admin
+    .from('parsed_messages')
+    .select('id, message_id, received_at, parsed_payload, shop_key')
+    .eq('workspace_id', workspaceId)
+    .eq('shop_key', 'amazon')
+    .eq('status', 'suggested')
+  const inboxRows = (amazonInbox ?? []) as Array<{
+    id: string
+    message_id: string | null
+    received_at: string
+    parsed_payload: ParsedPayload | null
+    shop_key: string | null
+  }>
+  if (inboxRows.length > 0) {
+    const suggPayload = inboxRows.map((row) => {
+      const p = row.parsed_payload ?? {}
+      return {
+        workspace_id: workspaceId,
+        parsed_message_id: row.id,
+        message_id: row.message_id,
+        received_at: row.received_at,
+        shop_key: row.shop_key ?? 'amazon',
+        shop_label: p.shop_label ?? 'Amazon',
+        order_id: p.order_id ?? null,
+        product: p.product ?? null,
+        quantity: p.quantity ?? 1,
+        total: null,
+        currency: p.currency ?? 'EUR',
+        tracking: p.tracking ?? null,
+        trackings: p.trackings ?? null,
+        carrier: p.carrier ?? null,
+        eta: null,
+        status: p.status ?? 'shipped',
+        raw: { _demo: true },
+      }
+    })
+    const { error: suggErr } = await admin
+      .from('pending_deal_suggestions')
+      .insert(suggPayload)
+    if (suggErr) {
+      console.warn('demo amazon suggestions insert failed', suggErr.message)
+    }
+  }
 
   // ---- Inventory items (8-12 aus Top-Produkten) -------------------------
   const productCount = new Map<string, number>()
