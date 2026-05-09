@@ -1,0 +1,30 @@
+{
+  "ts": "2026-05-09T22:25:50Z",
+  "panic": true,
+  "checks": {
+    "disk": {
+      "free_pct": 60,
+      "free_gb": 100,
+      "ok": true
+    },
+    "worktrees": {
+      "count": 0,
+      "ok": true
+    },
+    "inbox": {
+      "count": 0,
+      "paused": false,
+      "ok": true
+    },
+    "stash": {
+      "count": 0,
+      "ok": true
+    },
+    "cost": {
+      "today_usd": 0.0,
+      "week_usd": 0.0,
+      "ok": true
+    }
+  },
+  "notifications_sent": []
+}

@@ -63,8 +63,21 @@ trap 'rm -f "$LOCK" "$STATE"' EXIT INT TERM
 NEXT_ITEM="$(find "$INBOX" -maxdepth 1 -type f -name '*.md' ! -name '.gitkeep' 2>/dev/null | sort | head -n 1)"
 if [ -z "$NEXT_ITEM" ]; then
   log "inbox empty"
+  # Idle-Notify: nur EINMAL pro Idle-Phase. Reset sobald wieder Tasks da sind.
+  IDLE_STATE="$ROOT/.claude/state/last-idle-notify.txt"
+  mkdir -p "$(dirname "$IDLE_STATE")"
+  PREV_IDLE="$(cat "$IDLE_STATE" 2>/dev/null || echo)"
+  if [ "$PREV_IDLE" != "idle" ]; then
+    "$NOTIFY" "Claude idle" "Inbox leer — keine Tasks mehr." info >/dev/null 2>&1 || true
+    echo "idle" > "$IDLE_STATE"
+  fi
   exit 0
 fi
+
+# Tasks vorhanden → Idle-State zurücksetzen, damit nach Abarbeitung
+# wieder eine Idle-Notify möglich ist.
+mkdir -p "$ROOT/.claude/state"
+echo "active" > "$ROOT/.claude/state/last-idle-notify.txt"
 
 ITEM_NAME="$(basename "$NEXT_ITEM")"
 SLUG="${ITEM_NAME%.md}"

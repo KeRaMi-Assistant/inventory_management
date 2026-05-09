@@ -1,0 +1,4 @@
+{"sent_ts": 1778365535, "severity": "critical", "topic": "test-topic", "title": "Watchdog: Disk CRITICAL", "body": "Disk free: 2% / 3GB (threshold: <5% or <5GB)", "actions": "", "priority": 5, "dry_run": true}
+{"sent_ts": 1778365535, "severity": "critical", "topic": "test-topic", "title": "Watchdog: Cost-Cap EXCEEDED", "body": "today=25.00/20USD week=25.00/100USD. PANIC marker written.", "actions": "", "priority": 5, "dry_run": true}
+{"sent_ts": 1778365536, "severity": "critical", "topic": "test-topic", "title": "Watchdog: Cost-Cap EXCEEDED", "body": "today=99.00/20USD week=99.00/100USD. PANIC marker written.", "actions": "", "priority": 5, "dry_run": true}
+{"ts":"2026-05-09T22:54:00Z","severity":"critical","topic":"claude-kerami-3kf2j","title":"Self-Mod blocked","body":"Actor=keremozkan target=.claude/scripts/auto-commit.sh","priority":5,"actions":null}

@@ -12,7 +12,7 @@ Du shipst den aktuellen Feature-Branch — bis zum gemergten Stand auf
    - `flutter test` — bei Fehlern ABORT
    - `security-reviewer` Subagent — bei `verdict: block` ABORT, Findings listen
 3. Wenn alles grün:
-   - Whitelist-Add: `git add lib/ supabase/migrations/ supabase/functions/ test/ pubspec.yaml pubspec.lock plans/ .github/ CLAUDE.md .claude/agents/ .claude/commands/ .claude/scripts/ .claude/settings.json .claude/backlog/templates/ .claude/launchagent.plist.template .mcp.json .gitignore .env.test.example .env.headless.example`
+   - Whitelist-Add: `git add lib/ supabase/migrations/ supabase/functions/ test/ pubspec.yaml pubspec.lock plans/ .github/ CLAUDE.md .claude/agents/ .claude/commands/ .claude/scripts/ .claude/settings.json .claude/backlog/templates/ .claude/launchagent.plist.template .mcp.json .gitignore .env.test.example .env.headless.example .claude/stakeholder/ .claude/stakeholder/digest/ .claude/disputes/ .claude/audit/ .claude/overseer/ .claude/analyzer/ .claude/integrity/ .claude/git-hooks/ .claude/memory/ .claude/schemas/ .claude/metrics/ .claude/whitelist.txt`
    - `git diff --cached --stat` — bevor Commit, sanity-check dass keine Secrets im Diff sind (`grep -nE "(supabase_config\\.dart|google-services\\.json|GoogleService-Info)" <(git diff --cached --name-only)` muss leer sein)
    - Commit-Message aus dem letzten Plan-Titel oder $ARGUMENTS, mit `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`
    - `git push -u origin <branch>`
