@@ -46,6 +46,114 @@ Glossar-Trigger: neue Tabelle, neue Edge-Function, neuer Domain-Begriff (Klassen
 
 Pfade, die KEIN Doku-Update brauchen: `test/`, `*.lock`, `build/`, `.dart_tool/`, `.claude/test-runs/`, `.claude/backlog/`, `coverage/`, `*.png`/`*.jpg`. Diese überspringst du stillschweigend.
 
+## Page-Registry-Pflege (PFLICHT)
+
+Zusätzlich zum Handbuch pflegt der Agent die Page-Registry
+[`.claude/agents/_page-registry.md`](_page-registry.md). Sie ist die
+Single-Source-of-Truth über alle User-sichtbaren Screens + Sub-Routes
+und wird vom `browser-tester` als Audit-Checkliste genutzt. Ohne diesen
+Pflege-Pass würden neue Screens still durchrutschen.
+
+### Trigger
+
+Bei JEDEM Run prüft der Agent zusätzlich zum Kapitel-Pass:
+
+1. Aus dem geparsten Diff alle Statuszeilen mit Pfad unter
+   `lib/screens/**/*.dart` herausfiltern (rekursiv, inkl.
+   `lib/screens/auth/`).
+2. Klassifiziere jeden Treffer:
+   - `A` (added) → **Registry-Add**.
+   - `D` (deleted) → **Registry-Remove**.
+   - `R<n>` (renamed) → **Registry-Remove** alter Pfad +
+     **Registry-Add** neuer Pfad.
+   - `M` (modified) → kein Registry-Edit (nur Handbuch-Trigger).
+3. Inline-Helper-Files unterhalb `lib/screens/` werden ignoriert,
+   wenn der Klassenname **nicht** auf `Screen` endet (z. B.
+   `lib/screens/_widgets/foo_card.dart`). Heuristik: enthält die Datei
+   mind. eine `class <Name>Screen extends`-Deklaration → Registry-
+   relevant. Sonst überspringen + im Report unter
+   `## Registry-übersprungen` listen.
+
+### Registry-Add — Workflow
+
+Pro neuem Screen-File:
+
+1. Datei lesen (`Read`), Klassennamen extrahieren
+   (`class <Name>Screen extends ...`).
+2. Route-Slug ableiten:
+   - Snake-Case-Filename ohne `_screen.dart`-Suffix in Kebab-Case
+     umwandeln (`inventory_screen.dart` → `/inventory`,
+     `billing_profile_screen.dart` → `/billing-profile`).
+   - Pfade unter `lib/screens/auth/` landen im Block "Auth- &
+     First-Run-Routes".
+   - `public_profile_screen.dart` ist die Sonder-URL `/public-profile/<slug>`
+     (Web-only, ohne Login) — diese Heuristik gilt: enthält der File-
+     Name `public_profile`, behalte Suffix `<slug>`.
+3. Pflicht-Tests:
+   - Default für eingeloggte Screens: `smoke-theme, mobile-overflow`.
+   - Default für Auth-Screens (`lib/screens/auth/`): `smoke-<slug>,
+     smoke-theme` (wobei `<slug>` der Route-Name ohne führendes `/`
+     ist; falls noch kein passendes `smoke-<slug>` existiert, melde es
+     im Report — der Maintainer ergänzt die Test-Definition unten).
+4. Notiz-Spalte: leer lassen, mit `> TODO: Notiz ergänzen` im Report
+   melden (keine Fakten erfinden).
+5. Edit (`Edit`) auf `_page-registry.md`: Eintrag **am Ende der
+   passenden Tabelle** anhängen — Top-Level vs Auth-Block. Tabellen-
+   Reihenfolge in den restlichen Zeilen NICHT umsortieren.
+
+### Registry-Remove — Workflow
+
+Pro gelöschtem Screen-File:
+
+1. In `_page-registry.md` die Tabellen-Zeile suchen, deren `File`-
+   Spalte exakt diesen Pfad enthält.
+2. Die Zeile per `Edit` entfernen (eine Zeile pro Edit, keine
+   Komplett-Rewrites).
+3. Wenn der Screen auch in der Sub-Routes-Tabelle als Trigger-Quelle
+   referenziert ist (`Trigger`-Spalte beginnt mit `<route>`), bleibt
+   die Sub-Route-Zeile bestehen — nur als TODO-Hinweis im Report
+   markieren ("Trigger-Screen wurde gelöscht, Sub-Route prüfen").
+
+### Sub-Routes-Pflege
+
+Sub-Routes (`lib/widgets/add_edit_*.dart`,
+`lib/widgets/*_dialog.dart`, `lib/widgets/*_sheet.dart`) folgen
+derselben Add/Remove-Logik:
+
+- Pattern für Detection: Datei matcht
+  `lib/widgets/(add_edit_*|*_dialog|*_sheet).dart` ODER
+  `lib/widgets/**/product_drilldown_sheet.dart`-artige Sheets.
+- Route-Trigger ableiten: schaue in die Datei, ob ein Klassennamen-
+  Hinweis auf den triggernden Screen liegt (z. B. `AddEditDealDialog`
+  → `/deals`). Wenn unklar: `> TODO: Trigger-Route prüfen` im Report.
+- Default Pflicht-Tests: `smoke-theme, mobile-overflow`.
+- Eintrag in der Sub-Routes-Tabelle am Ende anhängen.
+
+### Output-Erweiterung
+
+Der Schluss-Block bekommt zwei zusätzliche Zeilen:
+
+```
+- registry_added: <n>     # neue Einträge in _page-registry.md
+- registry_removed: <m>   # entfernte Einträge in _page-registry.md
+```
+
+Plus pro Add/Remove einen 1-Zeilen-Diff-Hinweis in der Form
+`Registry +/− /<route> (lib/screens/<file>.dart)`.
+
+### Hartes "DO NOT" für die Registry
+
+- **Keine Umsortierung** der existierenden Tabellen-Zeilen — nur
+  anhängen / entfernen. Die Reihenfolge spiegelt den Tab-Index in
+  `MainScreen`, blindes Sortieren würde das brechen.
+- **Keine Pflicht-Test-Spalte erfinden**, wenn nicht klar ist, ob
+  `smoke-<slug>` schon im Tester-Prompt definiert ist — `> TODO`
+  setzen + im Report melden.
+- **Keine Sub-Route-Verschiebung** in Top-Level oder umgekehrt — wenn
+  unklar, im Report klären lassen.
+- Im **Dry-Run-Modus** (kein `--apply`) werden Registry-Edits nur
+  geplant und im Output gezeigt, **nicht** geschrieben.
+
 ## Workflow
 
 ### 1. Diff-Analyse
@@ -103,6 +211,8 @@ Strukturierter Schluss-Block (für Caller / `/ship`):
 - changed_paths: <n>
 - updated_chapters: <n>
 - glossary_additions: <n>
+- registry_added: <n>
+- registry_removed: <m>
 - unclassified_paths: <n>
 - next_step: <kurzer Vorschlag>
 ```
@@ -138,13 +248,15 @@ Mehrere Flags lassen sich kombinieren (`--apply --from origin/main --strict`).
 
 ## Stop-Kriterien
 
-- **Dry-run:** Plan ist erstellt, geplante Snippets sind aufgelistet. Fertig.
-- **Apply:** Alle klassifizierten Kapitel haben Edits, Glossar ist konsistent (Verlinkung steht), Schluss-Block ausgegeben. Fertig.
-- **Blocker:** `docs/handbook/` fehlt → siehe Vorbedingung. Anderer fataler Fehler (z. B. Diff-Befehl scheitert) → mit `[BLOCKER] <Beschreibung>` exit, ohne Teilschritte.
+- **Dry-run:** Plan ist erstellt, geplante Snippets sind aufgelistet, Registry-Adds/-Removes sind geplant aber nicht geschrieben. Fertig.
+- **Apply:** Alle klassifizierten Kapitel haben Edits, Glossar ist konsistent (Verlinkung steht), `_page-registry.md` ist synchron mit Screen-/Sub-Route-Diff, Schluss-Block ausgegeben. Fertig.
+- **Blocker:** `docs/handbook/` fehlt → siehe Vorbedingung. `_page-registry.md` fehlt → mit `[BLOCKER] _page-registry.md fehlt — siehe Backlog #03 (page-registry-doc-updater-extension).` exit, ohne Teilschritte. Anderer fataler Fehler (z. B. Diff-Befehl scheitert) → mit `[BLOCKER] <Beschreibung>` exit.
 
 ## Erwartetes Verhalten an Test-Inputs
 
-- Geänderte `lib/screens/inventory_screen.dart` → Klassifikation: `03-screens-walkthrough.md`. Kein Glossar-Update.
+- Geänderte `lib/screens/inventory_screen.dart` → Klassifikation: `03-screens-walkthrough.md`. Kein Glossar-Update. Kein Registry-Update (`M`).
+- **Neue** `lib/screens/reports_screen.dart` → Klassifikation: `03-screens-walkthrough.md` + Registry-Add (`/reports`, Pflicht-Tests Default).
+- **Gelöschte** `lib/screens/legacy_dashboard_screen.dart` → Registry-Remove + Hinweis im Report, dass Erwähnungen im Handbuch zu prüfen sind.
 - Neue Migration `20260508_add_supplier_payment_terms.sql` mit Tabelle `supplier_payment_terms` → Klassifikation: `06-database.md` + Glossar.
 - Neuer Subagent `.claude/agents/doc-updater.md` → Klassifikation: `05-architecture.md` (Subagent-Liste).
 - Geänderte `.github/workflows/flutter-ci.yml` → Klassifikation: `08-deployment.md` (CI-Sektion).
