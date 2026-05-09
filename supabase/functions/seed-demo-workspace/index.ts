@@ -269,6 +269,14 @@ async function probeColumn(
 interface DemoAmazonFixture {
   orderId: string
   shipmentId: string
+  // Echte DE-Carrier-Tracking-Nummer (Format Amazon Logistics:
+  // "DE" + 10 Digits, siehe inbox_adapters.ts STRONG_TRACKING_PATTERNS).
+  // Wird als Plain-Text in den HTML-Body eingebettet ("Your tracking
+  // number is: DE…") + als parsed_payload.tracking persistiert.
+  // VORHER (PR #39 Synthetik) stand stattdessen nur die orderingShipmentId
+  // im tracking-Field — das war 15-stellig und KEINE Carrier-Nr. User-
+  // Frust-Bug PR #48 + #49 sind auf genau diesen Mismatch zurückzuführen.
+  trackingDe: string
   product: string
   tld: string
   fromAddress: string
@@ -279,6 +287,7 @@ const DEMO_AMAZON_FIXTURES: DemoAmazonFixture[] = [
   {
     orderId: '306-4234293-3555528',
     shipmentId: '106121425175302',
+    trackingDe: 'DE5455279839',
     product: 'Samsung 870 EVO SSD 1TB',
     tld: 'de',
     fromAddress: 'versandbestaetigung@amazon.de',
@@ -287,6 +296,7 @@ const DEMO_AMAZON_FIXTURES: DemoAmazonFixture[] = [
   {
     orderId: '306-5580998-3956325',
     shipmentId: '108834567890123',
+    trackingDe: 'DE6701142233',
     product: 'Samsung 9100 PRO NVMe M.2 SSD 2TB',
     tld: 'de',
     fromAddress: 'versandbestaetigung@amazon.de',
@@ -295,6 +305,7 @@ const DEMO_AMAZON_FIXTURES: DemoAmazonFixture[] = [
   {
     orderId: '404-5127739-1289903',
     shipmentId: '109555111222333',
+    trackingDe: 'DE8821445566',
     product: 'Samsung 990 PRO NVMe SSD 1TB',
     tld: 'it',
     fromAddress: 'conferma-spedizione@amazon.it',
@@ -303,6 +314,7 @@ const DEMO_AMAZON_FIXTURES: DemoAmazonFixture[] = [
   {
     orderId: '405-4447968-7281969',
     shipmentId: '110123456789012',
+    trackingDe: 'DE7732998877',
     product: 'Seagate BarraCuda 2TB HDD',
     tld: 'es',
     fromAddress: 'confirmar-envio@amazon.es',
@@ -311,6 +323,7 @@ const DEMO_AMAZON_FIXTURES: DemoAmazonFixture[] = [
   {
     orderId: '402-4004849-1316335',
     shipmentId: '111777888999000',
+    trackingDe: 'DE9988776655',
     product: '2 x Samsung SSD 870 EVO 500GB',
     tld: 'fr',
     fromAddress: 'confirmation-commande@amazon.fr',
@@ -325,10 +338,19 @@ interface DemoInboxResult {
 }
 
 function buildDemoAmazonHtml(f: DemoAmazonFixture): string {
-  // Realistisches Amazon-Click-Tracker-Format, das echten Live-Mails
-  // entspricht: doppelt URL-encoded Ziel-URL mit `orderingShipmentId%3D`.
-  // Wenn der Adapter dieses Pattern matchen kann, matcht er auch echte
-  // Live-Mails (siehe test/fixtures/amazon_live/*).
+  // Realistisches Amazon-Mail-Format mit allen drei Tracking-Quellen,
+  // wie sie auch in echten Live-Mails parallel vorkommen:
+  //  1. Plain-Text-Carrier-Tracking ("Your tracking number is: DE…")
+  //     — das ist die echte Sendungs-Nummer, die User auch im Carrier-
+  //     Portal eingeben können.
+  //  2. orderingShipmentId aus dem shiptrack-Redirect-Link — Amazon-
+  //     interner Identifier, KEINE Carrier-Nr.
+  //  3. Order-Detail-Link zur Bestellung.
+  //
+  // Der Adapter (`inbox_adapters.ts` STRONG_TRACKING_PATTERNS) muss
+  // (1) priorisieren — vorher hat er stillschweigend (2) genommen,
+  // weil das DE-Pattern fehlte und der HTML-href-Fallback gegriffen
+  // hat.
   return [
     '<!DOCTYPE html>',
     '<html><body><table><tr><td>',
@@ -336,6 +358,7 @@ function buildDemoAmazonHtml(f: DemoAmazonFixture): string {
     `<p><span>Bestellung <a href="https://www.amazon.${f.tld}/gp/f.html?C=AAAA000AAAA&K=BBBB000BBBB&M=urn:rtn:msg:demo&R=CCCC000CCCC&T=C&U=https%3A%2F%2Fbusiness.amazon.${f.tld}%2Fabredir%2Fgp%2Fcss%2Fsummary%2Fedit.html%3Fie%3DUTF8%26orderID%3D${f.orderId}&H=DDDDDDDDDDDD" class="rio_link">${f.orderId}</a></span></p>`,
     `<p><span>Item(s): ${f.product}</span></p>`,
     `<a class="rio_btn rio_bg_yellow" href="https://www.amazon.${f.tld}/gp/f.html?C=AAAA000AAAA&K=BBBB000BBBB&M=urn:rtn:msg:demo&R=DDDD000DDDD&T=C&U=https%3A%2F%2Fbusiness.amazon.${f.tld}%2Fabredir%2Fgp%2Fcss%2Fshiptrack%2Fview.html%2Fref%3Dpe_demo%3Fie%3DUTF8%26addressID%3DREDACTED%26orderID%3D${f.orderId}%26shipmentDate%3D1770594703%26orderingShipmentId%3D${f.shipmentId}%26packageId%3D1&H=EEEEEEEEEEEE">Lieferung verfolgen</a>`,
+    `<p>Your item(s) is (are) being sent by Amazon Logistics. Your tracking number is: ${f.trackingDe}. Depending on the delivery method you chose, it's possible that the tracking information might not be visible immediately.</p>`,
     '<p><span>Voraussichtlich in 2-3 Tagen.</span></p>',
     '</td></tr></table></body></html>',
   ].join('\n')
@@ -375,14 +398,32 @@ async function ensureDemoAmazonInbox(
     accountId = (created as { id: string }).id
   }
 
-  // 2) Pro Fixture: nur einfügen, wenn message_hash noch nicht existiert.
+  // 2a) Cleanup ALTE Demo-Amazon-Mails (v1 hatte die orderingShipmentId
+  // als tracking-Field + KEIN DE-Plain-Text im HTML — User-Bug-Quelle).
+  // Wir löschen sowohl v1-Hashes als auch v2-Hashes, damit der Re-Seed
+  // idempotent ist und immer den aktuellen HTML-/Tracking-Stand liefert.
+  // CASCADE auf parsed_messages → pending_deal_suggestions löscht die
+  // gepaart erstellten Suggestions automatisch mit.
+  const { error: cleanupErr } = await admin
+    .from('parsed_messages')
+    .delete()
+    .eq('workspace_id', workspaceId)
+    .like('message_hash', 'demo-amazon-%')
+  if (cleanupErr) {
+    throw new Error(`demo-amazon cleanup failed: ${cleanupErr.message}`)
+  }
+
+  // 2b) Frisch einfügen mit v2-Hash + echten DE-Tracking-Werten.
   let inserted = 0
   let existed = 0
   const baseUid = 8000000000n // bigint message_uid platzhalter
   const now = new Date()
   for (let i = 0; i < DEMO_AMAZON_FIXTURES.length; i++) {
     const f = DEMO_AMAZON_FIXTURES[i]
-    const hash = `demo-amazon-${f.shipmentId}`
+    // v2-Hash kennzeichnet den neuen Stand (DE-Plain-Text + DE-Tracking
+    // als primary). Erlaubt späteren Migrationen einen weiteren Step
+    // (v3, …) ohne Daten-Verwirrung.
+    const hash = `demo-amazon-v2-${f.shipmentId}`
     const { data: existing, error: existErr } = await admin
       .from('parsed_messages')
       .select('id')
@@ -413,8 +454,10 @@ async function ensureDemoAmazonInbox(
         quantity: 1,
         currency: 'EUR',
         status: 'shipped',
-        tracking: f.shipmentId,
-        trackings: [f.shipmentId],
+        // primary tracking ist die echte Carrier-Nr (DE-Format), die
+        // orderingShipmentId rutscht auf trackings[1] für Debug-Zwecke.
+        tracking: f.trackingDe,
+        trackings: [f.trackingDe, f.shipmentId],
         carrier: 'Amazon Logistics',
         _raw_html: html,
       },
