@@ -64,7 +64,14 @@ Deno.test('Amazon DE Live-Wrap 02: 2-Artikel-Versand mit eigenem orderingShipmen
   assertEquals(parsed!.carrier, 'Amazon Logistics')
 })
 
-Deno.test('Amazon IT Live-Wrap: Italian "spedizione" subject + Redirect-Wrap', async () => {
+Deno.test('Amazon IT Live-Wrap: echte User-Mail mit Plain-Text "DE5455279839" + orderingShipmentId', async () => {
+  // Diese Fixture ist die echte Mail aus dem User-Bug-Report:
+  // Order 404-5127739-1289903, Plain-Text "Your tracking number is:
+  // DE5455279839", parallel orderingShipmentId=109727463192302 im
+  // shiptrack-Redirect-Link.
+  // Erwartetes Verhalten: STRONG-Pattern für DE\d{8,14} matcht das
+  // Plain-Text-Tracking BEFORE der HTML-href-Fallback die orderingShipmentId
+  // findet — User sieht die echte Carrier-Tracking-Nummer.
   const html = await loadFixture('amazon_it_live_redirect_wrap.html')
   const c = ctx(
     'conferma-spedizione@amazon.it',
@@ -75,8 +82,16 @@ Deno.test('Amazon IT Live-Wrap: Italian "spedizione" subject + Redirect-Wrap', a
   assertExists(parsed)
   assertEquals(parsed!.orderId, '404-5127739-1289903')
   assertEquals(parsed!.status, 'shipped')
-  assertEquals(parsed!.tracking, '109555111222333')
+  assertEquals(
+    parsed!.tracking, 'DE5455279839',
+    'Plain-Text Carrier-Tracking muss gegen orderingShipmentId-Fallback gewinnen',
+  )
   assertEquals(parsed!.carrier, 'Amazon Logistics')
+  // orderingShipmentId aus dem href darf max. als Sekundär-Tracking
+  // dazukommen (in trackings[]), niemals als primary `tracking`.
+  if (parsed!.trackings && parsed!.trackings.length > 1) {
+    assertEquals(parsed!.trackings[0], 'DE5455279839')
+  }
 })
 
 Deno.test('Amazon ES Live-Wrap: Spanish "envío" subject + Redirect-Wrap', async () => {

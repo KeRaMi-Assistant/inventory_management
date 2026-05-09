@@ -804,6 +804,46 @@ class SupabaseRepository {
     );
   }
 
+  /// Re-Parse aller Vorschläge mit `_raw_html` durch die aktuelle Adapter-
+  /// Registry. Wird genutzt, wenn ein Adapter-Bug eine FALSCHE Tracking-
+  /// Nummer gespeichert hat (z.B. interne Amazon-`orderingShipmentId`
+  /// statt der echten Carrier-Nummer aus dem Plain-Text-Body).
+  ///
+  /// `forceOverwrite=true` überschreibt auch bereits gesetzte Tracking-
+  /// Werte. Server-seitig ist der Aufruf hart auf die Workspaces des
+  /// eingeloggten Users gescoped — kein Cross-Workspace-Zugriff möglich.
+  Future<InboxReparseResult> triggerReparseTracking({
+    String? shopKey,
+    bool forceOverwrite = false,
+  }) async {
+    final response = await _client.functions.invoke(
+      'inbox-parse',
+      body: {
+        'reparse_no_tracking': true,
+        if (forceOverwrite) 'force_overwrite': true,
+        'shop_key': ?shopKey,
+      },
+    );
+    if (response.status >= 400) {
+      throw StateError(
+        'Re-Parse fehlgeschlagen (HTTP ${response.status}). '
+        'Pruefe in Supabase Studio: Edge Function "inbox-parse" deployed?',
+      );
+    }
+    final data = response.data;
+    if (data is Map) {
+      return InboxReparseResult(
+        scanned: (data['scanned'] as num?)?.toInt() ?? 0,
+        rescued: (data['rescued'] as num?)?.toInt() ?? 0,
+        unchanged: (data['unchanged'] as num?)?.toInt() ?? 0,
+        errors: (data['errors'] as num?)?.toInt() ?? 0,
+      );
+    }
+    return const InboxReparseResult(
+      scanned: 0, rescued: 0, unchanged: 0, errors: 0,
+    );
+  }
+
   // ── Carrier-API-Credentials (Sprint 7) ───────────────────────────────────
 
   /// Lädt die maskierten Credentials aller Carrier des aktiven Workspaces
@@ -1123,5 +1163,21 @@ class InboxPollResult {
     this.suggested,
     this.matched,
     this.more = false,
+  });
+}
+
+/// Rückgabe von [SupabaseRepository.triggerReparseTracking]. `rescued` =
+/// Anzahl Suggestions, deren `tracking`/`carrier` durch den Re-Parse
+/// neu gesetzt oder überschrieben wurden.
+class InboxReparseResult {
+  final int scanned;
+  final int rescued;
+  final int unchanged;
+  final int errors;
+  const InboxReparseResult({
+    required this.scanned,
+    required this.rescued,
+    required this.unchanged,
+    required this.errors,
   });
 }

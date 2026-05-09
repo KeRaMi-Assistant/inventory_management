@@ -242,6 +242,32 @@ class _InboxHeader extends StatelessWidget {
                 : const Icon(Icons.refresh),
             onPressed: provider.isLoading ? null : onRefresh,
           ),
+          PopupMenuButton<String>(
+            tooltip: 'Mehr',
+            icon: const Icon(Icons.more_vert),
+            enabled: !provider.isLoading && !provider.isPumping,
+            onSelected: (value) {
+              if (value == 'reparse-tracking') {
+                _triggerReparseTracking(context, provider);
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem<String>(
+                value: 'reparse-tracking',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.refresh_outlined),
+                  title: Text('Tracking-Daten neu auslesen'),
+                  subtitle: Text(
+                    'Wendet die aktuelle Adapter-Registry erneut auf alle '
+                    'Vorschläge an. Korrigiert falsch extrahierte Tracking-'
+                    'Nummern (z.B. wenn ein Adapter-Bug eine interne '
+                    'Shipment-ID statt der echten Carrier-Nr gespeichert hat).',
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -584,6 +610,36 @@ Future<void> _triggerPoll(BuildContext context, InboxProvider provider) async {
   } else if (provider.lastError != null) {
     messenger.showSnackBar(SnackBar(
       content: Text('Polling fehlgeschlagen: ${provider.lastError}'),
+      backgroundColor: AppTheme.danger,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 8),
+    ));
+  }
+}
+
+Future<void> _triggerReparseTracking(
+  BuildContext context,
+  InboxProvider provider,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.showSnackBar(const SnackBar(
+    content: Text('Liest Tracking-Daten neu aus…'),
+    behavior: SnackBarBehavior.floating,
+    duration: Duration(seconds: 2),
+  ));
+  final result = await provider.reparseTracking();
+  if (result != null) {
+    final msg = result.rescued > 0
+        ? '${result.rescued} Vorschlag${result.rescued == 1 ? "" : "äge"}'
+            ' korrigiert (${result.scanned} geprüft).'
+        : 'Keine Korrekturen nötig (${result.scanned} geprüft).';
+    messenger.showSnackBar(SnackBar(
+      content: Text(msg),
+      behavior: SnackBarBehavior.floating,
+    ));
+  } else if (provider.lastError != null) {
+    messenger.showSnackBar(SnackBar(
+      content: Text('Re-Parse fehlgeschlagen: ${provider.lastError}'),
       backgroundColor: AppTheme.danger,
       behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 8),

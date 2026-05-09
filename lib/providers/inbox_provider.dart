@@ -469,6 +469,31 @@ class InboxProvider extends ChangeNotifier {
     }
   }
 
+  /// Re-Parse aller Suggestions mit `_raw_html` durch die aktuelle
+  /// Adapter-Registry. User-Trigger nach Adapter-Bug-Fixes (z.B. wenn
+  /// eine FALSCHE Tracking-Nummer im Vorschlag steht). Setzt [lastError]
+  /// bei Fehlern + refresht die Inbox bei Erfolg.
+  Future<InboxReparseResult?> reparseTracking({
+    String? shopKey,
+    bool forceOverwrite = true,
+  }) async {
+    if (_loading || _pumping) return null;
+    _lastError = null;
+    notifyListeners();
+    try {
+      final result = await _repository.triggerReparseTracking(
+        shopKey: shopKey,
+        forceOverwrite: forceOverwrite,
+      );
+      await refresh();
+      return result;
+    } catch (e) {
+      _lastError = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
   /// Wrapper um [SupabaseRepository.triggerInboxPoll], der den Pump-State
   /// pflegt und nach jeder Server-Iteration einen [refresh] auslöst —
   /// so wachsen die Tab-Counter live mit, anstatt erst nach dem Loop-Ende

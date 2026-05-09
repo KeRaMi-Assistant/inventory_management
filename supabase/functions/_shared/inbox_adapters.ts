@@ -103,6 +103,17 @@ const STRONG_TRACKING_PATTERNS: Array<{ re: RegExp; carrier?: string }> = [
   { re: /\b(JJD\d{10,18})\b/, carrier: 'DHL' },
   { re: /\b([A-Z]{2}\d{9}DE)\b/, carrier: 'DHL' },
   { re: /\b(\d{20,22})\b/, carrier: 'DHL' },
+  // Amazon Logistics in DE: Country-Code "DE" am ANFANG + 8–14 Digits
+  // ("DE5455279839" aus echten Versand-Mails, 12 Zeichen). Vorher war
+  // NUR `[A-Z]{2}\d{9}DE` drin — das matcht aber DHL-Format
+  // (Country-Code AM ENDE, z.B. RR123456789DE), nicht das Amazon-
+  // Format (Country-Code AM ANFANG). Resultat: DE-Tracking landete
+  // nicht im STRONG-Match, fiel auf den HTML-href-Fallback und der
+  // pickte die interne `orderingShipmentId` aus dem progress-tracker-
+  // Link statt der echten Carrier-Nr. Begrenzung 8–14 Digits, damit
+  // wir nicht versehentlich PLZs ("DE12345") matchen — Amazon-
+  // Tracking ist immer ≥ 10-stellig.
+  { re: /\b(DE\d{8,14})\b/, carrier: 'Amazon Logistics' },
 ]
 
 // Mehrsprachig: DE (Sendungsnummer / Tracking-Nr / Paketnummer),
