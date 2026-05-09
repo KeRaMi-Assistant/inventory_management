@@ -46,6 +46,13 @@ Deno.serve(async (req) => {
     reparse_forensics?: boolean
     workspace_id?: string
     shop_key?: string
+    // Wenn true, werden auch parsed_messages mit bereits gesetztem
+    // tracking neu durchgejagt — der Re-Parse überschreibt den alten
+    // Wert dann, wenn der Adapter jetzt etwas anderes liefert.
+    // Wird gebraucht, wenn ein Adapter-Bug eine FALSCHE Tracking-Nummer
+    // gespeichert hat (z.B. orderingShipmentId aus progress-tracker-URL
+    // statt der echten Carrier-Nummer aus dem Plain-Text-Body).
+    force_overwrite?: boolean
   } = {}
   if (req.method === 'POST') {
     try {
@@ -70,6 +77,7 @@ Deno.serve(async (req) => {
     const result = await reparseNoTracking(admin, {
       workspaceId: body.workspace_id,
       shopKey: body.shop_key,
+      forceOverwrite: body.force_overwrite === true,
     })
     return jsonResp({ ok: true, mode: 'reparse_no_tracking', ...result })
   }
@@ -181,9 +189,15 @@ interface ReparseNoTrackingStats {
 /// genutzt, wenn die Adapter-Registry verbessert wurde (z.B. neuer
 /// Carrier-URL-Pattern) und bestehende Mails neu durchgejagt werden
 /// sollen, ohne erneut über IMAP zu fetchen.
+///
+/// Mit `forceOverwrite=true` werden auch Rows mit bereits gesetztem
+/// tracking neu durchgejagt — gebraucht für Bug-Fixes, die eine FALSCH
+/// extrahierte Tracking-Nummer korrigieren müssen. Der neue Wert wird
+/// nur geschrieben, wenn er sich tatsächlich vom alten unterscheidet
+/// (idempotent gegen Re-Runs).
 async function reparseNoTracking(
   admin: ReturnType<typeof createClient>,
-  options: { workspaceId?: string; shopKey?: string },
+  options: { workspaceId?: string; shopKey?: string; forceOverwrite?: boolean },
 ): Promise<ReparseNoTrackingStats> {
   const stats: ReparseNoTrackingStats = {
     scanned: 0,
@@ -199,9 +213,12 @@ async function reparseNoTracking(
       .select('id, workspace_id, from_address, subject, parsed_payload, received_at')
       .in('status', ['suggested', 'matched'])
       .not('parsed_payload->_raw_html', 'is', null)
-      .is('parsed_payload->>tracking', null)
       .order('received_at', { ascending: true })
       .limit(PAGE)
+    // Default-Filter (Bug-Fix-Mode überschreibt das absichtlich):
+    if (!options.forceOverwrite) {
+      q = q.is('parsed_payload->>tracking', null)
+    }
     if (options.workspaceId) q = q.eq('workspace_id', options.workspaceId)
     if (options.shopKey) q = q.eq('shop_key', options.shopKey)
     if (cursor) q = q.gt('received_at', cursor)
@@ -252,7 +269,7 @@ async function reparseNoTracking(
           stats.errors++
           continue
         }
-        await admin
+        let suggestionUpdate = admin
           .from('pending_deal_suggestions')
           .update({
             tracking: parsed.tracking,
@@ -262,7 +279,14 @@ async function reparseNoTracking(
             carrier: parsed.carrier ?? null,
           })
           .eq('parsed_message_id', row.id)
-          .is('tracking', null)
+        // Im default Re-Parse-Mode (rescue) nur Suggestions ohne Tracking
+        // berühren — wir wollen kein bestehendes (bereits manuell vom User
+        // editiertes) Tracking versehentlich überschreiben.
+        // Im force-Mode überschreiben wir bewusst (Bug-Fix-Re-Parse).
+        if (!options.forceOverwrite) {
+          suggestionUpdate = suggestionUpdate.is('tracking', null)
+        }
+        await suggestionUpdate
         stats.rescued++
       } catch (e) {
         console.warn('reparseNoTracking row failed', row.id, e)

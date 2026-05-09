@@ -267,6 +267,58 @@ Deno.test('Amazon DE Bestellbestätigung weiterhin erkannt', () => {
   assertEquals(parsed!.orderId, '303-1234567-1234567')
 })
 
+// Regression: User-reported Bug. Eine echte Amazon-Versand-Mail
+// ("Your tracking number is: DE5455279839") landete in der App mit
+// `tracking = '109727463192302'` — das war die `orderingShipmentId`
+// aus dem progress-tracker-Link, NICHT die echte Carrier-Tracking-
+// Nummer. Ursache: CONTEXT_TRACKING_RE erlaubte zwischen Keyword und
+// Wert nur Whitespace/Trenner; "tracking number IS: …" matchte nicht,
+// also fiel der Adapter stumm auf den HTML-href-Fallback zurück.
+Deno.test('Amazon Logistics: "Your tracking number is: DE…" gewinnt gegen progress-tracker-URL', () => {
+  const html = `
+    <p>Your item(s) is (are) being sent by Amazon Logistics.
+       Your tracking number is: DE5455279839. Depending on the
+       delivery method you chose, it's possible that the tracking
+       information might not be visible immediately.</p>
+    <a href="https://www.amazon.de/progress-tracker/package/ref=pe_xxx?orderId=404-5127739-1289903&packageId=1&orderingShipmentId=109727463192302">
+      Track your package
+    </a>
+  `
+  const c = ctx(
+    'shipment-tracking@amazon.de',
+    'Your Amazon.it order of "Samsung Memorie MZ-V9S1T0BW 990 EVO…"',
+    'Your item(s) is (are) being sent by Amazon Logistics. ' +
+      'Your tracking number is: DE5455279839. Order: 404-5127739-1289903.',
+    html,
+  )
+  const parsed = detectAndParse(c)
+  assertExists(parsed)
+  assertEquals(parsed!.shopKey, 'amazon')
+  assertEquals(
+    parsed!.tracking, 'DE5455279839',
+    'Plain-Text-Tracking muss vor HTML-orderingShipmentId-Fallback gewinnen',
+  )
+  // orderingShipmentId darf höchstens als zweite Tracking-Nr im Array
+  // landen, niemals als primary tracking — das hat den User in die Irre
+  // geführt.
+  assert(
+    parsed!.tracking !== '109727463192302',
+    'orderingShipmentId aus progress-tracker-URL darf NICHT primary sein',
+  )
+  assertEquals(parsed!.carrier, 'Amazon Logistics')
+})
+
+Deno.test('Amazon DE: "Deine Sendungsnummer lautet: …" matcht (lautet-Variante)', () => {
+  const c = ctx(
+    'versand@amazon.de',
+    'Deine Bestellung wurde versendet',
+    'Deine Sendungsnummer lautet: 12345678901234. Sie wird in Kürze von Hermes zugestellt.',
+  )
+  const parsed = detectAndParse(c)
+  assertExists(parsed)
+  assertEquals(parsed!.tracking, '12345678901234')
+})
+
 Deno.test('Kaufland Marketplace weiterhin erkannt', () => {
   const c = ctx(
     'noreply@kaufland-marktplatz.de',
