@@ -184,11 +184,22 @@ function findTrackingsInHtml(html: string): { trackings: string[]; carrier?: str
   let carrier: string | undefined
 
   // Common Carrier-URL-Patterns. Reihenfolge: spezifisch → generisch.
+  // Wichtig für Amazon: deren Versand-Mails wrappen jeden Tracking-Link
+  // in einen `amazon.<tld>/gp/f.html?...&U=<URL-encoded-ZielURL>`-
+  // Redirect. Die echten Carrier-URL-Parameter (`piececode`, `trackingId`,
+  // `orderingShipmentId`) stehen also doppelt URL-encoded im href. Wir
+  // matchen daher gegen RAW + decoded(URL) — siehe Loop unten.
   const URL_PATTERNS: Array<{ re: RegExp; carrier?: string }> = [
     // Amazon Logistics: track.amazon.de/123ABC oder ?trackingId=...
     { re: /track\.amazon\.[a-z.]+\/(?:tracking\/)?([A-Z0-9]{10,30})\b/i, carrier: 'Amazon Logistics' },
     { re: /[?&]trackingId=([A-Z0-9-]{8,30})/i, carrier: 'Amazon Logistics' },
-    { re: /[?&]packageId=([A-Z0-9-]{8,30})/i, carrier: 'Amazon Logistics' },
+    // Amazon-Logistics-Shipment-ID aus shiptrack/view.html — der einzige
+    // ID, den Amazon in Versandbestätigungen für eigene Logistik mit-
+    // schickt. Pure numerisch, 12–18 Stellen. Kein Carrier-Tracking im
+    // klassischen Sinn, aber für den User klickbar (`amazon.<tld>/
+    // progress-tracker/...`) und der einzige Anker, an dem Statusupdates
+    // hängen können. Klare Trennung zu `packageId` (häufig nur "1").
+    { re: /[?&]orderingShipmentId=([0-9]{8,20})/i, carrier: 'Amazon Logistics' },
     // DHL: nolp.dhl.de/?piececode=... oder /track/123
     { re: /[?&]piececode=([A-Z0-9]{8,30})/i, carrier: 'DHL' },
     { re: /nolp\.dhl\.[a-z.]+\/.*?[?&]idc=([A-Z0-9]{10,30})/i, carrier: 'DHL' },
@@ -209,26 +220,42 @@ function findTrackingsInHtml(html: string): { trackings: string[]; carrier?: str
     { re: /seur\.[a-z.]+\/.*?[?&]segOnLine=([A-Z0-9]{8,30})/i, carrier: 'SEUR' },
     // GLS variant (US/UK)
     { re: /gls-?[a-z]*\.[a-z.]+\/.*?[?&]trackingNumber=([A-Z0-9]{8,30})/i, carrier: 'GLS' },
-    // Generic: any tracknum/tracking/trk parameter (last resort)
+    // Generic: any tracknum/tracking/trk parameter (last resort).
+    // packageId wurde aus dem generischen Block entfernt — Amazon liefert
+    // dafür typischerweise "1" / "2", was als Tracking-Nummer wertlos ist.
     { re: /[?&](?:trk|tracking_?number|tracknum|tracking_id|trackingnr)=([A-Z0-9-]{8,30})/i },
   ]
 
   // Erst spezifische URL-Patterns, dann generische tracking-Wörter im Pfad.
-  const hrefRe = /href\s*=\s*["']([^"']{8,400})["']/gi
+  // URL-Cap auf 2000 erhöht: Amazon-Redirect-URLs sind häufig 600–1200
+  // Zeichen lang (Click-Tracking-Tokens + URL-encoded Ziel-URL).
+  const hrefRe = /href\s*=\s*["']([^"']{8,2000})["']/gi
   let h: RegExpExecArray | null
   while ((h = hrefRe.exec(html)) !== null) {
     const url = h[1]
+    // decodeURIComponent throws bei `%`-Sequenzen ohne valides Hex —
+    // skip in dem Fall und arbeite mit dem Roh-URL weiter.
+    let decoded = url
+    if (url.includes('%')) {
+      try { decoded = decodeURIComponent(url) } catch { /* ignore */ }
+    }
+    const candidates = decoded === url ? [url] : [url, decoded]
     for (const p of URL_PATTERNS) {
-      const m = p.re.exec(url)
-      if (m && m[1]) {
-        const tn = m[1]
-        if (!seen.has(tn)) {
-          seen.add(tn)
-          out.push(tn)
-          carrier ??= p.carrier ?? inferCarrier(tn, url)
+      let matched = false
+      for (const candidate of candidates) {
+        const m = p.re.exec(candidate)
+        if (m && m[1]) {
+          const tn = m[1]
+          if (!seen.has(tn)) {
+            seen.add(tn)
+            out.push(tn)
+            carrier ??= p.carrier ?? inferCarrier(tn, candidate)
+          }
+          matched = true
+          break
         }
-        break // nur das erste Match pro URL
       }
+      if (matched) break // nur das erste Match pro URL
     }
   }
   return { trackings: out, carrier }

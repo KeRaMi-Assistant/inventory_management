@@ -96,8 +96,11 @@ export const dhlAdapter: TrackingAdapter = {
     if (!isObject(shipment)) return null
     const status = isObject(shipment.status) ? shipment.status : null
     const code = pickString(status, 'statusCode', 'status')?.toLowerCase()
+    // `status`-Feld zuerst: bei DHL ist das das kurze, kuratierte Label
+    // ("Zugestellt", "In Zustellung"). `description` ist der ausgeschriebene
+    // Satz mit kleingeschriebenem Verb — weniger nützlich als Last-Event.
     const description =
-      pickString(status, 'description', 'status') ?? undefined
+      pickString(status, 'status', 'description') ?? undefined
     const timestamp = pickString(status, 'timestamp')
 
     let normalized: TrackingDeliveryStatus = 'unknown'
@@ -239,7 +242,7 @@ export const upsAdapter: TrackingAdapter = {
       const dateStr = pickString(first, 'date')
       // UPS-Format `YYYYMMDD` ohne Trennzeichen → in ISO-Date wandeln.
       if (dateStr && /^\d{8}$/.test(dateStr)) {
-        deliveredAt = `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}T00:00:00Z`
+        deliveredAt = `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}T00:00:00.000Z`
       } else {
         deliveredAt = toIso(dateStr)
       }
