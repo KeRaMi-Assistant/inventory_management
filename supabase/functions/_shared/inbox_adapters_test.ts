@@ -353,6 +353,64 @@ Deno.test('Amazon Demo-Seeder HTML: DE-Plain-Text gewinnt gegen orderingShipment
   )
 })
 
+// DE-Tracking-Carrier-Detection. User-Wunsch: Label nur, wenn der Body
+// einen klaren Carrier-Hinweis liefert. `DE\d{10,12}` allein ist nicht
+// eindeutig — Amazon Logistics UND DHL national nutzen das Format.
+//
+// Wir testen drei Fälle:
+//   a) Body enthält "Amazon Logistics" → carrier = "Amazon Logistics"
+//   b) Body enthält "DHL"              → carrier = "DHL"
+//   c) Body enthält weder noch         → carrier = undefined (kein Label)
+//
+// Vorher hatte STRONG_TRACKING_PATTERNS hardcoded "Amazon Logistics" für
+// DE\d{8,14} — das hat ALLE DE-Trackings als Amazon Logistics beschriftet,
+// auch wenn sie in Wirklichkeit DHL waren. Das Label-Feld muss jetzt aus
+// dem Body inferred werden.
+Deno.test('DE-Tracking + Body "Amazon Logistics" → carrier=Amazon Logistics', () => {
+  const c = ctx(
+    'versandbestaetigung@amazon.de',
+    'Deine Bestellung wurde versendet',
+    'Your item(s) is (are) being sent by Amazon Logistics. '
+      + 'Your tracking number is: DE5455279839.',
+  )
+  const parsed = detectAndParse(c)
+  assertExists(parsed)
+  assertEquals(parsed!.tracking, 'DE5455279839')
+  assertEquals(parsed!.carrier, 'Amazon Logistics')
+})
+
+Deno.test('DE-Tracking + Body "DHL" → carrier=DHL (nicht Amazon Logistics!)', () => {
+  // Echter Fall aus dem User-Screenshot: x-kom-Bestellung mit
+  // "DE294559406" als Tracking, Body sagt "DHL". Vorher wurde das als
+  // "Amazon Logistics" beschriftet — falsch.
+  const c = ctx(
+    'noreply@x-kom.pl',
+    'Deine x-kom-Bestellung wurde versendet',
+    'Sendung wird versendet mit DHL. Sendungsnummer: DE294559406.',
+  )
+  const parsed = detectAndParse(c)
+  assertExists(parsed)
+  assertEquals(parsed!.tracking, 'DE294559406')
+  assertEquals(parsed!.carrier, 'DHL')
+})
+
+Deno.test('DE-Tracking ohne Body-Hint → carrier=undefined (kein Label > falsches Label)', () => {
+  const c = ctx(
+    'noreply@example.com',
+    'Bestellung versendet',
+    'Sendungsnummer: DE5455279839. Lieferung in 2-3 Werktagen.',
+  )
+  const parsed = detectAndParse(c)
+  // Adapter erkennt evtl. nicht den Shop (kein Match) — aber wenn doch
+  // (z.B. via generischen Fallback), darf carrier nicht hardcoded sein.
+  if (parsed && parsed.tracking === 'DE5455279839') {
+    assert(
+      parsed.carrier === undefined || parsed.carrier === null,
+      `carrier sollte undefined sein, war "${parsed.carrier}"`,
+    )
+  }
+})
+
 Deno.test('Amazon DE: "Deine Sendungsnummer lautet: …" matcht (lautet-Variante)', () => {
   const c = ctx(
     'versand@amazon.de',
