@@ -1642,62 +1642,71 @@ class _TrackingPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () async {
-        await Clipboard.setData(ClipboardData(text: tracking));
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Tracking-Nummer kopiert.'),
-            behavior: SnackBarBehavior.floating,
-          ));
-        }
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppTheme.bgSubtleOf(context),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.local_shipping_outlined,
-                size: 14, color: AppTheme.textSecondaryOf(context)),
-            const SizedBox(width: 6),
-            Text(
-              tracking,
-              style: TextStyle(
-                fontSize: 12,
-                fontFamily: 'monospace',
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimaryOf(context),
-              ),
-            ),
-            if (carrier != null) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.bgSurfaceOf(context),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: AppTheme.borderStrongOf(context)),
+    final semanticsLabel = carrier != null ? '$carrier $tracking' : tracking;
+    return Semantics(
+      label: semanticsLabel,
+      button: true,
+      container: true,
+      excludeSemantics: true,
+      child: InkWell(
+        key: ValueKey('tracking-pill-$tracking'),
+        onTap: () async {
+          await Clipboard.setData(ClipboardData(text: tracking));
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Tracking-Nummer kopiert.'),
+              behavior: SnackBarBehavior.floating,
+            ));
+          }
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.bgSubtleOf(context),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.local_shipping_outlined,
+                  size: 14, color: AppTheme.textSecondaryOf(context)),
+              const SizedBox(width: 6),
+              Text(
+                tracking,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimaryOf(context),
                 ),
-                child: Text(
-                  carrier!,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textSecondaryOf(context),
+              ),
+              if (carrier != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.bgSurfaceOf(context),
+                    borderRadius: BorderRadius.circular(999),
+                    border:
+                        Border.all(color: AppTheme.borderStrongOf(context)),
+                  ),
+                  child: Text(
+                    carrier!,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textSecondaryOf(context),
+                    ),
                   ),
                 ),
-              ),
+              ],
+              const SizedBox(width: 4),
+              Icon(Icons.copy_outlined,
+                  size: 12, color: AppTheme.textMutedOf(context)),
             ],
-            const SizedBox(width: 4),
-            Icon(Icons.copy_outlined,
-                size: 12, color: AppTheme.textMutedOf(context)),
-          ],
+          ),
         ),
       ),
     );
