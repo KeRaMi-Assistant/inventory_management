@@ -308,6 +308,51 @@ Deno.test('Amazon Logistics: "Your tracking number is: DE…" gewinnt gegen prog
   assertEquals(parsed!.carrier, 'Amazon Logistics')
 })
 
+// Regression: das HTML, das `seed-demo-workspace.buildDemoAmazonHtml`
+// generiert, MUSS vom Adapter als DE-Tracking erkannt werden — sonst
+// hat der Test-Workspace immer noch keine Coverage und der User-Frust
+// kommt zurück. Wir testen hier 1:1 das geseedete Pattern (Plain-Text-
+// "Your tracking number is: DE…" + parallel orderingShipmentId im
+// shiptrack-Redirect-Link).
+Deno.test('Amazon Demo-Seeder HTML: DE-Plain-Text gewinnt gegen orderingShipmentId-Fallback', () => {
+  const orderId = '306-4234293-3555528'
+  const shipmentId = '106121425175302'
+  const trackingDe = 'DE5455279839'
+  const html = [
+    '<!DOCTYPE html>',
+    '<html><body><table><tr><td>',
+    '<span class="rio_sc_headline">Versandbestätigung</span>',
+    `<p><span>Bestellung <a href="https://www.amazon.de/gp/f.html?C=AAAA&K=BBBB&M=urn:rtn:msg:demo&R=CCCC&T=C&U=https%3A%2F%2Fbusiness.amazon.de%2Fabredir%2Fgp%2Fcss%2Fsummary%2Fedit.html%3Fie%3DUTF8%26orderID%3D${orderId}&H=DDDD" class="rio_link">${orderId}</a></span></p>`,
+    `<p><span>Item(s): Samsung 870 EVO SSD 1TB</span></p>`,
+    `<a class="rio_btn rio_bg_yellow" href="https://www.amazon.de/gp/f.html?C=AAAA&K=BBBB&M=urn:rtn:msg:demo&R=DDDD&T=C&U=https%3A%2F%2Fbusiness.amazon.de%2Fabredir%2Fgp%2Fcss%2Fshiptrack%2Fview.html%2Fref%3Dpe_demo%3Fie%3DUTF8%26addressID%3DREDACTED%26orderID%3D${orderId}%26shipmentDate%3D1770594703%26orderingShipmentId%3D${shipmentId}%26packageId%3D1&H=EEEE">Lieferung verfolgen</a>`,
+    `<p>Your item(s) is (are) being sent by Amazon Logistics. Your tracking number is: ${trackingDe}. Depending on the delivery method you chose, it's possible that the tracking information might not be visible immediately.</p>`,
+    '<p><span>Voraussichtlich in 2-3 Tagen.</span></p>',
+    '</td></tr></table></body></html>',
+  ].join('\n')
+
+  const c = ctx(
+    'versandbestaetigung@amazon.de',
+    'Deine Amazon.de-Bestellung mit "Samsung 870 EVO SSD..." wurde versandt!',
+    '',
+    html,
+  )
+  const parsed = detectAndParse(c)
+  assertExists(parsed)
+  assertEquals(parsed!.shopKey, 'amazon')
+  assertEquals(parsed!.orderId, orderId)
+  assertEquals(
+    parsed!.tracking, trackingDe,
+    'Demo-Seeder-HTML muss DE-Carrier-Tracking als primary liefern',
+  )
+  assertEquals(parsed!.carrier, 'Amazon Logistics')
+  // Sicherheitsnetz: orderingShipmentId darf NICHT primary werden,
+  // sonst kehrt der Bug zurück.
+  assert(
+    parsed!.tracking !== shipmentId,
+    'orderingShipmentId darf nicht als primary tracking gewählt werden',
+  )
+})
+
 Deno.test('Amazon DE: "Deine Sendungsnummer lautet: …" matcht (lautet-Variante)', () => {
   const c = ctx(
     'versand@amazon.de',
