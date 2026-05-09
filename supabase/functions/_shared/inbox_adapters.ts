@@ -103,17 +103,16 @@ const STRONG_TRACKING_PATTERNS: Array<{ re: RegExp; carrier?: string }> = [
   { re: /\b(JJD\d{10,18})\b/, carrier: 'DHL' },
   { re: /\b([A-Z]{2}\d{9}DE)\b/, carrier: 'DHL' },
   { re: /\b(\d{20,22})\b/, carrier: 'DHL' },
-  // Amazon Logistics in DE: Country-Code "DE" am ANFANG + 8–14 Digits
-  // ("DE5455279839" aus echten Versand-Mails, 12 Zeichen). Vorher war
-  // NUR `[A-Z]{2}\d{9}DE` drin — das matcht aber DHL-Format
-  // (Country-Code AM ENDE, z.B. RR123456789DE), nicht das Amazon-
-  // Format (Country-Code AM ANFANG). Resultat: DE-Tracking landete
-  // nicht im STRONG-Match, fiel auf den HTML-href-Fallback und der
-  // pickte die interne `orderingShipmentId` aus dem progress-tracker-
-  // Link statt der echten Carrier-Nr. Begrenzung 8–14 Digits, damit
-  // wir nicht versehentlich PLZs ("DE12345") matchen — Amazon-
-  // Tracking ist immer ≥ 10-stellig.
-  { re: /\b(DE\d{8,14})\b/, carrier: 'Amazon Logistics' },
+  // DE-Tracking mit Country-Code AM ANFANG + 8–14 Digits ("DE5455279839"
+  // aus echten Versand-Mails, 12 Zeichen). Wird sowohl von Amazon Logistics
+  // als auch von DHL national genutzt — ohne Body-Kontext NICHT eindeutig.
+  // Bewusst KEIN hardcoded `carrier` hier: `inferCarrier(tn, body)` liest
+  // statt dessen Carrier-Hinweise aus dem Body ("Amazon Logistics", "DHL",
+  // "Hermes", …). Wenn der Body keinen Hinweis hat → carrier=undefined →
+  // UI zeigt nur die Tracking-Nummer ohne Label (lieber kein Label als
+  // falsches). Begrenzung 8–14 Digits, damit wir nicht versehentlich PLZs
+  // ("DE12345") matchen — Tracking ist immer ≥ 10-stellig.
+  { re: /\b(DE\d{8,14})\b/ },
 ]
 
 // Mehrsprachig: DE (Sendungsnummer / Tracking-Nr / Paketnummer),
@@ -176,10 +175,23 @@ const findFirst = (s: string, patterns: RegExp[]): string | undefined => {
 }
 
 function inferCarrier(tn: string, body: string): string | undefined {
+  // 1. Format-eindeutige Tracking-Codes — Carrier ergibt sich aus dem
+  //    Code-Format selbst, ohne Body-Kontext.
   if (/^1Z/.test(tn)) return 'UPS'
   if (/^TBA/i.test(tn)) return 'Amazon Logistics'
   if (/^JJD/.test(tn)) return 'DHL'
   if (/^[A-Z]{2}\d{9}DE$/.test(tn)) return 'DHL'
+
+  // 2. Carrier-Keyword im Body. `DE\d{10,12}` ist NICHT format-eindeutig
+  //    (sowohl Amazon Logistics als auch DHL national nutzen das Schema)
+  //    — ohne Body-Hinweis liefert die Funktion `undefined` und das UI
+  //    zeigt die Tracking-Nr ohne Carrier-Label.
+  //    Reihenfolge: spezifischere Keywords zuerst (Amazon Logistics ist
+  //    ein 2-Wort-Anker, der weniger leicht aus Boilerplate-Text matcht
+  //    als das einzelne Wort "DHL"). Wenn beide vorkommen ("Versand
+  //    durch Amazon Logistics in Kooperation mit DHL"), gewinnt der
+  //    explizite Mehrwort-Anker.
+  if (/\bamazon\s+logistics\b/i.test(body)) return 'Amazon Logistics'
   if (/\bdhl\b/i.test(body)) return 'DHL'
   if (/\bhermes\b/i.test(body)) return 'Hermes'
   if (/\bdpd\b/i.test(body)) return 'DPD'
