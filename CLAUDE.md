@@ -172,7 +172,24 @@ um Regressionen zu finden, die `flutter analyze` + `flutter test` nicht sehen.
 **Nutzung:**
 - `/test-ui smoke-login` → ruft `browser-tester`, läuft Login-Flow durch.
 - `/test-ui smoke-inbox` → Login + Inbox + "Alle als gelesen markieren".
+- `/test-ui smoke-theme-toggle` → alle 10 Top-Level-Routen Light + Dark.
+- `/test-ui smoke-help` → Hilfeseite (Search, FAQ, Phone, Theme, EN).
+- `/test-ui smoke-full-app-audit` → Mega-Audit: läuft jede Route aus
+  [`.claude/agents/_page-registry.md`](.claude/agents/_page-registry.md)
+  ab (Light + Dark × Desktop + Phone), prüft Pixel-Overflow,
+  Console-Errors und Theme-Konsistenz, schreibt pro Befund einen
+  Auto-Requeue-Task `00-followup-…` ins Inbox.
 - `/test-ui <freitext>` → Klartext-Anweisung, der Agent übersetzt sie selbst.
+
+**Pre-Ship-Pflicht (UI-Änderungen):** Vor jedem `/ship` einer
+User-sichtbaren UI-Änderung (neuer Screen, Theme/Color-Tweak,
+Layout-Refactor, neue Sub-Route) muss `smoke-full-app-audit`
+mindestens einmal grün durchlaufen — sonst kein Merge. Bei
+`Result: failed` schreibt der Tester automatisch
+`00-followup-…`-Items, die der Drain als Allererstes pickt;
+manuelle Trigger-Tasks sind nicht nötig. Bugfixes ohne UI-Wirkung
+dürfen mit dem engeren Smoke-Szenario auskommen
+(z. B. `smoke-inbox`, `smoke-help`).
 
 **Web-Server:** `bash .claude/scripts/dev-web.sh` startet `flutter build web` + `python -m http.server 8123`. `bash .claude/scripts/stop-web.sh` stoppt sauber.
 
