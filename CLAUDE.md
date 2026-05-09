@@ -262,6 +262,49 @@ Strukturproblemen (veraltetes Kapitel, falsche Sektionen) meldet er
 das im Schluss-Block — die Überarbeitung macht ein `planner` →
 `flutter-coder`-Workflow.
 
+## Page-Registry
+
+Die Datei [`.claude/agents/_page-registry.md`](.claude/agents/_page-registry.md)
+ist die **Single-Source-of-Truth** über alle User-sichtbaren Screens
+(Top-Level + Auth + Onboarding) und User-sichtbaren Sub-Routes
+(Modal-Dialogs, Bottom-Sheets). Ohne sie hat der Browser-Tester keine
+Audit-Checkliste — neue Screens würden bei UI-Audits unsichtbar
+durchrutschen.
+
+**Wer pflegt sie:**
+
+- Initial angelegt + manuell kuratiert (Pflicht-Tests, Notizen).
+- **Inkrementell automatisch** durch den `doc-updater`-Agent: bei
+  jedem `/update-docs`-Run werden Adds/Removes von Files unter
+  `lib/screens/` und Sub-Route-Files unter `lib/widgets/`
+  (`add_edit_*`, `*_dialog`, `*_sheet`) erkannt und Tabellen-Einträge
+  ergänzt bzw. entfernt. Reihenfolge bleibt erhalten.
+
+**Wer liest sie:**
+
+- `browser-tester` nutzt sie als Pflicht-Checkliste für Full-App-
+  Audits (siehe Backlog #04).
+- Maintainer beim PR-Review: "Ist der neue Screen drin? Stimmen die
+  Pflicht-Tests?"
+
+**Format:** Markdown bleibt das Format (kein JSON), damit Menschen
+direkt lesen und greppen können. Tabellen-Spalten:
+`Route | File | Pflicht-Tests | Notizen`. Pflicht-Tests-Schlüssel
+sind unten in der Datei selbst dokumentiert.
+
+**Default-Pflicht-Tests** für neu hinzugefügte Screens:
+`smoke-theme, mobile-overflow`. Auth-Screens bekommen `smoke-<slug>,
+smoke-theme`. Spezifische Test-Sets (`charts-render`, `all-6-tabs`,
+`deal-flow`, …) werden manuell ergänzt — der Agent setzt nur Defaults.
+
+**Wann manuell editieren:**
+
+- Wenn ein neuer Pflicht-Test-Schlüssel hinzukommt (Definitionsblock
+  am Ende der Datei pflegen).
+- Wenn die Bottom-Nav-Reihenfolge in `MainScreen` umgebaut wird —
+  dann passt der Agent die Tabellen nicht automatisch um, das macht
+  ein `flutter-coder`-Workflow.
+
 ## Hilfeseite pflegen
 
 Die User-sichtbare Hilfeseite liegt in
