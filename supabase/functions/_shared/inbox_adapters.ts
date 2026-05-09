@@ -108,10 +108,21 @@ const STRONG_TRACKING_PATTERNS: Array<{ re: RegExp; carrier?: string }> = [
 // Mehrsprachig: DE (Sendungsnummer / Tracking-Nr / Paketnummer),
 // EN (tracking number / tracking id / tracking #), FR (numéro de suivi),
 // IT (numero di tracciamento / numero tracciamento), ES (número de
-// seguimiento), PL (numer przesyłki). Bug-Fix: vorher `nr[uú]mero` —
-// das matchte "nrúmero", nicht das tatsächliche Spanisch "número".
+// seguimiento), PL (numer przesyłki).
+//
+// Bug-Fix #1: vorher `nr[uú]mero` — das matchte "nrúmero", nicht das
+// tatsächliche Spanisch "número".
+//
+// Bug-Fix #2: Amazon-Versand-Mails formulieren "Your tracking number
+// IS: DE5455279839" / "Deine Sendungsnummer LAUTET: …". Der vorherige
+// Regex erlaubte nur Whitespace/Trenner zwischen Keyword und Nummer
+// und fiel deshalb stumm auf den HTML-href-Fallback (`orderingShipmentId`)
+// zurück — User sah die interne Amazon-Package-ID statt der echten
+// Carrier-Tracking-Nummer. Der `is/ist/lautet/est/es/jest`-Slot ist
+// optional, damit ältere Pattern ohne Verb (z.B. "Sendungsnummer:")
+// weiterhin matchen.
 const CONTEXT_TRACKING_RE =
-  /(?:tracking(?:[-\s]?(?:id|nummer|nr\.?|number|no\.?|#))?|sendungs?(?:[-\s]?(?:nummer|nr\.?))|paket(?:[-\s]?(?:nummer|nr\.?))|n[uú]mero\s+de\s+seguimiento|num[eé]ro\s+de\s+suivi|numero\s+(?:di\s+)?tracciamento|numer\s+przesy(?:ł|l)ki)\s*[:\s#=-]*\s*([A-Z0-9-]{8,30})/i
+  /(?:tracking(?:[-\s]?(?:id|nummer|nr\.?|number|no\.?|#))?|sendungs?(?:[-\s]?(?:nummer|nr\.?))|paket(?:[-\s]?(?:nummer|nr\.?))|n[uú]mero\s+de\s+seguimiento|num[eé]ro\s+de\s+suivi|numero\s+(?:di\s+)?tracciamento|numer\s+przesy(?:ł|l)ki)(?:\s+(?:is|ist|lautet|est|es|jest))?\s*[:\s#=-]*\s*([A-Z0-9-]{8,30})/i
 
 const stripHtml = (html: string): string =>
   html
