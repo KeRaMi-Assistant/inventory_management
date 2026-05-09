@@ -38,7 +38,27 @@ Deno.serve(async (req) => {
   const isCron = cronSecret && authHeader === `Bearer ${cronSecret}`
   const isService =
     authHeader === `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-  if (!isCron && !isService) return jsonResp({ error: 'Unauthorized' }, 401)
+
+  // Dritter Auth-Pfad: User-JWT vom Flutter-Client. Erlaubt manuelles
+  // Re-Parsen aus der App heraus ohne Service-Role-Key. Kritisch:
+  // wir scopen alles harten auf die Workspaces des Users — kein
+  // Cross-Workspace-Zugriff möglich.
+  let scopedUserId: string | null = null
+  let scopedWorkspaceIds: string[] | null = null
+  if (!isCron && !isService) {
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    if (!authHeader || !anonKey) return jsonResp({ error: 'Unauthorized' }, 401)
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      anonKey,
+      { global: { headers: { Authorization: authHeader } } },
+    )
+    const { data: userData, error: userErr } = await userClient.auth.getUser()
+    if (userErr || !userData.user) {
+      return jsonResp({ error: 'Unauthorized' }, 401)
+    }
+    scopedUserId = userData.user.id
+  }
 
   let body: {
     reparse_unclassified?: boolean
@@ -68,6 +88,26 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
   )
 
+  // User-Pfad: einschränken auf eigene Workspace-IDs. Wenn der User im
+  // Body einen `workspace_id` mitgibt, prüfen wir Mitgliedschaft. Sonst
+  // setzen wir scopedWorkspaceIds = alle Workspaces des Users.
+  if (scopedUserId !== null) {
+    const { data: memberRows, error: memberErr } = await admin
+      .from('workspace_members')
+      .select('workspace_id')
+      .eq('user_id', scopedUserId)
+    if (memberErr) return jsonResp({ error: memberErr.message }, 500)
+    scopedWorkspaceIds = (memberRows ?? []).map(
+      (r: { workspace_id: string }) => r.workspace_id,
+    )
+    if (scopedWorkspaceIds.length === 0) {
+      return jsonResp({ ok: true, scanned: 0, rescued: 0, scoped_user: scopedUserId })
+    }
+    if (body.workspace_id && !scopedWorkspaceIds.includes(body.workspace_id)) {
+      return jsonResp({ error: 'workspace_id not in user scope' }, 403)
+    }
+  }
+
   if (body.reparse_unclassified === true) {
     const result = await reparseUnclassified(admin)
     return jsonResp({ ok: true, mode: 'reparse_unclassified', ...result })
@@ -76,6 +116,10 @@ Deno.serve(async (req) => {
   if (body.reparse_no_tracking === true) {
     const result = await reparseNoTracking(admin, {
       workspaceId: body.workspace_id,
+      // User-Pfad: hart auf eigene Workspaces einschränken, falls kein
+      // expliziter workspace_id übergeben wurde.
+      workspaceIds: body.workspace_id ? undefined
+        : (scopedWorkspaceIds ?? undefined),
       shopKey: body.shop_key,
       forceOverwrite: body.force_overwrite === true,
     })
@@ -197,7 +241,13 @@ interface ReparseNoTrackingStats {
 /// (idempotent gegen Re-Runs).
 async function reparseNoTracking(
   admin: ReturnType<typeof createClient>,
-  options: { workspaceId?: string; shopKey?: string; forceOverwrite?: boolean },
+  options: {
+    workspaceId?: string
+    // User-JWT-Pfad: scope auf alle Workspaces des Users.
+    workspaceIds?: string[]
+    shopKey?: string
+    forceOverwrite?: boolean
+  },
 ): Promise<ReparseNoTrackingStats> {
   const stats: ReparseNoTrackingStats = {
     scanned: 0,
@@ -220,6 +270,9 @@ async function reparseNoTracking(
       q = q.is('parsed_payload->>tracking', null)
     }
     if (options.workspaceId) q = q.eq('workspace_id', options.workspaceId)
+    else if (options.workspaceIds && options.workspaceIds.length > 0) {
+      q = q.in('workspace_id', options.workspaceIds)
+    }
     if (options.shopKey) q = q.eq('shop_key', options.shopKey)
     if (cursor) q = q.gt('received_at', cursor)
     const { data, error } = await q
