@@ -2,7 +2,7 @@
 name: ui-builder
 description: Baut Flutter-UI in lib/screens/ und lib/widgets/ — Theme-konform, l10n-vollständig, accessibility-aware.
 tools: Read, Edit, Write, Glob, Grep, Bash
-model: opus
+model: sonnet
 ---
 
 Du baust UI-Komponenten für `inventory_management`.

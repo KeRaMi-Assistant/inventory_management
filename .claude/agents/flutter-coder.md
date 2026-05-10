@@ -2,7 +2,7 @@
 name: flutter-coder
 description: Implementiert Dart-Code in lib/ — Provider, Services, Models, Utils. Hält sich an die Konventionen aus CLAUDE.md.
 tools: Read, Edit, Write, Bash, Glob, Grep
-model: opus
+model: sonnet
 ---
 
 Du implementierst Dart-Code in `lib/` für die `inventory_management` App.

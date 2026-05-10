@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# pre-push: blockt Pushes, die Self-Mod-Blocklist-Pfade ändern.
+#
+# Verhalten:
+#   - HEADLESS_MODE=1 + Blocklist-Hit  → HARDER abort (auch ohne Bypass).
+#   - sonst (manuelle User-Session)    → warnen, aber zulassen.
+#
+# Aktivierung via: bash .claude/scripts/install-self-mod-guard.sh
+# (Symlink/Copy nach .git/hooks/pre-push.)
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+LIB="$REPO_ROOT/.claude/scripts/lib/self-mod-blocklist.sh"
+
+if [ ! -r "$LIB" ]; then
+  exit 0
+fi
+
+# shellcheck disable=SC1090
+. "$LIB"
+
+# stdin: <local_ref> <local_sha> <remote_ref> <remote_sha>
+# We compute changed files between the local SHA and remote SHA.
+TMPF="$(mktemp)"
+trap 'rm -f "$TMPF" "$TMPF.uniq"' EXIT
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "${local_sha:-}" ] && continue
+  if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+    continue # delete
+  fi
+  if [ "${remote_sha:-}" = "0000000000000000000000000000000000000000" ] || [ -z "${remote_sha:-}" ]; then
+    range="$local_sha"
+  else
+    range="${remote_sha}..${local_sha}"
+  fi
+  git log --name-only --pretty=format: "$range" 2>/dev/null >> "$TMPF" || true
+done
+
+sort -u "$TMPF" | sed '/^$/d' > "$TMPF.uniq" || true
+
+if [ ! -s "$TMPF.uniq" ]; then
+  exit 0
+fi
+
+hits=""
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  if _is_self_mod_blocked "$REPO_ROOT/$f"; then
+    hits="${hits}${f}
+"
+  fi
+done < "$TMPF.uniq"
+
+if [ -z "$hits" ]; then
+  exit 0
+fi
+
+# Audit
+if [ -x "$REPO_ROOT/.claude/scripts/audit-record.sh" ]; then
+  "$REPO_ROOT/.claude/scripts/audit-record.sh" \
+    "${USER:-unknown}" "self-mod-push" "$(printf '%s' "$hits" | tr '\n' ',')" \
+    "pre-push hook detected blocklist diff (HEADLESS_MODE=${HEADLESS_MODE:-0})" \
+    >/dev/null 2>&1 || true
+fi
+
+# Notification
+if [ -x "$REPO_ROOT/.claude/scripts/notify.sh" ]; then
+  "$REPO_ROOT/.claude/scripts/notify.sh" \
+    "Self-Mod Push intercepted" \
+    "Blocklist-Files in Push: $(printf '%s' "$hits" | tr '\n' ' ')" \
+    "failure" >/dev/null 2>&1 || true
+fi
+
+# Headless: hard abort
+if [ "${HEADLESS_MODE:-0}" = "1" ] || [ -n "${OVERSEER_WORKER_PID:-}" ]; then
+  echo "----------------------------------------------------------------------" >&2
+  echo "PRE-PUSH ABORT (self-mod-blocklist, HEADLESS_MODE=1):"            >&2
+  echo "Folgende Blocklist-Files in dieser Push-Range:"                    >&2
+  printf '  - %s\n' $hits                                                  >&2
+  echo "Worker dürfen diese Files NICHT pushen. Run von einer User-Session"  >&2
+  echo "(touch .claude/.user-session-active) wenn das beabsichtigt ist."   >&2
+  echo "----------------------------------------------------------------------" >&2
+  exit 1
+fi
+
+# User-Session: nur warnen
+echo "----------------------------------------------------------------------" >&2
+echo "WARNING (self-mod-blocklist): folgende geschützte Files sind im Push:" >&2
+printf '  - %s\n' $hits                                                  >&2
+echo "Push fortgesetzt (User-Session)."                                  >&2
+echo "----------------------------------------------------------------------" >&2
+exit 0

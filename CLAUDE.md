@@ -23,7 +23,8 @@
 - **NIE direkt auf `main` committen.** Immer `feature/<slug>` oder `fix/<slug>`.
 - Branch-Naming: kebab-case, max 40 Zeichen.
 - Commits dürfen automatisiert sein, aber:
-  - `git add .` ist VERBOTEN. Nur Whitelist: `git add lib/ supabase/migrations/ supabase/functions/ test/ pubspec.yaml pubspec.lock plans/ .github/ CLAUDE.md .claude/`
+  - `git add .` ist VERBOTEN. Kein Wildcard `.claude/*`. Nur explizite Whitelist (Single-Source-of-Truth: `.claude/whitelist.txt`):
+    `git add lib/ supabase/migrations/ supabase/functions/ test/ pubspec.yaml pubspec.lock plans/ .github/ CLAUDE.md .claude/agents/ .claude/commands/ .claude/scripts/ .claude/settings.json .claude/stakeholder/ .claude/stakeholder/digest/ .claude/disputes/ .claude/audit/ .claude/overseer/ .claude/analyzer/ .claude/integrity/ .claude/git-hooks/ .claude/memory/ .claude/schemas/ .claude/metrics/ .claude/whitelist.txt`
   - Niemals `lib/config/supabase_config.dart`, `google-services.json`, `GoogleService-Info.plist`, `.env*`, `*.csv` mit Daten committen.
 - Commit-Messages auf Deutsch oder Englisch, kurz und im Imperativ. Optional Co-Author-Line beibehalten.
 

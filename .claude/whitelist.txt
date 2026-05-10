@@ -1,0 +1,44 @@
+# Claude Code Commit-Whitelist — Single-Source-of-Truth
+# Referenziert von: auto-commit.sh, ship.md, CLAUDE.md §Branching & Commits
+# Format: ein Pfad pro Zeile (repo-relativ), Kommentare via #, leere Zeilen erlaubt.
+# KEIN Wildcard (.claude/* o.ä.) — immer explizite Pfade!
+#
+# Pflege: Wenn neue autonomy-Pfade hinzukommen, nur hier ergänzen.
+# auto-commit.sh liest diese Datei dynamisch. ship.md und CLAUDE.md
+# müssen manuell synchron gehalten werden.
+
+# --- App-Code ---
+lib
+supabase/migrations
+supabase/functions
+test
+pubspec.yaml
+pubspec.lock
+
+# --- Pläne + CI ---
+plans
+.github
+CLAUDE.md
+
+# --- Claude-Agenten-Infrastruktur ---
+.claude/agents
+.claude/commands
+.claude/scripts
+.claude/settings.json
+
+# --- Autonomy-Pfade (P0-1) ---
+.claude/stakeholder
+.claude/stakeholder/digest
+.claude/disputes
+.claude/audit
+.claude/overseer
+.claude/analyzer
+.claude/integrity
+.claude/git-hooks
+.claude/memory
+.claude/schemas
+.claude/metrics
+.claude/whitelist.txt
+
+# --- Backlog-Templates (kein runs/ oder .lock) ---
+.claude/backlog/templates

@@ -17,6 +17,19 @@ block() {
   exit 2
 }
 
+# --- Self-Mod-Blocklist (P0-0) ---------------------------------------------
+# Source library, prüfe Bash-Command gegen Blocklist BEVOR existing Guards.
+GUARD_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/self-mod-blocklist.sh"
+if [ -r "$GUARD_LIB" ]; then
+  # shellcheck disable=SC1090
+  . "$GUARD_LIB"
+  _guard_bash_self_mod "$cmd"
+  rc=$?
+  if [ "$rc" -eq 2 ]; then
+    block "self-mod-blocklist: Bash-Befehl würde geschützten Pfad ändern (HEADLESS_MODE/Overseer aktiv)"
+  fi
+fi
+
 # Force-push auf main
 if echo "$cmd" | grep -qE 'git push.*-f.*\b(origin\s+)?main\b'; then
   block "force-push auf main ist verboten"

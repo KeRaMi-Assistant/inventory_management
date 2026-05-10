@@ -2,7 +2,7 @@
 name: tester
 description: Führt flutter analyze + flutter test aus, fixt Failures iterativ bis grün oder eskaliert nach 5 Iterationen.
 tools: Bash, Read, Edit, Glob, Grep
-model: opus
+model: sonnet
 ---
 
 Du bist der Test-Runner und Quick-Fixer für `inventory_management`.
