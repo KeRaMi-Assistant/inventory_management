@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 # overseer.sh — Long-running daemon that processes items from
-# .claude/overseer/inbox/ via single-worker pipeline (Phase 1 N=1).
+# .claude/overseer/inbox/ via N-worker pool (Phase 2, default N=2, hard-cap N=3).
 #
 # Architecture inspiration: ComposioHQ agent-orchestrator (MIT-licensed)
 #   https://github.com/ComposioHQ/agent-orchestrator
 # We borrow the pattern (atomic-move queue → worker spawn in isolated
-# workspace → graceful shutdown markers) but no code. Phase 2 will grow
-# this to N>1 worker pool; today the loop is strictly sequential.
+# workspace → graceful shutdown markers) but no code.
 #
 # CLI:
 #   overseer.sh           — daemon-loop (default)
-#   overseer.sh --once    — one iteration, then exit
-#   overseer.sh --status  — print lock holder PID + current item + pre-flight state
+#   overseer.sh --once    — one pool-management iteration, then exit
+#   overseer.sh --status  — print lock holder PID + current items + pre-flight state
 #   overseer.sh --stop    — touch STOP marker
 #   overseer.sh --resume  — remove STOP marker
 #
@@ -20,6 +19,11 @@
 #   PANIC               — full halt (set by watchdog or worker exit 2)
 #   AUTH_EXPIRED        — set by oauth-check when claude probe fails
 #   COST_CAP_REACHED    — set by cost_check_or_die
+#
+# Worker-Pool (P2-1):
+#   OVERSEER_MAX_WORKERS — max parallel workers (default 2, hard-cap 3)
+#   Worker state tracked in $OVERSEER_DIR/state/workers/<pid>.pid (JSON)
+#   Each worker writes exit-code to <pid>.exit on trap-EXIT.
 #
 # Lock file: $OVERSEER_DIR/.overseer.lock (separate from .claude/backlog/.lock
 #   so the legacy headless-runner stays untouched, Mitigation 8).
@@ -46,6 +50,19 @@ AUTH_EXPIRED_MARKER="${OVERSEER_DIR}/AUTH_EXPIRED"
 COST_CAP_MARKER="${OVERSEER_DIR}/COST_CAP_REACHED"
 OAUTH_CACHE_FILE="${OVERSEER_DIR}/state/oauth-last-check.ts"
 HOURLY_NOTIFY_FILE="${OVERSEER_DIR}/state/last-hourly-notify.ts"
+WORKERS_STATE_DIR="${OVERSEER_DIR}/state/workers"
+HEALTH_JSON="${OVERSEER_DIR}/health.json"
+
+# Stakeholder-Triage paths (P2-4)
+STAKEHOLDER_DIR="${REPO_ROOT}/.claude/stakeholder"
+STAKEHOLDER_INBOX_DIR="${STAKEHOLDER_DIR}/inbox"
+STAKEHOLDER_TRIAGED_DIR="${STAKEHOLDER_DIR}/triaged"
+STAKEHOLDER_QUARANTINE_DIR="${STAKEHOLDER_DIR}/quarantine"
+STAKEHOLDER_PROCESSED_DIR="${STAKEHOLDER_DIR}/processed"
+TRIAGE_LAST_RUN_FILE="${OVERSEER_DIR}/state/triage-last-run.ts"
+TRIAGE_INTERVAL="${OVERSEER_TRIAGE_INTERVAL:-60}"   # seconds between triage sweeps
+TRIAGE_BUDGET_PER_ITEM="${OVERSEER_TRIAGE_BUDGET:-0.50}"
+VALIDATOR_BUDGET_PER_ITEM="${OVERSEER_VALIDATOR_BUDGET:-0.20}"
 
 WORKER_SH="${SCRIPT_DIR}/worker.sh"
 NOTIFY_SH="${SCRIPT_DIR}/notify.sh"
@@ -57,7 +74,8 @@ LIB_COST="${SCRIPT_DIR}/lib/cost-cap.sh"
 LIB_AUDIT="${SCRIPT_DIR}/lib/audit.sh"
 LIB_OAUTH="${SCRIPT_DIR}/lib/oauth-check.sh"
 
-mkdir -p "$OVERSEER_DIR" "$INBOX_DIR" "$INPROGRESS_DIR" "$DONE_DIR" "$FAILED_DIR" "$OVERSEER_DIR/state"
+mkdir -p "$OVERSEER_DIR" "$INBOX_DIR" "$INPROGRESS_DIR" "$DONE_DIR" "$FAILED_DIR" "$OVERSEER_DIR/state" "$WORKERS_STATE_DIR" \
+  "$STAKEHOLDER_INBOX_DIR" "$STAKEHOLDER_TRIAGED_DIR" "$STAKEHOLDER_QUARANTINE_DIR" "$STAKEHOLDER_PROCESSED_DIR"
 
 # ---------------------------------------------------------------------------
 # Source libraries (optional — degrade gracefully if missing)
@@ -80,10 +98,32 @@ CAP_WEEK="${OVERSEER_CAP_WEEK:-100}"
 OAUTH_TTL="${OVERSEER_OAUTH_TTL:-3600}"
 HOURLY_TTL=3600
 
+# Worker-Pool tunables (P2-1)
+# Note: clamp + log happen after _log is defined (see _pool_init_worker_pool below).
+_RAW_MAX_WORKERS="${OVERSEER_MAX_WORKERS:-2}"
+POOL_MAX_WORKERS=2  # resolved in _pool_init_worker_pool
+POOL_MAX_WORKERS_CLAMP_WARN=""  # set if clamped, logged after _log defined
+# Health-JSON stale threshold for disk-watchdog-pause (seconds)
+HEALTH_JSON_STALE_TTL=60
+
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
 _log() { printf '[overseer %s pid=%d] %s\n' "$(date -u +%H:%M:%S)" "$$" "$*" >&2; }
+
+# Resolve POOL_MAX_WORKERS now that _log is defined.
+_pool_init_worker_pool() {
+  if (( _RAW_MAX_WORKERS > 3 )); then
+    _log "WARN: OVERSEER_MAX_WORKERS=${_RAW_MAX_WORKERS} > 3 — clamping to 3"
+    POOL_MAX_WORKERS=3
+  elif (( _RAW_MAX_WORKERS < 1 )); then
+    POOL_MAX_WORKERS=1
+  else
+    POOL_MAX_WORKERS="${_RAW_MAX_WORKERS}"
+  fi
+  unset _RAW_MAX_WORKERS
+}
+_pool_init_worker_pool
 
 _audit() {
   if command -v audit_record >/dev/null 2>&1; then
@@ -113,6 +153,220 @@ _hourly_notify() {
     _notify "$severity" "$title" "$body"
     printf '%s' "$now" > "${HOURLY_NOTIFY_FILE}.${key}"
   fi
+}
+
+# ---------------------------------------------------------------------------
+# Stakeholder-Triage Pipeline (P2-4)
+# ---------------------------------------------------------------------------
+
+# _triage_slug_from_file <filepath> → derive slug from filename
+_triage_slug_from_file() {
+  local base
+  base="$(basename "$1" .md)"
+  printf '%s' "$base"
+}
+
+# _run_stakeholder_triage_pipeline <inbox_file>
+# Runs triage + validator for a single stakeholder inbox item.
+# Handles cost-check, audit, quarantine/pass routing.
+# Rate-limit: 1 triage per second (enforced by caller sweep loop).
+_run_stakeholder_triage_pipeline() {
+  local inbox_file="$1"
+  local slug
+  slug="$(_triage_slug_from_file "$inbox_file")"
+
+  _log "triage: starting pipeline for slug=$slug"
+  _audit "triage_started" "$slug" "inbox_file=$inbox_file"
+
+  # Cost-check before invoking triage LLM
+  if command -v cost_check_or_die >/dev/null 2>&1; then
+    local cc_rc=0
+    cost_check_or_die "$CAP_TODAY" "$CAP_WEEK" >/dev/null 2>&1 || cc_rc=$?
+    if [ "$cc_rc" -eq 2 ]; then
+      _log "triage: cost-cap exceeded — aborting triage for slug=$slug"
+      _audit "triage_skipped" "$slug" "cost-cap exceeded"
+      return 1
+    fi
+  fi
+
+  # Record triage cost
+  if command -v cost_record >/dev/null 2>&1; then
+    cost_record "stakeholder-triage" "$TRIAGE_BUDGET_PER_ITEM" >/dev/null 2>&1 || true
+  fi
+
+  # Invoke triage agent
+  local triage_rc=0
+  set +e
+  claude --print --agent stakeholder-triage \
+    "Process stakeholder inbox file: ${inbox_file}" \
+    >/dev/null 2>&1
+  triage_rc=$?
+  set -e
+
+  if [ "$triage_rc" -ne 0 ]; then
+    _log "triage: agent failed (rc=$triage_rc) for slug=$slug"
+    _audit "triage_agent_failed" "$slug" "rc=$triage_rc"
+    return 1
+  fi
+
+  # Determine triage output type by checking which file was written
+  local triaged_file="${STAKEHOLDER_TRIAGED_DIR}/01-stakeholder-${slug}.md"
+  local quarantine_triage_file="${STAKEHOLDER_QUARANTINE_DIR}/${slug}.md"
+  local response_file="${STAKEHOLDER_DIR}/responses/${slug}.md"
+
+  if [ -f "$quarantine_triage_file" ]; then
+    # Triage agent detected injection-attempt → already quarantined
+    _log "triage: injection-attempt quarantined by triage agent: slug=$slug"
+    _audit "triage_quarantined" "$slug" "injection-attempt detected by triage agent"
+    _notify info "Stakeholder-Item quarantined (triage): $slug" \
+      "see ${quarantine_triage_file}"
+    # Move original to processed
+    mv "$inbox_file" "${STAKEHOLDER_PROCESSED_DIR}/${slug}.md" 2>/dev/null || \
+      cp "$inbox_file" "${STAKEHOLDER_PROCESSED_DIR}/${slug}.md" && rm -f "$inbox_file" || true
+    return 0
+  fi
+
+  if [ -f "$response_file" ]; then
+    # Triage agent answered a question → no backlog item needed
+    _log "triage: question answered for slug=$slug"
+    _audit "triage_question_answered" "$slug" "response=$response_file"
+    mv "$inbox_file" "${STAKEHOLDER_PROCESSED_DIR}/${slug}.md" 2>/dev/null || \
+      cp "$inbox_file" "${STAKEHOLDER_PROCESSED_DIR}/${slug}.md" && rm -f "$inbox_file" || true
+    return 0
+  fi
+
+  if [ ! -f "$triaged_file" ]; then
+    _log "triage: no output file found for slug=$slug — agent may have failed silently"
+    _audit "triage_no_output" "$slug" "expected $triaged_file"
+    return 1
+  fi
+
+  # Triage produced a backlog item — run validator
+  _log "triage: running validator for slug=$slug"
+
+  # Record validator cost
+  if command -v cost_record >/dev/null 2>&1; then
+    cost_record "stakeholder-validator" "$VALIDATOR_BUDGET_PER_ITEM" >/dev/null 2>&1 || true
+  fi
+
+  local validator_rc=0
+  set +e
+  claude --print --agent stakeholder-validator \
+    "Validate triage output file: ${triaged_file}" \
+    >/dev/null 2>&1
+  validator_rc=$?
+  set -e
+
+  if [ "$validator_rc" -ne 0 ]; then
+    _log "triage: validator agent failed (rc=$validator_rc) for slug=$slug"
+    _audit "triage_validator_failed" "$slug" "rc=$validator_rc"
+    return 1
+  fi
+
+  # Check validator decision: look for .cleared marker (pass) or -rejected.md (quarantine)
+  local cleared_marker="${STAKEHOLDER_TRIAGED_DIR}/${slug}.cleared"
+  local rejected_file="${STAKEHOLDER_QUARANTINE_DIR}/${slug}-rejected.md"
+
+  local validator_result="unknown"
+
+  if [ -f "$cleared_marker" ]; then
+    validator_result="pass"
+    # Validator wrote to .claude/overseer/inbox/01-stakeholder-<slug>.md already
+    _log "triage: validator PASS for slug=$slug — item forwarded to overseer inbox"
+    # Clean up triaged file (validator already forwarded it)
+    rm -f "$triaged_file" "$cleared_marker" 2>/dev/null || true
+  elif [ -f "$rejected_file" ]; then
+    validator_result="quarantine"
+    _log "triage: validator QUARANTINE for slug=$slug — see $rejected_file"
+    _notify info "Stakeholder-Item quarantined: $slug" \
+      "see ${rejected_file}"
+    # Clean up triaged file (quarantined)
+    rm -f "$triaged_file" 2>/dev/null || true
+  else
+    # Validator produced no recognisable output — treat as quarantine by default
+    validator_result="unknown-quarantine"
+    _log "triage: validator produced no output for slug=$slug — treating as quarantine"
+    _audit "triage_validator_no_output" "$slug" "expected cleared or rejected marker"
+  fi
+
+  _audit "triage_validated" "$slug" "$validator_result"
+
+  # Move original inbox item to processed
+  mv "$inbox_file" "${STAKEHOLDER_PROCESSED_DIR}/${slug}.md" 2>/dev/null || \
+    { cp "$inbox_file" "${STAKEHOLDER_PROCESSED_DIR}/${slug}.md" && rm -f "$inbox_file"; } || true
+
+  return 0
+}
+
+# _run_stakeholder_triage_sweep
+# Processes all items in stakeholder/inbox/ (max 1 per second — rate limit).
+# Called from process_pool_iteration when triage interval has elapsed.
+_run_stakeholder_triage_sweep() {
+  local now
+  now="$(date +%s)"
+
+  # Check if triage interval has elapsed
+  local last=0
+  if [ -f "$TRIAGE_LAST_RUN_FILE" ]; then
+    last="$(cat "$TRIAGE_LAST_RUN_FILE" 2>/dev/null || echo 0)"
+  fi
+
+  local elapsed=$(( now - last ))
+  if (( elapsed < TRIAGE_INTERVAL )); then
+    return 0  # not yet time for next sweep
+  fi
+
+  # Update last-run timestamp
+  printf '%s' "$now" > "$TRIAGE_LAST_RUN_FILE"
+
+  # Find all inbox items
+  local inbox_files=()
+  if compgen -G "${STAKEHOLDER_INBOX_DIR}/*.md" >/dev/null 2>&1; then
+    while IFS= read -r -d '' f; do
+      inbox_files+=("$f")
+    done < <(find "$STAKEHOLDER_INBOX_DIR" -maxdepth 1 -name '*.md' -print0 2>/dev/null)
+  fi
+
+  if [ "${#inbox_files[@]}" -eq 0 ]; then
+    return 0  # nothing to do
+  fi
+
+  # Sort by mtime ascending (oldest first), then cap at 5 per iteration
+  local sorted_files=()
+  while IFS= read -r f; do
+    sorted_files+=("$f")
+  done < <(
+    for f in "${inbox_files[@]}"; do
+      # macOS: stat -f %m; Linux: stat -c %Y
+      local mtime
+      if mtime="$(stat -f %m "$f" 2>/dev/null)"; then
+        :
+      elif mtime="$(stat -c %Y "$f" 2>/dev/null)"; then
+        :
+      else
+        mtime=0
+      fi
+      printf '%s\t%s\n' "$mtime" "$f"
+    done | sort -n | awk -F'\t' '{print $2}'
+  )
+
+  local cap=5
+  local processed=0
+
+  _log "triage-sweep: found ${#inbox_files[@]} item(s) in stakeholder inbox (cap=$cap per iteration)"
+
+  for inbox_file in "${sorted_files[@]}"; do
+    [ -f "$inbox_file" ] || continue
+    if (( processed >= cap )); then
+      _log "triage-sweep: cap=$cap reached — deferring remaining items to next iteration"
+      break
+    fi
+
+    # Rate-limit: 1 triage per second
+    _run_stakeholder_triage_pipeline "$inbox_file" || true
+    processed=$(( processed + 1 ))
+    sleep 1
+  done
 }
 
 # ---------------------------------------------------------------------------
@@ -222,6 +476,305 @@ _on_shutdown() {
 }
 trap _on_shutdown TERM INT
 trap _release_lock EXIT
+
+# ---------------------------------------------------------------------------
+# Worker-Pool helpers (P2-1)
+# ---------------------------------------------------------------------------
+
+# _pool_pid_file <pid> → path to PID state file
+_pool_pid_file() { printf '%s/%s.pid' "$WORKERS_STATE_DIR" "$1"; }
+
+# _pool_exit_file <pid> → path to exit-code file written by worker on EXIT
+_pool_exit_file() { printf '%s/%s.exit' "$WORKERS_STATE_DIR" "$1"; }
+
+# _pool_write_pid_file <pid> <slug> <item_path> <worktree>
+# Writes JSON state file for a running worker.
+_pool_write_pid_file() {
+  local pid="$1" slug="$2" item_path="$3" worktree="$4"
+  local ts
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  local pidfile
+  pidfile="$(_pool_pid_file "$pid")"
+  printf '{"pid":%s,"slug":"%s","item_path":"%s","worktree":"%s","started":"%s"}\n' \
+    "$pid" "$slug" "$item_path" "$worktree" "$ts" > "$pidfile"
+}
+
+# _pool_active_count → echo number of workers whose PID is still alive
+_pool_active_count() {
+  local count=0
+  if compgen -G "${WORKERS_STATE_DIR}/*.pid" >/dev/null 2>&1; then
+    for pidfile in "${WORKERS_STATE_DIR}/"*.pid; do
+      [ -f "$pidfile" ] || continue
+      local pid
+      pid="$(python3 -c "import sys,json; d=json.load(open(sys.argv[1])); print(d['pid'])" "$pidfile" 2>/dev/null || true)"
+      [[ "$pid" =~ ^[0-9]+$ ]] || continue
+      if kill -0 "$pid" 2>/dev/null; then
+        count=$(( count + 1 ))
+      fi
+    done
+  fi
+  echo "$count"
+}
+
+# _pool_reap — check all PID-files, reap finished workers.
+# For each finished worker: reads exit-code from .exit file (or assumes 1),
+# calls release_item + worktree_remove, writes audit, removes state files.
+_pool_reap() {
+  if ! compgen -G "${WORKERS_STATE_DIR}/*.pid" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  for pidfile in "${WORKERS_STATE_DIR}/"*.pid; do
+    [ -f "$pidfile" ] || continue
+
+    # Parse state
+    local pid slug item_path worktree
+    pid="$(python3 -c "import sys,json; d=json.load(open(sys.argv[1])); print(d['pid'])" "$pidfile" 2>/dev/null || true)"
+    slug="$(python3 -c "import sys,json; d=json.load(open(sys.argv[1])); print(d['slug'])" "$pidfile" 2>/dev/null || true)"
+    item_path="$(python3 -c "import sys,json; d=json.load(open(sys.argv[1])); print(d['item_path'])" "$pidfile" 2>/dev/null || true)"
+    worktree="$(python3 -c "import sys,json; d=json.load(open(sys.argv[1])); print(d['worktree'])" "$pidfile" 2>/dev/null || true)"
+
+    if [[ ! "$pid" =~ ^[0-9]+$ ]]; then
+      # Malformed pid-file — clean up
+      rm -f "$pidfile"
+      continue
+    fi
+
+    # Still running? Skip.
+    if kill -0 "$pid" 2>/dev/null; then
+      continue
+    fi
+
+    # Worker finished — read exit code from .exit file.
+    # The renamer subshell (spawned by _pool_spawn) has up to 5s to move the
+    # uuid temp file to <pid>.exit. Give it a 1s grace period before defaulting
+    # to code=1 (which would incorrectly move the item to failed/).
+    local exitfile code
+    exitfile="$(_pool_exit_file "$pid")"
+    code=1  # safe default
+    if [ ! -f "$exitfile" ]; then
+      # Brief grace period: poll up to 1s for the renamer to deliver the exit file.
+      local grace_deadline=$(( $(date +%s) + 1 ))
+      while [ "$(date +%s)" -lt "$grace_deadline" ]; do
+        sleep 0.1
+        if [ -f "$exitfile" ]; then break; fi
+      done
+    fi
+    if [ -f "$exitfile" ]; then
+      local raw
+      raw="$(cat "$exitfile" 2>/dev/null || true)"
+      if [[ "$raw" =~ ^[0-9]+$ ]]; then
+        code="$raw"
+      fi
+    fi
+
+    _log "reap: pid=$pid slug=${slug:-?} exit=$code exitfile=$exitfile exitfile_exists=$([ -f "$exitfile" ] && echo yes || echo no)"
+
+    # Release item (same logic as original process_one_iteration)
+    if [ -n "$item_path" ] && [ -n "$slug" ] && command -v release_item >/dev/null 2>&1; then
+      case "$code" in
+        0)
+          release_item "$item_path" done >/dev/null 2>&1 || true
+          _audit "process_complete" "$slug" "exit=0 (pool-reap)"
+          ;;
+        1)
+          release_item "$item_path" failed >/dev/null 2>&1 || true
+          _audit "process_complete" "$slug" "exit=1 (pool-reap)"
+          _notify info "Overseer: item failed" "slug=$slug"
+          ;;
+        3)
+          release_item "$item_path" blocked-pre-ship >/dev/null 2>&1 || true
+          _audit "process_complete" "$slug" "exit=3 blocked-pre-ship (pool-reap)"
+          _notify info "Overseer: pre-ship blocked" "slug=$slug"
+          ;;
+        2)
+          # Worker requests PANIC
+          printf 'PANIC: worker exit 2 at %s (slug=%s pid=%s)\n' \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$slug" "$pid" > "$PANIC_MARKER"
+          local slug_clean
+          slug_clean="$(_slug_from_inprogress "$item_path")"
+          mv "$item_path" "${INBOX_DIR}/${slug_clean}.md" 2>/dev/null || true
+          _audit "panic_from_worker" "$slug" "exit=2 PANIC marker written (pool-reap)"
+          _notify critical "Overseer: PANIC from worker" "slug=$slug"
+          ;;
+        124)
+          release_item "$item_path" failed >/dev/null 2>&1 || true
+          _audit "process_complete" "$slug" "exit=124 timeout (pool-reap)"
+          _notify info "Overseer: worker timeout" "slug=$slug"
+          ;;
+        *)
+          release_item "$item_path" failed >/dev/null 2>&1 || true
+          _audit "process_complete" "$slug" "exit=$code (pool-reap)"
+          _notify info "Overseer: worker abnormal exit" "slug=$slug exit=$code"
+          ;;
+      esac
+    fi
+
+    # Cleanup worktree
+    if [ -n "$slug" ] && command -v worktree_remove >/dev/null 2>&1; then
+      worktree_remove "$slug" >/dev/null 2>&1 || true
+    fi
+
+    # Remove state files
+    rm -f "$pidfile" "$exitfile"
+  done
+}
+
+# _pool_disk_panic → returns 0 (panic) if health.json is fresh and panic=true,
+# returns 1 (no panic / unknown) otherwise.
+_pool_disk_panic() {
+  [ -f "$HEALTH_JSON" ] || return 1
+  local mtime now age
+  # macOS: stat -f %m; Linux: stat -c %Y
+  if mtime="$(stat -f %m "$HEALTH_JSON" 2>/dev/null)"; then
+    : # macOS
+  elif mtime="$(stat -c %Y "$HEALTH_JSON" 2>/dev/null)"; then
+    : # Linux
+  else
+    return 1
+  fi
+  now="$(date +%s)"
+  age=$(( now - mtime ))
+  if (( age > HEALTH_JSON_STALE_TTL )); then
+    return 1  # stale — don't block on stale data
+  fi
+  # Check panic field
+  local panic_val
+  panic_val="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('panic','false'))" \
+    "$HEALTH_JSON" 2>/dev/null || true)"
+  if [[ "$panic_val" == "True" ]] || [[ "$panic_val" == "true" ]]; then
+    return 0  # panic!
+  fi
+  return 1  # no panic
+}
+
+# _pool_spawn <item_path> <slug>
+# Creates worktree, spawns worker.sh in background, records PID-file.
+# Returns 0 on successful spawn, non-zero on error.
+_pool_spawn() {
+  local item_path="$1" slug="$2"
+
+  # Disk-watchdog-pause: check health.json before worktree_create
+  if _pool_disk_panic; then
+    _log "disk-panic in health.json — skipping spawn for slug=$slug"
+    _audit "spawn_skipped" "$slug" "disk-watchdog panic"
+    # Return item to inbox
+    if command -v release_item >/dev/null 2>&1; then
+      release_item "$item_path" failed >/dev/null 2>&1 || true
+    fi
+    return 1
+  fi
+
+  # Create worktree
+  local worktree_path
+  set +e
+  worktree_path="$(worktree_create "$slug" 2>&1)"
+  local wt_rc=$?
+  set -e
+
+  if [ "$wt_rc" -ne 0 ]; then
+    _log "worktree_create failed (rc=$wt_rc): $worktree_path slug=$slug"
+    _audit "worktree_failed" "$slug" "rc=$wt_rc out=$worktree_path"
+    _notify info "Overseer: worktree create failed" "slug=$slug rc=$wt_rc"
+    if command -v release_item >/dev/null 2>&1; then
+      release_item "$item_path" failed >/dev/null 2>&1 || true
+    fi
+    return 1
+  fi
+  # worktree_create may print warnings prepended; take last non-empty line
+  worktree_path="$(printf '%s' "$worktree_path" | awk 'NF{l=$0} END{print l}')"
+
+  # Resolve item-level timeout
+  local timeout_min timeout_sec
+  timeout_min="$(_fm_field "$item_path" "timeout_minutes")"
+  if [[ "$timeout_min" =~ ^[0-9]+$ ]]; then
+    timeout_sec=$(( timeout_min * 60 ))
+  else
+    timeout_sec="$WORKER_TIMEOUT_DEFAULT"
+  fi
+
+  local needs_gh
+  needs_gh="$(_fm_field "$item_path" "needs_gh")"
+
+  # Spawn worker as background job.
+  # Exit-code strategy: use a UUID-named temp file, rename to <pid>.exit after fork.
+  # This avoids BASHPID issues in subshells on macOS.
+  local workers_state_dir="$WORKERS_STATE_DIR"
+  local repo_root="$REPO_ROOT"
+  local uuid_exitfile
+  uuid_exitfile="${workers_state_dir}/_tmp_$(date +%s%N 2>/dev/null || date +%s)_${RANDOM}.exit.tmp"
+
+  (
+    export OVERSEER_WORKER_PID=$$
+    export HEADLESS_MODE=1
+    export CLAUDE_PROJECT_DIR="$worktree_path"
+    export COST_CAP_LEDGER_DIR="${repo_root}/.claude/overseer"
+    export REPO_ROOT="$repo_root"
+    if [ "${needs_gh:-false}" != "true" ]; then
+      unset GH_TOKEN
+    fi
+
+    # Run worker with timeout watchdog
+    bash "$WORKER_SH" "$item_path" "$worktree_path" &
+    local inner_pid=$!
+
+    local deadline=$(( $(date +%s) + timeout_sec ))
+    local rc=0
+    while kill -0 "$inner_pid" 2>/dev/null; do
+      if (( $(date +%s) >= deadline )); then
+        kill -TERM "$inner_pid" 2>/dev/null || true
+        sleep 2
+        kill -KILL "$inner_pid" 2>/dev/null || true
+        wait "$inner_pid" 2>/dev/null || true
+        rc=124
+        break
+      fi
+      sleep 1
+    done
+    if [ "$rc" -eq 0 ]; then
+      set +e
+      wait "$inner_pid"
+      rc=$?
+      set -e
+    fi
+
+    # Write exit-code to UUID temp file; overseer renames it after fork.
+    printf '%s\n' "$rc" > "$uuid_exitfile" 2>/dev/null || true
+    # shellcheck disable=SC2030
+    printf '[worker-wrapper pid=%d] wrote rc=%s to uuid_file=%s\n' "$$" "$rc" "$uuid_exitfile" >&2 2>/dev/null || true
+    exit "$rc"
+  ) &
+  local worker_pid=$!
+
+  # Rename UUID temp exit file to <pid>.exit so reaper finds it.
+  # (We do this after fork, so worker_pid is known.)
+  local final_exitfile
+  final_exitfile="$(_pool_exit_file "$worker_pid")"
+  # Rename happens in background so we don't block; poll briefly.
+  (
+    local deadline2=$(( $(date +%s) + 5 ))
+    while (( $(date +%s) < deadline2 )); do
+      if [ -f "$uuid_exitfile" ]; then
+        mv "$uuid_exitfile" "$final_exitfile" 2>/dev/null || true
+        break
+      fi
+      sleep 0.2
+    done
+    # Note: if worker crashed before writing the uuid file, the exit file will
+    # simply not exist. The reaper's default code=1 handles this case correctly.
+    # We intentionally do NOT write a fallback here to avoid cross-test
+    # contamination: a stale renamer writing after _reset would corrupt the
+    # freshly-recreated state/workers/ dir of the next test.
+  ) &
+
+  # Register PID-file immediately so reaper can track it
+  mkdir -p "$WORKERS_STATE_DIR"
+  _pool_write_pid_file "$worker_pid" "$slug" "$item_path" "$worktree_path"
+
+  _log "spawned: pid=$worker_pid slug=$slug timeout=${timeout_sec}s"
+  _audit "spawn" "$slug" "pid=$worker_pid worktree=$worktree_path"
+  return 0
+}
 
 # ---------------------------------------------------------------------------
 # Pre-flight: returns 0 if pickup OK, 1 if must idle this iteration.
@@ -416,7 +969,8 @@ _spawn_worker_and_wait() {
 }
 
 # ---------------------------------------------------------------------------
-# Process-one-iteration: pre-flight, pick, spawn, release. Returns:
+# process_one_iteration: legacy single-worker wrapper (used by --once mode).
+# Pre-flight, pick, spawn, wait inline. Returns:
 #   0 → processed an item (or idled deliberately); caller may continue.
 #   1 → no work available (idle).
 # ---------------------------------------------------------------------------
@@ -524,6 +1078,101 @@ process_one_iteration() {
 }
 
 # ---------------------------------------------------------------------------
+# process_pool_iteration (P2-1): one tick of the N-worker pool loop.
+# Reaps finished workers, then fills open slots with new items.
+# Returns:
+#   0 → at least one worker active or an item was spawned (not fully idle).
+#   1 → no active workers AND inbox empty (fully idle).
+# ---------------------------------------------------------------------------
+process_pool_iteration() {
+  # 0. Reap finished workers FIRST — before pre-flight's recover_orphaned_items
+  # sees stale in_progress files (files with the previous overseer's PID).
+  # Without this, orphan-recovery re-queues items that the pool already owns.
+  _pool_reap
+
+  # 1. Pre-flight
+  if ! _pre_flight; then
+    _log "pre-flight idle: $PRE_FLIGHT_REASON"
+    _audit "pre_flight_idle" "overseer" "$PRE_FLIGHT_REASON"
+    # Reap again in case a worker finished during pre-flight
+    _pool_reap
+    return 1
+  fi
+
+  # 1b. Stakeholder-triage sub-tick (P2-4): run every TRIAGE_INTERVAL seconds.
+  # Runs independently of worker-pool state — even when pool is full.
+  _run_stakeholder_triage_sweep || true
+
+  # 2. Reap finished workers (second pass: catches workers that finished between
+  #    step 0 and now, e.g. during pre-flight's oauth check or watchdog call).
+  _pool_reap
+
+  # Check for PANIC after reap (worker exit 2 may have written it)
+  if [ -f "$PANIC_MARKER" ]; then
+    _log "PANIC marker present after reap — idling"
+    return 1
+  fi
+
+  if ! command -v pick_next_item >/dev/null 2>&1; then
+    _log "ERROR: picker library not loaded"
+    return 1
+  fi
+
+  # 3. Fill open slots
+  local active
+  active="$(_pool_active_count)"
+  local spawned=0
+
+  while (( active < POOL_MAX_WORKERS )); do
+    # Re-check PANIC before each spawn attempt
+    if [ -f "$PANIC_MARKER" ]; then
+      _log "PANIC marker — stopping spawn loop"
+      break
+    fi
+
+    # Pick next item
+    local item_path
+    set +e
+    item_path="$(pick_next_item "$$" 2>/dev/null)"
+    local pick_rc=$?
+    set -e
+
+    if [ "$pick_rc" -ne 0 ] || [ -z "$item_path" ] || [ ! -f "$item_path" ]; then
+      # Nothing to pick right now
+      break
+    fi
+
+    local slug
+    slug="$(_slug_from_inprogress "$item_path")"
+    _log "picked: $slug (pool slot $((active + 1))/$POOL_MAX_WORKERS)"
+    _audit "pick" "$slug" "in_progress=$item_path pool_active=$active"
+
+    if _pool_spawn "$item_path" "$slug"; then
+      spawned=$(( spawned + 1 ))
+      active=$(( active + 1 ))
+    else
+      # spawn failed — slot not taken, stop trying this tick
+      break
+    fi
+  done
+
+  # 4. Determine idle status
+  local final_active
+  final_active="$(_pool_active_count)"
+
+  # Check inbox non-empty
+  local has_inbox=0
+  if compgen -G "${INBOX_DIR}/*.md" >/dev/null 2>&1; then
+    has_inbox=1
+  fi
+
+  if (( final_active == 0 )) && (( has_inbox == 0 )); then
+    return 1  # fully idle
+  fi
+  return 0  # work in progress or more items available
+}
+
+# ---------------------------------------------------------------------------
 # Status mode
 # ---------------------------------------------------------------------------
 print_status() {
@@ -544,24 +1193,39 @@ print_status() {
     printf '  lock_holder_pid  = (none)\n'
   fi
 
-  # Current item: only meaningful when exactly 1 in_progress file.
-  local count=0 current=""
+  # Current items in progress
+  local count=0
   if compgen -G "${INPROGRESS_DIR}/*.md" >/dev/null 2>&1; then
     for f in "${INPROGRESS_DIR}"/*.md; do
       count=$((count + 1))
-      current="$f"
     done
   fi
-  if [ "$count" -eq 1 ]; then
-    printf '  current_item     = %s\n' "$(basename "$current")"
-  else
-    printf '  current_item     = (%d in_progress)\n' "$count"
-  fi
+  printf '  in_progress      = %d item(s)\n' "$count"
+  printf '  worker_pool_max  = %d (POOL_MAX_WORKERS)\n' "${POOL_MAX_WORKERS:-2}"
+  printf '  active_workers   = %d\n' "$(_pool_active_count 2>/dev/null || echo '?')"
 
   printf '  STOP marker      = %s\n' "$([ -f "$STOP_MARKER" ] && echo present || echo absent)"
   printf '  PANIC marker     = %s\n' "$([ -f "$PANIC_MARKER" ] && echo present || echo absent)"
   printf '  AUTH_EXPIRED     = %s\n' "$([ -f "$AUTH_EXPIRED_MARKER" ] && echo present || echo absent)"
   printf '  COST_CAP_REACHED = %s\n' "$([ -f "$COST_CAP_MARKER" ] && echo present || echo absent)"
+
+  # Stakeholder-triage state (P2-4)
+  local sh_inbox=0
+  if compgen -G "${STAKEHOLDER_INBOX_DIR}/*.md" >/dev/null 2>&1; then
+    sh_inbox="$(find "$STAKEHOLDER_INBOX_DIR" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ')"
+  fi
+  printf '  stakeholder_inbox = %d item(s)\n' "$sh_inbox"
+  printf '  triage_interval  = %ss\n' "${TRIAGE_INTERVAL}"
+  local last_triage=never
+  if [ -f "$TRIAGE_LAST_RUN_FILE" ]; then
+    local lt_ts
+    lt_ts="$(cat "$TRIAGE_LAST_RUN_FILE" 2>/dev/null || echo 0)"
+    if [[ "$lt_ts" =~ ^[0-9]+$ ]]; then
+      local age=$(( $(date +%s) - lt_ts ))
+      last_triage="${age}s ago"
+    fi
+  fi
+  printf '  last_triage_sweep= %s\n' "$last_triage"
 }
 
 # ---------------------------------------------------------------------------
@@ -593,20 +1257,21 @@ if ! _acquire_lock_or_exit; then
   exit 0
 fi
 _audit "start" "overseer" "mode=$MODE pid=$$"
+_log "worker-pool: max=${POOL_MAX_WORKERS}"
 
 if [ "$MODE" = "once" ]; then
-  process_one_iteration || true
+  process_pool_iteration || true
   _audit "stop" "overseer" "mode=once"
   exit 0
 fi
 
 # ---------------------------------------------------------------------------
-# daemon loop
+# daemon loop (P2-1: N-worker pool)
 # ---------------------------------------------------------------------------
 _log "overseer daemon starting"
 while [ "$SHUTDOWN_REQUESTED" -eq 0 ]; do
   set +e
-  process_one_iteration
+  process_pool_iteration
   iter_rc=$?
   set -e
 

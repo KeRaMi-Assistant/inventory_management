@@ -371,125 +371,125 @@ Phase 1-3 läuft PARALLEL via `.claude/overseer/inbox/`. Erst Phase 4 mergt die 
 
 #### Task P2-1 — Worker-Pool (N=2, Hard-Cap N=3) im Overseer [Note: committee — Mitigation 6]
 
-- [ ] **Beschreibung:** Overseer spawnt bis zu N Workers parallel (Default N=2, Hard-Cap N=3, Env `OVERSEER_MAX_WORKERS`).
-- [ ] **acceptance:**
+- [x] **Beschreibung:** Overseer spawnt bis zu N Workers parallel (Default N=2, Hard-Cap N=3, Env `OVERSEER_MAX_WORKERS`).
+- [x] **acceptance:**
   - 4 Mock-Items + N=2 → exakt 2 parallel.
   - Slot frei → nächstes Item.
   - N=3 + 5 Items: 3 parallel + 2 wartend.
   - Disk-Watchdog pausiert bei < 30% / < 20 GB.
   - `OVERSEER_MAX_WORKERS=4` → Cap auf 3 + Warn-Log.
-- [ ] **verify:** `.claude/scripts/verify/overseer-pool.sh`
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** P1-1, P1-2, P0-3.
+- [x] **verify:** `.claude/scripts/verify/overseer-pool.sh`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** P1-1, P1-2, P0-3.
 
 #### Task P2-2 — Stakeholder-Inbox-CLI (Tier-1) [Note: committee — Mitigation 13, 14]
 
-- [ ] **Beschreibung:** `.claude/scripts/btw.sh "<text>"`: schreibt `.claude/stakeholder/inbox/<timestamp>-<slug>.md` mit Sandwich-Markers + Frontmatter `source: tier-1`. Schickt sofort ntfy-Acknowledgement via `notify.sh`. Slug ≤ 40 chars, kebab-case.
-- [ ] **acceptance:**
+- [x] **Beschreibung:** `.claude/scripts/btw.sh "<text>"`: schreibt `.claude/stakeholder/inbox/<timestamp>-<slug>.md` mit Sandwich-Markers + Frontmatter `source: tier-1`. Schickt sofort ntfy-Acknowledgement via `notify.sh`. Slug ≤ 40 chars, kebab-case.
+- [x] **acceptance:**
   - Item entsteht mit `source: tier-1`.
   - Sandwich-Markers vorhanden.
   - ntfy-Push via `notify.sh`.
-- [ ] **verify:** `.claude/scripts/verify/btw-cli.sh`
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** P0-1, P0-7.
+- [x] **verify:** `.claude/scripts/verify/btw-cli.sh`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** P0-1, P0-7.
 
 #### Task P2-2b — Telegram-Bot-Adapter (Tier-2) [ADDED post-committee — Mitigation 11, 13]
 
-- [ ] **Beschreibung:** **Pflicht für Phase-4-Akzeptanz „1 Woche ohne Laptop".** ~15 Zeilen Python (oder Deno via Edge-Function). Hört auf `/btw <text>`-Commands von Telegram-Bot, schreibt `.claude/stakeholder/inbox/<timestamp>-<slug>.md` mit `source: tier-2`. User-ID-Allowlist via Env `TELEGRAM_ALLOWED_USER_IDS`. **HMAC-signiertes Token, das pro Briefing rotiert wird.** Rate-Limit: max 5 Items/h Tier-2.
-- [ ] **acceptance:**
+- [x] **Beschreibung:** **Pflicht für Phase-4-Akzeptanz „1 Woche ohne Laptop".** ~15 Zeilen Python (oder Deno via Edge-Function). Hört auf `/btw <text>`-Commands von Telegram-Bot, schreibt `.claude/stakeholder/inbox/<timestamp>-<slug>.md` mit `source: tier-2`. User-ID-Allowlist via Env `TELEGRAM_ALLOWED_USER_IDS`. **HMAC-signiertes Token, das pro Briefing rotiert wird.** Rate-Limit: max 5 Items/h Tier-2.
+- [x] **acceptance:**
   - Allowed User → Item entsteht.
   - Disallowed User → keine Reaktion + Audit-Eintrag.
   - 6. Item innerhalb 1h → blocked + Notification.
   - HMAC-Token-Rotation pro Briefing funktioniert (Token aus aktuellstem Briefing-File).
   - ntfy-Action-Buttons als sekundärer Kanal (Mitigation 11): `notify.sh` (P0-7) bietet Helper für „Pause overseer", „Approve disput #N", „Show details".
   - Plan dokumentiert: ohne Telegram-Bridge ist Phase-4-Akzeptanz NICHT einlösbar.
-- [ ] **verify:** `.claude/scripts/verify/telegram-bridge.sh`
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** P2-2, P0-7.
+- [x] **verify:** `.claude/scripts/verify/telegram-bridge.sh`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** P2-2, P0-7.
 
 #### Task P2-3 — Stakeholder-Triage-Agent [Note: committee — Empfehlung d]
 
-- [ ] **Beschreibung:** `.claude/agents/stakeholder-triage.md` (**Modell: Opus**, Empfehlung d — direkter User→LLM-Adversarial-Boundary, hier Cost-Sparen kontraproduktiv). Read-Only-Tools (Read, Grep, Glob, Write — kein Bash). Klassifiziert: `feature-request` / `bugfix` / `question` / `injection-attempt`. Erzeugt entweder Backlog-Item ODER Response. Bei Injection: nach `quarantine/` + Audit. **Output mit Pflicht-Frontmatter `budget_usd`, `source`, `touches`, `model`.** Item-Priority-Prefix: `01-stakeholder-`.
-- [ ] **acceptance:**
+- [x] **Beschreibung:** `.claude/agents/stakeholder-triage.md` (**Modell: Opus**, Empfehlung d — direkter User→LLM-Adversarial-Boundary, hier Cost-Sparen kontraproduktiv). Read-Only-Tools (Read, Grep, Glob, Write — kein Bash). Klassifiziert: `feature-request` / `bugfix` / `question` / `injection-attempt`. Erzeugt entweder Backlog-Item ODER Response. Bei Injection: nach `quarantine/` + Audit. **Output mit Pflicht-Frontmatter `budget_usd`, `source`, `touches`, `model`.** Item-Priority-Prefix: `01-stakeholder-`.
+- [x] **acceptance:**
   - Sandwich-Marker-Regel im Prompt.
   - Tools: nur Read, Grep, Glob, Write.
   - Few-Shot mit 3 Beispielen.
   - Mock-Run Injection → quarantine.
   - Output gültiges Backlog-Item-Format mit allen Pflicht-Frontmatter-Feldern.
-- [ ] **verify:** `.claude/scripts/verify/stakeholder-triage.sh`
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** P2-2, Vorgänger A1.
+- [x] **verify:** `.claude/scripts/verify/stakeholder-triage.sh`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** P2-2, Vorgänger A1.
 
 #### Task P2-3b — Stakeholder-Validator-Agent [ADDED post-committee — Mitigation 13, Empfehlung k]
 
-- [ ] **Beschreibung:** `.claude/agents/stakeholder-validator.md`. Zweiter Agent prüft Triage-Output (Backlog-Item-Markdown) gegen Schema-Regex-Whitelist: kein `git rm`, keine destruktiven Befehle in `acceptance:`-Bullets, keine Schreib-Pfade außerhalb `lib/`/`supabase/`/`test/`/`.claude/`. Bei Verstoß → `quarantine/` + Audit.
-- [ ] **acceptance:**
+- [x] **Beschreibung:** `.claude/agents/stakeholder-validator.md`. Zweiter Agent prüft Triage-Output (Backlog-Item-Markdown) gegen Schema-Regex-Whitelist: kein `git rm`, keine destruktiven Befehle in `acceptance:`-Bullets, keine Schreib-Pfade außerhalb `lib/`/`supabase/`/`test/`/`.claude/`. Bei Verstoß → `quarantine/` + Audit.
+- [x] **acceptance:**
   - Mock-Triage-Output mit `git rm -rf` → quarantine.
   - Mock-Output mit `acceptance: rm -rf /` → quarantine.
   - Sauberer Output → durchgelassen.
   - Schema-Regex in `.claude/agents/stakeholder-validator.md` dokumentiert.
-- [ ] **verify:** `.claude/scripts/verify/stakeholder-validator.sh`
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** P2-3.
+- [x] **verify:** `.claude/scripts/verify/stakeholder-validator.sh`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** P2-3.
 
 #### Task P2-4 — Stakeholder-Triage in Overseer-Loop integrieren
 
-- [ ] **Beschreibung:** Overseer prüft alle 60s `.claude/stakeholder/inbox/`, ruft `stakeholder-triage` → `stakeholder-validator` (Pipeline). Audit-Trail jeder Triage. Validierte Items landen in `.claude/overseer/inbox/` mit Prefix `01-stakeholder-` (kommt nach `00-followup-`, vor `02-analyzer-`, Mitigation 14).
-- [ ] **acceptance:**
+- [x] **Beschreibung:** Overseer prüft alle 60s `.claude/stakeholder/inbox/`, ruft `stakeholder-triage` → `stakeholder-validator` (Pipeline). Audit-Trail jeder Triage. Validierte Items landen in `.claude/overseer/inbox/` mit Prefix `01-stakeholder-` (kommt nach `00-followup-`, vor `02-analyzer-`, Mitigation 14).
+- [x] **acceptance:**
   - 2 `btw`-Items → beide binnen 2 Min triagiert + validiert.
   - Triage→Validator-Pipeline funktioniert.
   - Audit pro Triage + Validate.
   - Priority-Prefix korrekt.
-- [ ] **verify:** `smoke-stakeholder-flow`
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** P2-1, P2-3, P2-3b.
+- [x] **verify:** `smoke-stakeholder-flow`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** P2-1, P2-3, P2-3b.
 
 #### Task P2-5 — Analyzer-Modul: `scan-tech-debt` [P3-4a-Pattern]
 
-- [ ] **Beschreibung:** `.claude/analyzer/modules/scan-tech-debt.sh`: greppt nach TODO/FIXME mit git-blame-Datum > 30 Tagen. Dedup-Hash auf `(file_path, modul_name)` (Mitigation 23, NICHT file+line). Cap 5 Items/Run. **`last_fix_attempt`-Counter:** nach 3 Versuchen am gleichen Subject → Modul pausiert dieses Subject 7 Tage + Audit + Stakeholder-Notify.
-- [ ] **acceptance:**
+- [x] **Beschreibung:** `.claude/analyzer/modules/scan-tech-debt.sh`: greppt nach TODO/FIXME mit git-blame-Datum > 30 Tagen. Dedup-Hash auf `(file_path, modul_name)` (Mitigation 23, NICHT file+line). Cap 5 Items/Run. **`last_fix_attempt`-Counter:** nach 3 Versuchen am gleichen Subject → Modul pausiert dieses Subject 7 Tage + Audit + Stakeholder-Notify.
+- [x] **acceptance:**
   - Mock-File mit altem TODO → 1 Item.
   - Re-Run → KEIN Duplikat.
   - 4. Versuch → Subject 7d pausiert + Notification.
   - Inbox-Cap > 50 → skip + Audit.
   - Item hat `source: tier-3`, `touches:`, `budget_usd`.
-- [ ] **verify:** `.claude/scripts/verify/scan-tech-debt.sh`
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** P0-1, P0-4.
+- [x] **verify:** `.claude/scripts/verify/scan-tech-debt.sh`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** P0-1, P0-4.
 
 #### Task P2-6 — Analyzer-Modul: `scan-l10n-drift`
 
-- [ ] **Beschreibung:** Wrapper um `python3 .claude/scripts/check-l10n.py --json`. Dedup-Hash, `last_fix_attempt`-Counter (Mitigation 23).
-- [ ] **acceptance:**
+- [x] **Beschreibung:** Wrapper um `python3 .claude/scripts/check-l10n.py --json`. Dedup-Hash, `last_fix_attempt`-Counter (Mitigation 23).
+- [x] **acceptance:**
   - Clean → kein Item.
   - Mock-Drift → 1 Item.
   - Re-Run → kein Duplikat.
   - 4. Versuch → 7d-Pause.
-- [ ] **verify:** `.claude/scripts/verify/scan-l10n-drift.sh`
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** P2-5.
+- [x] **verify:** `.claude/scripts/verify/scan-l10n-drift.sh`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** P2-5.
 
 #### Task P2-7 — Analyzer-Modul: `scan-failure-lessons-expiry`
 
-- [ ] **Beschreibung:** Liest `.claude/memory/failure-lessons.md`, prüft `expires_at:`-Felder.
-- [ ] **acceptance:**
+- [x] **Beschreibung:** Liest `.claude/memory/failure-lessons.md`, prüft `expires_at:`-Felder.
+- [x] **acceptance:**
   - Abgelaufene → 1 Item.
   - Future → kein Item.
-- [ ] **verify:** `.claude/scripts/verify/scan-failure-lessons.sh`
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** Vorgänger A2.
+- [x] **verify:** `.claude/scripts/verify/scan-failure-lessons.sh`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** Vorgänger A2.
 
 #### Task P2-8 — Analyzer-Daemon-Skript
 
-- [ ] **Beschreibung:** `.claude/scripts/analyzer.sh`: long-running Loop, alle 60 Min. Eigenes LaunchAgent (`RunAtLoad=false`, `ThrottleInterval=10`). Read-Only. Nutzt Cost-Cap-Library + `notify.sh`.
-- [ ] **acceptance:**
+- [x] **Beschreibung:** `.claude/scripts/analyzer.sh`: long-running Loop, alle 60 Min. Eigenes LaunchAgent (`RunAtLoad=false`, `ThrottleInterval=10`). Read-Only. Nutzt Cost-Cap-Library + `notify.sh`.
+- [x] **acceptance:**
   - LaunchAgent installiert.
   - 3 Module sequentiell.
   - Panic pausiert.
   - Audit pro Modul-Lauf.
-- [ ] **verify:** `.claude/scripts/verify/analyzer-daemon.sh`
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** P2-5, P2-6, P2-7, P0-5, P0-7.
+- [x] **verify:** `.claude/scripts/verify/analyzer-daemon.sh`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** P2-5, P2-6, P2-7, P0-5, P0-7.
 
 ---
 
