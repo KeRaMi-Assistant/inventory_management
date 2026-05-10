@@ -73,6 +73,7 @@ LIB_WORKTREE="${SCRIPT_DIR}/lib/worktree.sh"
 LIB_COST="${SCRIPT_DIR}/lib/cost-cap.sh"
 LIB_AUDIT="${SCRIPT_DIR}/lib/audit.sh"
 LIB_OAUTH="${SCRIPT_DIR}/lib/oauth-check.sh"
+LIB_PANIC="${SCRIPT_DIR}/lib/panic.sh"
 
 mkdir -p "$OVERSEER_DIR" "$INBOX_DIR" "$INPROGRESS_DIR" "$DONE_DIR" "$FAILED_DIR" "$OVERSEER_DIR/state" "$WORKERS_STATE_DIR" \
   "$STAKEHOLDER_INBOX_DIR" "$STAKEHOLDER_TRIAGED_DIR" "$STAKEHOLDER_QUARANTINE_DIR" "$STAKEHOLDER_PROCESSED_DIR"
@@ -80,7 +81,7 @@ mkdir -p "$OVERSEER_DIR" "$INBOX_DIR" "$INPROGRESS_DIR" "$DONE_DIR" "$FAILED_DIR
 # ---------------------------------------------------------------------------
 # Source libraries (optional — degrade gracefully if missing)
 # ---------------------------------------------------------------------------
-for lib in "$LIB_PICKER" "$LIB_WORKTREE" "$LIB_COST" "$LIB_AUDIT" "$LIB_OAUTH"; do
+for lib in "$LIB_PICKER" "$LIB_WORKTREE" "$LIB_COST" "$LIB_AUDIT" "$LIB_OAUTH" "$LIB_PANIC"; do
   if [ -f "$lib" ]; then
     # shellcheck disable=SC1090
     source "$lib"
@@ -97,6 +98,11 @@ CAP_TODAY="${OVERSEER_CAP_TODAY:-20}"
 CAP_WEEK="${OVERSEER_CAP_WEEK:-100}"
 OAUTH_TTL="${OVERSEER_OAUTH_TTL:-3600}"
 HOURLY_TTL=3600
+
+# Cloud-Heartbeat (P3-12): interval in seconds (default 60 min)
+HEARTBEAT_INTERVAL="${OVERSEER_HEARTBEAT_INTERVAL:-3600}"
+HEARTBEAT_PING_SH="${SCRIPT_DIR}/cloud-heartbeat-ping.sh"
+_last_heartbeat_ts=0
 
 # Worker-Pool tunables (P2-1)
 # Note: clamp + log happen after _log is defined (see _pool_init_worker_pool below).
@@ -576,19 +582,30 @@ _pool_reap() {
         0)
           release_item "$item_path" done >/dev/null 2>&1 || true
           _audit "process_complete" "$slug" "exit=0 (pool-reap)"
+          # P3-7: success → reset consecutive-failure counter
+          if command -v record_worker_success >/dev/null 2>&1; then
+            record_worker_success "$slug" 2>/dev/null || true
+          fi
           ;;
         1)
           release_item "$item_path" failed >/dev/null 2>&1 || true
           _audit "process_complete" "$slug" "exit=1 (pool-reap)"
           _notify info "Overseer: item failed" "slug=$slug"
+          # P3-7: failure → increment counter (may trigger panic)
+          if command -v record_worker_failure >/dev/null 2>&1; then
+            record_worker_failure "$slug" "$code" 2>/dev/null || true
+          fi
           ;;
         3)
           release_item "$item_path" blocked-pre-ship >/dev/null 2>&1 || true
           _audit "process_complete" "$slug" "exit=3 blocked-pre-ship (pool-reap)"
           _notify info "Overseer: pre-ship blocked" "slug=$slug"
+          # P3-7: exit 3 is a user/pre-ship issue — do NOT increment failure counter
           ;;
         2)
-          # Worker requests PANIC
+          # Worker requests PANIC — also record for bookkeeping (no double-trigger
+          # since enter_panic writes the marker first, then record_worker_failure
+          # sees the marker and skips re-enter).
           printf 'PANIC: worker exit 2 at %s (slug=%s pid=%s)\n' \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$slug" "$pid" > "$PANIC_MARKER"
           local slug_clean
@@ -596,16 +613,28 @@ _pool_reap() {
           mv "$item_path" "${INBOX_DIR}/${slug_clean}.md" 2>/dev/null || true
           _audit "panic_from_worker" "$slug" "exit=2 PANIC marker written (pool-reap)"
           _notify critical "Overseer: PANIC from worker" "slug=$slug"
+          # P3-7: bookkeeping only — PANIC marker already set above
+          if command -v record_worker_failure >/dev/null 2>&1; then
+            record_worker_failure "$slug" "$code" 2>/dev/null || true
+          fi
           ;;
         124)
           release_item "$item_path" failed >/dev/null 2>&1 || true
           _audit "process_complete" "$slug" "exit=124 timeout (pool-reap)"
           _notify info "Overseer: worker timeout" "slug=$slug"
+          # P3-7: timeout counts as failure
+          if command -v record_worker_failure >/dev/null 2>&1; then
+            record_worker_failure "$slug" "$code" 2>/dev/null || true
+          fi
           ;;
         *)
           release_item "$item_path" failed >/dev/null 2>&1 || true
           _audit "process_complete" "$slug" "exit=$code (pool-reap)"
           _notify info "Overseer: worker abnormal exit" "slug=$slug exit=$code"
+          # P3-7: any other non-zero exit counts as failure
+          if command -v record_worker_failure >/dev/null 2>&1; then
+            record_worker_failure "$slug" "$code" 2>/dev/null || true
+          fi
           ;;
       esac
     fi
@@ -1032,11 +1061,19 @@ process_one_iteration() {
     0)
       release_item "$item_path" done >/dev/null 2>&1 || true
       _audit "process_complete" "$slug" "exit=0"
+      # P3-7: success → reset consecutive-failure counter
+      if command -v record_worker_success >/dev/null 2>&1; then
+        record_worker_success "$slug" 2>/dev/null || true
+      fi
       ;;
     1)
       release_item "$item_path" failed >/dev/null 2>&1 || true
       _audit "process_complete" "$slug" "exit=1 (failed)"
       _notify info "Overseer: item failed" "slug=$slug"
+      # P3-7: failure → increment counter (may trigger panic)
+      if command -v record_worker_failure >/dev/null 2>&1; then
+        record_worker_failure "$slug" "$code" 2>/dev/null || true
+      fi
       ;;
     3)
       # Worker: pre-ship gates blocked (Mitigation 15). Item back to inbox
@@ -1044,6 +1081,7 @@ process_one_iteration() {
       release_item "$item_path" blocked-pre-ship >/dev/null 2>&1 || true
       _audit "process_complete" "$slug" "exit=3 (blocked-pre-ship)"
       _notify info "Overseer: pre-ship blocked" "slug=$slug — returned to inbox with [blocked-pre-ship] marker"
+      # P3-7: exit 3 is a user/pre-ship issue — do NOT increment failure counter
       ;;
     2)
       # Worker requests PANIC. Item back to inbox, marker, idle.
@@ -1056,16 +1094,28 @@ process_one_iteration() {
       mv "$item_path" "${INBOX_DIR}/${slug_clean}.md" 2>/dev/null || true
       _audit "panic_from_worker" "$slug" "exit=2 PANIC marker written"
       _notify critical "Overseer: PANIC from worker" "slug=$slug — overseer pausing"
+      # P3-7: bookkeeping only — PANIC marker already set above
+      if command -v record_worker_failure >/dev/null 2>&1; then
+        record_worker_failure "$slug" "$code" 2>/dev/null || true
+      fi
       ;;
     124)
       release_item "$item_path" failed >/dev/null 2>&1 || true
       _audit "process_complete" "$slug" "exit=124 (timeout)"
       _notify info "Overseer: worker timeout" "slug=$slug"
+      # P3-7: timeout counts as failure
+      if command -v record_worker_failure >/dev/null 2>&1; then
+        record_worker_failure "$slug" "$code" 2>/dev/null || true
+      fi
       ;;
     *)
       release_item "$item_path" failed >/dev/null 2>&1 || true
       _audit "process_complete" "$slug" "exit_code=$code"
       _notify info "Overseer: worker abnormal exit" "slug=$slug exit=$code"
+      # P3-7: any other non-zero exit counts as failure
+      if command -v record_worker_failure >/dev/null 2>&1; then
+        record_worker_failure "$slug" "$code" 2>/dev/null || true
+      fi
       ;;
   esac
 
@@ -1270,6 +1320,15 @@ fi
 # ---------------------------------------------------------------------------
 _log "overseer daemon starting"
 while [ "$SHUTDOWN_REQUESTED" -eq 0 ]; do
+  # Cloud-Heartbeat (P3-12): fire ping every HEARTBEAT_INTERVAL seconds.
+  _now="$(date +%s)"
+  if (( _now - _last_heartbeat_ts >= HEARTBEAT_INTERVAL )); then
+    if [ -x "$HEARTBEAT_PING_SH" ]; then
+      REPO_ROOT="$REPO_ROOT" bash "$HEARTBEAT_PING_SH" >/dev/null 2>&1 || true
+    fi
+    _last_heartbeat_ts="$_now"
+  fi
+
   set +e
   process_pool_iteration
   iter_rc=$?

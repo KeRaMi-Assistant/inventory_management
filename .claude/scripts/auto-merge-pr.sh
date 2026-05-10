@@ -30,9 +30,16 @@ fi
 
 echo "→ merging PR #$PR_NUM (squash + delete branch)…"
 
-# Pre-Launch: --admin erlaubt Merge auch wenn Branch nicht up-to-date.
-# Konflikte werden trotzdem nicht überschrieben (gh checked das vorher).
-if gh pr merge "$PR_NUM" --squash --delete-branch --admin; then
+# Mitigation 10: --admin wird NICHT standardmäßig verwendet.
+# Headless/Overseer-Pfad wartet auf CI-Gates statt --admin zu erzwingen.
+# Stakeholder-Override: MERGE_ADMIN_OVERRIDE=1 aktiviert --admin.
+GH_MERGE_ARGS=( --squash --delete-branch )
+if [ "${MERGE_ADMIN_OVERRIDE:-0}" = "1" ]; then
+  GH_MERGE_ARGS+=( --admin )
+  echo "  (MERGE_ADMIN_OVERRIDE=1: using --admin)"
+fi
+
+if gh pr merge "$PR_NUM" "${GH_MERGE_ARGS[@]}"; then
   echo "✓ PR #$PR_NUM merged."
   # Switch zu main + pull falls wir auf dem gemergten Branch waren
   CURRENT="$(git branch --show-current 2>/dev/null || echo)"

@@ -59,18 +59,9 @@ cost_record() {
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   local pid="$$"
 
-  # --- JSON-Zeile zusammenbauen ----------------------------------------------
-  # Kein externes Tool (jq) nötig — Werte sind bereits validiert/kontrolliert.
-  # agent wird escaped (einfache Strategie: Backslash + Anführungszeichen ersetzen).
-  local agent_escaped
-  agent_escaped="$(printf '%s' "$agent" | sed 's/\\/\\\\/g; s/"/\\"/g')"
-
-  local json_line
-  json_line="{\"ts\":\"${ts}\",\"agent\":\"${agent_escaped}\",\"usd\":${usd},\"pid\":${pid}}"
-
   # --- Atomares Append via flock (Linux) oder lockf (macOS/BSD) -------------
-  # flock -x -w 5: exklusiver Lock, max 5 Sekunden Wartezeit.
-  # lockf -t 5: macOS/BSD-Äquivalent.
+  # Hash-Chain-Berechnung findet INNERHALB des flock statt, um Race auf
+  # prev_hash zu verhindern. flock schützt bereits vor parallelen Schreibern.
   if command -v flock >/dev/null 2>&1; then
     (
       exec 200>"$lock_file"
@@ -78,11 +69,84 @@ cost_record() {
         printf 'cost_record: flock-Timeout auf "%s"\n' "$lock_file" >&2
         exit 3
       fi
-      printf '%s\n' "$json_line" >> "$ledger_file"
+      # Hash-Chain innerhalb des Locks berechnen und atomar appenden
+      python3 - "$ledger_file" "$ts" "$agent" "$usd" "$pid" <<'PYEOF'
+import sys, json, hashlib
+
+ledger_file = sys.argv[1]
+ts          = sys.argv[2]
+agent       = sys.argv[3]
+usd         = sys.argv[4]
+pid         = sys.argv[5]
+
+def sha256(s: str) -> str:
+    return hashlib.sha256(s.encode('utf-8')).hexdigest()
+
+zero_hash = '0' * 64
+
+# Compute prev_hash: SHA256 of the full last line (including newline)
+prev_hash = zero_hash
+try:
+    with open(ledger_file, 'r') as f:
+        lines = [l for l in f.readlines() if l.strip()]
+    if lines:
+        prev_hash = sha256(lines[-1])
+except FileNotFoundError:
+    pass
+
+# Compute entry_hash over deterministic concat
+entry_data = f"{ts}|{agent}|{usd}|{pid}|{prev_hash}"
+entry_hash = sha256(entry_data)
+
+# Escape agent for JSON
+agent_json = json.dumps(agent)[1:-1]  # strip surrounding quotes
+
+line = (f'{{"ts":"{ts}","agent":"{agent_json}",'
+        f'"usd":{usd},"pid":{pid},'
+        f'"prev_hash":"{prev_hash}","entry_hash":"{entry_hash}"}}\n')
+
+with open(ledger_file, 'a') as f:
+    f.write(line)
+PYEOF
     )
   elif command -v lockf >/dev/null 2>&1; then
     # lockf -t 5: wartet bis zu 5 Sekunden; exit != 0 bei Timeout
-    if ! lockf -t 5 "$lock_file" sh -c "printf '%s\n' \"\$1\" >> \"\$2\"" -- "$json_line" "$ledger_file"; then
+    # On macOS/BSD, run hash-chain computation inside lockf subprocess
+    if ! lockf -t 5 "$lock_file" python3 - "$ledger_file" "$ts" "$agent" "$usd" "$pid" <<'PYEOF'; then
+import sys, json, hashlib
+
+ledger_file = sys.argv[1]
+ts          = sys.argv[2]
+agent       = sys.argv[3]
+usd         = sys.argv[4]
+pid         = sys.argv[5]
+
+def sha256(s: str) -> str:
+    return hashlib.sha256(s.encode('utf-8')).hexdigest()
+
+zero_hash = '0' * 64
+
+prev_hash = zero_hash
+try:
+    with open(ledger_file, 'r') as f:
+        lines = [l for l in f.readlines() if l.strip()]
+    if lines:
+        prev_hash = sha256(lines[-1])
+except FileNotFoundError:
+    pass
+
+entry_data = f"{ts}|{agent}|{usd}|{pid}|{prev_hash}"
+entry_hash = sha256(entry_data)
+
+agent_json = json.dumps(agent)[1:-1]
+
+line = (f'{{"ts":"{ts}","agent":"{agent_json}",'
+        f'"usd":{usd},"pid":{pid},'
+        f'"prev_hash":"{prev_hash}","entry_hash":"{entry_hash}"}}\n')
+
+with open(ledger_file, 'a') as f:
+    f.write(line)
+PYEOF
       printf 'cost_record: lockf-Timeout auf "%s"\n' "$lock_file" >&2
       return 3
     fi
