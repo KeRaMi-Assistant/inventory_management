@@ -56,6 +56,11 @@ mkdir -p "$_tmpdir/repo/.claude/scripts/lib"
 mkdir -p "$_tmpdir/repo/.claude/overseer/notifications"
 # Copy notify.sh into fake repo hierarchy
 cp "$NOTIFY" "$_tmpdir/repo/.claude/scripts/notify.sh"
+# Copy notify-impl.sh shim-target if present (P0-7 split)
+if [ -f "$SCRIPT_DIR/../lib/notify-impl.sh" ]; then
+  cp "$SCRIPT_DIR/../lib/notify-impl.sh" "$_tmpdir/repo/.claude/scripts/lib/notify-impl.sh"
+  chmod +x "$_tmpdir/repo/.claude/scripts/lib/notify-impl.sh"
+fi
 chmod +x "$_tmpdir/repo/.claude/scripts/notify.sh"
 # Copy audit lib if present
 [ -f "$REPO_ROOT/.claude/scripts/lib/audit.sh" ] && \
@@ -162,6 +167,11 @@ printf '\nTest 6: make_action_buttons → valid ntfy Actions JSON\n'
 # Call make_action_buttons by sourcing notify.sh helpers in a subshell.
 # We need the path available inside the subshell, so export it first.
 export _NOTIFY_SH_PATH="$_tmpdir/repo/.claude/scripts/notify.sh"
+# P0-7 split: extract from notify-impl.sh if shim is in use
+if grep -q "exec.*notify-impl.sh" "$_NOTIFY_SH_PATH" 2>/dev/null \
+   && [ -f "$_tmpdir/repo/.claude/scripts/lib/notify-impl.sh" ]; then
+  export _NOTIFY_SH_PATH="$_tmpdir/repo/.claude/scripts/lib/notify-impl.sh"
+fi
 _json="$(bash <<'SUBSH'
 # Extract the make_action_buttons function definition from notify.sh and eval it
 _func_def="$(python3 -c "

@@ -12,6 +12,17 @@
 .claude/backlog/runs/
 .claude/backlog/.lock
 
+# Self-Mod / Integrity transient state (manifest itself IS tracked)
+.claude/.user-session-active
+.claude/integrity/check.out.log
+.claude/integrity/check.err.log
+.claude/overseer/PANIC
+.claude/audit/self-mod.log
+# Overseer runtime state (PANIC file above; full state dir ignored)
+.claude/overseer/state/
+# Analyzer module caches
+.claude/analyzer/cache/
+
 # Local test/dev secrets
 .env.test
 .env.local
@@ -64,3 +75,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Phase 0+1 runtime artifacts (autonomous-swarm)
+.claude/audit/.audit.ratelimit
+.claude/audit/[0-9]*.md
+.claude/audit/.audit.lock
+.claude/overseer/notifications/queued.jsonl
+.claude/overseer/notifications/sent.jsonl
+.claude/overseer/notifications/dedup.jsonl
+.claude/overseer/cost-ledger.jsonl
+.claude/overseer/state/
+.claude/state/

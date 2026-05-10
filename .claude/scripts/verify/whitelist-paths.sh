@@ -65,6 +65,11 @@ BLOCKLIST_FILE=".claude/scripts/notify.sh"
 if [ ! -f "$BLOCKLIST_FILE" ]; then
   echo "  SKIP: $BLOCKLIST_FILE existiert nicht — Test 2 übersprungen"
 else
+  # Backup working-tree state before modification (avoids `git restore` losing
+  # any uncommitted changes — the previous version reset notify.sh to the
+  # 49-line HEAD on every run).
+  _BLOCKLIST_BACKUP="$(mktemp /tmp/whitelist-verify-backup.XXXXXX)"
+  cp "$BLOCKLIST_FILE" "$_BLOCKLIST_BACKUP"
   # Wir fügen eine harmlose Zeile ein, dann testen, dann reverten
   printf '\n# whitelist-paths-verify-test\n' >> "$BLOCKLIST_FILE"
 
@@ -96,10 +101,12 @@ else
     touch "$SESSION_ACTIVE"
   fi
 
-  # Revert die Änderung an notify.sh
-  git restore -- "$BLOCKLIST_FILE" 2>/dev/null \
-    || git checkout HEAD -- "$BLOCKLIST_FILE" 2>/dev/null \
-    || { tail -n +1 "$BLOCKLIST_FILE" | head -n -2 > "$BLOCKLIST_FILE.tmp" && mv "$BLOCKLIST_FILE.tmp" "$BLOCKLIST_FILE"; }
+  # Revert die Änderung an notify.sh — restore from working-tree backup
+  # (NOT `git restore` — das würde uncommitted shim/notify-impl-Setup zerstören).
+  if [ -f "$_BLOCKLIST_BACKUP" ]; then
+    cp "$_BLOCKLIST_BACKUP" "$BLOCKLIST_FILE"
+    rm -f "$_BLOCKLIST_BACKUP"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
