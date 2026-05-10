@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.inventory.audit-backup</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__REPO_ROOT__/.claude/scripts/audit-backup.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO_ROOT__</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>REPO_ROOT</key>
+    <string>__REPO_ROOT__</string>
+    <!-- Set AUDIT_BACKUP_REMOTE before installing, e.g.: -->
+    <!-- git@github.com:KeRaMi-Assistant/inventory-audit-backup.git -->
+    <key>AUDIT_BACKUP_REMOTE</key>
+    <string>__AUDIT_BACKUP_REMOTE__</string>
+    <key>AUDIT_BACKUP_LOCAL</key>
+    <string>__HOME__/.claude/audit-backup-mirror</string>
+    <key>AUDIT_BACKUP_BRANCH</key>
+    <string>main</string>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <!-- Every Sunday at 04:00 (Weekday=0 = Sunday) -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>0</integer>
+    <key>Hour</key>
+    <integer>4</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>__REPO_ROOT__/.claude/backlog/runs/audit-backup-stdout.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>__REPO_ROOT__/.claude/backlog/runs/audit-backup-stderr.log</string>
+</dict>
+</plist>

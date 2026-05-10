@@ -1,0 +1,108 @@
+name: Cloud Heartbeat Watch (Off-Box-Watchdog)
+
+# Runs every 4 hours. Checks whether the local Overseer has pinged the
+# ntfy.sh heartbeat topic within the last 4 hours. If not → pushes a
+# high-priority alert to the user's NTFY_TOPIC.
+#
+# Also polls the heartbeat-token to guard against replay attacks: the Overseer
+# embeds the shared-secret in every ping body. If the token doesn't match the
+# GitHub Secret, a separate alert is fired.
+#
+# Required GitHub Secrets (set via `gh secret set`):
+#   NTFY_HEARTBEAT_TOPIC      — ntfy.sh topic that the Overseer pings to
+#   NTFY_TOPIC                — ntfy.sh topic for user-visible alerts
+#   OVERSEER_HEARTBEAT_TOKEN  — shared secret (same value as ~/.claude/inventory-overseer-heartbeat-token)
+#
+# Manual test: Actions → "Cloud Heartbeat Watch" → Run workflow
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'    # every 4 hours
+  workflow_dispatch:
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check heartbeat (last 4h)
+        env:
+          NTFY_HEARTBEAT_TOPIC: ${{ secrets.NTFY_HEARTBEAT_TOPIC }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          OVERSEER_HEARTBEAT_TOKEN: ${{ secrets.OVERSEER_HEARTBEAT_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Guard: all three secrets must be configured
+          if [ -z "${NTFY_HEARTBEAT_TOPIC:-}" ] || \
+             [ -z "${NTFY_TOPIC:-}" ] || \
+             [ -z "${OVERSEER_HEARTBEAT_TOKEN:-}" ]; then
+            echo "::warning::Cloud Heartbeat secrets not fully configured — skipping check"
+            echo "Set NTFY_HEARTBEAT_TOPIC, NTFY_TOPIC, OVERSEER_HEARTBEAT_TOKEN as repository secrets."
+            exit 0
+          fi
+
+          # Poll ntfy.sh: fetch messages from the last 4 hours.
+          # ntfy.sh API: GET /<topic>/json?poll=1&since=<duration>
+          # Returns newline-delimited JSON (one object per message).
+          # On empty topic or no messages → empty body.
+          POLL_OUT="$(curl -fsS --max-time 15 \
+            "https://ntfy.sh/${NTFY_HEARTBEAT_TOPIC}/json?poll=1&since=4h" \
+            2>/dev/null || true)"
+
+          if [ -z "$POLL_OUT" ]; then
+            echo "::warning::No heartbeat received in the last 4h — firing alert"
+            curl -fsS --max-time 10 \
+              -H "Priority: 5" \
+              -H "Title: Overseer is dead" \
+              -H "Tags: skull,sos" \
+              -d "No overseer heartbeat received in the last 4 hours. The daemon may be down." \
+              "https://ntfy.sh/${NTFY_TOPIC}" || true
+            exit 1
+          fi
+
+          # Take the most-recent message (last non-empty line)
+          LAST_LINE="$(printf '%s\n' "$POLL_OUT" | grep -v '^$' | tail -1)"
+
+          # Extract message body (the JSON payload sent by cloud-heartbeat-ping.sh)
+          # The ntfy message structure is: {"id":…,"message":"<body>",…}
+          # The body itself is the JSON string: {"ts":…,"host":…,"token":…}
+          MSG_BODY="$(printf '%s' "$LAST_LINE" | python3 -c "
+          import sys, json
+          try:
+              d = json.load(sys.stdin)
+              print(d.get('message', ''))
+          except Exception:
+              print('')
+          " 2>/dev/null || true)"
+
+          if [ -z "$MSG_BODY" ]; then
+            echo "::warning::Heartbeat message body is empty — possible format mismatch"
+            # Non-fatal: we received a message, just can't validate the token
+            exit 0
+          fi
+
+          # Validate embedded token
+          EMBEDDED_TOKEN="$(printf '%s' "$MSG_BODY" | python3 -c "
+          import sys, json
+          try:
+              d = json.loads(sys.stdin.read())
+              print(d.get('token', ''))
+          except Exception:
+              print('')
+          " 2>/dev/null || true)"
+
+          if [ "$EMBEDDED_TOKEN" != "$OVERSEER_HEARTBEAT_TOKEN" ]; then
+            echo "::error::Heartbeat token mismatch — possible replay or misconfiguration"
+            curl -fsS --max-time 10 \
+              -H "Priority: 4" \
+              -H "Title: Heartbeat token mismatch" \
+              -H "Tags: warning,lock" \
+              -d "Received heartbeat token does not match expected secret. Check setup." \
+              "https://ntfy.sh/${NTFY_TOPIC}" || true
+            exit 1
+          fi
+
+          echo "Heartbeat OK — token valid, last ping within 4h"
+          exit 0

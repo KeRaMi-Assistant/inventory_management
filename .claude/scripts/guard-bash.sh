@@ -30,6 +30,38 @@ if [ -r "$GUARD_LIB" ]; then
   fi
 fi
 
+# --- Branch-Allowlist-Check (P3-8) -----------------------------------------
+_branch_allowlist_check() {
+  local cmd="$*"
+  local branch=""
+
+  if [[ "$cmd" =~ git[[:space:]]+checkout[[:space:]]+-b[[:space:]]+([^[:space:]]+) ]]; then
+    branch="${BASH_REMATCH[1]}"
+  elif [[ "$cmd" =~ git[[:space:]]+switch[[:space:]]+-c[[:space:]]+([^[:space:]]+) ]]; then
+    branch="${BASH_REMATCH[1]}"
+  elif [[ "$cmd" =~ git[[:space:]]+push[[:space:]]+-u[[:space:]]+origin[[:space:]]+([^[:space:]]+) ]]; then
+    branch="${BASH_REMATCH[1]}"
+  fi
+
+  if [ -n "$branch" ]; then
+    # Allow main, master, HEAD — no prefix check needed
+    case "$branch" in main|master|HEAD) return 0 ;; esac
+    # Check allowlist
+    if [[ ! "$branch" =~ ^(feature|fix|chore)/[a-z0-9][a-z0-9-]{0,39}$ ]]; then
+      echo "[guard-bash] Branch-Name verstößt gegen Allowlist:" >&2
+      echo "  Erwartet: ^(feature|fix|chore)/[a-z0-9][a-z0-9-]{0,39}$  (max 40 Zeichen nach Prefix-Slash)" >&2
+      echo "  Bekommen: $branch" >&2
+      return 2
+    fi
+  fi
+  return 0
+}
+
+_branch_allowlist_check "$cmd"
+if [ $? -eq 2 ]; then
+  exit 2
+fi
+
 # Force-push auf main
 if echo "$cmd" | grep -qE 'git push.*-f.*\b(origin\s+)?main\b'; then
   block "force-push auf main ist verboten"

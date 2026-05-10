@@ -44,6 +44,8 @@ REPO_ROOT="${REPO_ROOT:-$(cd "${SCRIPT_DIR}/../.." && pwd)}"
 LIB_COST="${SCRIPT_DIR}/lib/cost-cap.sh"
 LIB_WORKTREE="${SCRIPT_DIR}/lib/worktree.sh"
 LIB_AUDIT="${SCRIPT_DIR}/lib/audit.sh"
+LIB_PANIC="${SCRIPT_DIR}/lib/panic.sh"
+COST_VERIFY_SH="${SCRIPT_DIR}/cost-verify.sh"
 NOTIFY_SH="${SCRIPT_DIR}/notify.sh"
 
 OVERSEER_DIR="${REPO_ROOT}/.claude/overseer"
@@ -58,6 +60,7 @@ INBOX_DIR="${REPO_ROOT}/.claude/overseer/inbox"
 if [ -f "$LIB_COST" ];     then source "$LIB_COST";     fi
 if [ -f "$LIB_WORKTREE" ]; then source "$LIB_WORKTREE"; fi
 if [ -f "$LIB_AUDIT" ];    then source "$LIB_AUDIT";    fi
+if [ -f "$LIB_PANIC" ];    then source "$LIB_PANIC";    fi
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -364,6 +367,29 @@ run_iteration() {
         "today=${COST_TODAY}/${cap_today}USD week=${COST_WEEK}/${cap_week}USD. PANIC marker written."
       notifications_sent="${notifications_sent:+${notifications_sent},}cost_cap_critical"
       _audit "panic_triggered" "cost_cap" "today=${COST_TODAY}/${cap_today} week=${COST_WEEK}/${cap_week}"
+    fi
+  fi
+
+  # -----------------------------------------------------------------------
+  # Check 6: Cost-Ledger Hash-Chain Tamper Detection (P3-10)
+  # -----------------------------------------------------------------------
+  if [ -x "$COST_VERIFY_SH" ]; then
+    local verify_rc=0
+    COST_CAP_LEDGER_DIR="${COST_CAP_LEDGER_DIR:-${OVERSEER_DIR}}" \
+      REPO_ROOT="$REPO_ROOT" \
+      "$COST_VERIFY_SH" 2>/dev/null || verify_rc=$?
+    if [ "$verify_rc" -eq 1 ]; then
+      panic=true
+      _log "CRITICAL: cost-ledger tampering detected — entering PANIC"
+      if command -v enter_panic >/dev/null 2>&1; then
+        enter_panic "cost-ledger-tampering-detected"
+      else
+        printf 'PANIC: cost-ledger-tampering-detected\ntimestamp: %s\n' "$ts" > "$PANIC_MARKER"
+      fi
+      _notify critical "Watchdog: Cost-Ledger TAMPERED" \
+        "Hash-chain verification failed. cost-verify.sh exit 1. PANIC marker written."
+      notifications_sent="${notifications_sent:+${notifications_sent},}cost_tamper_critical"
+      _audit "panic_triggered" "cost_ledger" "hash-chain tamper detected by cost-verify.sh"
     fi
   fi
 
