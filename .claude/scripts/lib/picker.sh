@@ -325,7 +325,28 @@ recover_orphaned_items() {
       continue
     fi
 
-    # Process dead — recover
+    # PID is dead — but check if a pool worker is actively working on this item.
+    # The pool stores worker state in $overseer_root/state/workers/<worker_pid>.pid
+    # with JSON containing item_path. If any active worker owns this item, skip.
+    local pool_workers_dir="${overseer_root}/state/workers"
+    if [ -d "$pool_workers_dir" ] && compgen -G "${pool_workers_dir}/*.pid" >/dev/null 2>&1; then
+      local pool_owns=0
+      for pwfile in "${pool_workers_dir}/"*.pid; do
+        [ -f "$pwfile" ] || continue
+        local pool_item_path
+        pool_item_path="$(python3 -c "import sys,json; d=json.load(open(sys.argv[1])); print(d.get('item_path',''))" "$pwfile" 2>/dev/null || true)"
+        if [ "$pool_item_path" = "$ip_file" ]; then
+          # A pool worker owns this item — don't recover it
+          pool_owns=1
+          break
+        fi
+      done
+      if [ "$pool_owns" -eq 1 ]; then
+        continue
+      fi
+    fi
+
+    # Process dead and no pool worker owns it — recover
     local slug="${basename%.md}"
     # Remove trailing .<pid> suffix
     slug="$(printf '%s' "$slug" | sed 's/\.[0-9][0-9]*$//')"

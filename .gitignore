@@ -22,6 +22,8 @@
 .claude/overseer/state/
 # Analyzer module caches
 .claude/analyzer/cache/
+# Analyzer module state (runtime JSON, .gitkeep tracked)
+.claude/analyzer/state/*.json
 
 # Local test/dev secrets
 .env.test

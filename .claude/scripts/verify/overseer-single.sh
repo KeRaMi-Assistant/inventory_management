@@ -164,12 +164,15 @@ mkdir -p "$SANDBOX_WORKTREES"
 
 # Run overseer in the sandbox: REPO_ROOT, CLAUDE_PROJECT_DIR override the path
 # resolution; NOTIFY_DRY_RUN keeps notify silent (we use mock notify anyway).
+# OVERSEER_MAX_WORKERS=1 forces single-worker mode so tests are deterministic:
+# each --once spawns exactly 1 worker; the next --once reaps it.
 _overseer() {
   REPO_ROOT="$SBX_REPO" \
   CLAUDE_PROJECT_DIR="$SBX_REPO" \
   COST_CAP_LEDGER_DIR="$SBX_OVERSEER" \
   OVERSEER_SLEEP_IDLE=0 OVERSEER_SLEEP_BETWEEN=0 \
   OVERSEER_OAUTH_TTL=999999 \
+  OVERSEER_MAX_WORKERS=1 \
   bash "$SBX_SCRIPTS/overseer.sh" "$@"
 }
 
@@ -188,10 +191,24 @@ EOF
 }
 
 _reset() {
+  # Wait for any in-flight exit-file renames to complete before wiping the
+  # state/workers/ dir. A stale renamer writing AFTER _reset would corrupt
+  # the freshly-recreated dir for the next test. We poll until no _tmp_*
+  # temp files remain (rename done) or up to 6s timeout.
+  local settle_deadline=$(( $(date +%s) + 6 ))
+  while [ "$(date +%s)" -lt "$settle_deadline" ]; do
+    local active_tmp
+    # pipefail-safe: wrap in subshell with pipefail disabled so that a missing
+    # state/workers/ dir (first _reset call or after rm -rf) doesn't abort.
+    active_tmp=$(set +o pipefail; find "$SBX_OVERSEER/state/workers" -name '_tmp_*.exit.tmp' 2>/dev/null | wc -l | tr -d ' '; exit 0)
+    if [ "${active_tmp:-0}" -eq 0 ]; then break; fi
+    sleep 0.2
+  done
   rm -rf "$SBX_OVERSEER"
   mkdir -p "$SBX_OVERSEER/inbox" "$SBX_OVERSEER/in_progress" \
            "$SBX_OVERSEER/done" "$SBX_OVERSEER/failed" \
-           "$SBX_OVERSEER/state" "$SBX_OVERSEER/notifications"
+           "$SBX_OVERSEER/state" "$SBX_OVERSEER/state/workers" \
+           "$SBX_OVERSEER/notifications"
   rm -rf "$SANDBOX_WORKTREES"
   mkdir -p "$SANDBOX_WORKTREES"
   _set_worker 0
@@ -202,16 +219,29 @@ _reset() {
 # Tests
 # ---------------------------------------------------------------------------
 
-# Test 1: --once with 3 items → 3 sequential invocations, each picks 1 item.
+# Test 1: --once with 3 items → pool processes all 3 items into done/.
+# With OVERSEER_MAX_WORKERS=1, each --once spawns at most 1 worker.
+# The pipeline is: --once → spawn worker-N → --once → reap-N + spawn worker-N+1 → …
+# We need enough --once ticks to both pick all items AND reap all workers.
 printf '\nTest 1: 3 items, sequential --once\n'
 _reset
 _write_item item-001
 _write_item item-002
 _write_item item-003
 
+# Initial ticks: pick all 3 items (each tick: reap previous + pick next)
 _overseer --once >/dev/null 2>&1
 _overseer --once >/dev/null 2>&1
 _overseer --once >/dev/null 2>&1
+
+# Wait loop: keep ticking until all 3 items land in done/ (30s timeout)
+deadline1=$(( $(date +%s) + 30 ))
+while [ "$(date +%s)" -lt "$deadline1" ]; do
+  count_done=$(find "$SBX_OVERSEER/done" -name '*.md' | wc -l | tr -d ' ')
+  if [ "$count_done" -ge 3 ]; then break; fi
+  _overseer --once >/dev/null 2>&1 || true
+  sleep 0.5
+done
 
 count_done=$(find "$SBX_OVERSEER/done" -name '*.md' | wc -l | tr -d ' ')
 count_inbox=$(find "$SBX_OVERSEER/inbox" -name '*.md' | wc -l | tr -d ' ')
@@ -260,12 +290,39 @@ _assert_file_exists "item NOT picked (still in inbox)" \
   "$SBX_OVERSEER/inbox/item-cost-1.md"
 rm -f "$SBX_OVERSEER/COST_CAP_REACHED"
 
+# _wait_for_reap: poll overseer --once until <file> exists or timeout.
+# Usage: _wait_for_reap <expected_file> [timeout_seconds]
+_wait_for_reap() {
+  local expected="$1"
+  local timeout_sec="${2:-30}"
+  local deadline=$(( $(date +%s) + timeout_sec ))
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+    if [ -e "$expected" ]; then
+      return 0
+    fi
+    # Re-tick overseer to trigger reap of finished workers
+    _overseer --once >/dev/null 2>&1 || true
+    sleep 0.5
+  done
+  # Final check after timeout
+  [ -e "$expected" ]
+}
+
 # Test 5: Worker stub exit 0 → done/, worktree gone.
 printf '\nTest 5: worker exit 0 → done/\n'
 _reset
 _write_item item-ok-1
 _set_worker 0
 _overseer --once >/dev/null 2>&1
+# Workers are async — wait for reap to move item to done/
+done_sentinel="$SBX_OVERSEER/done/.test5_sentinel"
+deadline5=$(( $(date +%s) + 30 ))
+while [ "$(date +%s)" -lt "$deadline5" ]; do
+  done_match=$(find "$SBX_OVERSEER/done" -name 'item-ok-1*.md' | wc -l | tr -d ' ')
+  if [ "$done_match" -ge 1 ]; then break; fi
+  _overseer --once >/dev/null 2>&1 || true
+  sleep 0.5
+done
 done_match=$(find "$SBX_OVERSEER/done" -name 'item-ok-1*.md' | wc -l | tr -d ' ')
 _assert_eq "item in done/ (any pid suffix)" "1" "$done_match"
 _assert_file_not_exists "worktree removed" "$SANDBOX_WORKTREES/wt_item-ok-1"
@@ -276,6 +333,14 @@ _reset
 _write_item item-fail-1
 _set_worker 1
 _overseer --once >/dev/null 2>&1
+# Workers are async — wait for reap to move item to failed/
+deadline6=$(( $(date +%s) + 30 ))
+while [ "$(date +%s)" -lt "$deadline6" ]; do
+  fail_match=$(find "$SBX_OVERSEER/failed" -name 'item-fail-1*.md' | wc -l | tr -d ' ')
+  if [ "$fail_match" -ge 1 ]; then break; fi
+  _overseer --once >/dev/null 2>&1 || true
+  sleep 0.5
+done
 fail_match=$(find "$SBX_OVERSEER/failed" -name 'item-fail-1*.md' | wc -l | tr -d ' ')
 _assert_eq "item in failed/ (any pid suffix)" "1" "$fail_match"
 today="$(date -u +%Y-%m-%d)"
@@ -290,7 +355,16 @@ printf '\nTest 7: worker exit 2 → PANIC, item back to inbox\n'
 _reset
 _write_item item-panic-w-1
 _set_worker 2
-_overseer --once >/dev/null 2>&1
+_overseer --once 2>&1 | grep -E 'spawned|reap' >&2 || true
+# Workers are async — wait for reap to write PANIC marker
+deadline7=$(( $(date +%s) + 30 ))
+while [ "$(date +%s)" -lt "$deadline7" ]; do
+  if [ -f "$SBX_OVERSEER/PANIC" ]; then break; fi
+  _overseer --once 2>&1 | grep -E 'spawned|reap' >&2 || true
+  sleep 0.5
+done
+# Wait briefly for any lingering background renames to finish before _reset
+sleep 0.5
 _assert_file_exists "PANIC marker written by worker exit 2" \
   "$SBX_OVERSEER/PANIC"
 _assert_file_exists "item returned to inbox" \
@@ -303,25 +377,39 @@ rm -f "$SBX_OVERSEER/PANIC"
 printf '\nTest 8: lock conflict\n'
 _reset
 _write_item item-lock-1
-# Run first overseer in the background with a long-sleep mock worker
+# Run first overseer in the background with a short-sleep mock worker
+# (enough to hold the lock, but not so long it slows the suite)
 cat > "$WORKER_SH" <<'EOF'
 #!/usr/bin/env bash
-sleep 5
+sleep 2
 exit 0
 EOF
 chmod +x "$WORKER_SH"
 
 _overseer --once >/dev/null 2>&1 &
 first_pid=$!
-# Wait until lock is held (or first completes — shouldn't, since worker sleeps 5s).
-sleep 1
+# Wait until lock is held (or first completes).
+sleep 0.5
 # Second invocation should exit 0 silently (no item picked).
 _overseer --once >/dev/null 2>&1
 rc=$?
 _assert_eq "second --once exits 0 silently" "0" "$rc"
-# Inbox should still have the original item OR done has it (depending on timing).
-# Crucial check: only ONE item processed total.
+# Wait for first overseer to finish, then reap the background worker.
 wait "$first_pid" || true
+# IMPORTANT: do NOT call _set_worker here — the inner worker (bash worker.sh,
+# spawned async by _pool_spawn) is still running "sleep 2". On bash 3.2 macOS,
+# overwriting the script file while bash reads it incrementally causes a syntax
+# error (rc=2), which the reaper interprets as a worker PANIC. Wait for the reap
+# to complete first; _set_worker 0 is called at the end of the test.
+# Reap: keep ticking until item lands in done/ (or timeout).
+deadline8=$(( $(date +%s) + 30 ))
+while [ "$(date +%s)" -lt "$deadline8" ]; do
+  total_processed=$(( $(find "$SBX_OVERSEER/done" -name '*.md' | wc -l) + \
+                      $(find "$SBX_OVERSEER/failed" -name '*.md' | wc -l) ))
+  if [ "$total_processed" -ge 1 ]; then break; fi
+  _overseer --once >/dev/null 2>&1 || true
+  sleep 0.5
+done
 total_processed=$(( $(find "$SBX_OVERSEER/done" -name '*.md' | wc -l) + \
                     $(find "$SBX_OVERSEER/failed" -name '*.md' | wc -l) ))
 _assert_eq "exactly 1 item processed under lock contention" "1" "$total_processed"
