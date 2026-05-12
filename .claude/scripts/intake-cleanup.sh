@@ -25,8 +25,8 @@ set -uo pipefail
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
-AUDIT_LIB="$SCRIPT_DIR/lib/audit.sh"
-NOTIFY_SH="$SCRIPT_DIR/notify.sh"
+AUDIT_LIB="${AUDIT_LIB:-$SCRIPT_DIR/lib/audit.sh}"
+NOTIFY_SH="${NOTIFY_SH:-$REPO_ROOT/.claude/scripts/notify.sh}"
 
 PENDING_DIR="$REPO_ROOT/.claude/stakeholder/pending-approval"
 STALE_DIR="$PENDING_DIR/stale"

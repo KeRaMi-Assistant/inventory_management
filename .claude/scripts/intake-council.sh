@@ -8,10 +8,15 @@
 #
 # Spawnt ein 3-Agent-Mini-Council:
 #   Round 1 (parallel): disput-proponent (Sonnet, Intake-Mode) + intake-skeptic (Sonnet)
-#   Round 2 (nur bei Patt): intake-pragmatist (Opus, Tie-Break)
+#   Round 2 (IMMER): intake-pragmatist (Opus, Final-Synthesizer)
+#
+# Pragmatist läuft IMMER (auch bei Konsens), weil nur er das vollständige
+# Backlog-Item-YAML schreiben kann. Bei Round-1-Konsens tendiert er zum
+# entsprechenden Verdict (propose bei accept+accept, reject bei reject+reject),
+# bei Split entscheidet er.
 #
 # Cost-Caps: $2/Proposal (lifetime), $10/Tag.
-# Modell-deterministische Kosten: Sonnet $0.20, Opus $0.40.
+# Modell-deterministische Kosten: Sonnet $0.20, Opus $0.40. Gesamt ~$0.80-$1.20.
 # Output: .claude/stakeholder/pending-approval/<id>.md (Schema 3.2).
 
 set -uo pipefail
@@ -490,23 +495,13 @@ run_council() {
   log "Consensus: $consensus"
 
   case "$consensus" in
-    consensus_accept)
-      write_verdict_file "$id" "1" "propose" "$council_dir" "$proposal_file"
-      _finished=1
-      exit 0
-      ;;
-    consensus_reject)
-      write_verdict_file "$id" "1" "reject" "$council_dir" "$proposal_file"
-      _finished=1
-      exit 0
-      ;;
-    needs_tiebreak)
-      log "Patt — Round 2 mit Intake-Pragmatist"
-      ;;
+    consensus_accept) log "Konsens accept — Pragmatist synthetisiert + schreibt Backlog-Item" ;;
+    consensus_reject) log "Konsens reject — Pragmatist bestätigt + schreibt finales Verdict" ;;
+    needs_tiebreak)   log "Patt — Pragmatist entscheidet" ;;
   esac
 
   # --------------------------------------------------------------------
-  # Round 2: Intake-Pragmatist als Tie-Break (Opus)
+  # Round 2: Intake-Pragmatist als Final-Synthesizer (Opus) — IMMER aufgerufen
   # --------------------------------------------------------------------
   local r2_prag="$council_dir/round-2-pragmatist.md"
 
@@ -543,10 +538,22 @@ run_council() {
     propose-with-changes|accept-with-changes) final_verdict="propose-with-changes" ;;
     reject) final_verdict="reject" ;;
     needs-full-council) final_verdict="needs-full-council" ;;
-    *) final_verdict="reject" ;;
+    *)
+      # Pragmatist-Vote nicht parsebar — falle auf Round-1-Konsens zurück
+      case "$consensus" in
+        consensus_accept) final_verdict="propose" ;;
+        consensus_reject) final_verdict="reject" ;;
+        *)                final_verdict="reject" ;;
+      esac
+      ;;
   esac
 
-  write_verdict_file "$id" "2" "$final_verdict" "$council_dir" "$proposal_file"
+  # round-Nummer: bei Round-1-Konsens bleibt round=1 (Backward-Compat mit Tests),
+  # bei needs_tiebreak round=2.
+  local final_round=2
+  [ "$consensus" != "needs_tiebreak" ] && final_round=1
+
+  write_verdict_file "$id" "$final_round" "$final_verdict" "$council_dir" "$proposal_file"
   _finished=1
   exit 0
 }
