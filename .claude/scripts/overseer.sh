@@ -694,15 +694,19 @@ _pool_spawn() {
     return 1
   fi
 
+  # Derive worktree-compatible short slug (strip priority-prefix + truncate).
+  local wt_slug
+  wt_slug="$(_worktree_slug_from_inprogress "$item_path")"
+
   # Create worktree
   local worktree_path
   set +e
-  worktree_path="$(worktree_create "$slug" 2>&1)"
+  worktree_path="$(worktree_create "$wt_slug" 2>&1)"
   local wt_rc=$?
   set -e
 
   if [ "$wt_rc" -ne 0 ]; then
-    _log "worktree_create failed (rc=$wt_rc): $worktree_path slug=$slug"
+    _log "worktree_create failed (rc=$wt_rc): $worktree_path slug=$slug wt_slug=$wt_slug"
     _audit "worktree_failed" "$slug" "rc=$wt_rc out=$worktree_path"
     _notify info "Overseer: worktree create failed" "slug=$slug rc=$wt_rc"
     if command -v release_item >/dev/null 2>&1; then
@@ -916,6 +920,22 @@ _slug_from_inprogress() {
   printf '%s' "$stem" | sed 's/\.[0-9][0-9]*$//'
 }
 
+# _worktree_slug_from_inprogress <path>
+# Same as _slug_from_inprogress but trimmed for worktree-create:
+# - strips priority-prefix (00-followup-, 01-stakeholder-, 02-analyzer-).
+# - truncates to 30 chars (worktree.sh slug-regex limit ^[a-z0-9][a-z0-9-]{0,30}$).
+# - strips trailing hyphens after truncation.
+_worktree_slug_from_inprogress() {
+  local full
+  full="$(_slug_from_inprogress "$1")"
+  # Strip known priority-prefixes (NN-name-)
+  full="$(printf '%s' "$full" | sed -E 's/^(00-followup-|01-stakeholder-|02-analyzer-)//')"
+  # Truncate to 31 chars (1 leading + 30 trailing as per worktree.sh regex)
+  full="${full:0:31}"
+  # Strip trailing hyphens so we don't end with -
+  printf '%s' "$full" | sed 's/-*$//'
+}
+
 # ---------------------------------------------------------------------------
 # Frontmatter scalar reader (timeout_minutes, needs_gh, …)
 # ---------------------------------------------------------------------------
@@ -1031,15 +1051,19 @@ process_one_iteration() {
   _log "picked: $slug"
   _audit "pick" "$slug" "in_progress=$item_path"
 
+  # Derive worktree-compatible short slug
+  local wt_slug
+  wt_slug="$(_worktree_slug_from_inprogress "$item_path")"
+
   # Worktree create
   local worktree_path
   set +e
-  worktree_path="$(worktree_create "$slug" 2>&1)"
+  worktree_path="$(worktree_create "$wt_slug" 2>&1)"
   local wt_rc=$?
   set -e
 
   if [ "$wt_rc" -ne 0 ]; then
-    _log "worktree_create failed (rc=$wt_rc): $worktree_path"
+    _log "worktree_create failed (rc=$wt_rc): $worktree_path wt_slug=$wt_slug"
     _audit "worktree_failed" "$slug" "rc=$wt_rc out=$worktree_path"
     _notify info "Overseer: worktree create failed" "slug=$slug rc=$wt_rc"
     if command -v release_item >/dev/null 2>&1; then

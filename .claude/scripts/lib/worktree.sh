@@ -179,9 +179,11 @@ worktree_create() {
     fi
   fi
 
-  # Acceptance validation: no real .env* files (only symlinks allowed)
+  # Acceptance validation: no real .env* secret files (only symlinks allowed).
+  # .env*.example files are tracked templates without secrets — exempt.
   local real_env_files
-  real_env_files=$(find "$worktree_path" -maxdepth 1 -name '.env*' -type f 2>/dev/null || true)
+  real_env_files=$(find "$worktree_path" -maxdepth 1 -name '.env*' -type f \
+                        ! -name '.env*.example' 2>/dev/null || true)
   if [[ -n "$real_env_files" ]]; then
     echo "ERROR: real .env* files found in worktree (expected only symlinks):" >&2
     echo "$real_env_files" >&2
