@@ -172,18 +172,28 @@ def send_message(chat_id, text, parse_mode=None):
     """
     Send a message to Telegram. Auto-splits messages longer than
     TELEGRAM_MAX_MSG_LEN. parse_mode in {None, 'HTML', 'MarkdownV2'}.
+
+    Returns ``{"ok": True}`` when every chunk reached Telegram's API,
+    ``{"ok": False, "error": "..."}`` otherwise. Pre-existing callers that
+    ignore the return value remain unaffected (truthy on success).
     """
     if not text:
-        return
+        return {"ok": True, "skipped": "empty"}
     chunks = _split_for_telegram(text, TELEGRAM_MAX_MSG_LEN)
+    last_err = None
     for chunk in chunks:
-        _send_single(chat_id, chunk, parse_mode)
+        if not _send_single(chat_id, chunk, parse_mode):
+            last_err = "send_failed"
+    if last_err:
+        return {"ok": False, "error": last_err}
+    return {"ok": True}
 
 
-def _send_single(chat_id, text, parse_mode):
+def _send_single(chat_id, text, parse_mode) -> bool:
+    """Send one chunk. Returns True iff Telegram accepted it (HTTP 200 + ok)."""
     if MOCK_DIR:
         _mock_send_message(chat_id, text)
-        return
+        return True
     url = f"{TELEGRAM_API_BASE}/sendMessage"
     body = {"chat_id": chat_id, "text": text}
     if parse_mode:
@@ -197,7 +207,15 @@ def _send_single(chat_id, text, parse_mode):
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            pass
+            raw = resp.read().decode()
+            try:
+                resp_json = json.loads(raw)
+            except Exception:
+                resp_json = {}
+            if not resp_json.get("ok", True):
+                # Telegram returned ok=false; treat as failure so caller retries.
+                return False
+            return True
     except urllib.error.URLError as e:
         print(f"WARNING: sendMessage failed: {e}", file=sys.stderr)
         # Fallback: retry without parse_mode (in case HTML was malformed)
@@ -211,9 +229,10 @@ def _send_single(chat_id, text, parse_mode):
                     method="POST",
                 )
                 with urllib.request.urlopen(req2, timeout=10):
-                    pass
+                    return True
             except urllib.error.URLError:
-                pass
+                return False
+        return False
 
 
 def send_chat_action(chat_id, action="typing"):
@@ -906,31 +925,47 @@ def _render_verdict_mini(path: pathlib.Path, fm: dict) -> str:
 
 
 # --- Quiet-hours-aware push (uses notify.sh info → respects DND) ---
-def _push_verdict(path: pathlib.Path, fm: dict):
+def _push_verdict(path: pathlib.Path, fm: dict) -> bool:
+    """Push verdict via notify.sh + direct Telegram. Returns True only when the
+    Telegram send to the creator actually succeeded (so the watcher can retry
+    on transient network errors instead of falsely marking pushed_at)."""
     body = _render_verdict_mini(path, fm)
     title = f"Intake-Verdict: {fm.get('id', path.stem)}"
-    if not NOTIFY_SH.exists():
-        return
-    env = dict(os.environ)
-    env["REPO_ROOT"] = str(REPO_ROOT)
-    if MOCK_HOUR:
-        env["NOTIFY_FORCE_HOUR"] = MOCK_HOUR
-    subprocess.run(
-        [str(NOTIFY_SH), "info", "intake-verdict", title, body],
-        env=env, capture_output=True,
-    )
-    # Also send via Telegram directly for the creator
+    # notify.sh — best-effort (ntfy-side; failure doesn't block retry)
+    if NOTIFY_SH.exists():
+        env = dict(os.environ)
+        env["REPO_ROOT"] = str(REPO_ROOT)
+        if MOCK_HOUR:
+            env["NOTIFY_FORCE_HOUR"] = MOCK_HOUR
+        subprocess.run(
+            [str(NOTIFY_SH), "info", "intake-verdict", title, body],
+            env=env, capture_output=True,
+        )
+    # Direct Telegram send to creator — authoritative success-signal
     user_id = fm.get("user_id", "")
-    # If user_id is numeric (Telegram), push to that chat as well
-    if user_id and user_id.isdigit():
-        try:
-            send_message(int(user_id), body)
-        except Exception:
-            pass
+    if not (user_id and user_id.isdigit()):
+        # No Telegram creator (e.g. local-CLI proposal) → ntfy-only.
+        # Consider that successful so we don't retry forever.
+        return True
+    try:
+        result = send_message(int(user_id), body)
+    except Exception as exc:
+        sys.stderr.write(f"_push_verdict: telegram send failed: {exc}\n")
+        return False
+    # send_message returns the parsed Telegram response; check ok-flag.
+    if isinstance(result, dict):
+        return bool(result.get("ok"))
+    # Unknown shape — treat as not-confirmed so we retry.
+    return False
 
 
 def watch_pending_verdicts():
-    """Scan pending-approval/*.md, push any without pushed_at, set marker."""
+    """Scan pending-approval/*.md, push any without pushed_at, set marker.
+
+    pushed_at is set ONLY when the push to the creator's Telegram chat
+    succeeded. On transient failure (network, Telegram-API down), the watcher
+    retries on the next tick instead of silently dropping the verdict.
+    """
     if not PENDING_APPROVAL_DIR.exists():
         return 0
     pushed = 0
@@ -941,7 +976,10 @@ def watch_pending_verdicts():
         pushed_at = fm.get("pushed_at", "")
         if pushed_at:
             continue
-        _push_verdict(p, fm)
+        ok = _push_verdict(p, fm)
+        if not ok:
+            audit_record("telegram-bot", "intake_verdict_push_retry", fm.get("id", p.stem), "deferred")
+            continue
         iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         _write_frontmatter_field(p, "pushed_at", iso)
         audit_record("telegram-bot", "intake_verdict_pushed", fm.get("id", p.stem), "auto")
