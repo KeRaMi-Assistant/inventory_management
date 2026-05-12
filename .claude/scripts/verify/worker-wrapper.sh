@@ -91,6 +91,7 @@ mkdir -p "$MOCK_BIN"
 
 cat > "$MOCK_BIN/claude" <<'EOF'
 #!/usr/bin/env bash
+# Mock claude — emits --output-format json compatible JSON to stdout.
 LOG_FILE="${MOCK_CLAUDE_LOG:-/tmp/mock-claude.log}"
 {
   echo "=== mock claude invocation ==="
@@ -104,12 +105,12 @@ LOG_FILE="${MOCK_CLAUDE_LOG:-/tmp/mock-claude.log}"
   echo "cwd: $(pwd)"
 } >> "$LOG_FILE"
 
-# Stdout is captured into the worker's RUN_LOG.
-echo "mock-claude: starting"
+# Build the result text (the actual content that goes in the "result" field).
+RESULT_TEXT="mock-claude: starting"
 if [ -n "${MOCK_CLAUDE_OUTPUT:-}" ]; then
-  printf '%s\n' "$MOCK_CLAUDE_OUTPUT"
+  RESULT_TEXT="${RESULT_TEXT}
+${MOCK_CLAUDE_OUTPUT}"
 fi
-echo "Total cost: \$0.42"
 
 # Optionally touch + commit a file in the worktree.
 if [ -n "${MOCK_CLAUDE_TOUCH:-}" ] && [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
@@ -124,12 +125,21 @@ fi
 # Optional PANIC injection.
 if [ "${MOCK_CLAUDE_PANIC:-0}" = "1" ]; then
   touch "$PANIC_MARKER_PATH"
-  # Sleep so the watcher (30s tick) catches it. Use a small marker-ack file
-  # so the test can shorten this for CI: poll a kill instead.
+  # Sleep so the watcher (30s tick) catches it.
   for _ in $(seq 1 60); do
     sleep 1
   done
 fi
+
+# Emit structured JSON (--output-format json schema).
+# result field must be valid JSON string — escape backslash/quotes/newlines.
+ESCAPED_RESULT="$(printf '%s' "$RESULT_TEXT" | python3 -c "
+import sys, json
+print(json.dumps(sys.stdin.read())[1:-1]
+)" 2>/dev/null || printf '%s' "$RESULT_TEXT" | sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/' | tr -d '\n' | sed 's/\\n$//')"
+
+printf '{"result":"%s","session_id":"mock-session","total_cost_usd":0.42,"duration_ms":1234,"num_turns":1,"usage":{"input_tokens":100,"cached_input_tokens":0,"output_tokens":50,"cache_creation_input_tokens":0}}\n' \
+  "$ESCAPED_RESULT"
 
 exit "${MOCK_CLAUDE_EXIT:-0}"
 EOF

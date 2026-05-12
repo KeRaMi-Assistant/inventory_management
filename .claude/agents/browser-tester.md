@@ -486,3 +486,13 @@ Endlos-Pingpong wenn der Fix systemisch unmöglich ist.
 - Keine echten Mails versenden, keine Test-Aufträge in Prod-Systemen.
 - Keine Test-Account-Credentials in Logs/Reports leaken (Mail-Adresse OK,
   Password niemals).
+
+---
+
+## Cache-Notiz (interne Doku)
+
+Dieser System-Prompt ist statisch und wird beim 2. Aufruf desselben Agents von
+Anthropic's Prompt-Cache gehalten (5-Min-TTL, ~85% Latency-Reduktion, ~90%
+Cost-Reduktion). Caller dürfen KEINE dynamischen Bytes VOR dem User-Input
+injizieren — das würde den Cache invalidieren. User-Input (Szenario-Name,
+Freitext-Anweisung) immer ans PROMPT-ENDE stellen, nicht voranstellen.

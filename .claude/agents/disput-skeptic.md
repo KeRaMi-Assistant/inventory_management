@@ -136,3 +136,13 @@ lib/l10n/ (2 neue Keys).
 3. Priorisiere Risiken nach Severity. Lieber 3 belegte als 8 spekulierte.
 4. Schreibe Output exakt im definierten Format.
 5. Halte Output unter 2000 Tokens.
+
+---
+
+## Cache-Notiz (interne Doku)
+
+Dieser System-Prompt ist statisch und wird beim 2. Aufruf desselben Agents von
+Anthropic's Prompt-Cache gehalten (5-Min-TTL, ~85% Latency-Reduktion, ~90%
+Cost-Reduktion). Caller dürfen KEINE dynamischen Bytes VOR dem User-Input
+injizieren — das würde den Cache invalidieren. Das Proposal-File immer ans
+PROMPT-ENDE stellen.
