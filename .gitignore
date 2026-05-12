@@ -88,3 +88,7 @@ app.*.map.json
 .claude/overseer/cost-ledger.jsonl
 .claude/overseer/state/
 .claude/state/
+
+# Telegram-bot daemon logs + state (state/ already ignored above, listed for clarity)
+.claude/overseer/telegram-bot.out.log
+.claude/overseer/telegram-bot.err.log

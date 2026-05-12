@@ -339,6 +339,265 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Test 8: /yota (no arg) → snapshot via mock yota-snapshot.sh
+# ---------------------------------------------------------------------------
+printf '\nTest 8: /yota (no arg) → snapshot reply with "Status:"\n'
+ALLOWED_IDS="12345"
+rm -f "$MOCK_DIR/sent.jsonl"
+# Clear briefings → no HMAC required (irrelevant for /yota anyway)
+rm -f "$TMP_ROOT/.claude/stakeholder/digest/"*.md
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-yota-ratelimit.json"
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-yota-inflight.json"
+
+# Mock snapshot output
+MOCK_SNAPSHOT_CMD='printf "**Status:** active — 1/2 worker.\n**Alerts:** keine.\n"'
+
+printf '[{"update_id": 60, "message": {"message_id": 60, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "/yota"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" \
+CLAUDE_PROJECT_DIR="$TMP_ROOT" \
+MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" \
+TELEGRAM_ALLOWED_USER_IDS="12345" \
+MOCK_YOTA_SNAPSHOT_CMD="$MOCK_SNAPSHOT_CMD" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if [ -f "$MOCK_DIR/sent.jsonl" ] && python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('Status:' in json.loads(l).get('text','') for l in lines if l.strip())
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "/yota returned snapshot containing 'Status:'"
+else
+  _fail "/yota did not return snapshot (sent: $(cat "$MOCK_DIR/sent.jsonl" 2>/dev/null))"
+fi
+
+# ---------------------------------------------------------------------------
+# Test 9: /yota <frage> → mock LLM call
+# ---------------------------------------------------------------------------
+printf '\nTest 9: /yota <frage> → mock LLM-call returns mock answer\n'
+ALLOWED_IDS="12345"
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-yota-ratelimit.json"
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-yota-inflight.json"
+
+MOCK_LLM_CMD='printf "MOCK-YOTA-ANSWER für: %s" "$YOTA_QUESTION"'
+
+printf '[{"update_id": 61, "message": {"message_id": 61, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "/yota was läuft?"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" \
+CLAUDE_PROJECT_DIR="$TMP_ROOT" \
+MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" \
+TELEGRAM_ALLOWED_USER_IDS="12345" \
+MOCK_YOTA_LLM_CMD="$MOCK_LLM_CMD" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if [ -f "$MOCK_DIR/sent.jsonl" ] && python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('MOCK-YOTA-ANSWER' in json.loads(l).get('text','') for l in lines if l.strip())
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "/yota <frage> returned LLM-answer"
+else
+  _fail "/yota <frage> did not return mock LLM answer"
+fi
+
+# ---------------------------------------------------------------------------
+# Test 10: md_to_html() converter unit-test
+# ---------------------------------------------------------------------------
+printf '\nTest 10: md_to_html() unit-test\n'
+if python3 -c "
+import sys
+sys.path.insert(0, '$REAL_REPO_ROOT/.claude/scripts')
+import importlib.util
+spec = importlib.util.spec_from_file_location('tb', '$BOT_PY')
+tb = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(tb)
+got = tb.md_to_html('**Status:** *active*')
+assert got == '<b>Status:</b> <i>active</i>', f'got: {got!r}'
+got2 = tb.md_to_html('hello <there> & \`code\`')
+assert '&lt;there&gt;' in got2 and '<code>code</code>' in got2, f'got2: {got2!r}'
+" 2>&1; then
+  _pass "md_to_html basic conversions"
+else
+  _fail "md_to_html unit-test failed"
+fi
+
+# ---------------------------------------------------------------------------
+# Test 11: /yota rate-limit — 11th LLM-call blocked
+# ---------------------------------------------------------------------------
+printf '\nTest 11: /yota rate-limit — 11th blocked\n'
+ALLOWED_IDS="12345"
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-yota-ratelimit.json"
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-yota-inflight.json"
+
+MOCK_LLM_CMD='printf "ok %s" "$YOTA_QUESTION"'
+RL_HITS=0
+for I in $(seq 100 110); do
+  printf "[{\"update_id\": $I, \"message\": {\"message_id\": $I, \"from\": {\"id\": 12345, \"first_name\": \"Test\"}, \"chat\": {\"id\": 99}, \"text\": \"/yota frage $I\"}}]" > "$MOCK_DIR/updates.json"
+  REPO_ROOT="$TMP_ROOT" \
+  CLAUDE_PROJECT_DIR="$TMP_ROOT" \
+  MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+  TELEGRAM_BOT_TOKEN="mock-token" \
+  TELEGRAM_ALLOWED_USER_IDS="12345" \
+  MOCK_YOTA_LLM_CMD="$MOCK_LLM_CMD" \
+    python3 "$BOT_PY" --once 2>/dev/null
+done
+
+RL_HITS="$(python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+print(sum(1 for l in lines if 'rate-limited' in json.loads(l).get('text','')))
+" 2>/dev/null || echo 0)"
+if [ "$RL_HITS" -ge 1 ]; then
+  _pass "/yota 11th call rate-limited (hits=$RL_HITS)"
+else
+  _fail "/yota 11th call NOT rate-limited (hits=$RL_HITS)"
+fi
+
+# ---------------------------------------------------------------------------
+# Test 12: /yota concurrency-block — second call while first in-flight
+# ---------------------------------------------------------------------------
+printf '\nTest 12: /yota concurrency-block (in-flight lock)\n'
+ALLOWED_IDS="12345"
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-yota-ratelimit.json"
+
+# Pre-seed inflight lock to simulate ongoing call
+mkdir -p "$TMP_ROOT/.claude/overseer/state"
+python3 -c "
+import json, time, pathlib
+f = pathlib.Path('$TMP_ROOT/.claude/overseer/state/telegram-yota-inflight.json')
+f.write_text(json.dumps({'12345': {'started': time.time()}}))
+"
+
+MOCK_LLM_CMD='printf "should-not-run"'
+printf '[{"update_id": 70, "message": {"message_id": 70, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "/yota zweite frage"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" \
+CLAUDE_PROJECT_DIR="$TMP_ROOT" \
+MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" \
+TELEGRAM_ALLOWED_USER_IDS="12345" \
+MOCK_YOTA_LLM_CMD="$MOCK_LLM_CMD" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if [ -f "$MOCK_DIR/sent.jsonl" ] && python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('Moment' in json.loads(l).get('text','') for l in lines if l.strip())
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "concurrency-block reply sent"
+else
+  _fail "no concurrency-block reply"
+fi
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-yota-inflight.json"
+
+# ---------------------------------------------------------------------------
+# Test 13: /help → command list
+# ---------------------------------------------------------------------------
+printf '\nTest 13: /help → command list\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+printf '[{"update_id": 80, "message": {"message_id": 80, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "/help"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" \
+CLAUDE_PROJECT_DIR="$TMP_ROOT" \
+MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" \
+TELEGRAM_ALLOWED_USER_IDS="12345" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('/yota' in json.loads(l).get('text','') and '/btw' in json.loads(l).get('text','') for l in lines if l.strip())
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "/help lists /yota + /btw"
+else
+  _fail "/help did not list commands"
+fi
+
+# ---------------------------------------------------------------------------
+# Test 14: /status alias → same as /yota
+# ---------------------------------------------------------------------------
+printf '\nTest 14: /status alias\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-yota-ratelimit.json"
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-yota-inflight.json"
+MOCK_SNAPSHOT_CMD='printf "**Status:** idle\n"'
+printf '[{"update_id": 81, "message": {"message_id": 81, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "/status"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" \
+CLAUDE_PROJECT_DIR="$TMP_ROOT" \
+MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" \
+TELEGRAM_ALLOWED_USER_IDS="12345" \
+MOCK_YOTA_SNAPSHOT_CMD="$MOCK_SNAPSHOT_CMD" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('Status:' in json.loads(l).get('text','') for l in lines if l.strip())
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "/status alias returned snapshot"
+else
+  _fail "/status alias did not behave like /yota"
+fi
+
+# ---------------------------------------------------------------------------
+# Test 15: Long message split (>4096 chars → 2 sendMessage calls)
+# ---------------------------------------------------------------------------
+printf '\nTest 15: long message split\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-yota-ratelimit.json"
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-yota-inflight.json"
+
+# Build a 5000-char body (no newlines so split falls back to hard-cut)
+MOCK_LLM_CMD='python3 -c "print(\"A\"*5000)"'
+printf '[{"update_id": 90, "message": {"message_id": 90, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "/yota big"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" \
+CLAUDE_PROJECT_DIR="$TMP_ROOT" \
+MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" \
+TELEGRAM_ALLOWED_USER_IDS="12345" \
+MOCK_YOTA_LLM_CMD="$MOCK_LLM_CMD" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+SENT_COUNT="$(wc -l < "$MOCK_DIR/sent.jsonl" 2>/dev/null | tr -d ' ')"
+if [ "${SENT_COUNT:-0}" -ge 2 ]; then
+  _pass "long message split into $SENT_COUNT chunks"
+else
+  _fail "expected ≥2 chunks for long message, got $SENT_COUNT"
+fi
+
+# ---------------------------------------------------------------------------
+# Test 16: plist validity (plutil -lint)
+# ---------------------------------------------------------------------------
+printf '\nTest 16: plist validity\n'
+PLIST_TARGET="$TMP_ROOT/com.inventory.telegram-bot.plist"
+LAUNCH_AGENTS_DIR="$TMP_ROOT" \
+  bash "$REAL_REPO_ROOT/.claude/scripts/install-telegram-bot.sh" >/dev/null 2>&1 || true
+# Installer requires env vars; emulate them
+TELEGRAM_BOT_TOKEN="x" TELEGRAM_ALLOWED_USER_IDS="1" \
+  LAUNCH_AGENTS_DIR="$TMP_ROOT" \
+  bash "$REAL_REPO_ROOT/.claude/scripts/install-telegram-bot.sh" >/dev/null 2>&1
+
+if [ -f "$PLIST_TARGET" ] && plutil -lint "$PLIST_TARGET" >/dev/null 2>&1; then
+  _pass "plist plutil -lint passes"
+else
+  _fail "plist plutil -lint failed or plist missing"
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 printf '\n=== Results: %d passed, %d failed ===\n' "$PASS" "$FAIL"
