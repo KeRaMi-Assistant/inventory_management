@@ -616,6 +616,7 @@ cp "$REAL_REPO_ROOT/.claude/scripts/lib/cost-cap.sh" "$TMP_ROOT/.claude/scripts/
 # Build a mock pending-approval file factory
 _make_approval() {
   local id="$1" verdict="${2:-propose}" user="${3:-12345}" token="${4:-0123456789abcdef}"
+  local slug="${id##*-*-}"
   cat > "$TMP_ROOT/.claude/stakeholder/pending-approval/${id}.md" <<EOF
 ---
 id: ${id}
@@ -630,7 +631,7 @@ council_cost_usd: 0.40
 hmac_token: ${token}
 pushed_at: ""
 requires_human_dispute: false
-touches: []
+touches: [lib/app_theme.dart, lib/providers/x_provider.dart]
 created_from: intake-council
 ---
 
@@ -638,9 +639,42 @@ created_from: intake-council
 
 Council mag die Idee. ROI passt.
 
+## Proponent (Intake)
+
+### Vorteile
+- **Fundament existiert schon** in lib/app_theme.dart
+- Pre-Launch ist der billigste Zeitpunkt für den Refactor
+- Reduziert künftige Bug-Klasse durch zentralen Token-Layer
+
+### Vote: accept-with-changes
+
+## Skeptic (Intake)
+
+### Bedenken (proportional zur Evidenz)
+- [MITTEL] 80% schon implementiert, nur Paletten neu
+- [NIEDRIG] Pre-Launch-Prio gering
+- [NIEDRIG] Scope-Risk wenn keine Palette-Liste
+
+### Vote: accept-with-changes
+
 ## Vorgeschlagenes Backlog-Item
 
-slug: ${id##*-*-}
+\`\`\`yaml
+---
+slug: ${slug}
+source: tier-3-intake
+priority: 2
+budget_usd: 3.00
+model: sonnet
+touches: [lib/app_theme.dart, lib/providers/x_provider.dart, lib/screens/settings_screen.dart]
+estimated_minutes: 90
+created_from: intake-council
+trust_tier: 2
+---
+
+## Aufgabe
+Demo task body.
+\`\`\`
 EOF
 }
 
@@ -927,15 +961,41 @@ else
   _fail "second tick pushed again (before=$NOTIF_COUNT_BEFORE after=$NOTIF_COUNT_AFTER)"
 fi
 
-# --- Test I11: Mini-format contains emoji + slug + 1-sentence ---
-printf '\nTest I11: mini-format contents\n'
+# --- Test I11: Rich-Verdict-Push contains Proponent/Skeptic/Backlog ---
+printf '\nTest I11: rich-format contents (Proponent + Skeptic + Backlog-Item)\n'
 NOTIF_FILE="$TMP_ROOT/.claude/overseer/notifications/sent.jsonl"
-# Stub writes raw body (newlines escape JSON, so grep the file directly)
+TG_FILE="$MOCK_DIR/sent.jsonl"
+# Plain mini-format goes to ntfy stub:
 if grep -q '✅' "$NOTIF_FILE" 2>/dev/null \
    && grep -q 'csv-export' "$NOTIF_FILE" 2>/dev/null; then
-  _pass "mini-format contains emoji + slug"
+  _pass "ntfy plain fallback contains emoji + slug"
 else
-  _fail "mini-format missing emoji/slug"
+  _fail "ntfy plain fallback missing emoji/slug"
+fi
+# Rich HTML format goes to Telegram (sent.jsonl); JSON-encoded so emoji
+# are escape-sequences. Assert via Python json-decode.
+if python3 -c "
+import json, sys
+texts = [json.loads(l).get('text','') for l in open('$TG_FILE')]
+joined = '\n'.join(texts)
+need = ['<b>👍 Proponent', '<b>🤔 Skeptic', '<b>🧩 Backlog-Item']
+missing = [n for n in need if n not in joined]
+sys.exit(0 if not missing else 1)
+" 2>/dev/null; then
+  _pass "rich-format contains Proponent + Skeptic + Backlog-Item"
+else
+  _fail "rich-format missing required sections (file=$TG_FILE)"
+fi
+# Action-line with go + token
+if python3 -c "
+import json, sys
+texts = [json.loads(l).get('text','') for l in open('$TG_FILE')]
+joined = '\n'.join(texts)
+sys.exit(0 if 'go csv-export 0123456789abcdef' in joined else 1)
+" 2>/dev/null; then
+  _pass "rich-format has go-action with token"
+else
+  _fail "rich-format missing go-action"
 fi
 
 # --- Test I12: go-anyway requires reason for reject-verdict ---
@@ -1048,6 +1108,98 @@ if [ -f "$TMP_ROOT/.claude/overseer/notifications/sent.jsonl" ] && \
   _pass "quiet-hours info-push routed through notify.sh"
 else
   _fail "quiet-hours push not routed"
+fi
+
+# --- Test I17: go auto-triggers Overseer (MOCK_OVERSEER_TRIGGER=1) ---
+printf '\nTest I17: go → Overseer auto-trigger (mock)\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md
+rm -f "$TMP_ROOT/.claude/intake-council/state/last-go-trigger.json" 2>/dev/null
+_make_approval "20260512-100000-csv-export" propose 12345 0123456789abcdef
+# Need user-session marker so trigger doesn't skip
+mkdir -p "$TMP_ROOT/.claude"
+echo "test-marker-hash" > "$TMP_ROOT/.claude/.user-session-active"
+
+printf '[{"update_id": 217, "message": {"message_id": 217, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "go csv-export 0123456789abcdef"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+MOCK_INTAKE_VALIDATOR_CMD="echo pass" \
+MOCK_OVERSEER_TRIGGER="1" \
+ANTHROPIC_API_KEY= \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+MARKER="$TMP_ROOT/.claude/intake-council/state/last-go-trigger.json"
+if [ -f "$MARKER" ] && grep -q '"slug"' "$MARKER" 2>/dev/null \
+   && grep -q 'csv-export' "$MARKER" 2>/dev/null \
+   && grep -q '"ts"' "$MARKER" 2>/dev/null; then
+  _pass "MOCK_OVERSEER_TRIGGER wrote marker with slug + ts"
+else
+  _fail "MOCK_OVERSEER_TRIGGER marker missing or malformed"
+fi
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('Worker startet im Hintergrund' in json.loads(l).get('text','') for l in lines)
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "reply contains 'Worker startet im Hintergrund'"
+else
+  _fail "reply missing background-worker hint"
+fi
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('/yota' in json.loads(l).get('text','') for l in lines)
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "reply contains /yota hint"
+else
+  _fail "reply missing /yota hint"
+fi
+
+# --- Test I18: ANTHROPIC_API_KEY set → trigger skipped + warning + item stays ---
+printf '\nTest I18: ANTHROPIC_API_KEY skips auto-trigger\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md
+rm -f "$TMP_ROOT/.claude/intake-council/state/last-go-trigger.json" 2>/dev/null
+rm -f "$TMP_ROOT/.claude/overseer/inbox/01-stakeholder-csv-export.md"
+_make_approval "20260512-100000-csv-export" propose 12345 0123456789abcdef
+
+printf '[{"update_id": 218, "message": {"message_id": 218, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "go csv-export 0123456789abcdef"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+MOCK_INTAKE_VALIDATOR_CMD="echo pass" \
+MOCK_OVERSEER_TRIGGER="1" \
+ANTHROPIC_API_KEY="fake-key" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+# Marker must NOT exist (trigger was skipped)
+if [ ! -f "$TMP_ROOT/.claude/intake-council/state/last-go-trigger.json" ]; then
+  _pass "MOCK trigger skipped when ANTHROPIC_API_KEY set"
+else
+  _fail "trigger fired despite ANTHROPIC_API_KEY env"
+fi
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('ANTHROPIC_API_KEY' in json.loads(l).get('text','') for l in lines)
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "reply contains ANTHROPIC_API_KEY warning"
+else
+  _fail "warning missing in reply"
+fi
+
+# Inbox-Item must still exist (will be picked by next overseer tick)
+if [ -f "$TMP_ROOT/.claude/overseer/inbox/01-stakeholder-csv-export.md" ]; then
+  _pass "inbox-item still queued for later overseer tick"
+else
+  _fail "inbox-item missing — should have been written"
 fi
 
 # ---------------------------------------------------------------------------
