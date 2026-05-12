@@ -1,0 +1,177 @@
+[
+  {
+    "id": "eval-001",
+    "text": "Add dark-mode footer on Inventory-Screen showing item count",
+    "expected_verdict": "propose",
+    "expected_rationale_keywords": ["dark", "footer", "inventory", "theme"],
+    "_note": "Clear small UI improvement, fits Mobile-First, no RLS concern."
+  },
+  {
+    "id": "eval-002",
+    "text": "Make inventory items draggable to reorder them manually",
+    "expected_verdict": "propose-with-changes",
+    "expected_rationale_keywords": ["drag", "reorder", "mobile", "touch", "accessibility"],
+    "_note": "Skeptic will flag touch-target issues on phone and question whether LongPressDraggable works with 48dp targets on small phones."
+  },
+  {
+    "id": "eval-003",
+    "text": "Build complete custom Slack integration with E2E encryption for team notifications",
+    "expected_verdict": "reject",
+    "expected_rationale_keywords": ["scope", "pre-launch", "slack", "complexity", "encryption"],
+    "_note": "Massively out of scope for pre-launch. No Slack in stack. E2E encryption adds weeks. Reject hard."
+  },
+  {
+    "id": "eval-004",
+    "text": "Refactor guard-bash.sh to allow more commands by relaxing the blocklist",
+    "expected_verdict": "needs-full-council",
+    "expected_rationale_keywords": ["guard", "security", "self-mod", "blocklist", "risk"],
+    "_note": "Self-Mod-Touch: guard-bash.sh is in the self-mod blocklist. Must go through full council."
+  },
+  {
+    "id": "eval-005",
+    "text": "Speed up app start",
+    "expected_verdict": "propose-with-changes",
+    "expected_rationale_keywords": ["vague", "profiling", "startup", "clarify", "measure"],
+    "_note": "Ambiguous. Pragmatist will request concrete measurements. Change: add profiling step before implementation."
+  },
+  {
+    "id": "eval-006",
+    "text": "Add filter chips above inventory list to filter by category",
+    "expected_verdict": "propose",
+    "expected_rationale_keywords": ["filter", "ui", "inventory", "category"],
+    "_note": "Clear small UI improvement. Filter chips fit mobile-first pattern well. No RLS change needed."
+  },
+  {
+    "id": "eval-007",
+    "text": "Add search bar to inbox to find emails by sender or subject",
+    "expected_verdict": "propose",
+    "expected_rationale_keywords": ["search", "inbox", "filter", "ui"],
+    "_note": "Useful feature, well-scoped. Standard search bar pattern. No backend changes needed — client-side filter."
+  },
+  {
+    "id": "eval-008",
+    "text": "Show a badge count on the inbox tab icon when there are unread messages",
+    "expected_verdict": "propose",
+    "expected_rationale_keywords": ["badge", "inbox", "unread", "notification", "tab"],
+    "_note": "Small, clear, high-value. Flutter BadgeWidget or overlay. No RLS concern."
+  },
+  {
+    "id": "eval-009",
+    "text": "Add a 'Mark all as read' button to the inbox screen",
+    "expected_verdict": "propose",
+    "expected_rationale_keywords": ["inbox", "mark-read", "button", "ui"],
+    "_note": "Explicit, well-scoped, small. Direct user value for inbox management."
+  },
+  {
+    "id": "eval-010",
+    "text": "Add category color tags to inventory items so items can be color-coded",
+    "expected_verdict": "propose",
+    "expected_rationale_keywords": ["color", "category", "tag", "inventory", "ui"],
+    "_note": "Clear feature. Small schema addition (color field on category). Mobile-first friendly."
+  },
+  {
+    "id": "eval-011",
+    "text": "Add a multi-currency support system with live exchange rate fetching and automatic conversion on all money fields",
+    "expected_verdict": "reject",
+    "expected_rationale_keywords": ["scope", "pre-launch", "currency", "complexity", "external-api"],
+    "_note": "Pre-launch too big. Live exchange rates = external API dependency + schema refactor + every money field touched. Reject."
+  },
+  {
+    "id": "eval-012",
+    "text": "Migrate all auth from Supabase to a custom OAuth2 server we build ourselves",
+    "expected_verdict": "reject",
+    "expected_rationale_keywords": ["auth", "supabase", "scope", "security", "pre-launch"],
+    "_note": "Enormous scope, security risk, replaces core Supabase feature. Reject hard — no value for pre-launch."
+  },
+  {
+    "id": "eval-013",
+    "text": "Add AI-powered inventory demand forecasting using ML models trained on purchase history",
+    "expected_verdict": "reject",
+    "expected_rationale_keywords": ["scope", "ml", "pre-launch", "complexity", "data"],
+    "_note": "ML training pipeline, data requirements, pre-launch stage — massively out of scope. Reject."
+  },
+  {
+    "id": "eval-014",
+    "text": "Add a WhatsApp Business API integration for order notifications",
+    "expected_verdict": "ambiguous",
+    "expected_rationale_keywords": ["scope", "whatsapp", "integration", "pre-launch", "external", "reject", "council"],
+    "_note": "Borderline: could be reject (out of stack) or needs-full-council (external paid API + new integration surface). Pragmatist tie-break tests whether pre-launch scope or security-review concern wins."
+  },
+  {
+    "id": "eval-015",
+    "text": "Build a separate iOS app using Swift instead of Flutter for better performance",
+    "expected_verdict": "reject",
+    "expected_rationale_keywords": ["scope", "stack", "flutter", "native", "pre-launch"],
+    "_note": "Complete stack replacement. Goes against Flutter-first architecture. Reject."
+  },
+  {
+    "id": "eval-016",
+    "text": "Add an export-to-CSV button on the inventory list screen",
+    "expected_verdict": "ambiguous",
+    "expected_rationale_keywords": ["csv", "export", "data", "edge-function", "rls", "propose-with-changes", "needs-full-council"],
+    "_note": "Borderline: client-side CSV via dart:core = propose-with-changes; server-side with audit log = needs-full-council. Pragmatist tie-break depends on chosen implementation path."
+  },
+  {
+    "id": "eval-017",
+    "text": "Add a new Supabase migration to store inventory snapshots for historical reporting",
+    "expected_verdict": "needs-full-council",
+    "expected_rationale_keywords": ["migration", "supabase", "rls", "schema", "history"],
+    "_note": "New table = new migration + RLS policies required. Full council needed per project rule."
+  },
+  {
+    "id": "eval-018",
+    "text": "Modify .claude/agents/yota.md to give Yota write access to the backlog",
+    "expected_verdict": "needs-full-council",
+    "expected_rationale_keywords": ["self-mod", "agent", "yota", "write-access", "security"],
+    "_note": "Direct touch to .claude/agents/ — self-mod path. Requires full council regardless of apparent scope."
+  },
+  {
+    "id": "eval-019",
+    "text": "Deploy a new Edge Function to send weekly summary push notifications to workspace members",
+    "expected_verdict": "needs-full-council",
+    "expected_rationale_keywords": ["edge-function", "push", "notification", "deploy", "rls"],
+    "_note": "New edge function with push + RLS workspace scope. Full council ensures security + cost review."
+  },
+  {
+    "id": "eval-020",
+    "text": "Improve the onboarding flow with a short tutorial overlay for first-time users",
+    "expected_verdict": "propose-with-changes",
+    "expected_rationale_keywords": ["onboarding", "tutorial", "ux", "state", "first-time"],
+    "_note": "Good idea but Skeptic will flag: needs persistent state to show only once (local prefs), must not block returning users. Change: scope to first-login-only via shared_preferences."
+  },
+  {
+    "id": "eval-021",
+    "text": "Add bulk-delete on the inventory list (select multiple, delete all at once)",
+    "expected_verdict": "propose-with-changes",
+    "expected_rationale_keywords": ["bulk", "delete", "mobile", "touch", "confirmation"],
+    "_note": "Useful feature but Skeptic flags: destructive action needs confirmation dialog, multi-select UX on phone viewport needs careful touch-target design."
+  },
+  {
+    "id": "eval-022",
+    "text": "Allow users to upload inventory item photos from camera or gallery",
+    "expected_verdict": "propose-with-changes",
+    "expected_rationale_keywords": ["upload", "photo", "storage", "supabase", "file-size"],
+    "_note": "Good feature, Skeptic flags: Supabase Storage bucket needed, RLS policy required, file size limits, mobile permission handling (camera/gallery). Pragmatist: propose with storage setup scoped as T0."
+  },
+  {
+    "id": "eval-023",
+    "text": "Add sorting options to inventory list (by name, date, quantity)",
+    "expected_verdict": "propose",
+    "expected_rationale_keywords": ["sort", "inventory", "list", "ui", "filter"],
+    "_note": "Clear, small, client-side sort. No backend changes. Mobile-first: sort accessible via dropdown or sort-icon row."
+  },
+  {
+    "id": "eval-024",
+    "text": "Show expiry date warning badge on inventory items that expire within 7 days",
+    "expected_verdict": "propose",
+    "expected_rationale_keywords": ["expiry", "badge", "inventory", "warning", "ui"],
+    "_note": "Clear, high-value safety feature. UI-only: color badge on existing expiry_date field. No schema change needed."
+  },
+  {
+    "id": "eval-025",
+    "text": "Add a global search that searches across inventory, inbox, and deals simultaneously",
+    "expected_verdict": "ambiguous",
+    "expected_rationale_keywords": ["search", "global", "cross-entity", "performance", "scope"],
+    "_note": "Borderline: valuable but cross-entity search is complex. Skeptic: performance + RLS across 3 tables. Pragmatist may propose limited scope (inventory-only first). Could be propose-with-changes or needs-full-council depending on implementation path."
+  }
+]

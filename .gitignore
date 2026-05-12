@@ -92,3 +92,12 @@ app.*.map.json
 # Telegram-bot daemon logs + state (state/ already ignored above, listed for clarity)
 .claude/overseer/telegram-bot.out.log
 .claude/overseer/telegram-bot.err.log
+
+# Intake-Council: transient proposal/verdict/rejected files (LLM-generated or user-input)
+# .gitkeep files in each dir ARE tracked (negation below)
+.claude/stakeholder/pending-proposal/*.md
+.claude/stakeholder/pending-approval/*.md
+.claude/stakeholder/pending-approval/stale/*.md
+.claude/stakeholder/rejected/*.md
+# Intake-Council runtime state (reject-streak.json etc.)
+.claude/intake-council/state/*.json

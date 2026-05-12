@@ -49,6 +49,35 @@ BTW_SH = REPO_ROOT / ".claude" / "scripts" / "btw.sh"
 AUDIT_SH = REPO_ROOT / ".claude" / "scripts" / "lib" / "audit.sh"
 NOTIFY_SH = REPO_ROOT / ".claude" / "scripts" / "notify.sh"
 
+# Onboarding state dir (T23b)
+INTAKE_ONBOARDING_STATE_DIR = pathlib.Path(
+    os.environ.get("INTAKE_ONBOARDING_STATE_DIR",
+                   str(pathlib.Path.home() / ".claude" / "state"))
+)
+
+# Intake (Council-gated) paths
+PENDING_PROPOSAL_DIR = REPO_ROOT / ".claude" / "stakeholder" / "pending-proposal"
+PENDING_APPROVAL_DIR = REPO_ROOT / ".claude" / "stakeholder" / "pending-approval"
+REJECTED_DIR = REPO_ROOT / ".claude" / "stakeholder" / "rejected"
+OVERSEER_INBOX_DIR = REPO_ROOT / ".claude" / "overseer" / "inbox"
+
+YOTA_PROPOSE_SH = REPO_ROOT / ".claude" / "scripts" / "yota-propose.sh"
+INTAKE_COUNCIL_SH = REPO_ROOT / ".claude" / "scripts" / "intake-council.sh"
+COST_CAP_LIB = REPO_ROOT / ".claude" / "scripts" / "lib" / "cost-cap.sh"
+INTAKE_TOKENS_LIB = REPO_ROOT / ".claude" / "scripts" / "lib" / "intake-tokens.sh"
+
+MAX_INTAKE_ROUNDS = 3
+INTAKE_REJECT_STREAK_THRESHOLD = int(os.environ.get("INTAKE_REJECT_STREAK_THRESHOLD", "5"))
+INTAKE_REJECT_STREAK_WINDOW = 48 * 3600  # 48h
+INTAKE_REJECT_STREAK_DEBOUNCE = 24 * 3600  # max 1 streak-notify per 24h
+REJECT_STREAK_STATE_FILE = REPO_ROOT / ".claude" / "intake-council" / "state" / "reject-streak.json"
+
+# Mocks for tests
+MOCK_INTAKE_COUNCIL_CMD = os.environ.get("MOCK_INTAKE_COUNCIL_CMD", "")
+MOCK_INTAKE_VALIDATOR_CMD = os.environ.get("MOCK_INTAKE_VALIDATOR_CMD", "")
+MOCK_COST_TODAY_USD = os.environ.get("MOCK_COST_TODAY_USD", "")
+MOCK_HOUR = os.environ.get("MOCK_HOUR", "")  # for quiet-hours testing
+
 RATE_LIMIT_MAX = 5          # max /btw items per hour per user
 RATE_LIMIT_WINDOW = 3600    # 1 hour in seconds
 LONG_POLL_TIMEOUT = 30      # seconds for Telegram long-poll
@@ -538,6 +567,33 @@ def notify_info(topic, title, body):
     )
 
 # ---------------------------------------------------------------------------
+# T23b — Onboarding: first /btw after intake roll-out
+# ---------------------------------------------------------------------------
+
+INTAKE_ONBOARDING_HINT = (
+    "\n\nℹ️ <b>Neu seit Mai 2026:</b> <code>/yota propose &lt;idee&gt;</code> "
+    "lässt ein kleines Council deine Idee beraten bevor sie ins Backlog "
+    "geht (~$1, ~90s). <code>/btw</code> bleibt der Direkt-Pfad ohne Gate. "
+    "Mehr: <code>/help</code>"
+)
+
+
+def _intake_onboarding_marker(user_id: int) -> pathlib.Path:
+    return INTAKE_ONBOARDING_STATE_DIR / f"yota-intake-introduced-{user_id}"
+
+
+def _should_show_intake_onboarding(user_id: int) -> bool:
+    """True if this is the first /btw for this user since intake roll-out."""
+    return not _intake_onboarding_marker(user_id).exists()
+
+
+def _mark_intake_onboarding_shown(user_id: int):
+    """Create state-marker so onboarding is not shown again."""
+    INTAKE_ONBOARDING_STATE_DIR.mkdir(parents=True, exist_ok=True)
+    _intake_onboarding_marker(user_id).touch()
+
+
+# ---------------------------------------------------------------------------
 # btw.sh invocation
 # ---------------------------------------------------------------------------
 
@@ -612,6 +668,731 @@ def _handle_yota(chat_id, user_id, argtext):
     return chat_id, ("HTML", md_to_html(answer))
 
 # ---------------------------------------------------------------------------
+# Intake (Council-gated) helpers — T09..T13
+# ---------------------------------------------------------------------------
+
+INTAKE_ID_RE = _re.compile(r"^[0-9]{8}-[0-9]{6}-[a-z0-9-]{1,40}$")
+
+# Reply-parser regex tables (DE/EN aliases). Order: go-anyway BEFORE go.
+GO_ANYWAY_RE = _re.compile(
+    r"^go-anyway\s+(?P<id>[a-z0-9-]+|\d+)\s+(?P<token>[a-f0-9]{16})\s+(?P<reason>.+)$",
+    _re.IGNORECASE,
+)
+GO_RE = _re.compile(
+    r"^(?:go|👍|okay|ok|ja|approve)\s+(?P<id>[a-z0-9-]+|\d+)\s*(?P<token>[a-f0-9]{16})?\s*$",
+    _re.IGNORECASE,
+)
+REJECT_RE = _re.compile(
+    r"^(?:reject|nope|nein|nö|stop)\s+(?P<id>[a-z0-9-]+|\d+)(?:\s+(?P<reason>.+))?$",
+    _re.IGNORECASE,
+)
+CHANGE_RE = _re.compile(
+    r"^(?:change|ändere|aber)\s+(?P<id>[a-z0-9-]+|\d+)\s+(?P<text>.+)$",
+    _re.IGNORECASE | _re.DOTALL,
+)
+
+
+def _parse_frontmatter(path: pathlib.Path):
+    """Parse simple YAML frontmatter — flat key: value pairs only."""
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    if not content.startswith("---"):
+        return {}
+    end = content.find("\n---", 3)
+    if end < 0:
+        return {}
+    block = content[3:end].strip("\n")
+    fm = {}
+    for line in block.splitlines():
+        if ":" not in line:
+            continue
+        k, v = line.split(":", 1)
+        fm[k.strip()] = v.strip().strip('"').strip("'")
+    return fm
+
+
+def _write_frontmatter_field(path: pathlib.Path, field: str, value: str):
+    """Update a single frontmatter field in-place (atomic via tmp+rename)."""
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    pat = _re.compile(rf"^({_re.escape(field)}):.*$", _re.MULTILINE)
+    new_line = f"{field}: {value}"
+    if pat.search(content):
+        new_content = pat.sub(new_line, content, count=1)
+    else:
+        # Inject before closing ---
+        if content.startswith("---"):
+            end = content.find("\n---", 3)
+            if end >= 0:
+                new_content = content[:end] + "\n" + new_line + content[end:]
+            else:
+                return False
+        else:
+            return False
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(new_content, encoding="utf-8")
+    os.replace(str(tmp), str(path))
+    return True
+
+
+def _list_pending_approvals(user_id=None):
+    """Return list of (path, frontmatter) for live pending-approval files."""
+    out = []
+    if not PENDING_APPROVAL_DIR.exists():
+        return out
+    for p in sorted(PENDING_APPROVAL_DIR.glob("*.md")):
+        name = p.name
+        if name.endswith(".superseded.md"):
+            continue
+        # ignore subdirs (stale/, etc handled by glob non-recursion)
+        fm = _parse_frontmatter(p)
+        if user_id is not None and fm.get("user_id"):
+            # user_id may be "12345" or "local-xxx"
+            if str(fm["user_id"]) != str(user_id):
+                continue
+        out.append((p, fm))
+    return out
+
+
+def _resolve_intake_id(id_or_slug: str, user_id):
+    """
+    Resolve user-typed ID (full ID, slug-prefix, or numeric index) to a
+    pending-approval path. Returns (path, frontmatter, ambiguous_list).
+    On exact match: (path, fm, []).
+    On slug-prefix unique match: (path, fm, []).
+    On multiple matches: (None, None, list).
+    On no match: (None, None, []).
+    """
+    pendings = _list_pending_approvals(user_id=user_id)
+    if not pendings:
+        return None, None, []
+
+    # Numeric index — within current user's pending list
+    if id_or_slug.isdigit():
+        idx = int(id_or_slug) - 1
+        if 0 <= idx < len(pendings):
+            p, fm = pendings[idx]
+            return p, fm, []
+        return None, None, []
+
+    # Exact full intake ID
+    if INTAKE_ID_RE.match(id_or_slug):
+        for p, fm in pendings:
+            if fm.get("id") == id_or_slug:
+                return p, fm, []
+        return None, None, []
+
+    # Slug-prefix fuzzy match (e.g. "csv" matches "20260512-101010-csv-export")
+    matches = []
+    for p, fm in pendings:
+        full_id = fm.get("id", p.stem)
+        # The slug portion after YYYYMMDD-HHMMSS-
+        parts = full_id.split("-", 2)
+        slug = parts[2] if len(parts) >= 3 else full_id
+        if slug.startswith(id_or_slug.lower()):
+            matches.append((p, fm))
+    if len(matches) == 1:
+        return matches[0][0], matches[0][1], []
+    if len(matches) > 1:
+        return None, None, matches
+    return None, None, []
+
+
+def _intake_rate_limit_check(user_id: int) -> bool:
+    """Use the same 5/h limit as /btw, dedicated state key."""
+    return check_rate_limit(user_id)
+
+
+def _spawn_intake_council(proposal_path: str):
+    """Spawn intake-council.sh as a detached subprocess."""
+    if MOCK_INTAKE_COUNCIL_CMD:
+        env = {**os.environ, "INTAKE_PROPOSAL_PATH": proposal_path}
+        try:
+            subprocess.Popen(
+                ["bash", "-c", MOCK_INTAKE_COUNCIL_CMD],
+                env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except Exception as e:
+            print(f"WARNING: mock intake-council spawn failed: {e}", file=sys.stderr)
+        return
+    env = dict(os.environ)
+    # Pre-flight: unset ANTHROPIC_API_KEY (T08a)
+    env.pop("ANTHROPIC_API_KEY", None)
+    env["REPO_ROOT"] = str(REPO_ROOT)
+    env["CLAUDE_PROJECT_DIR"] = str(REPO_ROOT)
+    try:
+        subprocess.Popen(
+            ["nohup", "bash", str(INTAKE_COUNCIL_SH), proposal_path],
+            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except FileNotFoundError:
+        # No nohup — still detach via start_new_session
+        subprocess.Popen(
+            ["bash", str(INTAKE_COUNCIL_SH), proposal_path],
+            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception as e:
+        print(f"WARNING: intake-council spawn failed: {e}", file=sys.stderr)
+
+
+def _cost_today_usd_str() -> str:
+    """Get day-cost via lib/cost-cap.sh `cost_today_usd`. Mock-friendly."""
+    if MOCK_COST_TODAY_USD:
+        return MOCK_COST_TODAY_USD
+    if not COST_CAP_LIB.exists():
+        return "0.00"
+    try:
+        r = subprocess.run(
+            ["bash", "-c",
+             f'source "{COST_CAP_LIB}" && cost_today_usd'],
+            env={**os.environ, "REPO_ROOT": str(REPO_ROOT),
+                 "CLAUDE_PROJECT_DIR": str(REPO_ROOT)},
+            capture_output=True, text=True, timeout=5,
+        )
+        out = (r.stdout or "").strip()
+        return out or "0.00"
+    except Exception:
+        return "0.00"
+
+
+VERDICT_EMOJI = {
+    "propose": "✅",
+    "propose-with-changes": "✏️",
+    "reject": "❌",
+    "needs-full-council": "⚠️",
+}
+
+
+def _short_summary(path: pathlib.Path) -> str:
+    """Extract first non-empty line under '## Verdict-Summary' (1 sentence)."""
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    m = _re.search(r"^##\s*Verdict-Summary\s*$\n+([^\n#].+?)(?:\n\n|\n##|\Z)",
+                   content, _re.MULTILINE | _re.DOTALL)
+    if not m:
+        return ""
+    line = m.group(1).strip().split("\n")[0].strip()
+    if len(line) > 160:
+        line = line[:157] + "..."
+    return line
+
+
+def _render_verdict_mini(path: pathlib.Path, fm: dict) -> str:
+    """3-line mini-format (Plan §5 / T13b)."""
+    verdict = fm.get("verdict", "unknown")
+    emoji = VERDICT_EMOJI.get(verdict, "•")
+    full_id = fm.get("id", path.stem)
+    parts = full_id.split("-", 2)
+    slug = parts[2] if len(parts) >= 3 else full_id
+    summary = _short_summary(path) or f"verdict={verdict}"
+    token = fm.get("hmac_token", "")
+    day_cost = _cost_today_usd_str()
+    if verdict == "reject":
+        action = f"→ go-anyway {slug} {token} <reason>  ·  reject {slug}"
+    elif verdict == "needs-full-council":
+        action = f"→ /council {slug} (Self-Mod-Pfad)"
+    else:
+        action = f"→ go {slug} {token}  ·  reject {slug}  ·  change {slug} <text>"
+    return f"{emoji} {slug} — {verdict}\n└ {summary}\n└ {action}\n💰 ${day_cost} heute"
+
+
+# --- Quiet-hours-aware push (uses notify.sh info → respects DND) ---
+def _push_verdict(path: pathlib.Path, fm: dict):
+    body = _render_verdict_mini(path, fm)
+    title = f"Intake-Verdict: {fm.get('id', path.stem)}"
+    if not NOTIFY_SH.exists():
+        return
+    env = dict(os.environ)
+    env["REPO_ROOT"] = str(REPO_ROOT)
+    if MOCK_HOUR:
+        env["NOTIFY_FORCE_HOUR"] = MOCK_HOUR
+    subprocess.run(
+        [str(NOTIFY_SH), "info", "intake-verdict", title, body],
+        env=env, capture_output=True,
+    )
+    # Also send via Telegram directly for the creator
+    user_id = fm.get("user_id", "")
+    # If user_id is numeric (Telegram), push to that chat as well
+    if user_id and user_id.isdigit():
+        try:
+            send_message(int(user_id), body)
+        except Exception:
+            pass
+
+
+def watch_pending_verdicts():
+    """Scan pending-approval/*.md, push any without pushed_at, set marker."""
+    if not PENDING_APPROVAL_DIR.exists():
+        return 0
+    pushed = 0
+    for p in sorted(PENDING_APPROVAL_DIR.glob("*.md")):
+        if p.name.endswith(".superseded.md"):
+            continue
+        fm = _parse_frontmatter(p)
+        pushed_at = fm.get("pushed_at", "")
+        if pushed_at:
+            continue
+        _push_verdict(p, fm)
+        iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        _write_frontmatter_field(p, "pushed_at", iso)
+        audit_record("telegram-bot", "intake_verdict_pushed", fm.get("id", p.stem), "auto")
+        pushed += 1
+    return pushed
+
+
+# --- Anti-loop / reject-streak (Mitigation #20, T17) ---
+
+def _load_streak_state() -> dict:
+    """Load reject-streak.json; return empty dict on missing/corrupt."""
+    try:
+        if REJECT_STREAK_STATE_FILE.exists():
+            return json.loads(REJECT_STREAK_STATE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+
+def _save_streak_state(state: dict) -> None:
+    """Persist reject-streak.json atomically."""
+    try:
+        REJECT_STREAK_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = REJECT_STREAK_STATE_FILE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(REJECT_STREAK_STATE_FILE)
+    except Exception:
+        pass
+
+
+def _update_reject_streak(user_id: str) -> int:
+    """
+    Record a reject event for user_id in reject-streak.json.
+    Prunes history entries older than 48h (sliding window).
+    Returns updated count_48h.
+    """
+    state = _load_streak_state()
+    now = time.time()
+    cutoff = now - INTAKE_REJECT_STREAK_WINDOW
+    uid = str(user_id)
+
+    entry = state.get(uid, {"count_48h": 0, "first_in_window_ts": None, "history": []})
+    # Prune old entries
+    history = [ts for ts in entry.get("history", []) if ts > cutoff]
+    # Append current event
+    history.append(now)
+    first_ts = history[0] if history else now
+    entry = {
+        "count_48h": len(history),
+        "first_in_window_ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(first_ts)),
+        "history": history,
+    }
+    state[uid] = entry
+    _save_streak_state(state)
+    return entry["count_48h"]
+
+
+def _reset_reject_streak(user_id: str) -> None:
+    """Reset the reject-streak counter for user_id (called on 'go')."""
+    state = _load_streak_state()
+    uid = str(user_id)
+    if uid in state:
+        state[uid] = {"count_48h": 0, "first_in_window_ts": None, "history": []}
+        _save_streak_state(state)
+
+
+def _streak_debounce_check(user_id: str) -> bool:
+    """
+    Returns True if a streak-alarm notify may be sent (not debounced).
+    Debounce key stored in reject-streak.json as '<uid>_last_alarm_ts'.
+    """
+    state = _load_streak_state()
+    uid = str(user_id)
+    last_alarm = state.get(f"{uid}_last_alarm_ts", 0)
+    return (time.time() - last_alarm) >= INTAKE_REJECT_STREAK_DEBOUNCE
+
+
+def _record_streak_alarm(user_id: str) -> None:
+    """Record the timestamp of the last streak-alarm for debounce."""
+    state = _load_streak_state()
+    state[f"{str(user_id)}_last_alarm_ts"] = time.time()
+    _save_streak_state(state)
+
+
+def _check_reject_streak(user_id) -> int:
+    """
+    Backward-compatible helper: update persistent state and return count_48h.
+    Use _update_reject_streak() for the authoritative path in _handle_reject.
+    """
+    return _update_reject_streak(str(user_id))
+
+
+# --- Validator invocation (T11) ---
+def _run_intake_validator(approval_path: pathlib.Path) -> tuple:
+    """
+    Invoke intake-validator agent. Returns (verdict, reason).
+    verdict in {pass, needs-full-council, quarantine, error}.
+    """
+    if MOCK_INTAKE_VALIDATOR_CMD:
+        env = {**os.environ, "INTAKE_APPROVAL_PATH": str(approval_path),
+               "REPO_ROOT": str(REPO_ROOT)}
+        try:
+            r = subprocess.run(
+                ["bash", "-c", MOCK_INTAKE_VALIDATOR_CMD],
+                env=env, capture_output=True, text=True, timeout=10,
+            )
+            out = (r.stdout or "").strip().lower()
+            err = (r.stderr or "").strip()
+            for tag in ("pass", "needs-full-council", "quarantine"):
+                if tag in out:
+                    return tag, err or out
+            return ("error", out or err or "no verdict")
+        except Exception as e:
+            return ("error", str(e))
+    # Real run
+    env = dict(os.environ)
+    env.pop("ANTHROPIC_API_KEY", None)
+    env["REPO_ROOT"] = str(REPO_ROOT)
+    env["CLAUDE_PROJECT_DIR"] = str(REPO_ROOT)
+    cmd = [CLAUDE_BIN, "--print", "--agent", "intake-validator",
+           "-p", f"Validate file: {approval_path}"]
+    try:
+        r = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=90)
+        out = (r.stdout or "").strip().lower()
+        for tag in ("pass", "needs-full-council", "quarantine"):
+            if tag in out:
+                return tag, ""
+        return ("error", r.stderr.strip()[:200] if r.stderr else "no verdict")
+    except Exception as e:
+        return ("error", str(e))
+
+
+# ---------------------------------------------------------------------------
+# Intake command handlers
+# ---------------------------------------------------------------------------
+
+def _handle_yota_propose(chat_id, user_id, text):
+    text = (text or "").strip()
+    if not text:
+        return chat_id, "Usage: /yota propose <text>"
+
+    if not _intake_rate_limit_check(user_id):
+        audit_record("telegram-bot", "intake_rate_limited", "", f"user={user_id}")
+        return chat_id, f"Rate-Limit ({RATE_LIMIT_MAX}/h) — bitte später."
+
+    env = dict(os.environ)
+    env["YOTA_PROPOSE_TIER"] = "tier-2"
+    env["TELEGRAM_USER_ID"] = str(user_id)
+    env["REPO_ROOT"] = str(REPO_ROOT)
+    env["CLAUDE_PROJECT_DIR"] = str(REPO_ROOT)
+    env.pop("ANTHROPIC_API_KEY", None)
+
+    try:
+        r = subprocess.run(
+            ["bash", str(YOTA_PROPOSE_SH), text],
+            env=env, capture_output=True, text=True, timeout=15,
+        )
+    except subprocess.TimeoutExpired:
+        return chat_id, "❌ yota-propose Timeout"
+
+    rc = r.returncode
+    stdout = (r.stdout or "").strip()
+    stderr = (r.stderr or "").strip()
+
+    if rc == 2:
+        audit_record("telegram-bot", "intake_sentinel_rejected", "", f"user={user_id}")
+        return chat_id, "❌ Prompt-Injection erkannt, ignoriert."
+    if rc == 3:
+        return chat_id, f"⚠️ Identischer Vorschlag in den letzten Stunden — {stderr[:200]}"
+    if rc != 0 or not stdout:
+        return chat_id, f"❌ yota-propose Fehler: {stderr[:200] or 'unknown'}"
+
+    proposal_path = stdout.splitlines()[-1].strip()
+    _spawn_intake_council(proposal_path)
+    audit_record("telegram-bot", "intake_proposal_queued",
+                 pathlib.Path(proposal_path).stem, f"user={user_id}")
+
+    slug = pathlib.Path(proposal_path).stem
+    day_cost = _cost_today_usd_str()
+    msg = (
+        f"📥 Proposal queued: `{slug}`\n"
+        f"Council deliberiert (~90s, ~$0.50-2).\n"
+        f"💰 Cost heute: ${day_cost}"
+    )
+    return chat_id, ("HTML", md_to_html(msg))
+
+
+def _handle_yota_pending(chat_id, user_id):
+    pendings = _list_pending_approvals(user_id=user_id)
+    if not pendings:
+        return chat_id, "Nichts offen."
+    lines = [f"📋 Pending Approvals ({len(pendings)}):"]
+    for i, (p, fm) in enumerate(pendings, start=1):
+        full_id = fm.get("id", p.stem)
+        parts = full_id.split("-", 2)
+        slug = parts[2] if len(parts) >= 3 else full_id
+        verdict = fm.get("verdict", "?")
+        token = fm.get("hmac_token", "")[:8]
+        # age
+        try:
+            age_s = int(time.time() - p.stat().st_mtime)
+            if age_s < 3600:
+                age = f"{age_s // 60}min"
+            elif age_s < 86400:
+                age = f"{age_s // 3600}h"
+            else:
+                age = f"{age_s // 86400}d"
+        except OSError:
+            age = "?"
+        lines.append(f"{i}. `{slug}` ({verdict}, vor {age}) — go {slug} {token}")
+    lines.append("")
+    lines.append("Reply: `go <slug-or-id> <token>` / `reject <id>` / `change <id> <text>`")
+    return chat_id, ("HTML", md_to_html("\n".join(lines)))
+
+
+def _move_to_rejected(path: pathlib.Path, reason: str, fm: dict):
+    REJECTED_DIR.mkdir(parents=True, exist_ok=True)
+    iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        content = ""
+    # Build new file with rejected frontmatter prepended
+    new_fm = (
+        "---\n"
+        f"id: {fm.get('id', path.stem)}\n"
+        "state: rejected\n"
+        "rejected_by: user\n"
+        f"rejected_at: {iso}\n"
+        f"user_reason: {reason}\n"
+        f"council_verdict_was: {fm.get('verdict', 'unknown')}\n"
+        "---\n\n"
+        "## Original (snapshot)\n\n"
+    )
+    target = REJECTED_DIR / path.name
+    target.write_text(new_fm + content, encoding="utf-8")
+    try:
+        path.unlink()
+    except OSError:
+        pass
+    return target
+
+
+def _handle_go(chat_id, user_id, m, override=False):
+    """Shared handler for go and go-anyway."""
+    id_or_slug = m.group("id")
+    token = m.group("token") if "token" in m.groupdict() else None
+    reason = m.group("reason") if override else None
+
+    if id_or_slug and not (id_or_slug.isdigit() or _re.match(r"^[a-z0-9-]+$", id_or_slug)):
+        audit_record("telegram-bot", "intake_id_invalid", id_or_slug, f"user={user_id}")
+        return chat_id, "Ungültige ID-Form."
+
+    # Resolve WITHOUT user-id filter so we can detect wrong-user attempts
+    path, fm, ambiguous = _resolve_intake_id(id_or_slug, None)
+    if ambiguous:
+        lines = ["Mehrere offen, welches?"]
+        for i, (p, f) in enumerate(ambiguous, start=1):
+            lines.append(f"{i}. {f.get('id', p.stem)}")
+        return chat_id, "\n".join(lines)
+    if not path:
+        return chat_id, "Keine offene Approval mit dieser ID."
+
+    # Creator-binding (silent ignore on mismatch)
+    fm_user = fm.get("user_id", "")
+    if str(fm_user) != str(user_id) and not (fm_user.startswith("local-")):
+        audit_record("telegram-bot", "intake_go_wrong_user",
+                     fm.get("id", path.stem), f"actual={user_id} expected={fm_user}")
+        return chat_id, None  # silent ignore
+
+    # HMAC token check (if token provided)
+    if token:
+        # Verify via intake-tokens lib
+        try:
+            r = subprocess.run(
+                ["bash", "-c",
+                 f'source "{INTAKE_TOKENS_LIB}" && verify_hmac_token "{fm.get("id", "")}" "{token}"'],
+                env={**os.environ, "REPO_ROOT": str(REPO_ROOT)},
+                capture_output=True, timeout=5,
+            )
+            if r.returncode != 0:
+                # Cross-check frontmatter hmac_token directly (constant-time)
+                expected = fm.get("hmac_token", "")
+                if not hmac.compare_digest(expected, token):
+                    audit_record("telegram-bot", "intake_token_mismatch",
+                                 fm.get("id", path.stem), f"user={user_id}")
+                    return chat_id, "Token ungültig."
+        except Exception:
+            expected = fm.get("hmac_token", "")
+            if not hmac.compare_digest(expected, token):
+                audit_record("telegram-bot", "intake_token_mismatch",
+                             fm.get("id", path.stem), f"user={user_id}")
+                return chat_id, "Token ungültig."
+
+    # go-anyway: only for reject-verdicts, mandatory reason >10 chars
+    verdict_was = fm.get("verdict", "")
+    if override:
+        if verdict_was != "reject":
+            return chat_id, "go-anyway nur für reject-Verdicts."
+        if not reason or len(reason.strip()) <= 10:
+            return chat_id, "go-anyway braucht <reason> (>10 Zeichen Begründung)."
+        audit_record("telegram-bot", "intake_user_go_anyway",
+                     fm.get("id", path.stem), f"user={user_id} reason={reason[:80]}")
+
+    # Run validator
+    val_verdict, val_reason = _run_intake_validator(path)
+    audit_record("telegram-bot", "intake_user_go",
+                 fm.get("id", path.stem),
+                 f"user={user_id} validator={val_verdict} override={override}")
+
+    slug_parts = fm.get("id", path.stem).split("-", 2)
+    slug = slug_parts[2] if len(slug_parts) >= 3 else fm.get("id", path.stem)
+
+    if val_verdict == "pass":
+        # Validator already wrote overseer/inbox/01-stakeholder-<slug>.md.
+        # Move approval file out of live path (atomic).
+        try:
+            done_dir = PENDING_APPROVAL_DIR / "approved"
+            done_dir.mkdir(parents=True, exist_ok=True)
+            path.rename(done_dir / path.name)
+        except OSError:
+            pass
+        # Reset reject-streak counter on go (T17)
+        _reset_reject_streak(str(user_id))
+        return chat_id, f"✅ approved + queued als `{slug}`."
+    if val_verdict == "needs-full-council":
+        return chat_id, f"⚠️ Self-Mod-Pfad erkannt. Reply `/council {slug}` zum starten."
+    if val_verdict == "quarantine":
+        return chat_id, f"❌ Quarantined (Regel-Verstoß): {val_reason[:200]}"
+    return chat_id, f"❌ Validator-Fehler: {val_reason[:200]}"
+
+
+def _handle_reject(chat_id, user_id, m):
+    id_or_slug = m.group("id")
+    reason = (m.group("reason") or "").strip()
+    path, fm, ambiguous = _resolve_intake_id(id_or_slug, None)
+    if ambiguous:
+        return chat_id, f"Mehrere offen ({len(ambiguous)}) — nutze /yota pending für IDs."
+    if not path:
+        return chat_id, "Keine offene Approval mit dieser ID."
+    if str(fm.get("user_id", "")) != str(user_id) and not fm.get("user_id", "").startswith("local-"):
+        audit_record("telegram-bot", "intake_go_wrong_user",
+                     fm.get("id", path.stem), f"actual={user_id}")
+        return chat_id, None
+
+    _move_to_rejected(path, reason, fm)
+    audit_record("telegram-bot", "intake_user_reject",
+                 fm.get("id", path.stem), f"user={user_id} reason={reason[:80]}")
+
+    streak = _update_reject_streak(str(user_id))
+    if streak >= INTAKE_REJECT_STREAK_THRESHOLD:
+        if _streak_debounce_check(user_id):
+            audit_record("telegram-bot", "intake_rejected_streak_alarm",
+                         str(user_id),
+                         f"streak={streak} window=48h threshold={INTAKE_REJECT_STREAK_THRESHOLD}")
+            env = dict(os.environ)
+            env["REPO_ROOT"] = str(REPO_ROOT)
+            try:
+                subprocess.run(
+                    [str(NOTIFY_SH), "critical", "intake-streak",
+                     "Reject-Streak", f"{streak} rejects in 48h — Brainstorm-Modus oder Council off?"],
+                    env=env, capture_output=True,
+                )
+            except Exception:
+                pass
+            _record_streak_alarm(user_id)
+    return chat_id, f"❌ Rejected. Anti-Loop-Counter: {streak}/{INTAKE_REJECT_STREAK_THRESHOLD}."
+
+
+def _handle_change(chat_id, user_id, m):
+    id_or_slug = m.group("id")
+    new_text = (m.group("text") or "").strip()
+    path, fm, ambiguous = _resolve_intake_id(id_or_slug, None)
+    if ambiguous:
+        return chat_id, f"Mehrere offen ({len(ambiguous)})."
+    if not path:
+        return chat_id, "Keine offene Approval mit dieser ID."
+    if str(fm.get("user_id", "")) != str(user_id) and not fm.get("user_id", "").startswith("local-"):
+        return chat_id, None
+
+    # Round-counter enforcement
+    try:
+        cur_round = int(fm.get("round", "1"))
+    except ValueError:
+        cur_round = 1
+    if cur_round >= MAX_INTAKE_ROUNDS:
+        return chat_id, "Max 3 Runden erreicht. Schliess mit `go`/`reject`."
+
+    # Atomic-mv to superseded
+    full_id = fm.get("id", path.stem)
+    superseded = path.with_name(path.stem + ".superseded.md")
+    try:
+        path.rename(superseded)
+    except OSError as e:
+        return chat_id, f"❌ Konnte nicht versionieren: {e}"
+
+    # Write new pending-proposal with round+1
+    PENDING_PROPOSAL_DIR.mkdir(parents=True, exist_ok=True)
+    new_proposal = PENDING_PROPOSAL_DIR / f"{full_id}.md"
+    iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    try:
+        orig_content = superseded.read_text(encoding="utf-8")
+    except OSError:
+        orig_content = ""
+    body = (
+        "---\n"
+        f"id: {full_id}\n"
+        f"source: {fm.get('source', 'tier-2')}\n"
+        f"trust_tier: {fm.get('trust_tier', '2')}\n"
+        f"user_id: {user_id}\n"
+        f"created_at: {iso}\n"
+        "state: pending-proposal\n"
+        f"round: {cur_round + 1}\n"
+        f"content_hash: {fm.get('content_hash', '')}\n"
+        "---\n\n"
+        f"<<<UNTRUSTED_PROPOSAL tier={fm.get('trust_tier', '2')}>>>\n"
+        f"{orig_content}\n\n"
+        f"## User-Change (Round {cur_round + 1})\n"
+        f"{new_text}\n"
+        "<<<END_UNTRUSTED_PROPOSAL>>>\n"
+    )
+    new_proposal.write_text(body, encoding="utf-8")
+
+    _spawn_intake_council(str(new_proposal))
+    audit_record("telegram-bot", "intake_user_change",
+                 full_id, f"user={user_id} round={cur_round + 1}")
+    audit_record("telegram-bot", "intake_round_advanced",
+                 full_id, f"round={cur_round + 1}")
+
+    return chat_id, f"🔄 Round {cur_round + 1} läuft mit deiner Korrektur. Verdict in ~90s."
+
+
+def _try_intake_reply(chat_id, user_id, stripped):
+    """Try parsing the user reply as a council intake command.
+    Returns (chat_id, reply) tuple if matched, else None."""
+    m = GO_ANYWAY_RE.match(stripped)
+    if m:
+        return _handle_go(chat_id, user_id, m, override=True)
+    m = GO_RE.match(stripped)
+    if m:
+        return _handle_go(chat_id, user_id, m, override=False)
+    m = REJECT_RE.match(stripped)
+    if m:
+        return _handle_reject(chat_id, user_id, m)
+    m = CHANGE_RE.match(stripped)
+    if m:
+        return _handle_change(chat_id, user_id, m)
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Update processing
 # ---------------------------------------------------------------------------
 
@@ -650,17 +1431,38 @@ def process_update(update, allowed_ids):
     if cmd == "/help":
         msg = (
             "<b>Yota-Bot commands</b>\n"
+            "/yota propose <i>idee</i> — Council-gated intake (default, ~$0.50-2).\n"
+            "/yota pending — offene Council-Verdicts auflisten.\n"
             "/yota — Snapshot in 5 Zeilen (free, sofort).\n"
             "/yota <i>frage</i> — Yota-LLM-Antwort (~$0.05).\n"
+            "/btw <i>text</i> — Power-User Fast-Lane (skip Council).\n"
+            "go &lt;id&gt; &lt;token&gt; / reject &lt;id&gt; / change &lt;id&gt; &lt;text&gt; / go-anyway &lt;id&gt; &lt;token&gt; &lt;reason&gt;\n"
             "/status — Alias zu /yota.\n"
-            "/btw <i>text</i> — Stakeholder-Item ins Triage-Inbox.\n"
             "/help — diese Liste."
         )
         return chat_id, ("HTML", msg)
 
-    # /yota or /status
-    if cmd in ("/yota", "/status"):
+    # /yota propose <text>  — Council-gated intake (T09)
+    # Also aliases: /yotapropose, /propose
+    if cmd in ("/yota", "/yotapropose", "/propose"):
+        # /yota propose <text>
+        if cmd == "/yota" and rest_after_cmd.lower().startswith("propose"):
+            sub = rest_after_cmd[len("propose"):].strip()
+            return _handle_yota_propose(chat_id, user_id, sub)
+        if cmd == "/yota" and rest_after_cmd.lower().strip() == "pending":
+            return _handle_yota_pending(chat_id, user_id)
+        if cmd in ("/yotapropose", "/propose"):
+            return _handle_yota_propose(chat_id, user_id, rest_after_cmd)
+        # Plain /yota → snapshot/LLM (existing behaviour)
         return _handle_yota(chat_id, user_id, rest_after_cmd)
+
+    if cmd == "/status":
+        return _handle_yota(chat_id, user_id, rest_after_cmd)
+
+    # Intake reply parsing (go/reject/change/go-anyway) — T11/T12
+    intake_reply = _try_intake_reply(chat_id, user_id, stripped)
+    if intake_reply is not None:
+        return intake_reply
 
     if cmd != "/btw":
         # Other commands
@@ -730,7 +1532,16 @@ def process_update(update, allowed_ids):
         f"user={user_id} chars={len(actual_text)}",
     )
 
-    return chat_id, f"queued: {slug}"
+    # T23b — show onboarding hint exactly once per user after intake roll-out
+    reply_text = f"queued: {slug}"
+    if _should_show_intake_onboarding(user_id):
+        reply_text += INTAKE_ONBOARDING_HINT
+        _mark_intake_onboarding_shown(user_id)
+        audit_record("telegram-bot", "intake_onboarding_shown", slug,
+                     f"user={user_id}")
+        return chat_id, ("HTML", reply_text)
+
+    return chat_id, reply_text
 
 # ---------------------------------------------------------------------------
 # Main loop
@@ -756,12 +1567,19 @@ def run_once(allowed_ids, last_update_id=0):
     return last_update_id
 
 def run_loop(allowed_ids):
-    """Long-poll loop — runs until interrupted."""
+    """Long-poll loop — runs until interrupted. Watcher every 5 iterations."""
     last_update_id = 0
+    iteration = 0
     print(f"telegram-bot: starting long-poll loop (allowed users: {sorted(allowed_ids)})", flush=True)
     while True:
         try:
             last_update_id = run_once(allowed_ids, last_update_id)
+            iteration += 1
+            if iteration % 5 == 0:
+                try:
+                    watch_pending_verdicts()
+                except Exception as e:
+                    print(f"WARNING: verdict-watcher: {e}", file=sys.stderr)
         except KeyboardInterrupt:
             print("\ntelegram-bot: stopped", flush=True)
             break
@@ -782,6 +1600,12 @@ def main():
 
     if "--status" in args:
         cmd_status()
+        return
+
+    if "--watch-once" in args:
+        # Run only the verdict-watcher pass (no getUpdates). Useful for tests.
+        pushed = watch_pending_verdicts()
+        print(json.dumps({"pushed": pushed}))
         return
 
     validate_config()
