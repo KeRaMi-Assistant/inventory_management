@@ -598,6 +598,446 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Intake-Council Tests (T09..T13)
+# ---------------------------------------------------------------------------
+
+# Setup additional intake dirs + copy yota-propose.sh + slug.sh + intake-tokens.sh
+mkdir -p "$TMP_ROOT/.claude/stakeholder/pending-proposal"
+mkdir -p "$TMP_ROOT/.claude/stakeholder/pending-approval"
+mkdir -p "$TMP_ROOT/.claude/stakeholder/rejected"
+mkdir -p "$TMP_ROOT/.claude/overseer/inbox"
+
+cp "$REAL_REPO_ROOT/.claude/scripts/yota-propose.sh" "$TMP_ROOT/.claude/scripts/yota-propose.sh" 2>/dev/null || true
+cp "$REAL_REPO_ROOT/.claude/scripts/lib/slug.sh" "$TMP_ROOT/.claude/scripts/lib/slug.sh" 2>/dev/null || true
+cp "$REAL_REPO_ROOT/.claude/scripts/lib/intake-tokens.sh" "$TMP_ROOT/.claude/scripts/lib/intake-tokens.sh" 2>/dev/null || true
+cp "$REAL_REPO_ROOT/.claude/scripts/lib/api-key-preflight.sh" "$TMP_ROOT/.claude/scripts/lib/api-key-preflight.sh" 2>/dev/null || true
+cp "$REAL_REPO_ROOT/.claude/scripts/lib/cost-cap.sh" "$TMP_ROOT/.claude/scripts/lib/cost-cap.sh" 2>/dev/null || true
+
+# Build a mock pending-approval file factory
+_make_approval() {
+  local id="$1" verdict="${2:-propose}" user="${3:-12345}" token="${4:-0123456789abcdef}"
+  cat > "$TMP_ROOT/.claude/stakeholder/pending-approval/${id}.md" <<EOF
+---
+id: ${id}
+source: tier-2
+trust_tier: 2
+user_id: ${user}
+created_at: 2026-05-12T10:00:00Z
+state: pending-approval
+verdict: ${verdict}
+round: 1
+council_cost_usd: 0.40
+hmac_token: ${token}
+pushed_at: ""
+requires_human_dispute: false
+touches: []
+created_from: intake-council
+---
+
+## Verdict-Summary
+
+Council mag die Idee. ROI passt.
+
+## Vorgeschlagenes Backlog-Item
+
+slug: ${id##*-*-}
+EOF
+}
+
+# --- Test I1: /yota propose spawns council ---
+printf '\nTest I1: /yota propose spawns intake-council\n'
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-proposal/"*.md 2>/dev/null
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-ratelimit.json"
+# Marker file: council spawn writes here
+SPAWN_MARKER="$TMP_ROOT/council-spawned.txt"
+rm -f "$SPAWN_MARKER"
+
+printf '[{"update_id": 200, "message": {"message_id": 200, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "/yota propose neue csv-export funktion"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" \
+CLAUDE_PROJECT_DIR="$TMP_ROOT" \
+MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" \
+TELEGRAM_ALLOWED_USER_IDS="12345" \
+MOCK_INTAKE_COUNCIL_CMD="echo \"\$INTAKE_PROPOSAL_PATH\" > $SPAWN_MARKER" \
+MOCK_COST_TODAY_USD="1.23" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+# Allow detached subprocess to flush
+sleep 1
+
+PROPOSAL_COUNT="$(ls "$TMP_ROOT/.claude/stakeholder/pending-proposal/" 2>/dev/null | wc -l | tr -d ' ')"
+if [ "$PROPOSAL_COUNT" -ge 1 ]; then
+  _pass "pending-proposal file created"
+else
+  _fail "no pending-proposal file created"
+fi
+
+if [ -f "$SPAWN_MARKER" ] && grep -q 'pending-proposal' "$SPAWN_MARKER" 2>/dev/null; then
+  _pass "intake-council spawn invoked"
+else
+  _fail "intake-council spawn NOT invoked"
+fi
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('Proposal queued' in json.loads(l).get('text','') for l in lines)
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "ACK 'Proposal queued' sent"
+else
+  _fail "no ACK sent"
+fi
+
+# --- Test I2: /yota pending lists files ---
+printf '\nTest I2: /yota pending lists 3 approvals\n'
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md
+rm -f "$MOCK_DIR/sent.jsonl"
+_make_approval "20260512-100000-csv-export" propose 12345
+_make_approval "20260512-100100-dark-footer" reject 12345
+_make_approval "20260512-100200-inbox-filter" propose-with-changes 12345
+
+printf '[{"update_id": 201, "message": {"message_id": 201, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "/yota pending"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+text = lines[0] and json.loads(lines[0]).get('text','')
+ok = 'csv-export' in text and 'dark-footer' in text and 'inbox-filter' in text
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "/yota pending listed all 3 slugs"
+else
+  _fail "/yota pending did not list 3 slugs"
+fi
+
+# --- Test I3: go <id> <token> valid → validator runs ---
+printf '\nTest I3: go <id> valid token → validator invoked\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md
+_make_approval "20260512-100000-csv-export" propose 12345 0123456789abcdef
+VALIDATOR_MARKER="$TMP_ROOT/validator-ran.txt"
+rm -f "$VALIDATOR_MARKER"
+
+printf '[{"update_id": 202, "message": {"message_id": 202, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "go 20260512-100000-csv-export 0123456789abcdef"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+MOCK_INTAKE_VALIDATOR_CMD="echo \"\$INTAKE_APPROVAL_PATH\" > $VALIDATOR_MARKER; echo pass" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if [ -f "$VALIDATOR_MARKER" ]; then
+  _pass "validator invoked"
+else
+  _fail "validator NOT invoked"
+fi
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('approved' in json.loads(l).get('text','') for l in lines)
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "approval ack sent"
+else
+  _fail "no approval ack"
+fi
+
+# --- Test I4: go from wrong user → silent ignore ---
+printf '\nTest I4: go from wrong user → silent ignore\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md
+_make_approval "20260512-100000-csv-export" propose 12345 0123456789abcdef
+# Allow user 99999 as well (allowlist), but creator is 12345
+printf '[{"update_id": 203, "message": {"message_id": 203, "from": {"id": 99999, "first_name": "Other"}, "chat": {"id": 99}, "text": "go 20260512-100000-csv-export 0123456789abcdef"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345,99999" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+SENT_COUNT="$([ -f "$MOCK_DIR/sent.jsonl" ] && wc -l < "$MOCK_DIR/sent.jsonl" | tr -d ' ' || echo 0)"
+if [ "$SENT_COUNT" -eq 0 ]; then
+  _pass "silent ignore (no reply) for wrong-user go"
+else
+  _fail "expected silent ignore, got $SENT_COUNT replies"
+fi
+
+# --- Test I5: go with wrong token → "Token ungültig" ---
+printf '\nTest I5: go with wrong token → rejected\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+printf '[{"update_id": 204, "message": {"message_id": 204, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "go 20260512-100000-csv-export ffffffffffffffff"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('Token ungültig' in json.loads(l).get('text','') for l in lines)
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "token mismatch reply sent"
+else
+  _fail "no token-mismatch reply"
+fi
+
+# --- Test I6: reject moves file to rejected/ ---
+printf '\nTest I6: reject moves file → rejected/\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md
+rm -f "$TMP_ROOT/.claude/stakeholder/rejected/"*.md
+_make_approval "20260512-100000-csv-export" propose 12345
+
+printf '[{"update_id": 205, "message": {"message_id": 205, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "reject 20260512-100000-csv-export no fit"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if [ -f "$TMP_ROOT/.claude/stakeholder/rejected/20260512-100000-csv-export.md" ] \
+   && [ ! -f "$TMP_ROOT/.claude/stakeholder/pending-approval/20260512-100000-csv-export.md" ]; then
+  _pass "file moved to rejected/"
+else
+  _fail "rejected/ move failed"
+fi
+if grep -q 'user_reason: no fit' "$TMP_ROOT/.claude/stakeholder/rejected/20260512-100000-csv-export.md" 2>/dev/null; then
+  _pass "user_reason persisted"
+else
+  _fail "user_reason missing"
+fi
+
+# --- Test I7: change creates superseded + new pending-proposal round=2 ---
+printf '\nTest I7: change → superseded + round=2 proposal\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-proposal/"*.md
+_make_approval "20260512-100000-csv-export" propose 12345
+
+printf '[{"update_id": 206, "message": {"message_id": 206, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "change 20260512-100000-csv-export use sqlite instead"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+MOCK_INTAKE_COUNCIL_CMD="true" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if [ -f "$TMP_ROOT/.claude/stakeholder/pending-approval/20260512-100000-csv-export.superseded.md" ]; then
+  _pass "superseded file created"
+else
+  _fail "superseded file missing"
+fi
+if [ -f "$TMP_ROOT/.claude/stakeholder/pending-proposal/20260512-100000-csv-export.md" ] \
+   && grep -q '^round: 2' "$TMP_ROOT/.claude/stakeholder/pending-proposal/20260512-100000-csv-export.md"; then
+  _pass "new pending-proposal with round=2"
+else
+  _fail "round-2 proposal missing"
+fi
+
+# --- Test I8: MAX_INTAKE_ROUNDS — 4th change blocked ---
+printf '\nTest I8: round=3 → change blocked\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md
+cat > "$TMP_ROOT/.claude/stakeholder/pending-approval/20260512-100000-csv-export.md" <<'EOF'
+---
+id: 20260512-100000-csv-export
+source: tier-2
+trust_tier: 2
+user_id: 12345
+created_at: 2026-05-12T10:00:00Z
+state: pending-approval
+verdict: propose
+round: 3
+council_cost_usd: 0.40
+hmac_token: 0123456789abcdef
+pushed_at: ""
+requires_human_dispute: false
+touches: []
+created_from: intake-council
+---
+EOF
+
+printf '[{"update_id": 207, "message": {"message_id": 207, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "change 20260512-100000-csv-export blocked text"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('Max 3 Runden' in json.loads(l).get('text','') for l in lines)
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "round-limit blocked 4th change"
+else
+  _fail "round-limit NOT enforced"
+fi
+
+# --- Test I9: Verdict-Push-Watcher pushes + sets pushed_at ---
+printf '\nTest I9: watcher pushes verdict + sets pushed_at\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md
+_make_approval "20260512-100000-csv-export" propose 12345
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+MOCK_COST_TODAY_USD="2.50" \
+  python3 "$BOT_PY" --watch-once 2>/dev/null
+
+if grep -q 'pushed_at: 20' "$TMP_ROOT/.claude/stakeholder/pending-approval/20260512-100000-csv-export.md"; then
+  _pass "pushed_at set after push"
+else
+  _fail "pushed_at NOT set"
+fi
+if [ -f "$TMP_ROOT/.claude/overseer/notifications/sent.jsonl" ] && \
+   grep -q 'intake-verdict' "$TMP_ROOT/.claude/overseer/notifications/sent.jsonl"; then
+  _pass "notify.sh invoked with intake-verdict topic"
+else
+  _fail "notify.sh not invoked"
+fi
+
+# --- Test I10: Watcher-Idempotency ---
+printf '\nTest I10: watcher idempotency (no double-push)\n'
+NOTIF_COUNT_BEFORE="$(wc -l < "$TMP_ROOT/.claude/overseer/notifications/sent.jsonl" 2>/dev/null | tr -d ' ' || echo 0)"
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" \
+  python3 "$BOT_PY" --watch-once 2>/dev/null
+NOTIF_COUNT_AFTER="$(wc -l < "$TMP_ROOT/.claude/overseer/notifications/sent.jsonl" 2>/dev/null | tr -d ' ' || echo 0)"
+if [ "$NOTIF_COUNT_BEFORE" = "$NOTIF_COUNT_AFTER" ]; then
+  _pass "second tick: no new notification"
+else
+  _fail "second tick pushed again (before=$NOTIF_COUNT_BEFORE after=$NOTIF_COUNT_AFTER)"
+fi
+
+# --- Test I11: Mini-format contains emoji + slug + 1-sentence ---
+printf '\nTest I11: mini-format contents\n'
+NOTIF_FILE="$TMP_ROOT/.claude/overseer/notifications/sent.jsonl"
+# Stub writes raw body (newlines escape JSON, so grep the file directly)
+if grep -q '✅' "$NOTIF_FILE" 2>/dev/null \
+   && grep -q 'csv-export' "$NOTIF_FILE" 2>/dev/null; then
+  _pass "mini-format contains emoji + slug"
+else
+  _fail "mini-format missing emoji/slug"
+fi
+
+# --- Test I12: go-anyway requires reason for reject-verdict ---
+printf '\nTest I12: go-anyway requires reason\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md
+_make_approval "20260512-100000-csv-export" reject 12345 0123456789abcdef
+
+# Short reason (<= 10 chars) → blocked
+printf '[{"update_id": 208, "message": {"message_id": 208, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "go-anyway 20260512-100000-csv-export 0123456789abcdef short"}}]' > "$MOCK_DIR/updates.json"
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('Begründung' in json.loads(l).get('text','') for l in lines)
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "short reason rejected"
+else
+  _fail "short reason not enforced"
+fi
+
+# --- Test I13: ID-Disambiguation slug-prefix unique → auto-target ---
+printf '\nTest I13: slug-prefix disambig (csv → csv-export)\n'
+rm -f "$MOCK_DIR/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md
+_make_approval "20260512-100000-csv-export" propose 12345 0123456789abcdef
+_make_approval "20260512-100100-dark-footer" propose 12345 fedcba9876543210
+_make_approval "20260512-100200-inbox-filter" propose 12345 1111222233334444
+
+printf '[{"update_id": 209, "message": {"message_id": 209, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "go csv 0123456789abcdef"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+MOCK_INTAKE_VALIDATOR_CMD="echo pass" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('approved' in json.loads(l).get('text','') and 'csv-export' in json.loads(l).get('text','') for l in lines)
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "slug-prefix 'csv' matched 'csv-export'"
+else
+  _fail "slug-prefix match failed: $(cat $MOCK_DIR/sent.jsonl)"
+fi
+
+# --- Test I14: /yota pending empty → "Nichts offen" ---
+printf '\nTest I14: /yota pending empty\n'
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md 2>/dev/null
+rm -f "$MOCK_DIR/sent.jsonl"
+printf '[{"update_id": 210, "message": {"message_id": 210, "from": {"id": 12345, "first_name": "Test"}, "chat": {"id": 99}, "text": "/yota pending"}}]' > "$MOCK_DIR/updates.json"
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+  python3 "$BOT_PY" --once 2>/dev/null
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+ok = any('Nichts offen' in json.loads(l).get('text','') for l in lines)
+import sys; sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+  _pass "empty pending → 'Nichts offen'"
+else
+  _fail "empty pending did not reply correctly"
+fi
+
+# --- Test I15: /yota propose rate-limit (6th blocked) ---
+printf '\nTest I15: /yota propose rate-limit\n'
+rm -f "$TMP_ROOT/.claude/overseer/state/telegram-ratelimit.json"
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-proposal/"*.md
+rm -f "$MOCK_DIR/sent.jsonl"
+
+for I in 300 301 302 303 304 305; do
+  printf "[{\"update_id\": $I, \"message\": {\"message_id\": $I, \"from\": {\"id\": 12345, \"first_name\": \"Test\"}, \"chat\": {\"id\": 99}, \"text\": \"/yota propose idee $I\"}}]" > "$MOCK_DIR/updates.json"
+  REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
+  TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
+  MOCK_INTAKE_COUNCIL_CMD="true" \
+    python3 "$BOT_PY" --once 2>/dev/null
+done
+
+if python3 -c "
+import json
+lines = open('$MOCK_DIR/sent.jsonl').readlines()
+hits = sum(1 for l in lines if 'Rate-Limit' in json.loads(l).get('text','') or 'rate-limited' in json.loads(l).get('text','').lower())
+import sys; sys.exit(0 if hits >= 1 else 1)
+" 2>/dev/null; then
+  _pass "6th /yota propose blocked by rate-limit"
+else
+  _fail "rate-limit not enforced"
+fi
+
+# --- Test I16: Quiet-Hours notify.sh forwarding (NOTIFY_FORCE_HOUR=23) ---
+printf '\nTest I16: quiet-hours forwarding\n'
+rm -f "$TMP_ROOT/.claude/overseer/notifications/sent.jsonl"
+rm -f "$TMP_ROOT/.claude/stakeholder/pending-approval/"*.md
+_make_approval "20260512-100000-csv-export" propose 12345
+
+REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" \
+MOCK_HOUR="23" \
+  python3 "$BOT_PY" --watch-once 2>/dev/null
+
+if [ -f "$TMP_ROOT/.claude/overseer/notifications/sent.jsonl" ] && \
+   grep -q '"severity":"info"' "$TMP_ROOT/.claude/overseer/notifications/sent.jsonl"; then
+  _pass "quiet-hours info-push routed through notify.sh"
+else
+  _fail "quiet-hours push not routed"
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 printf '\n=== Results: %d passed, %d failed ===\n' "$PASS" "$FAIL"

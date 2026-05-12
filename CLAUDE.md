@@ -476,6 +476,37 @@ System pausiert UNBEDINGT bei (User-Aktion erforderlich):
 9. Anthropic Admin-API-Spend-Limit
 10. Branch-Protection-Setup (einmalig)
 
+### Intake-Council (User-Gated Backlog-Aufnahme)
+
+Neuer Default-Pfad für User-Ideen: `/yota propose <idee>` (Telegram oder CLI).
+
+**Flow:**
+1. User: `/yota propose "Dunkler Footer auf Inventory"` (Telegram) oder `bash .claude/scripts/yota-propose.sh "..."` (CLI).
+2. 3-Agent-Mini-Council (Proponent + Intake-Skeptic + Intake-Pragmatist) berät ROI, Doppelung, Mobile-First-Fit, Maintenance-Last.
+3. Council schreibt Verdict-File in `.claude/stakeholder/pending-approval/<id>.md`.
+4. Telegram-Bot pushed Mini-Verdict (3 Zeilen) an User mit HMAC-Token.
+5. User antwortet:
+   - `go <id> <token>` → intake-validator → `.claude/overseer/inbox/01-stakeholder-<slug>.md` → Worker pickt.
+   - `reject <id> [<reason>]` → `.claude/stakeholder/rejected/<id>.md`.
+   - `change <id> <text>` → Round 2 mit Korrektur (max 3 Runden).
+   - `go-anyway <id> <token> <reason>` → Override für reject-Verdicts (Begründung Pflicht).
+
+**Cost-Profil:** $0.50-$0.80/Council-Run (Sonnet für Proponent+Skeptic, Opus für Pragmatist-Tie-Break). Lifetime-Cap $2/Proposal (deckt 3 Runden), Tagescap $10. Reject-Streak: 5 in 48h → kritische Notify.
+
+**Sicherheit:**
+- Creator-Binding: nur der originale User darf `go`/`reject`/`change` (Telegram `from.id` == Frontmatter `user_id`).
+- HMAC-Token-Echo Pflicht bei `go`.
+- Self-Mod-Pfade in `touches:` (z.B. `.claude/scripts/`) triggern automatisch `verdict: needs-full-council` → User muss `/council` separat aufrufen.
+- intake-validator (eigener Agent, NICHT in Self-Mod-Blocklist) als Schema-Wall.
+
+**Default vs. Power-User:**
+- `/yota propose` ist neuer Default (Council vor Worker).
+- `/btw` bleibt als Power-User-Fast-Lane (direkt zum Worker, kein Gate).
+
+**Pre-Flight:** `ANTHROPIC_API_KEY` env-var darf NICHT gesetzt sein (sonst kippt Max-Plan auf API-Pay-per-Token, Anthropic Bug #39903). `intake-council.sh` failt loud.
+
+**Verify:** `bash .claude/scripts/verify/intake-council.sh` (21 Tests), `bash .claude/scripts/verify/telegram-bridge.sh` (45 Tests inkl. /yota propose).
+
 ### Setup
 
 ```bash
@@ -537,6 +568,12 @@ Installation nach Setup:
 ```bash
 bash .claude/scripts/session-start.sh
 bash .claude/scripts/install-telegram-bot.sh --load-now
+```
+
+```bash
+# Intake-Council aktivieren (kein extra Install — läuft automatisch
+# wenn telegram-bot.py geladen ist und intake-council.sh ausführbar ist).
+ls -la .claude/scripts/intake-council.sh .claude/scripts/yota-propose.sh
 ```
 
 ## Referenzen

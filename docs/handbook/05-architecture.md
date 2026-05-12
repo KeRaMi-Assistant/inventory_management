@@ -368,6 +368,9 @@ oder direkt per Slash-Command:
 | `browser-tester` | Playwright-MCP-Smokes gegen Web-App | `/test-ui`, UI-Tasks |
 | `l10n-checker` | ARB-Symmetrie + Hardcoded-Strings | `/check-l10n` |
 | `doc-updater` | Hält `docs/handbook/` synchron mit Code-Änderungen | `/update-docs`, optional in `/ship` |
+| `intake-skeptic` | Intake-Council: ROI-/Duplikat-/Maintenance-kritische Gegenstimme | `intake-council.sh` |
+| `intake-pragmatist` | Intake-Council: Tie-Break zwischen Proponent + Skeptic (Opus) | `intake-council.sh` |
+| `intake-validator` | Schema-Wall: validiert `pending-approval`-Files vor Backlog-Aufnahme | `intake-council.sh` |
 
 Modell-Routing siehe [CLAUDE.md](../../CLAUDE.md): Plan/Architektur/RLS auf
 Opus, Routine-Coding auf Sonnet.
@@ -383,6 +386,20 @@ Mensch-im-Loop-Stops (u. a. `supabase db push`, Cost-Cap, PANIC nach 3 Failures)
 Vollständige Architektur, Setup-Befehle und alle 10 Human-in-the-Loop-Stops:
 → [CLAUDE.md § Autonomous Council Swarm](../../CLAUDE.md)
 → Plan: [`plans/2026-05-09_autonomous_council_swarm.md`](../../plans/2026-05-09_autonomous_council_swarm.md)
+
+## Intake-Council (Post-Phase-4-Add-On)
+
+User-Ideen durchlaufen seit Mai 2026 einen Council-Gate bevor sie ins Backlog wandern:
+
+**Pfad:** Telegram/CLI `/yota propose` → 3-Agent-Mini-Council (Proponent + Intake-Skeptic + Intake-Pragmatist) → Verdict-Push an User → User-Approval → intake-validator → Backlog.
+
+**Begründung:** Pre-Launch-ROI-Filter. Verhindert dass Worker-Capacity für nice-to-have-Features draufgeht.
+
+**Details:** `CLAUDE.md` § Autonomous Council Swarm → Intake-Council. Plan: `plans/2026-05-12_yota-council-gated-intake.md`.
+
+**Re-Use vs. Neu:**
+- Re-Use: `disput-proponent` (mit Intake-Mode-Header), `cost-cap.sh`, `audit.sh`, `notify.sh`, Sandwich-Marker-Pattern.
+- Neu: `intake-skeptic.md`, `intake-pragmatist.md`, `intake-validator.md` (alle nicht in Self-Mod-Blocklist).
 
 ## Anti-Patterns (NICHT machen)
 

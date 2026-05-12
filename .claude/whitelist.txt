@@ -29,6 +29,10 @@ CLAUDE.md
 # --- Autonomy-Pfade (P0-1) ---
 .claude/stakeholder
 .claude/stakeholder/digest
+.claude/stakeholder/pending-proposal
+.claude/stakeholder/pending-approval
+.claude/stakeholder/rejected
+.claude/intake-council
 .claude/disputes
 .claude/audit
 .claude/overseer

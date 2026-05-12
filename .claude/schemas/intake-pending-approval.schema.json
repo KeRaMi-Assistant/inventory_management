@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "intake-pending-approval",
+  "title": "Intake Pending-Approval Frontmatter",
+  "description": "Schema for .claude/stakeholder/pending-approval/<id>.md YAML frontmatter",
+  "type": "object",
+  "required": [
+    "id", "source", "trust_tier", "user_id",
+    "created_at", "council_finished_at", "state", "verdict",
+    "round", "council_cost_usd", "hmac_token",
+    "pushed_at", "requires_human_dispute", "touches", "created_from"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}-[0-9]{6}-[a-z0-9-]{1,40}$"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["tier-1", "tier-2"]
+    },
+    "trust_tier": {
+      "type": "integer",
+      "enum": [1, 2]
+    },
+    "user_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO-8601 UTC timestamp"
+    },
+    "council_finished_at": {
+      "type": "string",
+      "description": "ISO-8601 UTC timestamp when council completed"
+    },
+    "state": {
+      "type": "string",
+      "const": "pending-approval"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["propose", "propose-with-changes", "reject", "needs-full-council"]
+    },
+    "round": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "council_cost_usd": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Cost of the council run in USD"
+    },
+    "hmac_token": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 hex HMAC token, rotated per proposal"
+    },
+    "pushed_at": {
+      "type": ["string", "null"],
+      "description": "Bot-watcher marker timestamp, null or empty if not yet pushed"
+    },
+    "requires_human_dispute": {
+      "type": "boolean",
+      "description": "True when proposal touches Self-Mod paths"
+    },
+    "touches": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Paths proposed by the council to be modified"
+    },
+    "created_from": {
+      "type": "string",
+      "const": "intake-council",
+      "description": "Must always be intake-council (not stakeholder-validator)"
+    }
+  }
+}

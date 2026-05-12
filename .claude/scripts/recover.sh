@@ -464,6 +464,116 @@ _check_dead_worktrees() {
 }
 
 # ---------------------------------------------------------------------------
+# Check 5: Hung intake-council dirs
+#
+# A council run is considered hung when:
+#   .claude/intake-council/<id>/ exists (council working dir)
+#   AND no corresponding .claude/stakeholder/pending-approval/<id>*.md exists
+#   AND the directory's mtime is older than INTAKE_COUNCIL_HUNG_TIMEOUT_MIN (default 10)
+#
+# Recovery:
+#   1. Audit intake_council_hung_recovered
+#   2. Kill orphan intake-council.sh subprocess (best-effort via pgrep)
+#   3. Write pending-approval/<id>.md with verdict: reject, reason: hung-aborted-recovery
+#   4. Remove intake-council/<id>/ dir contents
+#   5. Notify user
+# ---------------------------------------------------------------------------
+_check_hung_intake_councils() {
+  local timeout_min="${INTAKE_COUNCIL_HUNG_TIMEOUT_MIN:-10}"
+  local timeout_secs=$(( timeout_min * 60 ))
+  _log "Check 5: hung intake-council dirs (timeout=${timeout_min}min)"
+
+  local council_root="${REPO_ROOT}/.claude/intake-council"
+  local approval_dir="${REPO_ROOT}/.claude/stakeholder/pending-approval"
+
+  if [ ! -d "$council_root" ]; then
+    _log "  no intake-council dir — skip"
+    return 0
+  fi
+
+  local now_epoch
+  now_epoch="$(date +%s)"
+
+  for council_dir in "$council_root"/*/; do
+    [ -d "$council_dir" ] || continue
+
+    local council_id
+    council_id="$(basename "$council_dir")"
+
+    # mtime of the council working dir
+    local dir_mtime
+    dir_mtime="$(python3 -c "import os,sys; print(int(os.path.getmtime(sys.argv[1])))" \
+      "$council_dir" 2>/dev/null || echo "0")"
+    local age=$(( now_epoch - dir_mtime ))
+
+    if [ "$age" -lt "$timeout_secs" ]; then
+      # Fresh — not hung yet
+      continue
+    fi
+
+    # Check if a corresponding pending-approval already exists (council finished OK)
+    local approval_exists=0
+    if compgen -G "${approval_dir}/${council_id}*.md" >/dev/null 2>&1; then
+      approval_exists=1
+    elif compgen -G "${approval_dir}/*${council_id}*.md" >/dev/null 2>&1; then
+      approval_exists=1
+    fi
+
+    if [ "$approval_exists" -eq 1 ]; then
+      _log "  council_id=${council_id} age=${age}s → approval exists, skip"
+      continue
+    fi
+
+    _log "  HUNG COUNCIL: id=${council_id} age=${age}s > ${timeout_secs}s — recovering"
+
+    # Best-effort: kill orphan subprocess
+    local orphan_pids
+    orphan_pids="$(pgrep -f "intake-council.sh.*${council_id}" 2>/dev/null || true)"
+    if [ -n "$orphan_pids" ]; then
+      _log "  killing orphan PIDs: ${orphan_pids}"
+      printf '%s\n' "$orphan_pids" | xargs kill -9 2>/dev/null || true
+    fi
+
+    # Write reject verdict to pending-approval
+    mkdir -p "$approval_dir"
+    local iso
+    iso="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    local approval_file="${approval_dir}/${council_id}.md"
+    {
+      printf -- '---\n'
+      printf 'id: %s\n' "$council_id"
+      printf 'state: pending-approval\n'
+      printf 'verdict: reject\n'
+      printf 'reason: hung-aborted-recovery\n'
+      printf 'recovered_at: %s\n' "$iso"
+      printf 'recovered_by: recover.sh\n'
+      printf -- '---\n\n'
+      printf '# Auto-Recovery: Hung Council Aborted\n\n'
+      printf 'Council run for `%s` timed out after %d seconds without producing an approval.\n' \
+        "$council_id" "$age"
+      printf 'Recovery triggered at: %s\n' "$iso"
+    } > "$approval_file"
+
+    # Remove council dir contents (leave dir itself for audit breadcrumb)
+    find "$council_dir" -mindepth 1 -not -name '.gitkeep' -delete 2>/dev/null || true
+
+    _audit "intake_council_hung_recovered" "$council_id" \
+      "age=${age}s timeout=${timeout_secs}s orphan_pids=${orphan_pids:-none}"
+
+    # Extract a human-readable slug for notification
+    local slug_part
+    slug_part="$(printf '%s' "$council_id" | python3 -c \
+      'import sys; p=sys.stdin.read().strip().split("-",2); print(p[2] if len(p)>=3 else p[-1])' \
+      2>/dev/null || printf '%s' "$council_id")"
+
+    _notify info "Recovery: hung council aborted" \
+      "Council for '${slug_part}' hung (${age}s), aborted with reject verdict. Re-propose if needed."
+
+    _log "  INFO: recovery done — council_id=${council_id} approval=${approval_file}"
+  done
+}
+
+# ---------------------------------------------------------------------------
 # Check 4: Stash cleanup (overseer-related stashes > 5)
 # ---------------------------------------------------------------------------
 _check_stash_cleanup() {
@@ -502,6 +612,7 @@ run_once() {
   _check_hanging_workers
   _check_dead_worktrees
   _check_stash_cleanup
+  _check_hung_intake_councils
 
   _log "=== recovery iteration done ==="
 }
