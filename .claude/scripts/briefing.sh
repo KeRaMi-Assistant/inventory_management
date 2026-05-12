@@ -57,12 +57,19 @@ _truncate() {
 # Cost-Summary (today, yesterday, week)
 # ---------------------------------------------------------------------------
 _cost_summary() {
-  python3 - "$(_cost_cap_ledger_dir)/cost-ledger.jsonl" <<'PYEOF'
+  python3 - "$(_cost_cap_ledger_dir)/cost-ledger.jsonl" "${BRIEFING_MOCK_DATE:-}" <<'PYEOF'
 import sys, json, os
 from datetime import datetime, timezone, timedelta
 
 ledger_file = sys.argv[1]
-now = datetime.now(timezone.utc)
+mock_date = sys.argv[2] if len(sys.argv) > 2 else ''
+if mock_date:
+    try:
+        now = datetime.strptime(mock_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    except ValueError:
+        now = datetime.now(timezone.utc)
+else:
+    now = datetime.now(timezone.utc)
 today_str = now.strftime('%Y-%m-%d')
 yesterday_str = (now - timedelta(days=1)).strftime('%Y-%m-%d')
 cutoff_str = (now - timedelta(days=6)).strftime('%Y-%m-%d')

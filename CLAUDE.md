@@ -160,6 +160,15 @@ am Laptop sitzt. Setup einmalig:
 - Vorausgesetzt Branch-Protection ist aktiv (einmalig via
   `bash .claude/scripts/setup-branch-protection.sh` setzen).
 
+### Phase-4-Migration: Headless-Loop auf Autonomous Swarm umgestellt
+
+**Phase-4-Migration (2026-05-10):** Der alte `com.kerami.inventory.headless`
+LaunchAgent ist deaktiviert und entfernt. Der Overseer (`com.inventory.overseer`)
+übernimmt den Inbox-Loop auf `.claude/backlog/inbox/` im Autonomous-Swarm-Betrieb.
+`uninstall-headless.sh` bleibt als Fallback im Repo erhalten.
+
+Verify: `bash .claude/scripts/verify/launchagent-state.sh`
+
 ## Browser-Smoke-Tests (Playwright MCP)
 
 Claude kann die Flutter-Web-App in Chrome starten, einloggen und durchklicken,
@@ -371,6 +380,97 @@ selbst (keine maschinelle Übersetzung). Bei strukturellen Problemen
 (z. B. „Sektion X ist komplett veraltet") meldet er das im
 Schluss-Block — die Überarbeitung übernimmt ein `planner` →
 `flutter-coder`-Workflow.
+
+## Autonomous Council Swarm
+
+Vollständig autonomer Multi-Agent-Loop. Plan: [`plans/2026-05-09_autonomous_council_swarm.md`](plans/2026-05-09_autonomous_council_swarm.md). Phase 0-3 implementiert (PRs #52, #53, #54).
+
+### Architektur
+
+```
+Stakeholder
+    │ /btw "..."             ntfy-Reply (Action-Buttons)
+    ▼                                    ▲
+btw.sh (tier-1)        Telegram-Bot (tier-2, HMAC)
+    │                            │
+    ▼                            ▼
+.claude/stakeholder/inbox/<slug>.md
+    │
+    ▼  (60s tick)
+stakeholder-triage (Opus, sandwich-markers)
+    │
+    ▼
+stakeholder-validator (Sonnet, schema-regex)
+    │  pass        │ quarantine
+    ▼              ▼
+.claude/backlog/inbox/01-stakeholder-<slug>.md   .claude/stakeholder/quarantine/
+
+Analyzer-Daemon (stündlich) ──► .claude/backlog/inbox/02-analyzer-<modul>-<slug>.md
+  ├─ scan-tech-debt        ├─ scan-mobile-overflow
+  ├─ scan-l10n-drift       ├─ scan-test-coverage
+  ├─ scan-failure-lessons  ├─ scan-doc-drift
+                           ├─ scan-help-drift
+                           ├─ scan-security-drift   (needs_dispute: true)
+                           ├─ scan-dead-code
+                           └─ scan-dependency-rot   (needs_dispute: true)
+
+Overseer (KeepAlive-Daemon)
+  ├─ pick_next_item (atomic-move + per-file-soft-lock)
+  ├─ needs_dispute? → disput.sh (3 Runden, Pragmatist Tie-Break)
+  ├─ worktree_create + worker.sh (claude --print, budget_usd req)
+  └─ release_item done/failed/blocked-pre-ship/[merge-conflict]
+
+Watchdogs (parallel):
+  ├─ watchdog.sh (5min: Disk, Worktrees, Cost-Cap, Cost-Tampering)
+  ├─ recover.sh (5min: tote PIDs, hängende Worker, 3-Cycle-Limit → failed/)
+  ├─ cleanup.sh (täglich 03:00: branches/stashes/run-logs/disputes/audit)
+  ├─ briefing.sh (täglich 09:00 → .claude/audit/briefings/)
+  ├─ weekly-digest.sh (Sonntag 09:00 → .claude/stakeholder/digest/)
+  ├─ audit-backup.sh (Sonntag 04:00 → separates Off-Site-Repo)
+  └─ cloud-heartbeat-ping.sh (60min → ntfy.sh)
+       └─ GitHub-Action checkt alle 4h → Push wenn aus
+```
+
+### Mensch-im-Loop-Stops
+
+System pausiert UNBEDINGT bei (User-Aktion erforderlich):
+
+1. `supabase db push` gegen Prod
+2. `gh pr merge --admin` (außer Stakeholder-Override via `MERGE_ADMIN_OVERRIDE=1`)
+3. `supabase secrets set`
+4. OAuth-Token-Expiry (gh, claude, supabase)
+5. Cost-Cap überschritten (Hard-Stop, manueller Reset via `resume.sh`)
+6. PANIC nach 3 consecutive failures (resume.sh nur via valider user-session)
+7. Self-Mod-Hit (Worker hat Blocklist-Pfad gewollt)
+8. Disput unresolved nach 3 Rounds → Stakeholder-Notify
+9. Anthropic Admin-API-Spend-Limit
+10. Branch-Protection-Setup (einmalig)
+
+### Setup
+
+```bash
+bash .claude/scripts/install-self-mod-guard.sh
+bash .claude/scripts/install-integrity-check.sh
+bash .claude/scripts/install-overseer.sh --load-now
+bash .claude/scripts/install-analyzer.sh --load-now
+bash .claude/scripts/install-recovery.sh --load-now
+bash .claude/scripts/install-cleanup.sh --load-now
+bash .claude/scripts/install-briefing.sh --load-now
+bash .claude/scripts/install-weekly-digest.sh --load-now
+bash .claude/scripts/setup-cloud-heartbeat.sh   # Token, dann gh secret set ...
+bash .claude/scripts/install-audit-backup.sh --load-now  # nach AUDIT_BACKUP_REMOTE in .env.headless
+```
+
+User-Session-Marker bei manueller Arbeit:
+```bash
+bash .claude/scripts/session-start.sh   # vor Beginn
+# ... arbeite
+bash .claude/scripts/session-end.sh     # nach Abschluss
+```
+
+### Verify-Suite
+
+`bash .claude/scripts/verify/*.sh` — 43+ Tests grün als CI-Smoke.
 
 ## Referenzen
 
