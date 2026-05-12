@@ -1418,12 +1418,47 @@ def _write_overseer_inbox_item(slug: str, approval_path: pathlib.Path,
     OVERSEER_INBOX_DIR.mkdir(parents=True, exist_ok=True)
     iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     target = OVERSEER_INBOX_DIR / f"01-stakeholder-{slug}.md"
-    stamp = (
-        f"<!-- intake-validator: pass | checked: {iso} | "
-        f"checks: destructive-cmds,path-patterns,injection,frontmatter,self-mod-scan -->\n"
-        f"<!-- source-approval: {approval_path.name} | id: {fm.get('id','')} -->\n\n"
+
+    # Normalise the extracted Backlog-Item block into a proper Overseer-compatible
+    # file: classic `---\n<frontmatter>\n---\n<body>` structure (no leading
+    # ```yaml fences, no leading HTML comments before the frontmatter — picker.sh
+    # only matches `^---` at the very top).
+    body = item_body.strip()
+
+    # Strip ```yaml/```yml opening fence. Pragmatist sometimes writes them
+    # without a matching closing fence — handle both (closed + unclosed).
+    open_m = _re.match(r"^```\s*ya?ml\s*\n", body, _re.IGNORECASE)
+    if open_m:
+        body = body[open_m.end():]
+        # Trim trailing ``` if present.
+        close_m = _re.search(r"\n```\s*$", body)
+        if close_m:
+            body = body[:close_m.start()]
+        body = body.strip()
+
+    # Split into frontmatter (between --- ... ---) and the rest.
+    fm_m = _re.match(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", body, _re.DOTALL)
+    if fm_m:
+        frontmatter = fm_m.group(1).rstrip()
+        rest = fm_m.group(2).strip()
+    else:
+        # No --- delimiters: treat the whole block as frontmatter (best-effort).
+        frontmatter = body
+        rest = ""
+
+    # Validator stamp + provenance go AFTER the frontmatter so picker.sh's
+    # `^---` match still succeeds.
+    stamp_block = (
+        "<!-- intake-validator: pass | checked: " + iso + " | "
+        "checks: destructive-cmds,path-patterns,injection,frontmatter-5a,"
+        "frontmatter-5b,self-mod-scan -->\n"
+        f"<!-- source-approval: {approval_path.name} | id: {fm.get('id','')} -->\n"
     )
-    target.write_text(stamp + item_body + "\n", encoding="utf-8")
+
+    out = "---\n" + frontmatter + "\n---\n\n" + stamp_block
+    if rest:
+        out += "\n" + rest + "\n"
+    target.write_text(out, encoding="utf-8")
     return target
 
 
