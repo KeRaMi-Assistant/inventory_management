@@ -372,6 +372,18 @@ oder direkt per Slash-Command:
 Modell-Routing siehe [CLAUDE.md](../../CLAUDE.md): Plan/Architektur/RLS auf
 Opus, Routine-Coding auf Sonnet.
 
+## Autonomous Council Swarm
+
+Vollständig autonomer Multi-Agent-Loop für unbeaufsichtigte Backlog-Abarbeitung. Implementiert in Phase 0-3 (PRs #52, #53, #54).
+
+Kernkomponenten: **Stakeholder-Triage** (ntfy / Telegram → Backlog-Inbox), **Overseer-Daemon** (pick_next_item → Worktree → Worker), **Analyzer-Daemon** (stündliche Code-Scans → automatische Backlog-Items), **Watchdog + Recovery** (Disk, Cost-Cap, tote PIDs), **Briefing + Digest** (tägliche/wöchentliche Zusammenfassungen).
+
+Mensch-im-Loop-Stops (u. a. `supabase db push`, Cost-Cap, PANIC nach 3 Failures) sind hart in den Skripten verankert.
+
+Vollständige Architektur, Setup-Befehle und alle 10 Human-in-the-Loop-Stops:
+→ [CLAUDE.md § Autonomous Council Swarm](../../CLAUDE.md)
+→ Plan: [`plans/2026-05-09_autonomous_council_swarm.md`](../../plans/2026-05-09_autonomous_council_swarm.md)
+
 ## Anti-Patterns (NICHT machen)
 
 - Riverpod / GetX neben Provider mischen.

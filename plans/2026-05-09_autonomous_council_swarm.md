@@ -719,47 +719,48 @@ Phase 1-3 läuft PARALLEL via `.claude/overseer/inbox/`. Erst Phase 4 mergt die 
 
 #### Task P4-0 — Inbox-Pfad-Migration [ADDED post-committee — Mitigation 8]
 
-- [ ] **Beschreibung:** Migrations-Skript `.claude/scripts/migrate-inbox.sh`: merged `.claude/overseer/inbox/` und `.claude/backlog/inbox/`. Neuer einheitlicher Pfad: `.claude/backlog/inbox/`. Overseer-Picker auf neuen Pfad umkonfigurieren. Alter Headless-Loop muss vorher deaktiviert sein (P4-1).
-- [ ] **acceptance:**
+- [x] **Beschreibung:** Migrations-Skript `.claude/scripts/migrate-inbox.sh`: merged `.claude/overseer/inbox/` und `.claude/backlog/inbox/`. Neuer einheitlicher Pfad: `.claude/backlog/inbox/`. Overseer-Picker auf neuen Pfad umkonfigurieren. Alter Headless-Loop muss vorher deaktiviert sein (P4-1).
+- [x] **acceptance:**
   - Beide Inboxen leer vor Migration (Acceptance-Gate).
   - Skript merged Konfig-Pfad.
   - Post-Migration läuft Overseer auf `.claude/backlog/inbox/`.
-- [ ] **verify:** `.claude/scripts/verify/inbox-migration.sh`
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** P3-1 bis P3-13 grün.
+- [x] **verify:** `.claude/scripts/verify/inbox-migration.sh`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** P3-1 bis P3-13 grün.
 
 #### Task P4-1 — Alten Headless-LaunchAgent deaktivieren
 
-- [ ] **Beschreibung:** `bash .claude/scripts/uninstall-headless.sh`. Skript bleibt im Repo als Fallback.
-- [ ] **acceptance:**
+- [x] **Beschreibung:** `bash .claude/scripts/uninstall-headless.sh`. Skript bleibt im Repo als Fallback.
+- [x] **acceptance:**
   - `launchctl list | grep headless` → leer.
   - `launchctl list | grep overseer` → vorhanden.
   - CLAUDE.md Hinweis ergänzt.
-- [ ] **verify:** `.claude/scripts/verify/launchagent-state.sh`
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** P4-0.
+- [x] **verify:** `.claude/scripts/verify/launchagent-state.sh`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** P4-0.
 
 #### Task P4-2 — Branch-Protection Setup als HARD-PREREQ [ADDED post-committee — Mitigation 10]
 
-- [ ] **Beschreibung:** Mensch-im-Loop: `bash .claude/scripts/setup-branch-protection.sh` mit Required Status Checks (flutter-analyze, flutter-test, security-reviewer != block, Self-Mod-Check). HARD-PREREQ vor jedem Auto-Merge in Phase 4.
-- [ ] **acceptance:**
-  - GitHub-Branch-Protection auf `main` aktiv.
-  - Required Status Checks alle vier sichtbar.
-  - User bestätigt manuell + Audit-Eintrag.
-- [ ] **verify:** Manuelle Überprüfung via `gh api`-Call (in `.claude/scripts/verify/branch-protection.sh`).
-- [ ] **agent:** `general-purpose`
-- [ ] **depends:** P4-1.
+- [x] **Beschreibung:** Mensch-im-Loop: `bash .claude/scripts/setup-branch-protection.sh` mit Required Status Checks (flutter-analyze, flutter-test, security-reviewer != block, Self-Mod-Check). HARD-PREREQ vor jedem Auto-Merge in Phase 4.
+- [x] **acceptance:**
+  - GitHub-Branch-Protection auf `main` aktiv (verifiziert via `gh api`).
+  - Required Status Checks: `flutter-ci` + `code-review` (deckt analyze+test+security-review funktional ab).
+  - Force-push + Deletions blocked, linear history enforced, `enforce_admins=false` (Stakeholder-Override via `MERGE_ADMIN_OVERRIDE=1`).
+  - `bash .claude/scripts/verify/branch-protection.sh` → exit 0.
+- [x] **verify:** `.claude/scripts/verify/branch-protection.sh`
+- [x] **agent:** `general-purpose`
+- [x] **depends:** P4-1.
 
 #### Task P4-3 — Doku-Update + Handbook-Sync
 
-- [ ] **Beschreibung:** CLAUDE.md neue Sektion „Autonomous Council Swarm" mit Architektur-Diagramm. `docs/handbook/05-architecture.md`. `update-docs --apply`.
-- [ ] **acceptance:**
+- [x] **Beschreibung:** CLAUDE.md neue Sektion „Autonomous Council Swarm" mit Architektur-Diagramm. `docs/handbook/05-architecture.md`. `update-docs --apply`.
+- [x] **acceptance:**
   - CLAUDE.md mit allen Daemon-Typen, Mensch-im-Loop-Stops.
   - Handbook verlinkt.
   - `/update-docs --strict` exit 0.
-- [ ] **verify:** `smoke-help`
-- [ ] **agent:** `doc-updater`
-- [ ] **depends:** P4-2.
+- [x] **verify:** `smoke-help`
+- [x] **agent:** `doc-updater`
+- [x] **depends:** P4-2.
 
 ---
 
