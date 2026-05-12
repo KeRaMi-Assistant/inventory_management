@@ -729,7 +729,7 @@ printf '[{"update_id": 202, "message": {"message_id": 202, "from": {"id": 12345,
 
 REPO_ROOT="$TMP_ROOT" CLAUDE_PROJECT_DIR="$TMP_ROOT" MOCK_TELEGRAM_API_DIR="$MOCK_DIR" \
 TELEGRAM_BOT_TOKEN="mock-token" TELEGRAM_ALLOWED_USER_IDS="12345" \
-MOCK_INTAKE_VALIDATOR_CMD="echo \"\$INTAKE_APPROVAL_PATH\" > $VALIDATOR_MARKER; echo pass" \
+MOCK_INTAKE_VALIDATOR_CMD="echo \"\$INTAKE_APPROVAL_PATH\" > $VALIDATOR_MARKER; echo 'pass — no violations'" \
   python3 "$BOT_PY" --once 2>/dev/null
 
 if [ -f "$VALIDATOR_MARKER" ]; then
@@ -747,6 +747,19 @@ import sys; sys.exit(0 if ok else 1)
   _pass "approval ack sent"
 else
   _fail "no approval ack"
+fi
+
+# Verify overseer/inbox item was written by Bash-side extraction
+INBOX_FILE="$TMP_ROOT/.claude/overseer/inbox/01-stakeholder-csv-export.md"
+if [ -f "$INBOX_FILE" ]; then
+  _pass "overseer/inbox item written via Bash-side extraction"
+  if grep -q '^slug:' "$INBOX_FILE" 2>/dev/null; then
+    _pass "inbox item contains backlog-item YAML"
+  else
+    _fail "inbox item missing backlog-item content"
+  fi
+else
+  _fail "overseer/inbox file NOT written: $INBOX_FILE"
 fi
 
 # --- Test I4: go from wrong user → silent ignore ---

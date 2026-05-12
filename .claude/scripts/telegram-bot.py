@@ -1073,10 +1073,84 @@ def _check_reject_streak(user_id) -> int:
 
 
 # --- Validator invocation (T11) ---
+def _parse_validator_output(out: str) -> tuple:
+    """Parse first line for verdict + reason. Returns (verdict, reason)."""
+    text = (out or "").strip()
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        low = line.lower()
+        for tag in ("pass", "needs-full-council", "quarantine"):
+            # Match tag at start of line (with optional em-dash/colon/space reason)
+            if low == tag or low.startswith(tag + " ") or low.startswith(tag + "—") or low.startswith(tag + " —") or low.startswith(tag + ":"):
+                reason = line[len(tag):].lstrip(" —:-").strip()
+                return tag, reason
+    # Fallback: substring scan (legacy mock-friendly)
+    low = text.lower()
+    for tag in ("pass", "needs-full-council", "quarantine"):
+        if tag in low:
+            return tag, ""
+    return ("error", text[:200] or "no verdict")
+
+
+def _extract_backlog_item_yaml(approval_path: pathlib.Path) -> str:
+    """Extract the body of the '## Vorgeschlagenes Backlog-Item' section.
+
+    Returns the content between that heading and the next '## ' heading,
+    stripped. Returns "" if empty / not found.
+    """
+    try:
+        content = approval_path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    lines = content.splitlines()
+    in_section = False
+    out_lines = []
+    for line in lines:
+        if line.startswith("## Vorgeschlagenes Backlog-Item"):
+            in_section = True
+            continue
+        if in_section and line.startswith("## "):
+            break
+        if in_section:
+            out_lines.append(line)
+    return "\n".join(out_lines).strip()
+
+
+def _write_overseer_inbox_item(slug: str, approval_path: pathlib.Path,
+                                fm: dict) -> pathlib.Path:
+    """Extract backlog-item YAML from approval file and write the validated
+    item to .claude/overseer/inbox/01-stakeholder-<slug>.md.
+
+    Returns the written path. If the backlog-item section is empty, raises
+    ValueError so the caller can surface a clean error.
+    """
+    item_body = _extract_backlog_item_yaml(approval_path)
+    if not item_body:
+        raise ValueError("backlog-item section empty")
+    OVERSEER_INBOX_DIR.mkdir(parents=True, exist_ok=True)
+    iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    target = OVERSEER_INBOX_DIR / f"01-stakeholder-{slug}.md"
+    stamp = (
+        f"<!-- intake-validator: pass | checked: {iso} | "
+        f"checks: destructive-cmds,path-patterns,injection,frontmatter,self-mod-scan -->\n"
+        f"<!-- source-approval: {approval_path.name} | id: {fm.get('id','')} -->\n\n"
+    )
+    target.write_text(stamp + item_body + "\n", encoding="utf-8")
+    return target
+
+
 def _run_intake_validator(approval_path: pathlib.Path) -> tuple:
     """
     Invoke intake-validator agent. Returns (verdict, reason).
     verdict in {pass, needs-full-council, quarantine, error}.
+
+    Notes:
+      - Mock path stays substring-compatible (existing tests rely on `echo pass`).
+      - Real path reads file content, hands an explicit prompt to claude, and
+        parses the first verdict-line. The Bash-side (caller) handles the
+        deterministic file-move into overseer/inbox or quarantine.
     """
     if MOCK_INTAKE_VALIDATOR_CMD:
         env = {**os.environ, "INTAKE_APPROVAL_PATH": str(approval_path),
@@ -1086,12 +1160,12 @@ def _run_intake_validator(approval_path: pathlib.Path) -> tuple:
                 ["bash", "-c", MOCK_INTAKE_VALIDATOR_CMD],
                 env=env, capture_output=True, text=True, timeout=10,
             )
-            out = (r.stdout or "").strip().lower()
+            out = (r.stdout or "")
             err = (r.stderr or "").strip()
-            for tag in ("pass", "needs-full-council", "quarantine"):
-                if tag in out:
-                    return tag, err or out
-            return ("error", out or err or "no verdict")
+            verdict, reason = _parse_validator_output(out)
+            if verdict == "error":
+                return ("error", err or out.strip() or "no verdict")
+            return verdict, (reason or err or "")
         except Exception as e:
             return ("error", str(e))
     # Real run
@@ -1099,15 +1173,27 @@ def _run_intake_validator(approval_path: pathlib.Path) -> tuple:
     env.pop("ANTHROPIC_API_KEY", None)
     env["REPO_ROOT"] = str(REPO_ROOT)
     env["CLAUDE_PROJECT_DIR"] = str(REPO_ROOT)
+    prompt = (
+        "Validate this intake-council output. Read the file at:\n\n"
+        f"{approval_path}\n\n"
+        "Then check it against your schema rules (5 Kategorien). "
+        "Output EXACTLY one of the following on the FIRST line — nothing else "
+        "before it, no markdown, no preamble:\n"
+        "  pass — <reason>\n"
+        "  needs-full-council — <reason>\n"
+        "  quarantine — <reason>\n\n"
+        "Do NOT write any other files. The caller will handle the file-move "
+        "deterministically based on your verdict."
+    )
     cmd = [CLAUDE_BIN, "--print", "--agent", "intake-validator",
-           "-p", f"Validate file: {approval_path}"]
+           "--add-dir", str(REPO_ROOT),
+           "-p", prompt]
     try:
         r = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=90)
-        out = (r.stdout or "").strip().lower()
-        for tag in ("pass", "needs-full-council", "quarantine"):
-            if tag in out:
-                return tag, ""
-        return ("error", r.stderr.strip()[:200] if r.stderr else "no verdict")
+        verdict, reason = _parse_validator_output(r.stdout or "")
+        if verdict == "error":
+            return ("error", (r.stderr or "").strip()[:200] or "no verdict")
+        return verdict, reason
     except Exception as e:
         return ("error", str(e))
 
@@ -1294,7 +1380,20 @@ def _handle_go(chat_id, user_id, m, override=False):
     slug = slug_parts[2] if len(slug_parts) >= 3 else fm.get("id", path.stem)
 
     if val_verdict == "pass":
-        # Validator already wrote overseer/inbox/01-stakeholder-<slug>.md.
+        # Bash-side does the deterministic move: extract Backlog-Item-YAML
+        # from the pending-approval file and write it to overseer/inbox.
+        try:
+            written = _write_overseer_inbox_item(slug, path, fm)
+        except ValueError:
+            audit_record("telegram-bot", "intake_inbox_empty_item",
+                         fm.get("id", path.stem), f"user={user_id}")
+            return chat_id, (
+                f"❌ Backlog-Item leer in Approval-File. "
+                f"`bash .claude/scripts/repair-pending-approval.sh {fm.get('id', path.stem)}` "
+                f"+ erneut `go` versuchen."
+            )
+        except OSError as e:
+            return chat_id, f"❌ Konnte overseer/inbox nicht schreiben: {e}"
         # Move approval file out of live path (atomic).
         try:
             done_dir = PENDING_APPROVAL_DIR / "approved"
@@ -1302,12 +1401,35 @@ def _handle_go(chat_id, user_id, m, override=False):
             path.rename(done_dir / path.name)
         except OSError:
             pass
+        audit_record("telegram-bot", "intake_inbox_written",
+                     fm.get("id", path.stem),
+                     f"user={user_id} target={written.name}")
         # Reset reject-streak counter on go (T17)
         _reset_reject_streak(str(user_id))
         return chat_id, f"✅ approved + queued als `{slug}`."
     if val_verdict == "needs-full-council":
+        # Update pending-approval frontmatter verdict so subsequent steps know.
+        try:
+            content = path.read_text(encoding="utf-8")
+            content = _re.sub(r'^verdict:\s*.*$',
+                              'verdict: needs-full-council',
+                              content, count=1, flags=_re.MULTILINE)
+            if 'requires_human_dispute:' in content:
+                content = _re.sub(r'^requires_human_dispute:\s*.*$',
+                                  'requires_human_dispute: true',
+                                  content, count=1, flags=_re.MULTILINE)
+            path.write_text(content, encoding="utf-8")
+        except OSError:
+            pass
         return chat_id, f"⚠️ Self-Mod-Pfad erkannt. Reply `/council {slug}` zum starten."
     if val_verdict == "quarantine":
+        # Move approval file to quarantine directory.
+        try:
+            quarantine_dir = REPO_ROOT / ".claude" / "stakeholder" / "quarantine"
+            quarantine_dir.mkdir(parents=True, exist_ok=True)
+            path.rename(quarantine_dir / path.name)
+        except OSError:
+            pass
         return chat_id, f"❌ Quarantined (Regel-Verstoß): {val_reason[:200]}"
     return chat_id, f"❌ Validator-Fehler: {val_reason[:200]}"
 

@@ -184,18 +184,24 @@ ID1="20260512-100001-t1"
 PROP1="$SANDBOX_ROOT/.claude/stakeholder/pending-proposal/${ID1}.md"
 _make_proposal "$ID1" "$PROP1"
 
-MOCK_PRO_VOTE=accept MOCK_SKP_VOTE=accept _run_council "$PROP1" >/dev/null 2>&1 || true
+MOCK_PRO_VOTE=accept MOCK_SKP_VOTE=accept MOCK_PRAG_VOTE=propose _run_council "$PROP1" >/dev/null 2>&1 || true
 
 APPR1="$SANDBOX_ROOT/.claude/stakeholder/pending-approval/${ID1}.md"
 if [ -f "$APPR1" ]; then
   verdict=$(grep '^verdict:' "$APPR1" | awk '{print $2}')
   round=$(grep '^round:' "$APPR1" | awk '{print $2}')
   [ "$verdict" = "propose" ] && _pass "T1 verdict=propose" || _fail "T1 verdict=$verdict (expected propose)"
-  [ "$round" = "1" ] && _pass "T1 round=1 (no Round-2)" || _fail "T1 round=$round"
-  if [ ! -f "$SANDBOX_ROOT/.claude/intake-council/${ID1}/round-2-pragmatist.md" ]; then
-    _pass "T1 no Round-2 pragmatist file"
+  [ "$round" = "1" ] && _pass "T1 round=1 (consensus-accept retained)" || _fail "T1 round=$round"
+  if [ -f "$SANDBOX_ROOT/.claude/intake-council/${ID1}/round-2-pragmatist.md" ]; then
+    _pass "T1 Pragmatist file exists (always-on synth)"
   else
-    _fail "T1 unexpected Round-2 file exists"
+    _fail "T1 expected Pragmatist file (Option A: always-on)"
+  fi
+  # Backlog-Item-Block muss jetzt befüllt sein
+  if awk '/^## Vorgeschlagenes Backlog-Item/{f=1; next} /^## /{f=0} f && NF{found=1} END{exit found?0:1}' "$APPR1"; then
+    _pass "T1 Backlog-Item-Block befüllt"
+  else
+    _fail "T1 Backlog-Item-Block leer"
   fi
 else
   _fail "T1 approval file missing"
@@ -209,7 +215,7 @@ _reset_ledger
 ID2="20260512-100002-t2"
 PROP2="$SANDBOX_ROOT/.claude/stakeholder/pending-proposal/${ID2}.md"
 _make_proposal "$ID2" "$PROP2"
-MOCK_PRO_VOTE=reject MOCK_SKP_VOTE=reject _run_council "$PROP2" >/dev/null 2>&1 || true
+MOCK_PRO_VOTE=reject MOCK_SKP_VOTE=reject MOCK_PRAG_VOTE=reject _run_council "$PROP2" >/dev/null 2>&1 || true
 APPR2="$SANDBOX_ROOT/.claude/stakeholder/pending-approval/${ID2}.md"
 if [ -f "$APPR2" ]; then
   verdict=$(grep '^verdict:' "$APPR2" | awk '{print $2}')
