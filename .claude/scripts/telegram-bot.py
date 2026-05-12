@@ -65,6 +65,9 @@ YOTA_PROPOSE_SH = REPO_ROOT / ".claude" / "scripts" / "yota-propose.sh"
 INTAKE_COUNCIL_SH = REPO_ROOT / ".claude" / "scripts" / "intake-council.sh"
 COST_CAP_LIB = REPO_ROOT / ".claude" / "scripts" / "lib" / "cost-cap.sh"
 INTAKE_TOKENS_LIB = REPO_ROOT / ".claude" / "scripts" / "lib" / "intake-tokens.sh"
+OVERSEER_SH = REPO_ROOT / ".claude" / "scripts" / "overseer.sh"
+USER_SESSION_MARKER = REPO_ROOT / ".claude" / ".user-session-active"
+INTAKE_STATE_DIR = REPO_ROOT / ".claude" / "intake-council" / "state"
 
 MAX_INTAKE_ROUNDS = 3
 INTAKE_REJECT_STREAK_THRESHOLD = int(os.environ.get("INTAKE_REJECT_STREAK_THRESHOLD", "5"))
@@ -77,6 +80,7 @@ MOCK_INTAKE_COUNCIL_CMD = os.environ.get("MOCK_INTAKE_COUNCIL_CMD", "")
 MOCK_INTAKE_VALIDATOR_CMD = os.environ.get("MOCK_INTAKE_VALIDATOR_CMD", "")
 MOCK_COST_TODAY_USD = os.environ.get("MOCK_COST_TODAY_USD", "")
 MOCK_HOUR = os.environ.get("MOCK_HOUR", "")  # for quiet-hours testing
+MOCK_OVERSEER_TRIGGER = os.environ.get("MOCK_OVERSEER_TRIGGER", "")  # mock auto-trigger after go
 
 RATE_LIMIT_MAX = 5          # max /btw items per hour per user
 RATE_LIMIT_WINDOW = 3600    # 1 hour in seconds
@@ -906,7 +910,7 @@ def _short_summary(path: pathlib.Path) -> str:
 
 
 def _render_verdict_mini(path: pathlib.Path, fm: dict) -> str:
-    """3-line mini-format (Plan §5 / T13b)."""
+    """3-line mini-format (Plan §5 / T13b) — fallback when rich parser fails."""
     verdict = fm.get("verdict", "unknown")
     emoji = VERDICT_EMOJI.get(verdict, "•")
     full_id = fm.get("id", path.stem)
@@ -924,12 +928,258 @@ def _render_verdict_mini(path: pathlib.Path, fm: dict) -> str:
     return f"{emoji} {slug} — {verdict}\n└ {summary}\n└ {action}\n💰 ${day_cost} heute"
 
 
+def _extract_bullets(section_text: str, max_bullets: int = 3,
+                     max_per_bullet: int = 80) -> list:
+    """Parse Markdown bullets from a section, return first N short bullets.
+
+    Strips leading markers ('- ', '* ', '• '), collapses inline markdown
+    (bold **/__/ italic *_/_/) for display, truncates per bullet, and
+    silently drops empty lines + sub-heading lines.
+    """
+    out = []
+    if not section_text:
+        return out
+    for raw in section_text.splitlines():
+        line = raw.rstrip()
+        stripped = line.lstrip()
+        if not stripped:
+            continue
+        if stripped.startswith("#"):
+            continue
+        # Bullet detection — accept -, *, • as marker
+        m = _re.match(r"^[-*•]\s+(.*)$", stripped)
+        if not m:
+            continue
+        body = m.group(1).strip()
+        # Strip simple bold/italic markdown (just for display)
+        body = _re.sub(r"\*\*([^*]+)\*\*", r"\1", body)
+        body = _re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"\1", body)
+        body = _re.sub(r"__([^_]+)__", r"\1", body)
+        if len(body) > max_per_bullet:
+            body = body[: max_per_bullet - 1].rstrip() + "…"
+        if body:
+            out.append(body)
+        if len(out) >= max_bullets:
+            break
+    return out
+
+
+def _extract_section(content: str, heading_regex: str) -> str:
+    """Return body of first section matching heading_regex (case-insensitive,
+    anchored on line) until the next heading of same-or-higher level. Empty
+    string if not found.
+
+    Heading-level is detected from the match (# count). Subsection headings
+    (###... when matched section is ##) are KEPT inside the body; only a
+    sibling/parent heading terminates the section.
+    """
+    pat = _re.compile(heading_regex, _re.IGNORECASE | _re.MULTILINE)
+    m = pat.search(content)
+    if not m:
+        return ""
+    # Determine matched heading-level from the matched substring
+    matched_line = m.group(0).lstrip()
+    level = 0
+    for ch in matched_line:
+        if ch == "#":
+            level += 1
+        else:
+            break
+    if level == 0:
+        level = 2  # safe default for non-heading regexes
+    start = m.end()
+    rest = content[start:]
+    # Terminate on any heading with level <= matched level (i.e. 1..level #s
+    # followed by space — but NOT level+1 or deeper).
+    term_pat = _re.compile(rf"^#{{1,{level}}}\s+", _re.MULTILINE)
+    nxt = term_pat.search(rest)
+    if nxt:
+        return rest[: nxt.start()].strip()
+    return rest.strip()
+
+
+def _extract_vote(section_text: str) -> str:
+    """Find a `### Vote:` line or `Vote: ...` line, return value or ''."""
+    if not section_text:
+        return ""
+    m = _re.search(r"^#{2,3}\s*Vote:\s*(.+)$", section_text, _re.IGNORECASE | _re.MULTILINE)
+    if m:
+        return m.group(1).strip().rstrip(".")
+    m = _re.search(r"^\s*Vote:\s*(.+)$", section_text, _re.IGNORECASE | _re.MULTILINE)
+    if m:
+        return m.group(1).strip().rstrip(".")
+    return ""
+
+
+def _parse_inner_yaml(content: str) -> dict:
+    """Parse the INNER YAML block inside ## Vorgeschlagenes Backlog-Item.
+
+    Returns dict with keys: slug, priority, budget_usd, model, touches (list),
+    estimated_minutes. Missing keys map to ''.
+    """
+    out = {"slug": "", "priority": "", "budget_usd": "", "model": "",
+           "touches": [], "estimated_minutes": ""}
+    section = _extract_section(content, r"^##\s+Vorgeschlagenes\s+Backlog-Item")
+    if not section:
+        return out
+    # Take first ```yaml ... ``` block, else raw section.
+    m = _re.search(r"```(?:yaml)?\s*\n(.*?)\n```", section, _re.DOTALL)
+    yaml_text = m.group(1) if m else section
+    for line in yaml_text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or line == "---":
+            continue
+        m = _re.match(r"^([a-z_]+)\s*:\s*(.+)$", line, _re.IGNORECASE)
+        if not m:
+            continue
+        k, v = m.group(1).strip(), m.group(2).strip()
+        v = v.strip('"').strip("'")
+        if k == "touches":
+            if v.startswith("[") and v.endswith("]"):
+                items = [x.strip().strip('"').strip("'")
+                         for x in v[1:-1].split(",") if x.strip()]
+                out["touches"] = items
+        elif k in out:
+            out[k] = v
+    return out
+
+
+def _render_verdict_rich(path: pathlib.Path, fm: dict) -> str:
+    """Rich HTML-format for Telegram verdict-push (parse_mode=HTML).
+
+    Parses pending-approval markdown for Proponent/Skeptic/Backlog-Item
+    sections and renders Telegram-HTML. Falls back to mini-format on parse
+    errors. Caps total length to TELEGRAM_MAX_MSG_LEN - 200 (safety margin).
+    """
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return _render_verdict_mini(path, fm)
+
+    verdict = fm.get("verdict", "unknown")
+    verdict_upper = verdict.upper()
+    emoji = VERDICT_EMOJI.get(verdict, "•")
+    full_id = fm.get("id", path.stem)
+    parts = full_id.split("-", 2)
+    slug = parts[2] if len(parts) >= 3 else full_id
+    token = fm.get("hmac_token", "")
+    day_cost = _cost_today_usd_str()
+    council_cost = fm.get("council_cost_usd", "")
+
+    # Parse sections (be lenient — Proponent/Skeptic headings come in various forms)
+    proponent_sec = _extract_section(content, r"^#{2,3}\s+Proponent(?:[^\n]*)$")
+    skeptic_sec = _extract_section(content, r"^#{2,3}\s+Skeptic(?:[^\n]*)$")
+
+    # Vorteile bullets — try `### Vorteile` subsection, else first bullet list.
+    proponent_pros = _extract_bullets(
+        _extract_section(proponent_sec, r"^#{3,4}\s+Vorteile") or proponent_sec
+    )
+    skeptic_cons = _extract_bullets(
+        _extract_section(skeptic_sec, r"^#{3,4}\s+Bedenken[^\n]*") or skeptic_sec
+    )
+    proponent_vote = _extract_vote(proponent_sec)
+    skeptic_vote = _extract_vote(skeptic_sec)
+
+    inner = _parse_inner_yaml(content)
+
+    # Parser-fail guard: if neither side has any bullets AND no backlog-item slug,
+    # fall back to mini-format.
+    if not (proponent_pros or skeptic_cons or inner.get("slug")):
+        return _render_verdict_mini(path, fm)
+
+    def esc(s: str) -> str:
+        return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    lines = []
+    lines.append(f"<b>{emoji} Council: {esc(verdict_upper)}</b>")
+    lines.append(f"<b>📌 slug:</b> <code>{esc(slug)}</code>")
+    lines.append("")
+
+    lines.append("<b>👍 Proponent (Vorteile):</b>")
+    if proponent_pros:
+        for b in proponent_pros:
+            lines.append(f"• {esc(b)}")
+    else:
+        lines.append("• (keine Bullets extrahiert)")
+    if proponent_vote:
+        lines.append(f"<i>Vote: {esc(proponent_vote)}</i>")
+    lines.append("")
+
+    lines.append("<b>🤔 Skeptic (Bedenken):</b>")
+    if skeptic_cons:
+        for b in skeptic_cons:
+            lines.append(f"• {esc(b)}")
+    else:
+        lines.append("• (keine Bullets extrahiert)")
+    if skeptic_vote:
+        lines.append(f"<i>Vote: {esc(skeptic_vote)}</i>")
+    lines.append("")
+
+    lines.append("<b>🧩 Backlog-Item (Pragmatist-Synthese):</b>")
+    touches = inner.get("touches") or fm.get("touches", "")
+    # fm["touches"] is raw "[a, b, c]" string — parse
+    if isinstance(touches, str) and touches.startswith("["):
+        touches = [x.strip().strip('"').strip("'")
+                   for x in touches[1:-1].split(",") if x.strip()]
+    if isinstance(touches, list) and touches:
+        first = touches[0]
+        rest = len(touches) - 1
+        if rest > 0:
+            lines.append(f"• touches: <code>{esc(first)}</code>, +{rest} weitere")
+        else:
+            lines.append(f"• touches: <code>{esc(first)}</code>")
+    model = inner.get("model", "")
+    budget = inner.get("budget_usd", "")
+    eta = inner.get("estimated_minutes", "")
+    if model or budget or eta:
+        seg = []
+        if model:
+            seg.append(f"model: <code>{esc(model)}</code>")
+        if budget:
+            seg.append(f"budget: ${esc(budget)}")
+        if eta:
+            seg.append(f"ETA: {esc(eta)}min")
+        lines.append("• " + " · ".join(seg))
+    prio = inner.get("priority", "")
+    if prio:
+        lines.append(f"• priority: {esc(prio)}")
+    lines.append("")
+
+    lines.append("<b>🎯 Aktionen:</b>")
+    if verdict == "reject":
+        lines.append(f"✏️ <code>change {esc(slug)} &lt;dein Hinweis&gt;</code>")
+        lines.append(f"⚠️ <code>go-anyway {esc(slug)} {esc(token)} &lt;reason&gt;</code>")
+        lines.append(f"❌ <code>reject {esc(slug)}</code>")
+    elif verdict == "needs-full-council":
+        lines.append(f"🏛 <code>/council {esc(slug)}</code> (Self-Mod-Pfad)")
+        lines.append(f"❌ <code>reject {esc(slug)}</code>")
+    else:
+        lines.append(f"✅ <code>go {esc(slug)} {esc(token)}</code>")
+        lines.append(f"✏️ <code>change {esc(slug)} &lt;dein Hinweis&gt;</code>")
+        lines.append(f"❌ <code>reject {esc(slug)}</code>")
+    lines.append("")
+    foot = f"<i>💰 Heute: ${esc(day_cost)}"
+    if council_cost:
+        foot += f"  ·  Council kostete: ${esc(council_cost)}"
+    foot += "</i>"
+    lines.append(foot)
+
+    msg = "\n".join(lines)
+    # Truncate hard if needed (Telegram cap 4096 chars)
+    cap = TELEGRAM_MAX_MSG_LEN - 200
+    if len(msg) > cap:
+        msg = msg[: cap - 20].rstrip() + "\n<i>…(truncated)</i>"
+    return msg
+
+
 # --- Quiet-hours-aware push (uses notify.sh info → respects DND) ---
 def _push_verdict(path: pathlib.Path, fm: dict) -> bool:
     """Push verdict via notify.sh + direct Telegram. Returns True only when the
     Telegram send to the creator actually succeeded (so the watcher can retry
     on transient network errors instead of falsely marking pushed_at)."""
-    body = _render_verdict_mini(path, fm)
+    rich_body = _render_verdict_rich(path, fm)
+    # Plain-text fallback for ntfy (no HTML tags)
+    plain_body = _render_verdict_mini(path, fm)
     title = f"Intake-Verdict: {fm.get('id', path.stem)}"
     # notify.sh — best-effort (ntfy-side; failure doesn't block retry)
     if NOTIFY_SH.exists():
@@ -938,7 +1188,7 @@ def _push_verdict(path: pathlib.Path, fm: dict) -> bool:
         if MOCK_HOUR:
             env["NOTIFY_FORCE_HOUR"] = MOCK_HOUR
         subprocess.run(
-            [str(NOTIFY_SH), "info", "intake-verdict", title, body],
+            [str(NOTIFY_SH), "info", "intake-verdict", title, plain_body],
             env=env, capture_output=True,
         )
     # Direct Telegram send to creator — authoritative success-signal
@@ -948,7 +1198,7 @@ def _push_verdict(path: pathlib.Path, fm: dict) -> bool:
         # Consider that successful so we don't retry forever.
         return True
     try:
-        result = send_message(int(user_id), body)
+        result = send_message(int(user_id), rich_body, parse_mode="HTML")
     except Exception as exc:
         sys.stderr.write(f"_push_verdict: telegram send failed: {exc}\n")
         return False
@@ -1345,6 +1595,61 @@ def _move_to_rejected(path: pathlib.Path, reason: str, fm: dict):
     return target
 
 
+def _trigger_overseer_after_go(slug: str) -> tuple:
+    """Spawn `bash overseer.sh --once` detached after a successful go-pass.
+
+    Returns (ok: bool, msg: str). Skipped when ANTHROPIC_API_KEY is set or
+    user-session marker is missing — both cases short-circuit with a warning
+    that the caller appends to the user-reply.
+
+    Mock-Mode: when MOCK_OVERSEER_TRIGGER=1, writes a marker JSON to
+    .claude/intake-council/state/last-go-trigger.json instead of forking
+    a real subprocess. Tests rely on the marker.
+    """
+    # Pre-flight 1: ANTHROPIC_API_KEY would route Worker spend through API
+    # billing instead of Max-Plan OAuth — skip auto-trigger.
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return False, ("⚠️ ANTHROPIC_API_KEY env set — Worker-Auto-Trigger übersprungen "
+                       "(würde API-Billing statt Max-Plan nutzen). "
+                       "Item bleibt in der Inbox.")
+    # Pre-flight 2: user-session marker must exist (Self-Mod-Guard)
+    if not USER_SESSION_MARKER.exists():
+        return False, ("⚠️ User-Session-Marker fehlt — Worker-Auto-Trigger übersprungen. "
+                       "`bash .claude/scripts/session-start.sh` ausführen.")
+
+    # Mock-Mode for tests: write marker file, no real subprocess
+    if MOCK_OVERSEER_TRIGGER:
+        try:
+            INTAKE_STATE_DIR.mkdir(parents=True, exist_ok=True)
+            marker = INTAKE_STATE_DIR / "last-go-trigger.json"
+            iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            marker.write_text(json.dumps({"slug": slug, "ts": iso}, indent=2),
+                              encoding="utf-8")
+        except OSError as exc:
+            return False, f"⚠️ Mock-Trigger marker write failed: {exc}"
+        return True, "mock-triggered"
+
+    # Real-Mode: spawn detached overseer --once
+    if not OVERSEER_SH.exists():
+        return False, "⚠️ overseer.sh nicht gefunden — Worker bleibt in der Inbox."
+    env = dict(os.environ)
+    env.pop("ANTHROPIC_API_KEY", None)
+    env["REPO_ROOT"] = str(REPO_ROOT)
+    try:
+        subprocess.Popen(
+            ["bash", str(OVERSEER_SH), "--once"],
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True,  # detached, no SIGHUP propagation
+            cwd=str(REPO_ROOT),
+        )
+    except Exception as exc:
+        return False, f"⚠️ Overseer-Spawn fehlgeschlagen: {exc}"
+    return True, "worker-spawned"
+
+
 def _handle_go(chat_id, user_id, m, override=False):
     """Shared handler for go and go-anyway."""
     id_or_slug = m.group("id")
@@ -1442,7 +1747,30 @@ def _handle_go(chat_id, user_id, m, override=False):
                      f"user={user_id} target={written.name}")
         # Reset reject-streak counter on go (T17)
         _reset_reject_streak(str(user_id))
-        return chat_id, f"✅ approved + queued als `{slug}`."
+        # Auto-Trigger Overseer (Feature 2): spawn `overseer.sh --once`
+        # in background so the user doesn't need the LaunchAgent.
+        trig_ok, trig_msg = _trigger_overseer_after_go(slug)
+        audit_record("telegram-bot", "intake_auto_trigger",
+                     fm.get("id", path.stem),
+                     f"user={user_id} ok={trig_ok} msg={trig_msg[:80]}")
+        # Lookup budget for user-reply hint
+        try:
+            inner = _parse_inner_yaml(path.read_text(encoding="utf-8"))
+            budget_hint = inner.get("budget_usd") or "?"
+        except Exception:
+            budget_hint = "?"
+        if trig_ok:
+            reply = (
+                f"✅ approved + queued als: `{slug}`\n"
+                f"🚀 Worker startet im Hintergrund (~5-15min, Cost-Cap ${budget_hint})\n"
+                f"📊 Yota: /yota (zeigt active worker)"
+            )
+        else:
+            reply = (
+                f"✅ approved + queued als: `{slug}`\n"
+                f"{trig_msg}"
+            )
+        return chat_id, reply
     if val_verdict == "needs-full-council":
         # Update pending-approval frontmatter verdict so subsequent steps know.
         try:
