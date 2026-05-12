@@ -72,12 +72,25 @@ _grep_ok "Frontmatter: description mentions intake-council" "description:.*intak
 _grep_ok "Frontmatter: description mentions Self-Mod" "description:.*(Self-Mod|self-mod)"
 _grep_ok "Frontmatter: description mentions quarantine" "description:.*quarantine"
 
-# --- Five categories documented ---
+# --- Five categories documented (5 split into 5a + 5b) ---
 _grep_ok "Kategorie 1 section present" "Kategorie 1.*(Destruktiv|destruktiv)"
 _grep_ok "Kategorie 2 section present" "Kategorie 2.*(Self-Mod|self-mod)"
 _grep_ok "Kategorie 3 section present" "Kategorie 3.*(Gef|gef)"
 _grep_ok "Kategorie 4 section present" "Kategorie 4.*(Injection|injection)"
-_grep_ok "Kategorie 5 section present" "Kategorie 5.*(Frontmatter|frontmatter)"
+_grep_ok "Kategorie 5 section present" "Kategorie 5"
+# 5a: OUTER Frontmatter schema documented separately
+_grep_ok "Kat-5a: OUTER Frontmatter block documented" "Kategorie 5a"
+_grep_ok "Kat-5a: source tier-1/2/3 constraint documented" "tier-1.*tier-2.*tier-3|tier-[123]"
+_grep_ok "Kat-5a: hmac_token constraint documented" "hmac_token"
+_grep_ok "Kat-5a: verdict enum documented in 5a block" "propose.*propose-with-changes"
+# 5b: INNER YAML schema documented separately
+_grep_ok "Kat-5b: INNER YAML block documented" "Kategorie 5b"
+_grep_ok "Kat-5b: source tier-3-intake in INNER block" "tier-3-intake"
+_grep_ok "Kat-5b: budget_usd in INNER block" "budget_usd"
+_grep_ok "Kat-5b: model constraint in INNER block" "(haiku|sonnet|opus)"
+_grep_ok "Kat-5b: trust_tier in INNER block" "trust_tier"
+# Key distinction: INNER vs OUTER scan scope explicitly stated
+_grep_ok "Scan-scope: INNER YAML scan note present" "(INNER YAML|inner.*yaml|INNER.*Backlog)"
 
 # --- Kategorie 1: min 8 destructive commands (10 required per spec, check 8+) ---
 _count_ge "Kat-1: at least 8 destructive command patterns" \

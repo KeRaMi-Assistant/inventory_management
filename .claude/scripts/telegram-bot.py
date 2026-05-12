@@ -1118,6 +1118,26 @@ def _extract_backlog_item_yaml(approval_path: pathlib.Path) -> str:
     return "\n".join(out_lines).strip()
 
 
+_INNER_YAML_REQUIRED_FIELDS = (
+    "slug", "source", "priority", "budget_usd", "model", "touches", "created_from",
+)
+
+
+def _check_inner_yaml_fields(item_body: str) -> list:
+    """Sanity-check the INNER YAML block for the 7 required fields.
+
+    Returns a list of missing field names. Empty list = all present.
+    The check is intentionally lightweight (regex, not a full YAML parse)
+    so it adds negligible overhead and has no external dependencies.
+    """
+    missing = []
+    for field in _INNER_YAML_REQUIRED_FIELDS:
+        # Match "field:" at line-start (possibly inside a ```yaml block)
+        if not _re.search(rf"^{_re.escape(field)}\s*:", item_body, _re.MULTILINE):
+            missing.append(field)
+    return missing
+
+
 def _write_overseer_inbox_item(slug: str, approval_path: pathlib.Path,
                                 fm: dict) -> pathlib.Path:
     """Extract backlog-item YAML from approval file and write the validated
@@ -1125,10 +1145,26 @@ def _write_overseer_inbox_item(slug: str, approval_path: pathlib.Path,
 
     Returns the written path. If the backlog-item section is empty, raises
     ValueError so the caller can surface a clean error.
+
+    Performs a lightweight sanity-check on the INNER YAML for the 7 required
+    fields. If any are missing the item is still written (fallback), but an
+    audit record ``intake_inner_yaml_partial`` is emitted with the missing
+    field names so ops can investigate.
     """
     item_body = _extract_backlog_item_yaml(approval_path)
     if not item_body:
         raise ValueError("backlog-item section empty")
+
+    # Sanity-check INNER YAML required fields (non-blocking fallback).
+    missing_fields = _check_inner_yaml_fields(item_body)
+    if missing_fields:
+        audit_record(
+            "telegram-bot",
+            "intake_inner_yaml_partial",
+            fm.get("id", approval_path.stem),
+            f"missing_fields={','.join(missing_fields)}",
+        )
+
     OVERSEER_INBOX_DIR.mkdir(parents=True, exist_ok=True)
     iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     target = OVERSEER_INBOX_DIR / f"01-stakeholder-{slug}.md"
