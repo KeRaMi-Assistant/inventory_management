@@ -81,3 +81,13 @@ einen "Versendet"-Badge, der in Dark-Mode auch grün bleiben soll).
 - Keine hardcodeten Strings in den geänderten Files (`grep -nE "Text\(['\"][A-Za-zäöüÄÖÜß]" <file>` zur Selbstkontrolle).
 - Theme-konform.
 - Mobile-First-Selbstcheck (s.o.) durchlaufen.
+
+---
+
+## Cache-Notiz (interne Doku)
+
+Dieser System-Prompt ist statisch und wird beim 2. Aufruf desselben Agents von
+Anthropic's Prompt-Cache gehalten (5-Min-TTL, ~85% Latency-Reduktion, ~90%
+Cost-Reduktion). Caller dürfen KEINE dynamischen Bytes VOR dem User-Input
+injizieren — das würde den Cache invalidieren. Task-Beschreibung und Plan-Pfad
+immer ans PROMPT-ENDE stellen.

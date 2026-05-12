@@ -303,21 +303,49 @@ set +e
 
   echo "=== claude output ===" >> "$RUN_LOG"
 
-  # Build cmd
+  # Build cmd — --output-format json gives structured cost/result (Security #7)
   CLAUDE_ARGS=(
     --print
+    --output-format json
     --permission-mode auto
     --max-budget-usd "$BUDGET_USD"
     --model "$MODEL"
   )
 
+  # Capture raw JSON to a temp file; we'll extract result text + cost after.
+  JSON_TMP="${RUN_LOG%.log}.json"
+
   if [ -n "$TIMEOUT_BIN" ]; then
     "$TIMEOUT_BIN" "${TIMEOUT_MIN}m" claude "${CLAUDE_ARGS[@]}" -p "$PROMPT_HEADER" \
-      >> "$RUN_LOG" 2>&1
+      > "$JSON_TMP" 2>&1
   else
     claude "${CLAUDE_ARGS[@]}" -p "$PROMPT_HEADER" \
-      >> "$RUN_LOG" 2>&1
+      > "$JSON_TMP" 2>&1
   fi
+  _json_exit=$?
+
+  # Extract result text from JSON and append to RUN_LOG (preserves sentinel grep).
+  # Falls JSON-Parsing fails, append raw output so sentinels are still findable.
+  python3 - "$JSON_TMP" "$RUN_LOG" <<'PYEOF' 2>/dev/null || cat "$JSON_TMP" >> "$RUN_LOG"
+import sys, json
+json_path, log_path = sys.argv[1], sys.argv[2]
+try:
+    with open(json_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    result_text = data.get('result', '')
+    with open(log_path, 'a', encoding='utf-8') as f:
+        f.write(result_text)
+        if not result_text.endswith('\n'):
+            f.write('\n')
+except Exception:
+    # Fallback: append raw
+    with open(json_path, 'r', encoding='utf-8', errors='replace') as f:
+        raw = f.read()
+    with open(log_path, 'a', encoding='utf-8') as f:
+        f.write(raw)
+PYEOF
+
+  exit $_json_exit
 ) &
 PRINT_PID=$!
 
@@ -443,19 +471,51 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 10. Cost-Event ledger (Mitigation 3)
+# 10. Cost-Event ledger (Mitigation 3) — structured JSON extraction (Security #7)
 # ---------------------------------------------------------------------------
 ACTUAL_USD=""
-if [ -f "$RUN_LOG" ]; then
-  # claude --print typically logs total cost. Try a few patterns.
-  ACTUAL_USD="$(grep -oiE '(total[[:space:]]+cost|cost)[^0-9]*\$?[0-9]+\.[0-9]+' "$RUN_LOG" 2>/dev/null \
-                | grep -oE '[0-9]+\.[0-9]+' | tail -n 1 || true)"
+ACTUAL_INPUT_TOKENS=""
+ACTUAL_CACHED_TOKENS=""
+ACTUAL_OUTPUT_TOKENS=""
+
+JSON_TMP="${RUN_LOG%.log}.json"
+if [ -f "$JSON_TMP" ]; then
+  # Extract cost + token fields from structured JSON output.
+  eval "$(python3 - "$JSON_TMP" <<'PYEOF' 2>/dev/null || true
+import sys, json
+try:
+    with open(sys.argv[1], 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    usd = data.get('total_cost_usd')
+    usage = data.get('usage', {})
+    if usd is not None:
+        print(f"ACTUAL_USD={float(usd):.6f}")
+    inp = usage.get('input_tokens')
+    if inp is not None:
+        print(f"ACTUAL_INPUT_TOKENS={int(inp)}")
+    cached = usage.get('cached_input_tokens')
+    if cached is not None:
+        print(f"ACTUAL_CACHED_TOKENS={int(cached)}")
+    out = usage.get('output_tokens')
+    if out is not None:
+        print(f"ACTUAL_OUTPUT_TOKENS={int(out)}")
+except Exception:
+    pass
+PYEOF
+)"
 fi
+
 if [ -z "$ACTUAL_USD" ]; then
-  # Pessimist fallback: charge full budget.
+  # Pessimist fallback: charge full budget when JSON parsing fails.
   ACTUAL_USD="$BUDGET_USD"
 fi
-if command -v cost_record >/dev/null 2>&1; then
+
+if command -v cost_record_full >/dev/null 2>&1 \
+   && [ -n "$ACTUAL_INPUT_TOKENS" ] && [ -n "$ACTUAL_OUTPUT_TOKENS" ]; then
+  cost_record_full "worker-${SLUG}" "$ACTUAL_USD" \
+    "$ACTUAL_INPUT_TOKENS" "${ACTUAL_CACHED_TOKENS:-0}" "$ACTUAL_OUTPUT_TOKENS" \
+    >/dev/null 2>&1 || true
+elif command -v cost_record >/dev/null 2>&1; then
   cost_record "worker-${SLUG}" "$ACTUAL_USD" >/dev/null 2>&1 || true
 fi
 
@@ -493,6 +553,11 @@ fi
 } >> "$RUN_LOG"
 
 _audit "finish" "$SLUG" "exit=$FINAL_EXIT actual_usd=$ACTUAL_USD claude_exit=$EXIT_CODE"
+# Security #7 migration audit record (one-time; harmless on subsequent runs).
+if command -v audit_record >/dev/null 2>&1; then
+  audit_record system json-cost-migration "" \
+    "worker.sh + disput.sh on --output-format json" 2>/dev/null || true
+fi
 _log "done slug=$SLUG final_exit=$FINAL_EXIT (claude=$EXIT_CODE pre_ship=$PRE_SHIP_BLOCKED)"
 
 exit "$FINAL_EXIT"

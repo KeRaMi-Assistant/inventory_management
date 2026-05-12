@@ -110,6 +110,36 @@ Die App läuft primär auf iOS + Android. Tablet/Desktop sind sekundär.
 - **In CI auf PRs:** `claude-code-action@v1` Code-Review (auch via Max-Plan-OAuth-Token). Macht Security-Check als Teil des Reviews.
 - **Nicht aktiviert:** `claude-code-security-review@main` Action — braucht zwingend einen bezahlten API-Key, deckt aber nichts ab, was der lokale `security-reviewer` nicht auch findet.
 
+## Prompt-Caching (Cost-Tuning)
+
+Anthropic's Prompt-Cache hält stabile System-Prompts (Subagent-Definitionen) 5 min im Cache —
+**~90% Cost-Reduktion + ~85% Latency-Reduktion** für wiederholte Agent-Calls innerhalb eines
+Headless-Runs. Aktiviert sich automatisch ab ~1024 Tokens (keine explizite API-Konfiguration
+nötig bei Claude Code OAuth-Flows).
+
+**Status:** Aktiviert für `browser-tester`, `stakeholder-triage`, `disput-proponent`,
+`disput-skeptic`, `disput-pragmatist`, `ui-builder`. Kurze Agents (`planner`, `security-reviewer`,
+`flutter-coder`) liegen unter dem 1024-Token-Schwellenwert — kein Cache-Hit erwartet.
+
+**Pflicht-Regel:** Caller (`worker.sh`, `disput.sh`, `triage-stakeholder.sh`) müssen User-Input
+**ans PROMPT-ENDE** setzen — via `-p "..."` nach allen anderen Flags oder via stdin. Dynamischen
+Content VOR dem Agent-Body injizieren = Cache-Miss auf jedem Call.
+
+**Helper:** `.claude/scripts/lib/cache-friendly-invoke.sh`
+- `invoke_agent_cached <agent> <budget-usd> [user-input]`
+- `_validate_cache_friendly_invocation <cmd-string>` — Heuristik-Check
+
+**Skripte mit cache-friendly Invocation:**
+- `worker.sh` — nutzt `-p "$PROMPT_HEADER"` am Ende der CLAUDE_ARGS.
+- `disput.sh` — nutzt `< "$prompt_file"` (stdin, prompt-body zuerst).
+- `triage-stakeholder.sh` — nutzt `"..."` als letztes Argument (direkt hinter --agent).
+
+**Verifizierbar via:**
+```bash
+bash .claude/scripts/verify/prompt-cache-friendly.sh
+```
+Exit 0 = alle Checks grün. Auch: `cached_input_tokens > 0` in `claude --print --output-format json`.
+
 ## Auto-Merge (Pre-Launch-Modus)
 
 Da die App Pre-Launch ist und alles git-versioniert ist, darf Claude PRs
@@ -471,6 +501,22 @@ bash .claude/scripts/session-end.sh     # nach Abschluss
 ### Verify-Suite
 
 `bash .claude/scripts/verify/*.sh` — 43+ Tests grün als CI-Smoke.
+
+### Yota — Chat-Companion
+
+Read-only Beobachter des Swarms. Erklärt auf Deutsch in 3-7 Zeilen, was
+gerade läuft, wieviel verbrannt wurde und warum etwas hakt. Schreibt
+keinen Code, edit-tet keine Files.
+
+- `/yota` — Status-Snapshot (5-7 Zeilen).
+- `/yota was läuft auf worker fix-x?` — Detail-Frage.
+- `bash .claude/scripts/yota-snapshot.sh [--human]` — JSON/Markdown
+  direkt ohne Agent.
+- `bash .claude/scripts/install-yota-watch.sh --load-now` — 15-Minuten-
+  Push an ntfy.
+- `bash .claude/scripts/uninstall-yota-watch.sh` — Daemon stoppen.
+
+Code-Wünsche im Chat → `bash .claude/scripts/btw.sh "..."` oder `/queue`.
 
 ## Referenzen
 

@@ -925,3 +925,38 @@ Phase 4:
 Akzeptanz-Gates (NICHT als Tasks):
   Gate 4-A (48h) → Gate 4-B (72h) → Gate 4-C (7d ODER 48h-no-stakeholder)
 ```
+
+## Post-Phase-4 Additions
+
+Erweiterungen, die nach dem ursprünglichen Plan nachträglich hinzukamen.
+
+### Yota Chat-Companion + Watch-Daemon
+
+**Branch:** `feature/yota-and-quality-uplift`.
+
+**Motivation:** Während der Swarm autonom läuft, soll der User per
+Chat in Echtzeit erfahren, was gerade passiert, ohne JSON-Files lesen
+zu müssen. Yota ist explizit **read-only** — kein Coder, keine Edits,
+kein Agent-Spawning.
+
+**Lieferung:**
+- `.claude/scripts/yota-snapshot.sh` — read-only Aggregator (JSON +
+  `--human` Markdown). Liest `health.json`, `workers/*.pid`,
+  `cost-ledger.jsonl`, inbox-/done-/failed-Counts, `disputes/`,
+  `oauth-status.json`, Audit-Alerts, letztes Briefing, gh-merged-PRs
+  der letzten 24h.
+- `.claude/agents/yota.md` — Sonnet-Subagent,
+  `tools=Read,Glob,Grep,Bash` (kein Edit/Write). Few-Shot-Examples für
+  Status-, Failure- und „User will Coding"-Fragen.
+- `.claude/commands/yota.md` — Slash-Command `/yota [frage|watch]`.
+- `.claude/scripts/yota-watch.sh` + `install-yota-watch.sh` +
+  `uninstall-yota-watch.sh` + `.claude/yota-watch-launchagent.plist.template`
+  (15min ntfy-Push).
+- `.claude/scripts/verify/yota.sh` — 8 Tests (JSON-Validität,
+  Sandbox-Counts, `--human`-Sektionen, Frontmatter-Audit,
+  Few-Shot-Existenz, watch-dry-run, plutil-lint, <5s-Speed).
+
+**Nicht in Scope:** Telegram-Bridge-Integration (kommt später),
+historische Charts (Yota antwortet auf aktuellen State, nicht auf
+Trends — dafür gibt's `/briefing`).
+

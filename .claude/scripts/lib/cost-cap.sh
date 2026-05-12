@@ -158,6 +158,157 @@ PYEOF
   return $rc
 }
 
+# --- cost_record_full <agent> <usd> <input_tokens> <cached_tokens> <output_tokens> ---
+# Extended variant of cost_record that also stores token counts in the ledger.
+# Backwards-compat: falls back to cost_record if token args are omitted/zero.
+#
+# JSONL-Entry-Format (extended):
+#   {"ts":"...", "agent":"...", "usd":0.42, "pid":12345,
+#    "input_tokens":1234, "cached_input_tokens":1000, "output_tokens":567,
+#    "prev_hash":"...", "entry_hash":"..."}
+#
+# Hash-chain: entry_data includes token fields so hash is over all fields.
+cost_record_full() {
+  local agent="${1:-}"
+  local usd="${2:-}"
+  local input_tokens="${3:-0}"
+  local cached_tokens="${4:-0}"
+  local output_tokens="${5:-0}"
+
+  # --- Validierung -----------------------------------------------------------
+  if [ -z "$agent" ]; then
+    printf 'cost_record_full: <agent> darf nicht leer sein\n' >&2
+    return 1
+  fi
+  if ! printf '%s' "$usd" | grep -qE '^[0-9]+(\.[0-9]+)?$'; then
+    printf 'cost_record_full: <usd> muss eine positive Zahl sein, erhalten: "%s"\n' "$usd" >&2
+    return 1
+  fi
+  # Validate token counts are non-negative integers (default 0 if empty).
+  input_tokens="${input_tokens:-0}"
+  cached_tokens="${cached_tokens:-0}"
+  output_tokens="${output_tokens:-0}"
+  if ! printf '%s' "$input_tokens" | grep -qE '^[0-9]+$'; then input_tokens=0; fi
+  if ! printf '%s' "$cached_tokens" | grep -qE '^[0-9]+$'; then cached_tokens=0; fi
+  if ! printf '%s' "$output_tokens" | grep -qE '^[0-9]+$'; then output_tokens=0; fi
+
+  # --- Verzeichnis sicherstellen ---------------------------------------------
+  local ledger_dir
+  ledger_dir="$(_cost_cap_ledger_dir)"
+  mkdir -p "$ledger_dir"
+
+  local ledger_file="$ledger_dir/cost-ledger.jsonl"
+  local lock_file="$ledger_dir/.cost-ledger.lock"
+
+  local ts pid
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  pid="$$"
+
+  if command -v flock >/dev/null 2>&1; then
+    (
+      exec 200>"$lock_file"
+      if ! flock -x -w 5 200; then
+        printf 'cost_record_full: flock-Timeout auf "%s"\n' "$lock_file" >&2
+        exit 3
+      fi
+      python3 - "$ledger_file" "$ts" "$agent" "$usd" "$pid" \
+                "$input_tokens" "$cached_tokens" "$output_tokens" <<'PYEOF'
+import sys, json, hashlib
+
+ledger_file    = sys.argv[1]
+ts             = sys.argv[2]
+agent          = sys.argv[3]
+usd            = sys.argv[4]
+pid            = sys.argv[5]
+input_tokens   = int(sys.argv[6])
+cached_tokens  = int(sys.argv[7])
+output_tokens  = int(sys.argv[8])
+
+def sha256(s: str) -> str:
+    return hashlib.sha256(s.encode('utf-8')).hexdigest()
+
+zero_hash = '0' * 64
+prev_hash = zero_hash
+try:
+    with open(ledger_file, 'r') as f:
+        lines = [l for l in f.readlines() if l.strip()]
+    if lines:
+        prev_hash = sha256(lines[-1])
+except FileNotFoundError:
+    pass
+
+# entry_hash includes token fields for full integrity coverage
+entry_data = (f"{ts}|{agent}|{usd}|{pid}|{prev_hash}"
+              f"|{input_tokens}|{cached_tokens}|{output_tokens}")
+entry_hash = sha256(entry_data)
+
+agent_json = json.dumps(agent)[1:-1]
+
+line = (f'{{"ts":"{ts}","agent":"{agent_json}",'
+        f'"usd":{usd},"pid":{pid},'
+        f'"input_tokens":{input_tokens},'
+        f'"cached_input_tokens":{cached_tokens},'
+        f'"output_tokens":{output_tokens},'
+        f'"prev_hash":"{prev_hash}","entry_hash":"{entry_hash}"}}\n')
+
+with open(ledger_file, 'a') as f:
+    f.write(line)
+PYEOF
+    )
+  elif command -v lockf >/dev/null 2>&1; then
+    if ! lockf -t 5 "$lock_file" python3 - "$ledger_file" "$ts" "$agent" "$usd" "$pid" \
+                "$input_tokens" "$cached_tokens" "$output_tokens" <<'PYEOF'; then
+import sys, json, hashlib
+
+ledger_file    = sys.argv[1]
+ts             = sys.argv[2]
+agent          = sys.argv[3]
+usd            = sys.argv[4]
+pid            = sys.argv[5]
+input_tokens   = int(sys.argv[6])
+cached_tokens  = int(sys.argv[7])
+output_tokens  = int(sys.argv[8])
+
+def sha256(s: str) -> str:
+    return hashlib.sha256(s.encode('utf-8')).hexdigest()
+
+zero_hash = '0' * 64
+prev_hash = zero_hash
+try:
+    with open(ledger_file, 'r') as f:
+        lines = [l for l in f.readlines() if l.strip()]
+    if lines:
+        prev_hash = sha256(lines[-1])
+except FileNotFoundError:
+    pass
+
+entry_data = (f"{ts}|{agent}|{usd}|{pid}|{prev_hash}"
+              f"|{input_tokens}|{cached_tokens}|{output_tokens}")
+entry_hash = sha256(entry_data)
+
+agent_json = json.dumps(agent)[1:-1]
+
+line = (f'{{"ts":"{ts}","agent":"{agent_json}",'
+        f'"usd":{usd},"pid":{pid},'
+        f'"input_tokens":{input_tokens},'
+        f'"cached_input_tokens":{cached_tokens},'
+        f'"output_tokens":{output_tokens},'
+        f'"prev_hash":"{prev_hash}","entry_hash":"{entry_hash}"}}\n')
+
+with open(ledger_file, 'a') as f:
+    f.write(line)
+PYEOF
+      printf 'cost_record_full: lockf-Timeout auf "%s"\n' "$lock_file" >&2
+      return 3
+    fi
+  else
+    printf 'cost_record_full: kein flock/lockf verfügbar\n' >&2
+    return 3
+  fi
+  local rc=$?
+  return $rc
+}
+
 # --- cost_today_usd ---------------------------------------------------------
 # Summiert alle <usd>-Felder aus cost-ledger.jsonl mit ts-Datum == heute (UTC).
 # Echo: Float mit 2 Dezimalstellen (z.B. "3.27"). Bei leerem/fehlendem Ledger: "0.00".

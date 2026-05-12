@@ -148,3 +148,13 @@ Skeptic-Kernargument: Paginierungsproblem führt zu inkomplettem Export ohne Feh
 4. Gewichte Proponent- und Skeptic-Argumente anhand der drei Kriterien.
 5. Schreibe Output exakt im definierten Format.
 6. Halte Output unter 2000 Tokens.
+
+---
+
+## Cache-Notiz (interne Doku)
+
+Dieser System-Prompt ist statisch und wird beim 2. Aufruf desselben Agents von
+Anthropic's Prompt-Cache gehalten (5-Min-TTL, ~85% Latency-Reduktion, ~90%
+Cost-Reduktion). Caller dürfen KEINE dynamischen Bytes VOR dem User-Input
+injizieren — das würde den Cache invalidieren. Runden-Outputs (Proponent +
+Skeptic) immer ans PROMPT-ENDE stellen.

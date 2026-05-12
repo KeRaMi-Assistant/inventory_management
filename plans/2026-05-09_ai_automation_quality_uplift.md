@@ -378,28 +378,18 @@ Diese Stelle dokumentiert alle 12 Pflicht-Änderungen aus der Committee-Review n
 
 #### Task B5 — `planner`-Self-Critique-Pass (Opus → 2-Pass, mit Mode-Toggle)
 
-- [ ] **Beschreibung:** `planner`-Prompt erweitern: nach erstem Plan-Draft führt der Agent einen expliziten Self-Critique-Pass aus mit Prompt:
-  > "Lies den eben geschriebenen Plan. Finde Schwächen: einen verschwiegenen Edge-Case, eine zu grobe Task-Granularität, eine fehlende Akzeptanz-Bedingung. Schreibe sie unter `## Self-Critique` ans Plan-Ende. Korrigiere die Tasks dann inline."
-- [ ] **Note: [committee Empfehlung d]** Self-Critique-Pflicht von „mind. 3 Findings" GESTRICHEN — Reviewer findet nur was wirklich da ist (sonst LLM erfindet Probleme). Findings-Cap stattdessen offen.
-- [ ] **Note: [committee Empfehlung]** Mode-Toggle via env `PLANNER_MODE=draft|final`:
-  - `draft` (Council-Phase-1): Self-Critique **SKIP** — die 5 Reviewer SIND die Self-Critique. Spart Tokens + Wall-Clock.
-  - `final` (Solo-`/plan`): Self-Critique **ACTIVE**.
-- [ ] **Note: [committee Empfehlung d formalisierung]** Plan-Body-Note: „B5/B6 sind Phase-1-Soft-Implementierung. Wenn Council formal als Pflicht-Pre-Plan-Schritt etabliert wird, können B5/B6 aufgelöst werden. Critic-Pattern (Anthropic-Forschung) ist robuster als Self-Critique-im-Context."
-- [ ] **Nur bei `planner`** (Plan-Quality ist High-ROI). Nicht bei Coder-Agents.
-- [ ] **acceptance:**
-  - `planner.md` hat eine `### Self-Critique-Pass`-Sektion.
-  - `PLANNER_MODE=draft` → keine Self-Critique-Sektion im Output.
-  - `PLANNER_MODE=final` → Self-Critique-Sektion vorhanden, ≥ 1 Finding (kein Mindest-Cap).
-  - Korrigierte Tasks im Plan markiert (z.B. `[corrected after self-critique]`).
-- [ ] **verify:** `smoke-planner-mode-toggle` (Test beider Modi).
-- [ ] **agent:** `general-purpose`.
-- [ ] **depends:** A1.
+> **[SUPERSEDED 2026-05-12 — durch `plan-critic`-Agent ersetzt]**
+> Self-Critique im selben Context (Self-Critique-Pattern) wurde durch das von Anthropic-Forschung empfohlene **Critic-Pattern** (separater Agent) abgelöst. Separater Agent ist robuster als Self-Critique-im-Context, weil er keinen Confirmation-Bias aus dem Plan-Draft-Context trägt.
+> **Ersatz:** `.claude/agents/plan-critic.md` + `.claude/commands/plan-critic.md` + `.claude/scripts/verify/plan-critic.sh`.
+> **Nutzung:** `/plan-critic <plan-path>` nach jedem `/plan`-Call. Für große Features: `/council` (5-Reviewer) statt plan-critic.
+> Dieses Task-Item bleibt als historische Referenz erhalten — NICHT implementieren.
 
 #### Task B6 — `browser-tester`-Findings-Self-Critique (Confidence-Filter)
 
 - [ ] **Beschreibung:** Browser-Tester-Prompt um Self-Critique-Pass für Findings erweitern: nach Findings-Sammlung Schritt "Review your own findings — ist eine davon ein False-Positive? Markiere sie als `confidence: low` und behalte sie nur, wenn du dir sicher bist". Reduziert False-Positive-Auto-Requeue-Loops.
 - [ ] **Note: [committee]** `confidence`-Feld ist bereits in A4-Schema verankert (vorgezogen). B6 implementiert nur die Self-Critique-Logik im Prompt.
 - [ ] **Note: [committee Anti-Downgrade]** Deterministische Findings (`pixel-overflow`, `mobile-no-bottom-nav`) DÜRFEN NICHT auf `confidence: low` runtergestuft werden — Validator zeigt WARN. Prompt enthält explizite Liste der Anti-Downgrade-Kategorien.
+- [ ] **Note: [2026-05-12]** B6 betrifft `browser-tester`-Findings (nicht Plan-Drafts) — hier bleibt Self-Critique valide, weil der browser-tester keine externe Critic-Instanz braucht (er reviewed eigene Screenshot-Observations). B6 ist NICHT durch plan-critic ersetzt.
 - [ ] **acceptance:**
   - `browser-tester.md` hat Self-Critique-Schritt nach Findings-Sammlung.
   - Findings-JSON enthält `confidence: "high"|"medium"|"low"`-Feld (Schema-konform aus A4).
@@ -495,6 +485,7 @@ Diese Stelle dokumentiert alle 12 Pflicht-Änderungen aus der Committee-Review n
 
 ### Nicht-blockierende Empfehlungen (zur freien Aufnahme als Stretch-Tasks)
 
+- **3-Kriterien-README implementiert (Q2)** — `.claude/memory/README.md` + `failure-lessons.md` (initial leer) + Verify-Skript `.claude/scripts/verify/memory-readme.sh` angelegt. 12/12 Verify-Tests grün. [DONE 2026-05-12]
 - `expires_at`-Enforcer-Skript für `failure-lessons.md` (auto-prune abgelaufene Lessons) — als kleiner Stretch nach C2.
 - LaunchAgent-Plist-Template für C4 separat dokumentieren statt im Hauptscript.
 - Critic-Pattern-Refactor von B5/B6: separater Critic-Agent (Anthropic-Forschung empfiehlt das gegenüber Self-Critique-im-Context). Wenn Council formal Pflicht-Pre-Plan wird, können B5/B6 aufgelöst werden.
