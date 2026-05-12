@@ -518,6 +518,27 @@ keinen Code, edit-tet keine Files.
 
 Code-Wünsche im Chat → `bash .claude/scripts/btw.sh "..."` oder `/queue`.
 
+### Yota auf Telegram
+
+Bidirektionaler Chat vom Phone via Telegram-Bot.
+
+Setup: siehe [`.claude/scripts/SETUP_TELEGRAM.md`](.claude/scripts/SETUP_TELEGRAM.md)
+(~5 min, einmalig — BotFather-Token + User-ID in `.env.headless`).
+
+Commands im Telegram-Chat:
+- `/yota` — Snapshot.
+- `/yota <frage>` — Yota-LLM-Antwort (~$0.05, max 10/h).
+- `/status` — Alias zu `/yota`.
+- `/btw <text>` — Stakeholder-Item ins Triage-Inbox (max 5/h).
+- `/help` — Commands.
+
+Installation nach Setup:
+
+```bash
+bash .claude/scripts/session-start.sh
+bash .claude/scripts/install-telegram-bot.sh --load-now
+```
+
 ## Referenzen
 
 - Plan-Archiv: [`plans/`](plans/)

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.inventory.telegram-bot</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>set -a; [ -f "__REPO_ROOT__/.env.headless" ] &amp;&amp; . "__REPO_ROOT__/.env.headless"; set +a; exec /usr/bin/env python3 "__REPO_ROOT__/.claude/scripts/telegram-bot.py"</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__REPO_ROOT__</string>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>StandardOutPath</key>
+    <string>__REPO_ROOT__/.claude/overseer/telegram-bot.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__REPO_ROOT__/.claude/overseer/telegram-bot.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+        <key>HOME</key>
+        <string>__HOME__</string>
+        <key>LANG</key>
+        <string>en_US.UTF-8</string>
+        <key>CLAUDE_PROJECT_DIR</key>
+        <string>__REPO_ROOT__</string>
+        <key>REPO_ROOT</key>
+        <string>__REPO_ROOT__</string>
+    </dict>
+</dict>
+</plist>

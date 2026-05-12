@@ -49,9 +49,25 @@ BTW_SH = REPO_ROOT / ".claude" / "scripts" / "btw.sh"
 AUDIT_SH = REPO_ROOT / ".claude" / "scripts" / "lib" / "audit.sh"
 NOTIFY_SH = REPO_ROOT / ".claude" / "scripts" / "notify.sh"
 
-RATE_LIMIT_MAX = 5          # max items per hour per user
+RATE_LIMIT_MAX = 5          # max /btw items per hour per user
 RATE_LIMIT_WINDOW = 3600    # 1 hour in seconds
 LONG_POLL_TIMEOUT = 30      # seconds for Telegram long-poll
+
+# Yota-specific limits
+YOTA_RATE_LIMIT_MAX = 10        # max /yota <frage> LLM-calls per hour per user
+YOTA_LLM_TIMEOUT = 60           # seconds for claude --print --agent yota
+YOTA_LLM_BUDGET_USD = "0.30"    # max-budget-usd cap per LLM call
+TELEGRAM_MAX_MSG_LEN = 4096     # Telegram sendMessage max characters
+
+YOTA_RATELIMIT_FILE = None  # populated lazily (depends on STATE_DIR)
+YOTA_INFLIGHT_FILE = None   # populated lazily
+
+YOTA_SNAPSHOT_SH = None
+CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "claude")
+# Allow tests to stub LLM-call
+MOCK_YOTA_LLM_CMD = os.environ.get("MOCK_YOTA_LLM_CMD", "")
+# Allow tests to stub snapshot
+MOCK_YOTA_SNAPSHOT_CMD = os.environ.get("MOCK_YOTA_SNAPSHOT_CMD", "")
 
 # ---------------------------------------------------------------------------
 # Validation
@@ -123,12 +139,27 @@ def get_updates(offset=0):
         print(f"WARNING: getUpdates failed: {e}", file=sys.stderr)
     return []
 
-def send_message(chat_id, text):
+def send_message(chat_id, text, parse_mode=None):
+    """
+    Send a message to Telegram. Auto-splits messages longer than
+    TELEGRAM_MAX_MSG_LEN. parse_mode in {None, 'HTML', 'MarkdownV2'}.
+    """
+    if not text:
+        return
+    chunks = _split_for_telegram(text, TELEGRAM_MAX_MSG_LEN)
+    for chunk in chunks:
+        _send_single(chat_id, chunk, parse_mode)
+
+
+def _send_single(chat_id, text, parse_mode):
     if MOCK_DIR:
         _mock_send_message(chat_id, text)
         return
     url = f"{TELEGRAM_API_BASE}/sendMessage"
-    payload = json.dumps({"chat_id": chat_id, "text": text}).encode()
+    body = {"chat_id": chat_id, "text": text}
+    if parse_mode:
+        body["parse_mode"] = parse_mode
+    payload = json.dumps(body).encode()
     req = urllib.request.Request(
         url,
         data=payload,
@@ -140,6 +171,125 @@ def send_message(chat_id, text):
             pass
     except urllib.error.URLError as e:
         print(f"WARNING: sendMessage failed: {e}", file=sys.stderr)
+        # Fallback: retry without parse_mode (in case HTML was malformed)
+        if parse_mode:
+            try:
+                body2 = {"chat_id": chat_id, "text": text}
+                payload2 = json.dumps(body2).encode()
+                req2 = urllib.request.Request(
+                    url, data=payload2,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req2, timeout=10):
+                    pass
+            except urllib.error.URLError:
+                pass
+
+
+def send_chat_action(chat_id, action="typing"):
+    """Show 'typing...' indicator while we generate an answer."""
+    if MOCK_DIR:
+        return  # no-op in tests
+    url = f"{TELEGRAM_API_BASE}/sendChatAction"
+    payload = json.dumps({"chat_id": chat_id, "action": action}).encode()
+    req = urllib.request.Request(
+        url, data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5):
+            pass
+    except urllib.error.URLError:
+        pass
+
+
+def _split_for_telegram(text, limit):
+    """Split text into chunks <= limit, preferring line boundaries."""
+    if len(text) <= limit:
+        return [text]
+    chunks = []
+    remaining = text
+    while len(remaining) > limit:
+        # Find last newline within limit
+        cut = remaining.rfind("\n", 0, limit)
+        if cut <= 0:
+            cut = limit
+        chunks.append(remaining[:cut].rstrip("\n"))
+        remaining = remaining[cut:].lstrip("\n")
+    if remaining:
+        chunks.append(remaining)
+    return chunks
+
+
+# ---------------------------------------------------------------------------
+# Markdown → HTML (Telegram parse_mode=HTML)
+# ---------------------------------------------------------------------------
+
+import re as _re
+
+def md_to_html(text: str) -> str:
+    """
+    Convert a small Markdown subset to Telegram-HTML.
+    Supports: **bold**, *italic*, `code`, ```block```, [text](url).
+    Escapes raw <, >, & first; emitted tags are added afterwards.
+    """
+    if not text:
+        return ""
+
+    # 1) Extract fenced code blocks first so they're not touched by other rules
+    placeholders = []
+
+    def stash(match):
+        idx = len(placeholders)
+        placeholders.append(match.group(1))
+        return f"\x00BLOCK{idx}\x00"
+
+    text = _re.sub(r"```(.*?)```", stash, text, flags=_re.DOTALL)
+
+    # 2) Extract inline code
+    inline_codes = []
+
+    def stash_inline(match):
+        idx = len(inline_codes)
+        inline_codes.append(match.group(1))
+        return f"\x00ICODE{idx}\x00"
+
+    text = _re.sub(r"`([^`\n]+)`", stash_inline, text)
+
+    # 3) Escape HTML-special chars in remaining text
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    # 4) Links [text](url)
+    def link_sub(m):
+        label = m.group(1)
+        url = m.group(2).replace('"', "%22")
+        return f'<a href="{url}">{label}</a>'
+    text = _re.sub(r"\[([^\]]+)\]\(([^)]+)\)", link_sub, text)
+
+    # 5) Bold **x** (before italic so *x* doesn't eat one of the stars)
+    text = _re.sub(r"\*\*([^*\n]+)\*\*", r"<b>\1</b>", text)
+    # 6) Italic *x*  (single-star, non-greedy, no inner star)
+    text = _re.sub(r"(?<![\w*])\*([^*\n]+)\*(?!\w)", r"<i>\1</i>", text)
+
+    # 7) Restore inline code with escaping
+    def restore_inline(m):
+        idx = int(m.group(1))
+        content = inline_codes[idx]
+        content = content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return f"<code>{content}</code>"
+    text = _re.sub(r"\x00ICODE(\d+)\x00", restore_inline, text)
+
+    # 8) Restore block code
+    def restore_block(m):
+        idx = int(m.group(1))
+        content = placeholders[idx]
+        content = content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return f"<pre>{content}</pre>"
+    text = _re.sub(r"\x00BLOCK(\d+)\x00", restore_block, text)
+
+    return text
 
 # ---------------------------------------------------------------------------
 # Rate-limit (sliding window, state file)
@@ -194,6 +344,129 @@ def check_rate_limit(user_id: int) -> bool:
     state[key] = entry
     _save_ratelimit(state)
     return True
+
+# ---------------------------------------------------------------------------
+# Yota rate-limit (separate counter, 10/h) + in-flight lock
+# ---------------------------------------------------------------------------
+
+def _yota_ratelimit_file():
+    return STATE_DIR / "telegram-yota-ratelimit.json"
+
+def _yota_inflight_file():
+    return STATE_DIR / "telegram-yota-inflight.json"
+
+def check_yota_rate_limit(user_id: int) -> bool:
+    """True if user is within Yota LLM-call rate limit (10/h)."""
+    now = time.time()
+    f = _yota_ratelimit_file()
+    state = {}
+    if f.exists():
+        try:
+            state = json.loads(f.read_text())
+        except (json.JSONDecodeError, OSError):
+            state = {}
+    key = str(user_id)
+    entry = state.get(key, {"items": []})
+    entry["items"] = [ts for ts in entry.get("items", []) if now - ts < RATE_LIMIT_WINDOW]
+    if len(entry["items"]) >= YOTA_RATE_LIMIT_MAX:
+        state[key] = entry
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(state, indent=2))
+        return False
+    entry["items"].append(now)
+    state[key] = entry
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps(state, indent=2))
+    return True
+
+def yota_inflight_acquire(user_id: int) -> bool:
+    """Return True if no other Yota-call is running for this user."""
+    now = time.time()
+    f = _yota_inflight_file()
+    state = {}
+    if f.exists():
+        try:
+            state = json.loads(f.read_text())
+        except (json.JSONDecodeError, OSError):
+            state = {}
+    key = str(user_id)
+    cur = state.get(key)
+    # Expire stale lock (older than YOTA_LLM_TIMEOUT + buffer)
+    if cur and now - cur.get("started", 0) < YOTA_LLM_TIMEOUT + 10:
+        return False
+    state[key] = {"started": now}
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps(state, indent=2))
+    return True
+
+def yota_inflight_release(user_id: int):
+    f = _yota_inflight_file()
+    if not f.exists():
+        return
+    try:
+        state = json.loads(f.read_text())
+    except (json.JSONDecodeError, OSError):
+        return
+    state.pop(str(user_id), None)
+    f.write_text(json.dumps(state, indent=2))
+
+# ---------------------------------------------------------------------------
+# Yota invocations
+# ---------------------------------------------------------------------------
+
+def invoke_yota_snapshot() -> str:
+    """Run yota-snapshot.sh --human and return stdout (Markdown)."""
+    if MOCK_YOTA_SNAPSHOT_CMD:
+        cmd = ["bash", "-c", MOCK_YOTA_SNAPSHOT_CMD]
+    else:
+        snap = REPO_ROOT / ".claude" / "scripts" / "yota-snapshot.sh"
+        cmd = ["bash", str(snap), "--human"]
+    try:
+        r = subprocess.run(
+            cmd,
+            capture_output=True, text=True, timeout=15,
+            env={**os.environ, "REPO_ROOT": str(REPO_ROOT)},
+        )
+        out = (r.stdout or "").strip()
+        if not out and r.returncode != 0:
+            return f"snapshot failed (rc={r.returncode}): {(r.stderr or '').strip()[:300]}"
+        return out or "(empty snapshot)"
+    except subprocess.TimeoutExpired:
+        return "snapshot timeout (>15s)"
+    except Exception as e:
+        return f"snapshot error: {e}"
+
+def invoke_yota_llm(question: str) -> str:
+    """
+    Run `claude --print --agent yota -p "<question>"` with budget cap.
+    Returns answer text or a human-readable error message.
+    """
+    if MOCK_YOTA_LLM_CMD:
+        cmd = ["bash", "-c", MOCK_YOTA_LLM_CMD]
+        env = {**os.environ, "YOTA_QUESTION": question}
+    else:
+        cmd = [
+            CLAUDE_BIN, "--print",
+            "--agent", "yota",
+            "--max-budget-usd", YOTA_LLM_BUDGET_USD,
+            "-p", question,
+        ]
+        env = {**os.environ, "CLAUDE_PROJECT_DIR": str(REPO_ROOT)}
+    try:
+        r = subprocess.run(
+            cmd, capture_output=True, text=True,
+            timeout=YOTA_LLM_TIMEOUT, cwd=str(REPO_ROOT), env=env,
+        )
+        out = (r.stdout or "").strip()
+        if not out and r.returncode != 0:
+            return f"Yota-Fehler (rc={r.returncode}): {(r.stderr or '').strip()[:300]}"
+        return out or "(Yota lieferte keine Antwort)"
+    except subprocess.TimeoutExpired:
+        return "Yota braucht länger als erwartet, schau ins Briefing."
+    except FileNotFoundError:
+        return "Yota-CLI nicht gefunden (claude binary fehlt im PATH)."
+    except Exception as e:
+        return f"Yota-Fehler: {e}"
 
 # ---------------------------------------------------------------------------
 # HMAC Token (per-briefing rotation)
@@ -295,6 +568,50 @@ def invoke_btw(text: str) -> str:
     return ""
 
 # ---------------------------------------------------------------------------
+# /yota and /status handler
+# ---------------------------------------------------------------------------
+
+def _handle_yota(chat_id, user_id, argtext):
+    """
+    /yota (no arg)  → snapshot (fast, free).
+    /yota <frage>   → LLM-call via yota agent (rate-limited).
+    Returns (chat_id, ('HTML', html_text)).
+    """
+    argtext = (argtext or "").strip()
+
+    if not argtext:
+        md = invoke_yota_snapshot()
+        audit_record("telegram-bot", "yota_snapshot", "",
+                     f"user={user_id}")
+        return chat_id, ("HTML", md_to_html(md))
+
+    # Rate-limit (LLM-cost guard)
+    if not check_yota_rate_limit(user_id):
+        audit_record("telegram-bot", "yota_rate_limited", "",
+                     f"user={user_id}")
+        return chat_id, (
+            None,
+            f"rate-limited: max {YOTA_RATE_LIMIT_MAX} Yota-Fragen pro Stunde erreicht. "
+            "Schnell-Snapshot ohne Frage geht weiter (/yota)."
+        )
+
+    # Concurrency-lock
+    if not yota_inflight_acquire(user_id):
+        return chat_id, (None, "Moment, ich bin noch an deiner letzten Frage dran.")
+
+    # Typing indicator (real API only; no-op in mock)
+    send_chat_action(chat_id, "typing")
+
+    try:
+        answer = invoke_yota_llm(argtext)
+    finally:
+        yota_inflight_release(user_id)
+
+    audit_record("telegram-bot", "yota_llm", "",
+                 f"user={user_id} chars={len(argtext)}")
+    return chat_id, ("HTML", md_to_html(answer))
+
+# ---------------------------------------------------------------------------
 # Update processing
 # ---------------------------------------------------------------------------
 
@@ -323,13 +640,34 @@ def process_update(update, allowed_ids):
         return chat_id, None  # ignore silently (no reply)
 
     # --- Command detection ---
-    if not text.startswith("/btw"):
+    stripped = text.strip()
+    # Allow command suffix `/foo@botname` from group-chats
+    first_token = stripped.split(None, 1)[0] if stripped else ""
+    cmd = first_token.split("@", 1)[0].lower()
+    rest_after_cmd = stripped[len(first_token):].strip()
+
+    # /help
+    if cmd == "/help":
+        msg = (
+            "<b>Yota-Bot commands</b>\n"
+            "/yota — Snapshot in 5 Zeilen (free, sofort).\n"
+            "/yota <i>frage</i> — Yota-LLM-Antwort (~$0.05).\n"
+            "/status — Alias zu /yota.\n"
+            "/btw <i>text</i> — Stakeholder-Item ins Triage-Inbox.\n"
+            "/help — diese Liste."
+        )
+        return chat_id, ("HTML", msg)
+
+    # /yota or /status
+    if cmd in ("/yota", "/status"):
+        return _handle_yota(chat_id, user_id, rest_after_cmd)
+
+    if cmd != "/btw":
         # Other commands
         return chat_id, "Only /btw <text> supported"
 
     # Parse /btw [token] <text>
-    # Strip "/btw" prefix
-    rest = text[len("/btw"):].strip()
+    rest = rest_after_cmd
 
     if not rest:
         return chat_id, "Usage: /btw <text>"
@@ -408,7 +746,11 @@ def run_once(allowed_ids, last_update_id=0):
         try:
             chat_id, reply = process_update(update, allowed_ids)
             if chat_id is not None and reply is not None:
-                send_message(chat_id, reply)
+                if isinstance(reply, tuple) and len(reply) == 2:
+                    parse_mode, body = reply
+                    send_message(chat_id, body, parse_mode=parse_mode)
+                else:
+                    send_message(chat_id, reply)
         except Exception as e:
             print(f"WARNING: error processing update {update.get('update_id')}: {e}", file=sys.stderr)
     return last_update_id
