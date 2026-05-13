@@ -178,9 +178,9 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Test 4: Non-/btw command → "Only /btw <text> supported"
+# Test 4: Non-/btw command → friendly Yota fallback with command list
 # ---------------------------------------------------------------------------
-printf '\nTest 4: /start → reply "Only /btw <text> supported"\n'
+printf '\nTest 4: /start → Yota fallback reply with command hints\n'
 ALLOWED_IDS="12345"
 rm -f "$MOCK_DIR/sent.jsonl"
 INBOX_BEFORE="$(ls "$TMP_ROOT/.claude/stakeholder/inbox/" 2>/dev/null | wc -l | tr -d ' ')"
@@ -197,12 +197,18 @@ fi
 if [ -f "$MOCK_DIR/sent.jsonl" ] && python3 -c "
 import json, sys
 lines = open('$MOCK_DIR/sent.jsonl').readlines()
-ok = any('Only /btw' in json.loads(l).get('text','') for l in lines if l.strip())
+# Yota fallback must mention at least one of the core commands
+ok = any(
+    ('/yota propose' in (t := json.loads(l).get('text','')))
+    or ('/help' in t)
+    or ('go <slug>' in t) or ('go &lt;slug&gt;' in t)
+    for l in lines if l.strip()
+)
 sys.exit(0 if ok else 1)
 " 2>/dev/null; then
-  _pass "reply 'Only /btw <text> supported' sent"
+  _pass "Yota fallback reply sent with command hints"
 else
-  _fail "no 'Only /btw <text> supported' reply"
+  _fail "no Yota fallback reply"
 fi
 
 # ---------------------------------------------------------------------------
@@ -775,7 +781,11 @@ fi
 if python3 -c "
 import json
 lines = open('$MOCK_DIR/sent.jsonl').readlines()
-ok = any('approved' in json.loads(l).get('text','') for l in lines)
+# Accept legacy 'approved' or new Jarvis wording 'Verstanden' / 'Queued'
+ok = any(
+    any(s in json.loads(l).get('text','') for s in ('approved', 'Verstanden', 'Queued'))
+    for l in lines
+)
 import sys; sys.exit(0 if ok else 1)
 " 2>/dev/null; then
   _pass "approval ack sent"
@@ -1039,7 +1049,11 @@ MOCK_INTAKE_VALIDATOR_CMD="echo pass" \
 if python3 -c "
 import json
 lines = open('$MOCK_DIR/sent.jsonl').readlines()
-ok = any('approved' in json.loads(l).get('text','') and 'csv-export' in json.loads(l).get('text','') for l in lines)
+ok = any(
+    'csv-export' in (t := json.loads(l).get('text',''))
+    and any(s in t for s in ('approved', 'Verstanden', 'Queued'))
+    for l in lines
+)
 import sys; sys.exit(0 if ok else 1)
 " 2>/dev/null; then
   _pass "slug-prefix 'csv' matched 'csv-export'"
@@ -1141,7 +1155,10 @@ fi
 if python3 -c "
 import json
 lines = open('$MOCK_DIR/sent.jsonl').readlines()
-ok = any('Worker startet im Hintergrund' in json.loads(l).get('text','') for l in lines)
+ok = any(
+    any(s in (t := json.loads(l).get('text','')) for s in ('Worker startet im Hintergrund', 'Worker läuft jetzt im Hintergrund'))
+    for l in lines
+)
 import sys; sys.exit(0 if ok else 1)
 " 2>/dev/null; then
   _pass "reply contains 'Worker startet im Hintergrund'"

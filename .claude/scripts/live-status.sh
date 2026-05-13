@@ -55,18 +55,24 @@ write_status() {
     [ -n "$pid" ] && overseer_pids+=("$pid")
   done < <(pgrep -f "scripts/overseer\.sh" 2>/dev/null | head -3)
 
-  # Overall status
+  # Overall status — PANIC trumps WORKING trumps IDLE. Historical failed/ items
+  # do NOT poison status; only mark FAILED if a failure happened in the last 10 min.
   local status="IDLE"
   local status_emoji="💤"
-  if [ "${#claude_pids[@]}" -gt 0 ] || [ "${#worker_pids[@]}" -gt 0 ]; then
-    status="WORKING"
-    status_emoji="🔨"
-  elif [ -f "$REPO_ROOT/.claude/overseer/PANIC" ]; then
+  if [ -f "$REPO_ROOT/.claude/overseer/PANIC" ]; then
     status="PANIC"
     status_emoji="⛔"
-  elif [ "$failed_n" -gt 0 ] && [ "$done_n" -eq 0 ] && [ "$in_progress_n" -eq 0 ]; then
-    status="FAILED"
-    status_emoji="❌"
+  elif [ "${#claude_pids[@]}" -gt 0 ] || [ "${#worker_pids[@]}" -gt 0 ]; then
+    status="WORKING"
+    status_emoji="🔨"
+  else
+    # Recent failure (within last 10 min) raises status
+    local recent_failed
+    recent_failed=$(find "$REPO_ROOT/.claude/overseer/failed/" -name '*.md' -mmin -10 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$recent_failed" -gt 0 ]; then
+      status="RECENT-FAILURE"
+      status_emoji="⚠️"
+    fi
   fi
 
   # Worktree-diff for active worker
