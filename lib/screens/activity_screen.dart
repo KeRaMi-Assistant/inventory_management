@@ -19,7 +19,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
   final Set<String> _activeTypes = {};
   String _query = '';
 
-  static const _typeMeta = <String, ({IconData icon, Color color})>{
+  static final _typeMeta = <String, ({IconData icon, Color color})>{
     'deal':     (icon: Icons.list_alt_rounded,         color: AppTheme.accent),
     'status':   (icon: Icons.flag_rounded,             color: AppTheme.info),
     'stock':    (icon: Icons.inventory_2_rounded,      color: AppTheme.success),
@@ -126,7 +126,7 @@ class _Header extends StatelessWidget {
               color: AppTheme.accentLight,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.history_rounded,
+            child: Icon(Icons.history_rounded,
                 color: AppTheme.accent, size: 22),
           ),
           const SizedBox(width: 12),

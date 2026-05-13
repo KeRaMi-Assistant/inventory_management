@@ -344,7 +344,7 @@ class _AddTile extends StatelessWidget {
             width: 1.5,
           ),
         ),
-        child: const Icon(Icons.add_a_photo_outlined,
+        child: Icon(Icons.add_a_photo_outlined,
             color: AppTheme.accent, size: 20),
       ),
     );

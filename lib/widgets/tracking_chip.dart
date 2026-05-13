@@ -230,7 +230,7 @@ class _ChipBody extends StatelessWidget {
 
     final number = Text(
       _displayLabel,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w700,
         color: AppTheme.accent,

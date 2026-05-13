@@ -641,6 +641,47 @@ class _GeneralTab extends StatelessWidget {
                 },
               ),
             ),
+            const SizedBox(height: 16),
+            _SectionHeader(title: l10n.settingsPaletteSection),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Consumer<AppPreferencesProvider>(
+                builder: (context, prefs, _) {
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: AppColorPalette.values.map((palette) {
+                      final selected = prefs.colorPalette == palette;
+                      final color = AppTheme.paletteAccent(palette);
+                      return GestureDetector(
+                        onTap: () => context.read<AppPreferencesProvider>().setColorPalette(palette),
+                        child: Tooltip(
+                          message: _paletteName(l10n, palette),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: selected
+                                  ? Border.all(color: AppTheme.textPrimaryOf(context), width: 3)
+                                  : Border.all(color: Colors.transparent, width: 3),
+                              boxShadow: selected
+                                  ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 1)]
+                                  : null,
+                            ),
+                            child: selected
+                                ? const Icon(Icons.check, color: Colors.white, size: 18)
+                                : null,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            ),
             const SizedBox(height: 24),
             _SectionHeader(title: l10n.settingsLanguageSection),
             const SizedBox(height: 8),
@@ -3437,4 +3478,14 @@ class _SectionCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _paletteName(AppLocalizations l10n, AppColorPalette palette) {
+  return switch (palette) {
+    AppColorPalette.blue => l10n.settingsPaletteBlue,
+    AppColorPalette.indigo => l10n.settingsPaletteIndigo,
+    AppColorPalette.violet => l10n.settingsPaletteViolet,
+    AppColorPalette.teal => l10n.settingsPaletteTeal,
+    AppColorPalette.rose => l10n.settingsPaletteRose,
+  };
 }

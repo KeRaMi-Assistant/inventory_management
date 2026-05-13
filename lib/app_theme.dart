@@ -1,6 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+enum AppColorPalette { blue, indigo, violet, teal, rose }
+
+class _PaletteConfig {
+  final Color accent;
+  final Color accentLight;
+  final Color accentDark;
+  final Color accentLightDark;
+  final Color accentBorderLight;
+  final Color accentBorderDark;
+  final Color accentSelectedDark;
+  final Color accentTextDark;
+  const _PaletteConfig({
+    required this.accent,
+    required this.accentLight,
+    required this.accentDark,
+    required this.accentLightDark,
+    required this.accentBorderLight,
+    required this.accentBorderDark,
+    required this.accentSelectedDark,
+    required this.accentTextDark,
+  });
+}
+
 class AppTheme {
   // -- Neutral Base (Light) --
   static const Color bgApp = Color(0xFFF5F7FA);
@@ -27,6 +50,79 @@ class AppTheme {
   static const Color textSecondaryDark = Color(0xFFCBD5E1);
   static const Color textMutedDark = Color(0xFF94A3B8);
   static const Color textDisabledDark = Color(0xFF64748B);
+  // -- Palette definitions --
+  static const Map<AppColorPalette, _PaletteConfig> _palettes = {
+    AppColorPalette.blue: _PaletteConfig(
+      accent: Color(0xFF2563EB),
+      accentLight: Color(0xFFEFF6FF),
+      accentDark: Color(0xFF1D4ED8),
+      accentLightDark: Color(0xFF1E3A5F),
+      accentBorderLight: Color(0xFFBFDBFE),
+      accentBorderDark: Color(0xFF1E40AF),
+      accentSelectedDark: Color(0xFF1E3A5F),
+      accentTextDark: Color(0xFF60A5FA),
+    ),
+    AppColorPalette.indigo: _PaletteConfig(
+      accent: Color(0xFF4F46E5),
+      accentLight: Color(0xFFEEF2FF),
+      accentDark: Color(0xFF4338CA),
+      accentLightDark: Color(0xFF1E1B4B),
+      accentBorderLight: Color(0xFFC7D2FE),
+      accentBorderDark: Color(0xFF3730A3),
+      accentSelectedDark: Color(0xFF1E1B4B),
+      accentTextDark: Color(0xFF818CF8),
+    ),
+    AppColorPalette.violet: _PaletteConfig(
+      accent: Color(0xFF7C3AED),
+      accentLight: Color(0xFFF5F3FF),
+      accentDark: Color(0xFF6D28D9),
+      accentLightDark: Color(0xFF2E1065),
+      accentBorderLight: Color(0xFFDDD6FE),
+      accentBorderDark: Color(0xFF4C1D95),
+      accentSelectedDark: Color(0xFF2E1065),
+      accentTextDark: Color(0xFFA78BFA),
+    ),
+    AppColorPalette.teal: _PaletteConfig(
+      accent: Color(0xFF0D9488),
+      accentLight: Color(0xFFF0FDFA),
+      accentDark: Color(0xFF0F766E),
+      accentLightDark: Color(0xFF134E4A),
+      accentBorderLight: Color(0xFF99F6E4),
+      accentBorderDark: Color(0xFF115E59),
+      accentSelectedDark: Color(0xFF134E4A),
+      accentTextDark: Color(0xFF2DD4BF),
+    ),
+    AppColorPalette.rose: _PaletteConfig(
+      accent: Color(0xFFE11D48),
+      accentLight: Color(0xFFFFF1F2),
+      accentDark: Color(0xFFBE123C),
+      accentLightDark: Color(0xFF4C0519),
+      accentBorderLight: Color(0xFFFFCCD5),
+      accentBorderDark: Color(0xFF881337),
+      accentSelectedDark: Color(0xFF4C0519),
+      accentTextDark: Color(0xFFFB7185),
+    ),
+  };
+
+  // -- Active palette (set by AppPreferencesProvider on load/change) --
+  static AppColorPalette _active = AppColorPalette.blue;
+
+  static void setActivePalette(AppColorPalette p) => _active = p;
+
+  static AppColorPalette get activePalette => _active;
+
+  // -- Accent accessors (palette-aware) --
+  static Color get accent => _palettes[_active]!.accent;
+  static Color get accentLight => _palettes[_active]!.accentLight;
+  static Color get accentDark => _palettes[_active]!.accentDark;
+  static Color get accentLightDark => _palettes[_active]!.accentLightDark;
+  static Color get accentBorderLight => _palettes[_active]!.accentBorderLight;
+  static Color get accentBorderDark => _palettes[_active]!.accentBorderDark;
+  static Color get accentSelectedDark => _palettes[_active]!.accentSelectedDark;
+  static Color get accentTextDark => _palettes[_active]!.accentTextDark;
+
+  // Returns the primary accent for any palette (used by the palette picker UI).
+  static Color paletteAccent(AppColorPalette p) => _palettes[p]!.accent;
 
   // -- Context-aware helpers --
   static bool _dark(BuildContext context) =>
@@ -51,18 +147,9 @@ class AppTheme {
   static Color textDisabledOf(BuildContext context) =>
       _dark(context) ? textDisabledDark : textDisabled;
 
-  // Selected-Card-Background — accentLight in light mode, dark navy in dark mode.
-  static const Color accentSelectedDark = Color(0xFF1E3A5F);
   static Color accentSelectedBgOf(BuildContext context) =>
       _dark(context) ? accentSelectedDark : accentLight;
 
-  // -- Accent --
-  static const Color accent = Color(0xFF2563EB);
-  static const Color accentLight = Color(0xFFEFF6FF);
-  static const Color accentDark = Color(0xFF1D4ED8);
-  static const Color accentLightDark = Color(0xFF1E3A5F);
-  static const Color accentBorderLight = Color(0xFFBFDBFE);
-  static const Color accentBorderDark = Color(0xFF1E40AF);
   static Color accentLightOf(BuildContext context) =>
       _dark(context) ? accentLightDark : accentLight;
   static Color accentBorderOf(BuildContext context) =>
@@ -107,12 +194,10 @@ class AppTheme {
   static Color infoBorderOf(BuildContext context) =>
       _dark(context) ? infoBorderDark : infoBorder;
 
-  // Status text — slightly brighter in dark mode for readability.
   static const Color successTextDark = Color(0xFF34D399);
   static const Color warningTextDark = Color(0xFFFBBF24);
   static const Color dangerTextDark = Color(0xFFF87171);
   static const Color infoTextDark = Color(0xFF38BDF8);
-  static const Color accentTextDark = Color(0xFF60A5FA);
   static Color successTextOf(BuildContext context) =>
       _dark(context) ? successTextDark : success;
   static Color warningTextOf(BuildContext context) =>
@@ -134,12 +219,23 @@ class AppTheme {
   static const Color background = bgApp;
   static const Color cardBg = bgSurface;
   static const Color sidebar = bgSubtle;
-  static ThemeData get light {
+
+  // -- ThemeData builders --
+  static ThemeData get light => lightFor(_active);
+  static ThemeData get dark => darkFor(_active);
+
+  static ThemeData lightFor(AppColorPalette palette) =>
+      _buildLight(_palettes[palette]!);
+
+  static ThemeData darkFor(AppColorPalette palette) =>
+      _buildDark(_palettes[palette]!);
+
+  static ThemeData _buildLight(_PaletteConfig p) {
     final baseText = GoogleFonts.interTextTheme();
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: accent,
+        seedColor: p.accent,
         brightness: Brightness.light,
         surface: bgSurface,
       ),
@@ -166,11 +262,11 @@ class AppTheme {
         iconTheme: const IconThemeData(color: Colors.white),
         toolbarHeight: 52,
       ),
-      cardTheme: CardThemeData(
+      cardTheme: const CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: border, width: 1),
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+          side: BorderSide(color: border, width: 1),
         ),
         color: bgSurface,
         margin: EdgeInsets.zero,
@@ -188,19 +284,19 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(7),
-          borderSide: const BorderSide(color: accent, width: 1.5),
+          borderSide: BorderSide(color: p.accent, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         filled: true,
         fillColor: bgSurface,
         labelStyle: const TextStyle(color: textMuted, fontSize: 13),
-        floatingLabelStyle: const TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w500),
+        floatingLabelStyle: TextStyle(color: p.accent, fontSize: 12, fontWeight: FontWeight.w500),
         hintStyle: const TextStyle(color: textDisabled, fontSize: 13),
         isDense: true,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: accent,
+          backgroundColor: p.accent,
           foregroundColor: Colors.white,
           elevation: 0,
           shadowColor: Colors.transparent,
@@ -211,7 +307,7 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: accent,
+          foregroundColor: p.accent,
           side: const BorderSide(color: border),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -220,14 +316,14 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: accent,
+          foregroundColor: p.accent,
           textStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: accent,
+        backgroundColor: p.accent,
         foregroundColor: Colors.white,
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -259,20 +355,20 @@ class AppTheme {
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
       tabBarTheme: TabBarThemeData(
-        labelColor: accent,
+        labelColor: p.accent,
         unselectedLabelColor: textMuted,
-        indicatorColor: accent,
+        indicatorColor: p.accent,
         dividerColor: border,
       ),
     );
   }
 
-  static ThemeData get dark {
+  static ThemeData _buildDark(_PaletteConfig p) {
     final baseText = GoogleFonts.interTextTheme();
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: accent,
+        seedColor: p.accent,
         brightness: Brightness.dark,
         surface: bgSurfaceDark,
       ),
@@ -299,11 +395,11 @@ class AppTheme {
         iconTheme: const IconThemeData(color: Colors.white),
         toolbarHeight: 52,
       ),
-      cardTheme: CardThemeData(
+      cardTheme: const CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: borderDark, width: 1),
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+          side: BorderSide(color: borderDark, width: 1),
         ),
         color: bgSurfaceDark,
         margin: EdgeInsets.zero,
@@ -321,19 +417,19 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(7),
-          borderSide: const BorderSide(color: accent, width: 1.5),
+          borderSide: BorderSide(color: p.accent, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         filled: true,
         fillColor: bgSurfaceDark,
         labelStyle: const TextStyle(color: textMutedDark, fontSize: 13),
-        floatingLabelStyle: const TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w500),
+        floatingLabelStyle: TextStyle(color: p.accent, fontSize: 12, fontWeight: FontWeight.w500),
         hintStyle: const TextStyle(color: textDisabledDark, fontSize: 13),
         isDense: true,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: accent,
+          backgroundColor: p.accent,
           foregroundColor: Colors.white,
           elevation: 0,
           shadowColor: Colors.transparent,
@@ -344,7 +440,7 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: accent,
+          foregroundColor: p.accent,
           side: const BorderSide(color: borderDark),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -353,14 +449,14 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: accent,
+          foregroundColor: p.accent,
           textStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: accent,
+        backgroundColor: p.accent,
         foregroundColor: Colors.white,
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -392,9 +488,9 @@ class AppTheme {
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
       tabBarTheme: TabBarThemeData(
-        labelColor: accent,
+        labelColor: p.accent,
         unselectedLabelColor: textMutedDark,
-        indicatorColor: accent,
+        indicatorColor: p.accent,
         dividerColor: borderDark,
       ),
     );

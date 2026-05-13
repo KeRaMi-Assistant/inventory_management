@@ -2534,6 +2534,24 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get settingsPaletteSection => 'Color Palette';
+
+  @override
+  String get settingsPaletteBlue => 'Blue';
+
+  @override
+  String get settingsPaletteIndigo => 'Indigo';
+
+  @override
+  String get settingsPaletteViolet => 'Violet';
+
+  @override
+  String get settingsPaletteTeal => 'Teal';
+
+  @override
+  String get settingsPaletteRose => 'Rose';
+
+  @override
   String get settingsThemeSection => 'Appearance';
 
   @override

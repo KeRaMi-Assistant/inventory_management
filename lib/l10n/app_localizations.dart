@@ -4688,6 +4688,42 @@ abstract class AppLocalizations {
   /// **'Rolle: {role}'**
   String invitesRoleLabel(Object role);
 
+  /// No description provided for @settingsPaletteSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Farbpalette'**
+  String get settingsPaletteSection;
+
+  /// No description provided for @settingsPaletteBlue.
+  ///
+  /// In de, this message translates to:
+  /// **'Blau'**
+  String get settingsPaletteBlue;
+
+  /// No description provided for @settingsPaletteIndigo.
+  ///
+  /// In de, this message translates to:
+  /// **'Indigo'**
+  String get settingsPaletteIndigo;
+
+  /// No description provided for @settingsPaletteViolet.
+  ///
+  /// In de, this message translates to:
+  /// **'Violett'**
+  String get settingsPaletteViolet;
+
+  /// No description provided for @settingsPaletteTeal.
+  ///
+  /// In de, this message translates to:
+  /// **'Petrol'**
+  String get settingsPaletteTeal;
+
+  /// No description provided for @settingsPaletteRose.
+  ///
+  /// In de, this message translates to:
+  /// **'Rose'**
+  String get settingsPaletteRose;
+
   /// No description provided for @settingsThemeSection.
   ///
   /// In de, this message translates to:

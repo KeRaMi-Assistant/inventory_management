@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppPreferencesProvider extends ChangeNotifier {
@@ -6,6 +7,7 @@ class AppPreferencesProvider extends ChangeNotifier {
   static const _kLowStock = 'pref_low_stock_threshold';
   static const _kLocale = 'pref_locale';
   static const _kThemeMode = 'pref_theme_mode';
+  static const _kColorPalette = 'pref_color_palette';
 
   static const supportedLocales = <Locale>[
     Locale('de'),
@@ -16,12 +18,14 @@ class AppPreferencesProvider extends ChangeNotifier {
   int _lowStockThreshold = 5;
   Locale? _locale;
   ThemeMode _themeMode = ThemeMode.system;
+  AppColorPalette _colorPalette = AppColorPalette.blue;
   bool _ready = false;
 
   double get monthlyProfitGoal => _monthlyProfitGoal;
   int get lowStockThreshold => _lowStockThreshold;
   Locale? get locale => _locale;
   ThemeMode get themeMode => _themeMode;
+  AppColorPalette get colorPalette => _colorPalette;
   bool get isReady => _ready;
 
   Future<void> load() async {
@@ -36,6 +40,15 @@ class AppPreferencesProvider extends ChangeNotifier {
       'dark' => ThemeMode.dark,
       _ => ThemeMode.system,
     };
+    final rawPalette = prefs.getString(_kColorPalette);
+    _colorPalette = switch (rawPalette) {
+      'indigo' => AppColorPalette.indigo,
+      'violet' => AppColorPalette.violet,
+      'teal' => AppColorPalette.teal,
+      'rose' => AppColorPalette.rose,
+      _ => AppColorPalette.blue,
+    };
+    AppTheme.setActivePalette(_colorPalette);
     _ready = true;
     notifyListeners();
   }
@@ -62,6 +75,21 @@ class AppPreferencesProvider extends ChangeNotifier {
     } else {
       await prefs.setString(_kLocale, locale.languageCode);
     }
+    notifyListeners();
+  }
+
+  Future<void> setColorPalette(AppColorPalette palette) async {
+    _colorPalette = palette;
+    AppTheme.setActivePalette(palette);
+    final prefs = await SharedPreferences.getInstance();
+    final raw = switch (palette) {
+      AppColorPalette.indigo => 'indigo',
+      AppColorPalette.violet => 'violet',
+      AppColorPalette.teal => 'teal',
+      AppColorPalette.rose => 'rose',
+      AppColorPalette.blue => 'blue',
+    };
+    await prefs.setString(_kColorPalette, raw);
     notifyListeners();
   }
 

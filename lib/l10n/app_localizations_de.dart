@@ -2536,6 +2536,24 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get settingsPaletteSection => 'Farbpalette';
+
+  @override
+  String get settingsPaletteBlue => 'Blau';
+
+  @override
+  String get settingsPaletteIndigo => 'Indigo';
+
+  @override
+  String get settingsPaletteViolet => 'Violett';
+
+  @override
+  String get settingsPaletteTeal => 'Petrol';
+
+  @override
+  String get settingsPaletteRose => 'Rose';
+
+  @override
   String get settingsThemeSection => 'Erscheinungsbild';
 
   @override

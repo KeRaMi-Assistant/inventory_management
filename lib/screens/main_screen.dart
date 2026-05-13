@@ -638,7 +638,7 @@ class _AccountMenu extends StatelessWidget {
           value: 'plan',
           child: Row(
             children: [
-              const Icon(Icons.workspace_premium_outlined,
+              Icon(Icons.workspace_premium_outlined,
                   size: 16, color: AppTheme.accent),
               const SizedBox(width: 10),
               Expanded(
