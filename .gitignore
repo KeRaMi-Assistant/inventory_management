@@ -101,3 +101,8 @@ app.*.map.json
 .claude/stakeholder/rejected/*.md
 # Intake-Council runtime state (reject-streak.json etc.)
 .claude/intake-council/state/*.json
+
+# Live-Status-Daemon runtime artifacts
+.claude/overseer/LIVE_STATUS.md
+.claude/overseer/live-status.out.log
+.claude/overseer/live-status.err.log
