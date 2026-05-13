@@ -38,6 +38,8 @@ interface DealRow {
   user_id: string
   product: string
   tracking: string | null
+  tracking_confidence: 'strong' | 'manual' | 'none' | null
+  tracking_needs_review: boolean | null
   status: string
   arrival_date: string | null
   order_date: string
@@ -137,19 +139,41 @@ async function pollWorkspace(
   }
 
   // Offene Deals: Status "Unterwegs", tracking gesetzt, kein Arrival.
+  // T16: Skip Deals mit needs_review=true UND confidence='none' (Legacy/Weak)
+  //      → poll nur wenn (needs_review=false) ODER confidence IN ('strong','manual').
   const { data: dealRows, error: dealsErr } = await admin
     .from('deals')
-    .select('id, workspace_id, user_id, product, tracking, status, arrival_date, order_date')
+    .select(
+      'id, workspace_id, user_id, product, tracking, tracking_confidence, tracking_needs_review, status, arrival_date, order_date',
+    )
     .eq('workspace_id', workspaceId)
     .eq('status', 'Unterwegs')
     .is('arrival_date', null)
     .not('tracking', 'is', null)
+    .or(
+      'tracking_needs_review.is.false,tracking_needs_review.is.null,tracking_confidence.eq.strong,tracking_confidence.eq.manual',
+    )
     .order('order_date', { ascending: true })
     .limit(Math.min(budget, MAX_DEALS_PER_RUN))
   if (dealsErr) {
     console.error('Failed to load deals', workspaceId, dealsErr)
     stat.errors++
     return stat
+  }
+
+  // Belt-and-Suspenders: Post-Filter, falls Spalten in der DB noch nicht
+  // existieren (Migration T5 nicht angewandt) oder die OR-Query unerwartete
+  // Rows zurückgibt. Logik identisch zur Query-Bedingung.
+  const allRows = (dealRows ?? []) as DealRow[]
+  const eligible = allRows.filter((d) => {
+    if (d.tracking_needs_review !== true) return true
+    return d.tracking_confidence === 'strong' || d.tracking_confidence === 'manual'
+  })
+  const skipped = allRows.length - eligible.length
+  if (skipped > 0) {
+    console.log(
+      `tracking-poll: skipped ${skipped} deals (needs_review + confidence weak/none) in workspace`,
+    )
   }
 
   // Cache decrypted API-Keys pro Carrier (max 3 Aufrufe pro Workspace).
@@ -170,7 +194,7 @@ async function pollWorkspace(
     return key
   }
 
-  for (const deal of (dealRows ?? []) as DealRow[]) {
+  for (const deal of eligible) {
     if (!deal.tracking || deal.tracking.trim().length === 0) continue
     const adapter = detectAdapter(deal.tracking)
     if (!adapter) continue
@@ -267,3 +291,16 @@ function jsonResp(body: unknown, status = 200): Response {
 // Re-exports für Tests (Deno-Test importiert den Edge-Fn-Code, ruft aber
 // nur die reinen Adapter-Funktionen auf).
 export { ADAPTERS }
+
+// T16: pure helper, exported for tests. Returns true if a deal-row may be
+// polled against carrier APIs. Skip when needs_review=true AND confidence
+// is not strong/manual (i.e. legacy 'none' or weak/null).
+export function isPollEligible(deal: {
+  tracking_needs_review?: boolean | null
+  tracking_confidence?: 'strong' | 'manual' | 'none' | null
+}): boolean {
+  if (deal.tracking_needs_review !== true) return true
+  return (
+    deal.tracking_confidence === 'strong' || deal.tracking_confidence === 'manual'
+  )
+}

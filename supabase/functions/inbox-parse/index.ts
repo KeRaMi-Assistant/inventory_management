@@ -17,10 +17,15 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   detectAndParse,
   detectShop,
+  findAllTrackings,
+  gateTracking,
   isAccountingMail,
   isCarrierOnly,
 } from '../_shared/inbox_adapters.ts'
 import { runParseSweep, stripBody } from '../_shared/inbox_parse_runner.ts'
+
+// T12: Rate-Limit für User-getriggerte Re-Parse-Calls (5 min Cooldown).
+const REPARSE_COOLDOWN_MS = 5 * 60 * 1000
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,6 +69,11 @@ Deno.serve(async (req) => {
     reparse_unclassified?: boolean
     reparse_no_tracking?: boolean
     reparse_forensics?: boolean
+    // T12: User-getriggerter Re-Parse für Mails mit
+    // tracking_confidence='none' oder tracking_needs_review=true.
+    // Liest BEIDE Body-Quellen (_raw_html + _raw.text) und versucht
+    // Tracking mit der aktuellen Adapter-Registry neu zu klassifizieren.
+    reparse_low_confidence?: boolean
     workspace_id?: string
     shop_key?: string
     // Wenn true, werden auch parsed_messages mit bereits gesetztem
@@ -132,6 +142,84 @@ Deno.serve(async (req) => {
       shopKey: body.shop_key,
     })
     return jsonResp({ ok: true, mode: 'reparse_forensics', ...result })
+  }
+
+  if (body.reparse_low_confidence === true) {
+    // T12: Endpoint-Contract festschreiben.
+    // workspace_id MUSS aus auth.uid()-Scope kommen (siehe scopedWorkspaceIds
+    // oben). Service-Role-Pfad (Cron/Maintenance) muss workspace_id explizit
+    // im Body übergeben.
+    let targetWorkspaceIds: string[] = []
+    if (scopedUserId !== null) {
+      // User-Pfad: scope auf eigene Workspaces.
+      if (body.workspace_id) {
+        // Member-Check oben hat bereits validiert.
+        targetWorkspaceIds = [body.workspace_id]
+      } else {
+        targetWorkspaceIds = scopedWorkspaceIds ?? []
+      }
+    } else {
+      // Cron/Service: workspace_id ist Pflicht.
+      if (!body.workspace_id) {
+        return jsonResp({
+          error: 'workspace_id required for reparse_low_confidence in service mode',
+        }, 400)
+      }
+      targetWorkspaceIds = [body.workspace_id]
+    }
+
+    if (targetWorkspaceIds.length === 0) {
+      return jsonResp({
+        ok: true,
+        mode: 'reparse_low_confidence',
+        scanned: 0,
+        updated: 0,
+      })
+    }
+
+    // Rate-Limit: 5min Cooldown pro Workspace. Wir nehmen die zuletzt
+    // gespeicherte last_reparse_at pro Workspace (max über mailbox_accounts).
+    const { data: rlRows, error: rlErr } = await admin
+      .from('mailbox_accounts')
+      .select('workspace_id, last_reparse_at')
+      .in('workspace_id', targetWorkspaceIds)
+    if (rlErr) {
+      return jsonResp({ error: rlErr.message }, 500)
+    }
+    const now = Date.now()
+    let mostRecent = 0
+    for (const r of (rlRows ?? []) as Array<{
+      workspace_id: string
+      last_reparse_at: string | null
+    }>) {
+      if (r.last_reparse_at) {
+        const t = new Date(r.last_reparse_at).getTime()
+        if (t > mostRecent) mostRecent = t
+      }
+    }
+    if (mostRecent > 0 && now - mostRecent < REPARSE_COOLDOWN_MS) {
+      const retryAfter = Math.ceil(
+        (REPARSE_COOLDOWN_MS - (now - mostRecent)) / 1000,
+      )
+      return jsonResp({
+        error: 'rate_limit',
+        retry_after_seconds: retryAfter,
+      }, 429)
+    }
+
+    const result = await reparseLowConfidence(admin, {
+      workspaceIds: targetWorkspaceIds,
+      shopKey: body.shop_key,
+    })
+
+    // Stempel last_reparse_at für alle betroffenen Workspaces.
+    const stampIso = new Date().toISOString()
+    await admin
+      .from('mailbox_accounts')
+      .update({ last_reparse_at: stampIso })
+      .in('workspace_id', targetWorkspaceIds)
+
+    return jsonResp({ ok: true, mode: 'reparse_low_confidence', ...result })
   }
 
   const stats = await runParseSweep(admin, { limit: 200 })
@@ -258,11 +346,14 @@ async function reparseNoTracking(
   let cursor: string | null = null
   const PAGE = 100
   for (let i = 0; i < 25; i++) {
+    // Council-Finding #1: BEIDE Body-Quellen (_raw_html + _raw.text) müssen
+    // berücksichtigt werden — Plain-Text-only-Mails (PRs #48/#51) sonst
+    // unsichtbar für den Re-Parse.
     let q = admin
       .from('parsed_messages')
       .select('id, workspace_id, from_address, subject, parsed_payload, received_at')
       .in('status', ['suggested', 'matched'])
-      .not('parsed_payload->_raw_html', 'is', null)
+      .or('parsed_payload->_raw_html.not.is.null,parsed_payload->_raw->text.not.is.null')
       .order('received_at', { ascending: true })
       .limit(PAGE)
     // Default-Filter (Bug-Fix-Mode überschreibt das absichtlich):
@@ -295,14 +386,17 @@ async function reparseNoTracking(
       try {
         const payload = row.parsed_payload ?? {}
         const html = (payload._raw_html as string | undefined) ?? ''
-        if (!html) {
+        // Council-Finding #1: Plain-Text-Pfad nachziehen.
+        const rawObj = (payload._raw as { text?: string } | undefined) ?? {}
+        const text = (rawObj.text as string | undefined) ?? ''
+        if (!html && !text) {
           stats.unchanged++
           continue
         }
         const ctx = {
           from: row.from_address ?? '',
           subject: row.subject ?? '',
-          text: '',
+          text,
           html,
         }
         const parsed = detectAndParse(ctx)
@@ -463,6 +557,150 @@ async function reparseForensics(
         stats.byShop[shopKey].enriched++
       } catch (e) {
         console.warn('reparseForensics row failed', row.id, e)
+        stats.errors++
+      }
+    }
+    if (rows.length < PAGE) break
+  }
+  return stats
+}
+
+// ── T12: reparseLowConfidence ─────────────────────────────────────────────
+//
+// Liest alle parsed_messages mit `tracking_needs_review = TRUE` ODER
+// `tracking_confidence = 'none'` aus den gegebenen Workspaces, läuft mit
+// `findAllTrackings()` + `gateTracking({minConfidence:'strong'})` über
+// BEIDE Body-Quellen (_raw_html UND _raw.text — Council-Finding #1) und
+// aktualisiert tracking + carrier + confidence + needs_review + candidates.
+// Manuelle Trackings (`tracking_confidence = 'manual'`) werden NICHT
+// angetastet (Plan §5.2 Manual-Guard).
+interface ReparseLowConfidenceStats {
+  scanned: number
+  updated: number
+  unchanged: number
+  skipped_no_body: number
+  errors: number
+}
+
+async function reparseLowConfidence(
+  admin: ReturnType<typeof createClient>,
+  options: { workspaceIds: string[]; shopKey?: string },
+): Promise<ReparseLowConfidenceStats> {
+  const stats: ReparseLowConfidenceStats = {
+    scanned: 0,
+    updated: 0,
+    unchanged: 0,
+    skipped_no_body: 0,
+    errors: 0,
+  }
+  let cursor: string | null = null
+  const PAGE = 100
+  for (let i = 0; i < 25; i++) {
+    let q = admin
+      .from('parsed_messages')
+      .select(
+        'id, workspace_id, from_address, subject, parsed_payload, received_at',
+      )
+      .in('workspace_id', options.workspaceIds)
+      .in('status', ['suggested', 'matched'])
+      // needs_review=true ODER confidence='none' — beides JSONB-Felder.
+      .or(
+        'parsed_payload->>tracking_needs_review.eq.true,parsed_payload->>tracking_confidence.eq.none',
+      )
+      .order('received_at', { ascending: true })
+      .limit(PAGE)
+    if (options.shopKey) q = q.eq('shop_key', options.shopKey)
+    if (cursor) q = q.gt('received_at', cursor)
+    const { data, error } = await q
+    if (error) {
+      console.error('reparseLowConfidence select failed', error)
+      break
+    }
+    const rows = (data ?? []) as Array<{
+      id: string
+      workspace_id: string
+      from_address: string | null
+      subject: string | null
+      received_at: string
+      parsed_payload: Record<string, unknown> | null
+    }>
+    if (rows.length === 0) break
+    for (const row of rows) {
+      stats.scanned++
+      cursor = row.received_at
+      try {
+        const payload = row.parsed_payload ?? {}
+        // Manual-Guard: Wenn parsed-Layer manuell gesetzt ist, nicht anfassen.
+        if (payload.tracking_confidence === 'manual') {
+          stats.unchanged++
+          continue
+        }
+        const html = (payload._raw_html as string | undefined) ?? ''
+        const rawObj = (payload._raw as { text?: string } | undefined) ?? {}
+        const text = (rawObj.text as string | undefined) ?? ''
+        if (!html && !text) {
+          stats.skipped_no_body++
+          continue
+        }
+        const body = text + (text && html ? '\n\n' : '') + html
+        const candidates = findAllTrackings(body, { html })
+        const { primary } = gateTracking(candidates, { minConfidence: 'strong' })
+
+        const newConfidence = primary ? 'strong' : 'none'
+        const newNeedsReview = primary ? false : true
+        const newTracking = primary?.value ?? null
+        const newCarrier = primary?.carrier ?? null
+
+        const oldTracking = (payload.tracking as string | undefined) ?? null
+        const oldConfidence =
+          (payload.tracking_confidence as string | undefined) ?? 'none'
+
+        // Idempotenz-Check.
+        if (
+          newTracking === oldTracking &&
+          newConfidence === oldConfidence
+        ) {
+          stats.unchanged++
+          continue
+        }
+
+        const patched: Record<string, unknown> = {
+          ...payload,
+          tracking: newTracking,
+          tracking_carrier: newCarrier,
+          tracking_confidence: newConfidence,
+          tracking_needs_review: newNeedsReview,
+          tracking_candidates: candidates.slice(0, 10),
+        }
+
+        const { error: updErr } = await admin
+          .from('parsed_messages')
+          .update({ parsed_payload: patched })
+          .eq('id', row.id)
+        if (updErr) {
+          stats.errors++
+          continue
+        }
+
+        // Spiegele auf pending_deal_suggestions — nur wenn confidence='strong'
+        // (Plan §3.2: medium/weak nie in Deal/Suggestion-Pfad). Manual bleibt
+        // intakt (RLS-Layer kann das nicht garantieren → wir filtern hier).
+        if (primary) {
+          await admin
+            .from('pending_deal_suggestions')
+            .update({
+              tracking: newTracking,
+              carrier: newCarrier,
+              tracking_confidence: 'strong',
+              tracking_needs_review: false,
+            })
+            .eq('parsed_message_id', row.id)
+            .neq('tracking_confidence', 'manual')
+        }
+
+        stats.updated++
+      } catch (e) {
+        console.warn('reparseLowConfidence row failed', row.id, e)
         stats.errors++
       }
     }

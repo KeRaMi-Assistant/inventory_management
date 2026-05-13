@@ -1551,6 +1551,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'You may be in the wrong workspace. Check the workspace name top-right and switch if needed. Filters (buyer/shop/date) can also hide deals — clear them with the \"Clear filters\" button.';
 
   @override
+  String get helpFaqQ17 => 'What does the \"Review\" badge on a shipment mean?';
+
+  @override
+  String get helpFaqA17 =>
+      'The app has stored a tracking value, but our new detector isn\'t sure it really is a valid tracking number (e.g. because it comes from an older mail with an unclear format). Tap the deal and check the tracking card: \"Accept\" confirms the value, \"Dismiss\" clears it. On the deals list, the \"Review\" chip filters all affected deals at once.';
+
+  @override
+  String get helpFaqQ18 =>
+      'How does \"Re-evaluate tracking numbers\" in Settings work?';
+
+  @override
+  String get helpFaqA18 =>
+      'Settings → General → \"Re-evaluate tracking numbers\" rechecks every stored mail in this workspace with the latest, stricter detector. Wrongly stored values get flagged as \"Review\", newly recognised real trackings replace empty entries. Manually entered tracking numbers stay untouched. To protect against runaway loops, this runs at most once every 5 minutes per workspace.';
+
+  @override
+  String get helpFaqQ19 =>
+      'Why is a tracking number sometimes empty even though the shipping mail is there?';
+
+  @override
+  String get helpFaqA19 =>
+      'Since May 2026 the app only stores a tracking number when it is structurally verified (carrier pattern + length/checksum check). When the mail only contains an internal shop ID (e.g. an Amazon Logistics shipment ID) or the number is ambiguously formatted, the app deliberately leaves the field empty instead of saving a wrong value. You can always enter the tracking number manually on the deal — manual entries are never overwritten automatically.';
+
+  @override
   String get helpTroubleSection => 'Troubleshooting';
 
   @override
@@ -2897,14 +2920,73 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String trackingNeedsReviewFilterChip(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Review ($count)',
+      one: 'Review (1)',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get trackingReviewAcceptCta => 'Accept';
 
   @override
   String get trackingReviewDismissCta => 'Dismiss';
 
   @override
+  String get trackingReviewListTitle => 'Review tracking numbers';
+
+  @override
   String get trackingReviewNeededBadge => 'Review';
 
   @override
   String get trackingStatusBlockA11yLabel => 'Tracking status';
+
+  @override
+  String get inboxSectionOrder => 'Order';
+
+  @override
+  String get inboxSectionShipping => 'Shipping';
+
+  @override
+  String get inboxSectionLinkedTo => 'Linked to';
+
+  @override
+  String get inboxFieldOrderId => 'Order ID';
+
+  @override
+  String get inboxFieldProduct => 'Product';
+
+  @override
+  String get inboxFieldAmount => 'Amount';
+
+  @override
+  String get inboxFieldEta => 'ETA';
+
+  @override
+  String get inboxFieldDeal => 'Deal';
+
+  @override
+  String get dealTrackingStatusTitle => 'Tracking number';
+
+  @override
+  String get dealSectionTrackingStatus => 'Shipping status';
+
+  @override
+  String trackingUpdateError(Object error) {
+    return 'Tracking update failed: $error';
+  }
+
+  @override
+  String trackingAcceptError(Object error) {
+    return 'Tracking acceptance failed: $error';
+  }
+
+  @override
+  String trackingDiscardError(Object error) {
+    return 'Tracking discard failed: $error';
+  }
 }

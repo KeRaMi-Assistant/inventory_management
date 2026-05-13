@@ -9,11 +9,13 @@ import '../models/deal.dart';
 import '../models/inbox_message.dart';
 import '../models/mailbox_account.dart';
 import '../providers/inbox_provider.dart';
+import '../providers/inventory_provider.dart';
 import '../utils/mail_link.dart';
 import '../utils/url_helper.dart';
 import '../widgets/add_edit_deal_dialog.dart';
 import '../widgets/deal_picker_dialog.dart';
 import '../widgets/inbox_message_details.dart';
+import '../widgets/tracking_banner_improved_detection.dart';
 
 /// Postfach-Inbox: Vorschläge → vorausgefüllter Edit-Dialog beim Annehmen,
 /// Aktualisiert → Quick-View inkl. Mail-Link, Unklassifiziert → manueller
@@ -21,7 +23,14 @@ import '../widgets/inbox_message_details.dart';
 /// Zu-Deal-zuweisen und das Öffnen der Original-Mail im Web-Mailer.
 class InboxScreen extends StatefulWidget {
   final void Function(String ticket)? onOpenTicket;
-  const InboxScreen({super.key, this.onOpenTicket});
+  /// Optional callback when user taps the tracking-review banner.
+  /// Typically navigates to the Deals tab with the needs-review filter active.
+  final VoidCallback? onGoToDealsReview;
+  const InboxScreen({
+    super.key,
+    this.onOpenTicket,
+    this.onGoToDealsReview,
+  });
 
   @override
   State<InboxScreen> createState() => _InboxScreenState();
@@ -50,11 +59,17 @@ class _InboxScreenState extends State<InboxScreen> {
       length: 3,
       child: Consumer<InboxProvider>(
         builder: (context, provider, _) {
+          final needsReviewCount =
+              context.watch<InventoryProvider>().trackingNeedsReviewCount;
           return Scaffold(
             backgroundColor: AppTheme.bgAppOf(context),
             body: Column(
               children: [
                 _InboxHeader(provider: provider, onRefresh: _refresh),
+                TrackingBannerController(
+                  needsReviewCount: needsReviewCount,
+                  onTap: widget.onGoToDealsReview ?? () {},
+                ),
                 _InboxFilterBar(provider: provider),
                 Material(
                   color: AppTheme.bgSurfaceOf(context),
@@ -871,6 +886,36 @@ class _SuggestionCard extends StatelessWidget {
     }
   }
 
+  void _showDetails(BuildContext context) {
+    final parsedMessage = ParsedMessage(
+      id: suggestion.parsedMessageId,
+      workspaceId: suggestion.workspaceId,
+      accountId: '',
+      receivedAt: suggestion.receivedAt,
+      status: ParsedMessageStatus.suggested,
+      fromAddress: null,
+      subject: suggestion.product,
+      shopKey: suggestion.shopKey,
+      parsedPayload: {
+        'order_id': suggestion.orderId,
+        'shop_label': suggestion.shopLabel,
+        'product': suggestion.product,
+        'total': suggestion.total,
+        'currency': suggestion.currency,
+        'tracking': suggestion.tracking,
+        'carrier': suggestion.carrier,
+        'eta': suggestion.eta?.toIso8601String(),
+        'tracking_confidence': suggestion.trackingConfidence?.toJson(),
+        'tracking_needs_review': suggestion.trackingNeedsReview,
+      },
+    );
+    InboxMessageDetails.show(
+      context,
+      message: parsedMessage,
+      suggestion: suggestion,
+    );
+  }
+
   Future<void> _linkToDeal(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     final inbox = context.read<InboxProvider>();
@@ -946,6 +991,14 @@ class _SuggestionCard extends StatelessWidget {
                   tooltip: 'Aktionen',
                   itemBuilder: (_) => [
                     const PopupMenuItem(
+                      value: 'details',
+                      child: ListTile(
+                        leading: Icon(Icons.info_outline),
+                        title: Text('Details & Tracking anzeigen'),
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem(
                       value: 'tracking',
                       child: ListTile(
                         leading: Icon(Icons.local_shipping_outlined),
@@ -982,6 +1035,9 @@ class _SuggestionCard extends StatelessWidget {
                   ],
                   onSelected: (v) {
                     switch (v) {
+                      case 'details':
+                        _showDetails(context);
+                        break;
                       case 'tracking':
                         _applyTracking(context);
                         break;
@@ -1042,7 +1098,8 @@ class _SuggestionCard extends StatelessWidget {
                   ),
               ],
             ),
-            if (suggestion.trackings.isNotEmpty) ...[
+            if (suggestion.trackings.isNotEmpty ||
+                suggestion.trackingNeedsReview) ...[
               const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
@@ -1050,6 +1107,8 @@ class _SuggestionCard extends StatelessWidget {
                 children: [
                   for (final tn in suggestion.trackings)
                     _TrackingPill(tracking: tn, carrier: suggestion.carrier),
+                  if (suggestion.trackingNeedsReview)
+                    _TrackingNeedsReviewBadge(key: const Key('inbox-suggestion-card-needs-review-badge')),
                 ],
               ),
             ],
@@ -1763,6 +1822,33 @@ class _TrackingPill extends StatelessWidget {
                   size: 12, color: AppTheme.textMutedOf(context)),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Kompakter gelber Badge in der Suggestion-Card-Tracking-Zeile.
+/// Signalisiert, dass die Tracking-Nummer auf Prüfung wartet.
+class _TrackingNeedsReviewBadge extends StatelessWidget {
+  const _TrackingNeedsReviewBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppTheme.warningBgOf(context),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: AppTheme.warningBorderOf(context)),
+      ),
+      child: Text(
+        l10n.trackingReviewNeededBadge,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.warningTextOf(context),
         ),
       ),
     );

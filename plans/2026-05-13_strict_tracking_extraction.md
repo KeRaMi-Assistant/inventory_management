@@ -517,7 +517,7 @@ jkeen-Test-Numbers: alle Test-Numbers aus den vendoren JSON-Files laufen als Fix
   `parsed_messages` nullen (pure-numerisch + Amazon Logistics).
   `agent: db-migrator` · `depends: [T5]` · `est: 1h` (0.5 SP)
 
-- **[T7]** Dart: `InboxMessage` + `Deal` Modelle + Repository um
+- **[x]** Dart: `InboxMessage` + `Deal` Modelle + Repository um
   `trackingConfidence`/`trackingNeedsReview` erweitern. `inbox_match_service.dart`
   Forward-Only aufbrechen — überschreibt bei `currentTrackingNeedsReview == true`
   ODER `currentTracking` leer (Council-Finding #2). Schreiben bleibt blockiert
@@ -553,7 +553,7 @@ jkeen-Test-Numbers: alle Test-Numbers aus den vendoren JSON-Files laufen als Fix
   `settings_screen.dart` mit Confirm-Dialog + Offline-State.
   `agent: edge-fn-coder` · `depends: [T3c, T5]` · `est: 3h` (1.5 SP)
 
-- **[T13]** Fixtures + Negativ-Tests in `inbox_adapters_test.ts` (7 Negativ +
+- **[x]** Fixtures + Negativ-Tests in `inbox_adapters_test.ts` (7 Negativ +
   7 Positiv inkl. `pos_ups_1z_with_spaces` + `pos_dhl_20_digit_with_anchor` +
   2 Edge inkl. `edge_anchormatched_max_50chars`).
   `agent: flutter-coder` · `depends: [T3c, T4]` · `est: 3h` (1.5 SP)

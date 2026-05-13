@@ -242,13 +242,28 @@ Domain genau einer:
 - `CsvService` — Import/Export (alle Datentypen in einem ZIP).
 - `StatisticsService` / `StatisticsExportService` — Berechnungen + PDF/CSV.
 - `InboxMatchService` — Helper, der einen `ParsedMessage` an einen Deal
-  matcht (Plus/Minus Confidence).
+  matcht (Plus/Minus Confidence). Seit Plan
+  [`2026-05-13_strict_tracking_extraction.md`](../../plans/2026-05-13_strict_tracking_extraction.md)
+  prüft `shouldWriteTracking` sechs Cases: Strong-Detect überschreibt
+  bestehende Werte nur, wenn das alte Feld leer oder
+  `tracking_needs_review = TRUE` ist; `'manual'`-Einträge bleiben
+  unangetastet. Siehe
+  [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#forward-only-schreib-regel-dart).
 - `CarrierService` — UI-seitiger Helper für Tracking-Lookups.
 - `SessionManager` — Idle-Tracking.
 
 ## Modelle
 
 Pro Tabelle ein Modell in `lib/models/`. Konstruktoren:
+
+> Ergänzend zu den Tabellen-Modellen lebt in
+> [`lib/models/tracking_confidence.dart`](../../lib/models/tracking_confidence.dart)
+> das Enum `TrackingConfidence` (`strong | manual | none`), das von
+> `Deal`, `InboxMessage` und dem Widget
+> [`lib/widgets/tracking_status_block.dart`](../../lib/widgets/tracking_status_block.dart)
+> (5 Display-States) gemeinsam genutzt wird. Hintergrund siehe
+> [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#strict-tracking-extraction-confidence-modell).
+
 
 - `Model.fromMap(Map<String, dynamic>)` — von Supabase-Row.
 - `Model.toMap()` — für INSERT/UPDATE.

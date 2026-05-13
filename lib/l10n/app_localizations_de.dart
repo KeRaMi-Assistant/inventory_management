@@ -1551,6 +1551,29 @@ class AppLocalizationsDe extends AppLocalizations {
       'Du bist möglicherweise im falschen Workspace. Prüfe oben rechts den Workspace-Namen und wechsle ggf. Auch Filter (Käufer/Shop/Datum) können Deals ausblenden — Filter zurücksetzen mit dem „Filter leeren\"-Button.';
 
   @override
+  String get helpFaqQ17 => 'Was bedeutet das „Prüfen\"-Badge an einer Sendung?';
+
+  @override
+  String get helpFaqA17 =>
+      'Die App hat den Tracking-Wert zwar gespeichert, aber unsere neue Erkennung ist sich nicht sicher, ob es wirklich eine echte Sendungsnummer ist (z. B. weil sie aus einer älteren Mail mit unklarem Format kommt). Tippe auf den Deal und prüfe in der Sendungsnummer-Karte: „Übernehmen\" bestätigt den Wert, „Verwerfen\" leert ihn. In der Deals-Liste oben filtert der Chip „Prüfen\" alle betroffenen Deals auf einen Schlag.';
+
+  @override
+  String get helpFaqQ18 =>
+      'Wie funktioniert „Sendungsnummern neu bewerten\" in den Einstellungen?';
+
+  @override
+  String get helpFaqA18 =>
+      'Einstellungen → Allgemein → „Sendungsnummern neu bewerten\" prüft alle gespeicherten Mails dieses Workspaces nochmal mit der neuesten, strikteren Erkennung. Falsch gespeicherte Werte werden auf „Prüfen\" gesetzt, neu erkannte echte Trackings ersetzen leere Einträge. Manuell eingetragene Sendungsnummern bleiben unangetastet. Aus Schutz vor Doppelläufen läuft das maximal einmal alle 5 Minuten pro Workspace.';
+
+  @override
+  String get helpFaqQ19 =>
+      'Warum ist eine Sendungsnummer manchmal leer, obwohl die Versandmail da ist?';
+
+  @override
+  String get helpFaqA19 =>
+      'Seit Mai 2026 speichert die App eine Tracking-Nummer nur, wenn sie strukturell verifiziert ist (Carrier-Pattern + Längen-/Prüfsummen-Check). Wenn die Mail nur eine interne Shop-ID enthält (z. B. Amazon-Logistics-Shipment-ID) oder die Nummer unklar formatiert ist, lässt die App das Feld bewusst leer statt einen falschen Wert zu speichern. Du kannst die Sendungsnummer direkt im Deal manuell eintragen — manuelle Eingaben werden nie automatisch überschrieben.';
+
+  @override
   String get helpTroubleSection => 'Fehlerbehebung';
 
   @override
@@ -2901,14 +2924,73 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String trackingNeedsReviewFilterChip(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Prüfen ($count)',
+      one: 'Prüfen (1)',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get trackingReviewAcceptCta => 'Übernehmen';
 
   @override
   String get trackingReviewDismissCta => 'Verwerfen';
 
   @override
+  String get trackingReviewListTitle => 'Sendungsnummern prüfen';
+
+  @override
   String get trackingReviewNeededBadge => 'Prüfen';
 
   @override
   String get trackingStatusBlockA11yLabel => 'Sendungsnummern-Status';
+
+  @override
+  String get inboxSectionOrder => 'Bestellung';
+
+  @override
+  String get inboxSectionShipping => 'Versand';
+
+  @override
+  String get inboxSectionLinkedTo => 'Verknüpft mit';
+
+  @override
+  String get inboxFieldOrderId => 'Order-ID';
+
+  @override
+  String get inboxFieldProduct => 'Produkt';
+
+  @override
+  String get inboxFieldAmount => 'Betrag';
+
+  @override
+  String get inboxFieldEta => 'ETA';
+
+  @override
+  String get inboxFieldDeal => 'Deal';
+
+  @override
+  String get dealTrackingStatusTitle => 'Sendungsnummer';
+
+  @override
+  String get dealSectionTrackingStatus => 'Sendungsstatus';
+
+  @override
+  String trackingUpdateError(Object error) {
+    return 'Tracking-Update fehlgeschlagen: $error';
+  }
+
+  @override
+  String trackingAcceptError(Object error) {
+    return 'Tracking-Akzeptanz fehlgeschlagen: $error';
+  }
+
+  @override
+  String trackingDiscardError(Object error) {
+    return 'Tracking-Verwerfen fehlgeschlagen: $error';
+  }
 }

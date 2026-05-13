@@ -8,6 +8,7 @@ class FilterProvider extends ChangeNotifier {
   String? shop;
   bool? isDropship;
   bool? hasReceipt;
+  bool onlyNeedsReview = false;
   DateTime? fromDate;
   DateTime? toDate;
   String sortKey = 'orderDate';
@@ -44,6 +45,11 @@ class FilterProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setOnlyNeedsReview(bool value) {
+    onlyNeedsReview = value;
+    notifyListeners();
+  }
+
   void setDateRange(DateTime? from, DateTime? to) {
     fromDate = from;
     toDate = to;
@@ -67,6 +73,7 @@ class FilterProvider extends ChangeNotifier {
     shop = null;
     isDropship = null;
     hasReceipt = null;
+    onlyNeedsReview = false;
     fromDate = null;
     toDate = null;
     sortKey = 'orderDate';
@@ -106,6 +113,7 @@ class FilterProvider extends ChangeNotifier {
       if (shop != null && deal.shop != shop) return false;
       if (isDropship != null && deal.isDropship != isDropship) return false;
       if (hasReceipt != null && deal.hasReceipt != hasReceipt) return false;
+      if (onlyNeedsReview && !deal.trackingNeedsReview) return false;
       if (fromDate != null && deal.orderDate.isBefore(_dayStart(fromDate!))) {
         return false;
       }

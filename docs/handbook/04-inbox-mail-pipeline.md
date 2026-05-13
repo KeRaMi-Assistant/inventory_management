@@ -170,6 +170,106 @@ wenn direkt ein Schlüsselwort wie "Tracking", "Sendungsnummer" oder
 "Paketnummer" davorsteht — sonst Risiko, dass interne Shipment-IDs
 fälschlich als Tracking interpretiert werden.
 
+## Strict-Tracking-Extraction (Confidence-Modell)
+
+Seit Plan
+[`plans/2026-05-13_strict_tracking_extraction.md`](../../plans/2026-05-13_strict_tracking_extraction.md)
+gilt: eine Tracking-Nummer landet **nur** dann in `deals.tracking`,
+`pending_deal_suggestions.tracking` oder `parsed_messages.parsed_payload.tracking`,
+wenn drei Bedingungen erfüllt sind — strukturierte Carrier-URL **oder**
+Strong-Pattern mit Anchor-Wort im selben Sentence-Window, bestandene
+Validierung (Länge + Charset + Checksum, soweit möglich), und
+`confidence === 'strong'`. Alles andere → `tracking = NULL`,
+`tracking_confidence = 'none'`, `tracking_needs_review = TRUE`.
+
+### Pipeline-Order
+
+1. **Body-Cap** auf 256 KB (ReDoS-Mitigation).
+2. **Anchor-Detection**: Sentence-Window-Scan auf DE/EN/FR/IT/ES/PL-Anker
+   (`Sendungsnummer`, `Tracking`, `Sendungsverfolgung`, `numéro de
+   suivi`, …).
+3. **Whitespace-Normalisierung** vor jedem Pattern-Match
+   (`candidate.replace(/[\s ]+/g, '')`) — sonst killt der Strict-Mode
+   legitime UPS-Trackings wie `1Z 999 AA1 0123456784`.
+4. **Pattern-Match** auf den normalisierten Token.
+5. **Reject-Filter** (`REJECT_PATTERNS`, läuft NUR gegen den 3–30-Zeichen-
+   Token): Amazon-Order-IDs (`123-1234567-1234567`), IBAN-Prefixe, Tele-
+   fonnummern, PLZ. Reject-Hits werden in
+   `parsed_payload.tracking_candidates[].validation.rejectedBy` geloggt.
+6. **Validator** via vendoreter
+   [`jkeen/tracking_number_data`](https://github.com/jkeen/tracking_number_data)
+   in [`supabase/functions/_shared/tracking_data/`](../../supabase/functions/_shared/tracking_data/)
+   + Dünner Deno-Interpreter in
+   [`tracking_validators.ts`](../../supabase/functions/_shared/tracking_validators.ts).
+7. **Confidence-Assignment** (`strong | medium | weak` intern).
+
+### Confidence-Stufen
+
+| Wert | Bedeutung | Wirkung |
+|---|---|---|
+| `strong` | URL-eingebettet **oder** Anchor + Strong-Pattern + bestandene Validierung | wird in `deals.tracking` / `pending_deal_suggestions.tracking` geschrieben |
+| `manual` | Vom User per Hand eingetragen | nur auf `deals` möglich, niemals maschinell überschreibbar |
+| `none` | Keine sichere Erkennung | `tracking = NULL`, `tracking_needs_review = TRUE` |
+
+`medium` und `weak` existieren intern als Candidates (Forensik in
+`parsed_payload.tracking_candidates[]`), erreichen aber niemals die
+Persistenz-Felder — `CHECK`-Constraints lehnen die Werte ab. Der
+Amazon-`orderingShipmentId`-Sonderfall ist `medium` mit
+`source: 'amazon-shipment-id'` und löst im UI den Hinweis
+„Amazon-interne Shipment-ID — kein vollwertiges Carrier-Tracking" aus.
+
+### `TrackingCandidate`-Typ
+
+```ts
+interface TrackingCandidate {
+  value: string                       // normalisiert, ohne Whitespace
+  carrier?: string
+  confidence: 'strong' | 'medium' | 'weak'
+  source: 'strong-pattern' | 'context-anchor' | 'html-carrier-url'
+        | 'html-generic-url' | 'amazon-shipment-id'
+  anchorMatched?: string              // max 50 chars, NUR das Anchor-Wort
+  validation: { lengthOk, checksumOk?, rejectedBy? }
+}
+```
+
+`anchorMatched` ist auf 50 Zeichen begrenzt (PII-Schutz) und enthält
+NUR das Anchor-Wort, niemals nachgestellten Folge-Text.
+
+### Forward-Only-Schreib-Regel (Dart)
+
+Datei
+[`lib/services/inbox_match_service.dart`](../../lib/services/inbox_match_service.dart).
+`shouldWriteTracking` deckt sechs Cases ab und überschreibt nur dann
+einen bestehenden Wert, wenn die neue Erkennung `'strong'` ist UND der
+alte Wert entweder leer ist oder `tracking_needs_review = TRUE` trägt.
+`'manual'`-Einträge bleiben immer unverändert.
+
+### Re-Parse-Modi
+
+`inbox-parse` kennt vier Modi (siehe auch [07 — Edge
+Functions](07-edge-functions.md#inbox-parse)):
+
+| Mode | Effekt |
+|---|---|
+| Default (kein Flag) | `runParseSweep(limit=200)` auf pending Rows |
+| `reparse_unclassified` | alte `status='unclassified'` neu klassifizieren |
+| `reparse_no_tracking` | gezielt Mails ohne Tracking neu parsen |
+| `reparse_forensics` | Forensik-Erweiterung auf historischen Mails |
+| `reparse_low_confidence` | alle `tracking_needs_review=TRUE`-Mails mit dem Strict-Detector neu prüfen |
+
+Alle Re-Parse-Modi lesen **beide** Body-Quellen (`_raw_html` UND
+`_raw.text`) — sonst Regression auf Plain-Text-only-Mails. Der UI-
+Trigger sitzt in
+[`lib/screens/settings_screen.dart`](../../lib/screens/settings_screen.dart)
+(„Sendungsnummern neu bewerten") und respektiert das 5-Minuten-Cooldown
+aus `mailbox_accounts.last_reparse_at`.
+
+### `tracking-poll`-Skip
+
+`tracking-poll` skipped seit T16 alle Deals mit
+`tracking_needs_review = TRUE` UND `tracking_confidence = 'none'` —
+sonst würden API-Calls gegen leere Trackings laufen.
+
 ## inbox-parse — Klassifizierung & Match
 
 Datei:
@@ -187,6 +287,9 @@ Wird:
      ohne Tracking neu parsen.
    - `{reparse_forensics: true, workspace_id, shop_key}` — Forensik-
      Erweiterung auf historischen Mails laufen lassen.
+   - `{reparse_low_confidence: true}` — Strict-Tracking-Re-Evaluation auf
+     allen `tracking_needs_review=TRUE`-Mails des Workspaces, 5-Minuten-
+     Cooldown via `mailbox_accounts.last_reparse_at`.
 
 `runParseSweep` aus
 [`_shared/inbox_parse_runner.ts`](../../supabase/functions/_shared/inbox_parse_runner.ts):

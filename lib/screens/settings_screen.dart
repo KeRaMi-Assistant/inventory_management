@@ -2341,7 +2341,7 @@ class _MailboxTabState extends State<_MailboxTab> {
                         )
                       : ListView.separated(
                           padding: const EdgeInsets.all(16),
-                          itemCount: provider.accounts.length + 1,
+                          itemCount: provider.accounts.length + 2,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 8),
                           itemBuilder: (context, i) {
@@ -2352,6 +2352,10 @@ class _MailboxTabState extends State<_MailboxTab> {
                                 used: provider.accounts.length,
                                 visibilityDays: pricing.inboxVisibilityDays,
                               );
+                            }
+                            if (i == provider.accounts.length + 1) {
+                              // T12: Re-Parse-Sendungsnummern-Button.
+                              return const _TrackingReparseTile();
                             }
                             final account = provider.accounts[i - 1];
                             return _MailboxAccountTile(
@@ -3475,6 +3479,151 @@ class _SectionCard extends StatelessWidget {
           const SizedBox(height: 12),
           child,
         ],
+      ),
+    );
+  }
+}
+
+// ── T12: Tracking-Re-Parse-CTA ────────────────────────────────────────────
+// User-getriggerter Re-Parse für Mails mit tracking_confidence='none' oder
+// tracking_needs_review=true. Confirm-Dialog davor, 4 Error-States, ruft
+// `inbox-parse` Edge Function mit `reparse_low_confidence: true`. Nach
+// Erfolg refresh()t InboxProvider damit neue Trackings sofort sichtbar.
+class _TrackingReparseTile extends StatefulWidget {
+  const _TrackingReparseTile();
+
+  @override
+  State<_TrackingReparseTile> createState() => _TrackingReparseTileState();
+}
+
+class _TrackingReparseTileState extends State<_TrackingReparseTile> {
+  bool _running = false;
+
+  Future<void> _onTap() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final inboxProvider = context.read<InboxProvider>();
+    final activeWorkspaceId =
+        context.read<ActiveWorkspaceProvider>().active?.id;
+
+    if (activeWorkspaceId == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.trackingReparseFailed)),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.trackingReparseConfirmTitle),
+        content: Text(l10n.trackingReparseConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.trackingReparseCta),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _running = true);
+    try {
+      final res = await Supabase.instance.client.functions.invoke(
+        'inbox-parse',
+        body: {
+          'reparse_low_confidence': true,
+          'workspace_id': activeWorkspaceId,
+        },
+      );
+      if (!mounted) return;
+
+      final status = res.status;
+      // Rate-Limit: 429 mit `retry_after_seconds`.
+      if (status == 429) {
+        final retry = (res.data is Map &&
+                (res.data as Map)['retry_after_seconds'] is num)
+            ? ((res.data as Map)['retry_after_seconds'] as num).toInt()
+            : 60;
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              '${l10n.trackingReparseFailed} ($retry s)',
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (status >= 400) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.trackingReparseFailed)),
+        );
+        return;
+      }
+
+      final data = res.data;
+      final updatedCount =
+          (data is Map && data['updated'] is num) ? (data['updated'] as num).toInt() : 0;
+
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.trackingReparseSuccessCount(updatedCount))),
+      );
+
+      // T7: nach Re-Parse InboxProvider refreshen, damit neue Trackings
+      // sofort in der Inbox sichtbar sind.
+      await inboxProvider.refresh();
+    } on FunctionException catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.trackingReparseFailed)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.trackingReparseOffline)),
+      );
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: AppTheme.borderOf(context)),
+      ),
+      child: ListTile(
+        key: const Key('tracking-reparse-cta'),
+        leading: Icon(Icons.refresh, color: AppTheme.accentTextOf(context)),
+        title: Text(
+          _running ? l10n.trackingReparseRunning : l10n.trackingReparseCta,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          l10n.trackingReparseConfirmBody,
+          style: TextStyle(
+            fontSize: 12,
+            color: AppTheme.textSecondaryOf(context),
+          ),
+        ),
+        trailing: _running
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.chevron_right),
+        onTap: _running ? null : _onTap,
       ),
     );
   }

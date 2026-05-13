@@ -2828,6 +2828,42 @@ abstract class AppLocalizations {
   /// **'Du bist möglicherweise im falschen Workspace. Prüfe oben rechts den Workspace-Namen und wechsle ggf. Auch Filter (Käufer/Shop/Datum) können Deals ausblenden — Filter zurücksetzen mit dem „Filter leeren\"-Button.'**
   String get helpFaqA16;
 
+  /// No description provided for @helpFaqQ17.
+  ///
+  /// In de, this message translates to:
+  /// **'Was bedeutet das „Prüfen\"-Badge an einer Sendung?'**
+  String get helpFaqQ17;
+
+  /// No description provided for @helpFaqA17.
+  ///
+  /// In de, this message translates to:
+  /// **'Die App hat den Tracking-Wert zwar gespeichert, aber unsere neue Erkennung ist sich nicht sicher, ob es wirklich eine echte Sendungsnummer ist (z. B. weil sie aus einer älteren Mail mit unklarem Format kommt). Tippe auf den Deal und prüfe in der Sendungsnummer-Karte: „Übernehmen\" bestätigt den Wert, „Verwerfen\" leert ihn. In der Deals-Liste oben filtert der Chip „Prüfen\" alle betroffenen Deals auf einen Schlag.'**
+  String get helpFaqA17;
+
+  /// No description provided for @helpFaqQ18.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie funktioniert „Sendungsnummern neu bewerten\" in den Einstellungen?'**
+  String get helpFaqQ18;
+
+  /// No description provided for @helpFaqA18.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstellungen → Allgemein → „Sendungsnummern neu bewerten\" prüft alle gespeicherten Mails dieses Workspaces nochmal mit der neuesten, strikteren Erkennung. Falsch gespeicherte Werte werden auf „Prüfen\" gesetzt, neu erkannte echte Trackings ersetzen leere Einträge. Manuell eingetragene Sendungsnummern bleiben unangetastet. Aus Schutz vor Doppelläufen läuft das maximal einmal alle 5 Minuten pro Workspace.'**
+  String get helpFaqA18;
+
+  /// No description provided for @helpFaqQ19.
+  ///
+  /// In de, this message translates to:
+  /// **'Warum ist eine Sendungsnummer manchmal leer, obwohl die Versandmail da ist?'**
+  String get helpFaqQ19;
+
+  /// No description provided for @helpFaqA19.
+  ///
+  /// In de, this message translates to:
+  /// **'Seit Mai 2026 speichert die App eine Tracking-Nummer nur, wenn sie strukturell verifiziert ist (Carrier-Pattern + Längen-/Prüfsummen-Check). Wenn die Mail nur eine interne Shop-ID enthält (z. B. Amazon-Logistics-Shipment-ID) oder die Nummer unklar formatiert ist, lässt die App das Feld bewusst leer statt einen falschen Wert zu speichern. Du kannst die Sendungsnummer direkt im Deal manuell eintragen — manuelle Eingaben werden nie automatisch überschrieben.'**
+  String get helpFaqA19;
+
   /// No description provided for @helpTroubleSection.
   ///
   /// In de, this message translates to:
@@ -5306,6 +5342,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{Keine Sendungsnummer aktualisiert} =1{1 Sendungsnummer aktualisiert} other{{count} Sendungsnummern aktualisiert}}'**
   String trackingReparseSuccessCount(int count);
 
+  /// Filter chip label showing number of deals needing tracking review
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{Prüfen (1)} other{Prüfen ({count})}}'**
+  String trackingNeedsReviewFilterChip(int count);
+
   /// No description provided for @trackingReviewAcceptCta.
   ///
   /// In de, this message translates to:
@@ -5318,6 +5360,12 @@ abstract class AppLocalizations {
   /// **'Verwerfen'**
   String get trackingReviewDismissCta;
 
+  /// No description provided for @trackingReviewListTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Sendungsnummern prüfen'**
+  String get trackingReviewListTitle;
+
   /// No description provided for @trackingReviewNeededBadge.
   ///
   /// In de, this message translates to:
@@ -5329,6 +5377,84 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Sendungsnummern-Status'**
   String get trackingStatusBlockA11yLabel;
+
+  /// No description provided for @inboxSectionOrder.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellung'**
+  String get inboxSectionOrder;
+
+  /// No description provided for @inboxSectionShipping.
+  ///
+  /// In de, this message translates to:
+  /// **'Versand'**
+  String get inboxSectionShipping;
+
+  /// No description provided for @inboxSectionLinkedTo.
+  ///
+  /// In de, this message translates to:
+  /// **'Verknüpft mit'**
+  String get inboxSectionLinkedTo;
+
+  /// No description provided for @inboxFieldOrderId.
+  ///
+  /// In de, this message translates to:
+  /// **'Order-ID'**
+  String get inboxFieldOrderId;
+
+  /// No description provided for @inboxFieldProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Produkt'**
+  String get inboxFieldProduct;
+
+  /// No description provided for @inboxFieldAmount.
+  ///
+  /// In de, this message translates to:
+  /// **'Betrag'**
+  String get inboxFieldAmount;
+
+  /// No description provided for @inboxFieldEta.
+  ///
+  /// In de, this message translates to:
+  /// **'ETA'**
+  String get inboxFieldEta;
+
+  /// No description provided for @inboxFieldDeal.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal'**
+  String get inboxFieldDeal;
+
+  /// No description provided for @dealTrackingStatusTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Sendungsnummer'**
+  String get dealTrackingStatusTitle;
+
+  /// No description provided for @dealSectionTrackingStatus.
+  ///
+  /// In de, this message translates to:
+  /// **'Sendungsstatus'**
+  String get dealSectionTrackingStatus;
+
+  /// No description provided for @trackingUpdateError.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Update fehlgeschlagen: {error}'**
+  String trackingUpdateError(Object error);
+
+  /// No description provided for @trackingAcceptError.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Akzeptanz fehlgeschlagen: {error}'**
+  String trackingAcceptError(Object error);
+
+  /// No description provided for @trackingDiscardError.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Verwerfen fehlgeschlagen: {error}'**
+  String trackingDiscardError(Object error);
 }
 
 class _AppLocalizationsDelegate

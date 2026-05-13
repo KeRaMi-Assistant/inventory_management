@@ -24,6 +24,16 @@ Tabelle `activity_log`, eine UI-Heatmap der letzten User-Aktionen. Pro
 Workspace auf 50 Einträge limitiert. Nicht zu verwechseln mit
 [Audit-Log](#audit-log). Siehe [02 — Konzepte](02-concepts.md#activity-log).
 
+### Anchor-Wort
+
+Sprach-spezifisches Schlüsselwort (`Sendungsnummer`, `Tracking`,
+`Sendungsverfolgung`, `numéro de suivi`, …), das im Sentence-Window
+direkt vor einer Tracking-Kandidaten-Nummer stehen muss, damit die
+Strict-Tracking-Extraction sie als Strong-Pattern akzeptiert.
+Eingebettet in `TrackingCandidate.anchorMatched` (max 50 Zeichen,
+PII-Schutz). Siehe
+[04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#strict-tracking-extraction-confidence-modell).
+
 ### Anon-Key
 
 Der öffentliche Supabase-Schlüssel, mit dem die Flutter-App Requests an
@@ -244,6 +254,18 @@ In dieser App lebt jede stateful Provider-Klasse in
 
 ## R
 
+### REJECT_PATTERNS
+
+Negativ-Liste in
+[`inbox_adapters.ts`](../../supabase/functions/_shared/inbox_adapters.ts),
+die explizit bekannte Falsch-Positive (Amazon-Order-IDs wie
+`123-1234567-1234567`, IBAN-Prefixe, Telefonnummern, PLZ) aus
+Tracking-Candidates aussortiert. Läuft NUR gegen den bereits-
+gematchten 3–30-Zeichen-Token (ReDoS-Mitigation). Reject-Hits werden
+in `parsed_payload.tracking_candidates[].validation.rejectedBy`
+geloggt, nicht silent verworfen. Siehe
+[04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#strict-tracking-extraction-confidence-modell).
+
 ### Reship
 
 Versandart eines Deals: Ware kommt erst zum Reseller, der sie dann an den
@@ -280,6 +302,17 @@ Pattern: `deleted_at`-Spalte statt `DELETE`. App-Default-Filter nimmt nur
 Rows mit `deleted_at IS NULL`. Erlaubt Wiederherstellen. Siehe
 [06 — Datenbank](06-database.md#soft-delete).
 
+### Strict-Tracking
+
+Pipeline-Modus seit Plan
+[`2026-05-13_strict_tracking_extraction.md`](../../plans/2026-05-13_strict_tracking_extraction.md):
+eine Tracking-Nummer landet in den Persistenz-Feldern nur, wenn sie aus
+einer Carrier-URL **oder** einem Anchor-gebundenen Strong-Pattern
+stammt, die strukturelle Validierung (Länge + Charset + Checksum, soweit
+möglich) besteht und Confidence `strong` erreicht. Sonst: `tracking =
+NULL`, `tracking_confidence = 'none'`, `tracking_needs_review = TRUE`.
+Siehe [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#strict-tracking-extraction-confidence-modell).
+
 ### Supplier
 
 Großhändler / Lieferant. Tabelle `suppliers`. Siehe
@@ -292,6 +325,40 @@ Großhändler / Lieferant. Tabelle `suppliers`. Siehe
 Verkaufs-Ticket auf einer externen Plattform (Discord-Channel, Forum-
 Thread). Mehrere [Deals](#deal) können demselben Ticket zugeordnet sein.
 Tabelle `tickets`. Siehe [02 — Konzepte](02-concepts.md#ticket).
+
+### tracking_confidence
+
+Spalte auf `deals`, `pending_deal_suggestions` und `parsed_messages`
+(via JSONB-Spiegel). Wertebereich: `'strong' | 'manual' | 'none'` auf
+`deals`, `'strong' | 'none'` auf `pending_deal_suggestions`,
+`'strong' | 'medium' | 'weak' | 'none'` auf `parsed_messages`
+(Forensik). `CHECK`-Constraints enforce die Wertebereiche pro
+Tabelle. Dart-Enum-Pendant in
+[`lib/models/tracking_confidence.dart`](../../lib/models/tracking_confidence.dart).
+Siehe [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#strict-tracking-extraction-confidence-modell)
+und [06 — Datenbank](06-database.md#deals).
+
+### tracking_needs_review
+
+Boolean auf `deals` und `parsed_messages`. `TRUE` markiert Rows, deren
+Tracking aus einer älteren (schwächeren) Detection stammt und vom User
+geprüft werden sollte. Partial-Index `deals_needs_tracking_review_idx`
+trägt den Deals-Filter „Prüfen ({count})". Wird vom Re-Parse-Mode
+`reparse_low_confidence` und vom `tracking-poll`-Skip ausgewertet.
+Siehe [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#strict-tracking-extraction-confidence-modell).
+
+### TrackingCandidate
+
+TypeScript-Interface in
+[`inbox_adapters.ts`](../../supabase/functions/_shared/inbox_adapters.ts):
+ein einzelner Tracking-Kandidat mit `value`, `carrier`,
+`confidence` (`strong | medium | weak`), `source` (z. B.
+`strong-pattern`, `html-carrier-url`, `amazon-shipment-id`),
+optionalem `anchorMatched` und einer `validation`-Substruktur
+(`lengthOk`, `checksumOk?`, `rejectedBy?`). `findAllTrackings()` gibt
+ein sortiertes Array; nur der erste `strong`-Eintrag landet in den
+Persistenz-Feldern, der Rest bleibt in
+`parsed_payload.tracking_candidates[]` (max 10 Einträge) als Forensik.
 
 ### Tracking-Poll
 

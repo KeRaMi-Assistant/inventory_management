@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../models/activity_entry.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
+import '../models/tracking_confidence.dart';
 import '../models/deal_comment.dart';
 import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
@@ -73,6 +74,11 @@ class InventoryProvider extends ChangeNotifier {
 
   int get openOrdersCount =>
       _deals.where((d) => d.status == 'Bestellt').length;
+
+  /// Number of deals with `tracking_needs_review = true`.
+  /// Used for the counter badge on the Inbox nav tab and the Deals filter chip.
+  int get trackingNeedsReviewCount =>
+      _deals.where((d) => d.trackingNeedsReview).length;
 
   double get totalProfit =>
       _deals.fold(0, (sum, d) => sum + (d.totalProfit ?? 0));
@@ -876,5 +882,45 @@ class InventoryProvider extends ChangeNotifier {
     await _repository.deleteBatch(id);
     notifyListeners();
   }
+
+  // ── Tracking-Confidence-Updates ──────────────────────────────────────────
+
+  /// Akzeptiert das `needs_review`-Tracking eines Deals als korrekt (manual).
+  /// Setzt `tracking_confidence = 'manual'`, `tracking_needs_review = false`.
+  Future<void> acceptDealTrackingAsManual(int dealId) async {
+    await _repository.acceptDealTrackingAsManual(dealId);
+    _patchDeal(dealId, trackingConfidence: TrackingConfidence.manual, trackingNeedsReview: false);
+  }
+
+  /// Verwirft das Tracking eines Deals.
+  Future<void> discardDealTracking(int dealId) async {
+    await _repository.discardDealTracking(dealId);
+    _patchDeal(dealId, tracking: null, trackingConfidence: TrackingConfidence.none, trackingNeedsReview: false);
+  }
+
+  /// Setzt eine manuell eingegebene Tracking-Nummer auf einem Deal.
+  Future<void> updateDealTrackingManually(int dealId, String tracking) async {
+    await _repository.updateDealTrackingManually(dealId, tracking);
+    _patchDeal(dealId, tracking: tracking, trackingConfidence: TrackingConfidence.manual, trackingNeedsReview: false);
+  }
+
+  void _patchDeal(
+    int dealId, {
+    Object? tracking = _kSentinel,
+    TrackingConfidence? trackingConfidence,
+    bool? trackingNeedsReview,
+  }) {
+    final idx = _deals.indexWhere((d) => d.id == dealId);
+    if (idx == -1) return;
+    final old = _deals[idx];
+    _deals[idx] = old.copyWith(
+      tracking: tracking == _kSentinel ? old.tracking : tracking as String?,
+      trackingConfidence: trackingConfidence ?? old.trackingConfidence,
+      trackingNeedsReview: trackingNeedsReview ?? old.trackingNeedsReview,
+    );
+    notifyListeners();
+  }
+
+  static const Object _kSentinel = Object();
 
 }
