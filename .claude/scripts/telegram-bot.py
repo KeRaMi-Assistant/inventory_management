@@ -1090,9 +1090,19 @@ def _render_verdict_rich(path: pathlib.Path, fm: dict) -> str:
     def esc(s: str) -> str:
         return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
+    # --- Jarvis-style coordinator opening ---
+    if verdict == "approve":
+        intro = "Yota hier — Council ist durch, ich empfehle <b>grünes Licht</b>."
+    elif verdict == "reject":
+        intro = "Yota hier — der Council rät <b>davon ab</b>. Hier die Diskussion."
+    elif verdict == "needs-full-council":
+        intro = "Yota hier — die Idee streift Self-Mod-Pfade, ich brauche ein <b>volles Council</b>."
+    else:
+        intro = f"Yota hier — Council fertig, Verdict: <b>{esc(verdict_upper)}</b>."
+
     lines = []
-    lines.append(f"<b>{emoji} Council: {esc(verdict_upper)}</b>")
-    lines.append(f"<b>📌 slug:</b> <code>{esc(slug)}</code>")
+    lines.append(intro)
+    lines.append(f"<b>{emoji} Vote:</b> {esc(verdict_upper)}  ·  <b>📌 slug:</b> <code>{esc(slug)}</code>")
     lines.append("")
 
     lines.append("<b>👍 Proponent (Vorteile):</b>")
@@ -1145,23 +1155,23 @@ def _render_verdict_rich(path: pathlib.Path, fm: dict) -> str:
         lines.append(f"• priority: {esc(prio)}")
     lines.append("")
 
-    lines.append("<b>🎯 Aktionen:</b>")
+    lines.append("<b>🎯 Wie möchtest du weiter?</b>")
     if verdict == "reject":
-        lines.append(f"✏️ <code>change {esc(slug)} &lt;dein Hinweis&gt;</code>")
-        lines.append(f"⚠️ <code>go-anyway {esc(slug)} {esc(token)} &lt;reason&gt;</code>")
-        lines.append(f"❌ <code>reject {esc(slug)}</code>")
+        lines.append(f"✏️ <code>change {esc(slug)} &lt;dein Hinweis&gt;</code> — gib mir Feedback, ich lasse den Council nochmal ran.")
+        lines.append(f"⚠️ <code>go-anyway {esc(slug)} {esc(token)} &lt;begründung&gt;</code> — du überstimmst den Council (Begründung Pflicht).")
+        lines.append(f"❌ <code>reject {esc(slug)}</code> — wir lassen die Idee fallen.")
     elif verdict == "needs-full-council":
-        lines.append(f"🏛 <code>/council {esc(slug)}</code> (Self-Mod-Pfad)")
-        lines.append(f"❌ <code>reject {esc(slug)}</code>")
+        lines.append(f"🏛 <code>/council {esc(slug)}</code> — ich rufe das volle Komitee zusammen (Self-Mod-Pfad).")
+        lines.append(f"❌ <code>reject {esc(slug)}</code> — wir verwerfen die Idee.")
     else:
-        lines.append(f"✅ <code>go {esc(slug)} {esc(token)}</code>")
-        lines.append(f"✏️ <code>change {esc(slug)} &lt;dein Hinweis&gt;</code>")
-        lines.append(f"❌ <code>reject {esc(slug)}</code>")
+        lines.append(f"✅ <code>go {esc(slug)} {esc(token)}</code> — Worker startet sofort.")
+        lines.append(f"✏️ <code>change {esc(slug)} &lt;dein Hinweis&gt;</code> — Plan anpassen, Council läuft nochmal.")
+        lines.append(f"❌ <code>reject {esc(slug)}</code> — Idee verwerfen.")
     lines.append("")
-    foot = f"<i>💰 Heute: ${esc(day_cost)}"
+    foot = f"<i>💰 Heute insgesamt: ${esc(day_cost)}"
     if council_cost:
-        foot += f"  ·  Council kostete: ${esc(council_cost)}"
-    foot += "</i>"
+        foot += f"  ·  Dieser Council: ${esc(council_cost)}"
+    foot += "  ·  ich melde mich, sobald der Worker fertig ist.</i>"
     lines.append(foot)
 
     msg = "\n".join(lines)
@@ -1796,13 +1806,13 @@ def _handle_go(chat_id, user_id, m, override=False):
             budget_hint = "?"
         if trig_ok:
             reply = (
-                f"✅ approved + queued als: `{slug}`\n"
-                f"🚀 Worker startet im Hintergrund (~5-15min, Cost-Cap ${budget_hint})\n"
-                f"📊 Yota: /yota (zeigt active worker)"
+                f"✅ Verstanden — ich übergebe `{slug}` an den Worker.\n"
+                f"🔨 Worker läuft jetzt im Hintergrund (~5-15 min, Budget bis $${budget_hint}).\n"
+                f"📊 Live-Status: `/yota` oder check `.claude/overseer/LIVE_STATUS.md`."
             )
         else:
             reply = (
-                f"✅ approved + queued als: `{slug}`\n"
+                f"✅ Queued als `{slug}`.\n"
                 f"{trig_msg}"
             )
         return chat_id, reply
@@ -2024,8 +2034,16 @@ def process_update(update, allowed_ids):
         return intake_reply
 
     if cmd != "/btw":
-        # Other commands
-        return chat_id, "Only /btw <text> supported"
+        # Yota-style fallback: friendly redirect instead of curt rejection.
+        return chat_id, ("HTML", (
+            "Sorry, das hab ich nicht verstanden. Ich höre auf:\n"
+            "• <code>/yota propose ...</code> — neue Idee (Council berät, du gibst go)\n"
+            "• <code>go &lt;slug&gt; &lt;token&gt;</code> — Council-Verdict freigeben\n"
+            "• <code>reject &lt;slug&gt;</code>  ·  <code>change &lt;slug&gt; &lt;text&gt;</code>\n"
+            "• <code>/yota</code> — was läuft gerade?\n"
+            "• <code>/btw ...</code> — Power-User Fast-Lane\n"
+            "• <code>/help</code> — volle Liste"
+        ))
 
     # Parse /btw [token] <text>
     rest = rest_after_cmd
@@ -2154,6 +2172,30 @@ def cmd_status():
 # Entry point
 # ---------------------------------------------------------------------------
 
+_BOT_LOCK_FH = None  # keep ref so lock isn't released by GC
+
+
+def _acquire_singleton_lock():
+    """Prevent two long-poll instances from racing for Telegram updates.
+    On conflict prints a clear message and exits with code 0 (LaunchAgent retries)."""
+    global _BOT_LOCK_FH
+    import fcntl
+    lock_path = REPO_ROOT / ".claude" / "overseer" / "telegram-bot.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fh = open(lock_path, "w")
+    try:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print(
+            f"telegram-bot: another instance holds {lock_path} — exiting.",
+            file=sys.stderr,
+        )
+        sys.exit(0)
+    fh.write(str(os.getpid()))
+    fh.flush()
+    _BOT_LOCK_FH = fh
+
+
 def main():
     args = sys.argv[1:]
 
@@ -2174,6 +2216,7 @@ def main():
         run_once(allowed_ids, last_update_id=0)
         return
 
+    _acquire_singleton_lock()
     run_loop(allowed_ids)
 
 if __name__ == "__main__":

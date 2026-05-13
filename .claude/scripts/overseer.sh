@@ -1353,9 +1353,10 @@ while [ "$SHUTDOWN_REQUESTED" -eq 0 ]; do
     _last_heartbeat_ts="$_now"
   fi
 
-  set +e
-  process_pool_iteration
-  iter_rc=$?
+  iter_rc=0
+  process_pool_iteration || iter_rc=$?
+  # Defensive: process_pool_iteration mutates `set -e` internally (line ~1212);
+  # ensure errexit is back on for the loop body's other commands.
   set -e
 
   if [ "$iter_rc" -eq 1 ]; then
