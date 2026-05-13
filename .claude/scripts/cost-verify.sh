@@ -94,7 +94,15 @@ for idx, raw_line in enumerate(lines):
     usd   = _raw_field(raw_line, _usd_re)   # raw text, e.g. "0.10" not "0.1"
     pid   = _raw_field(raw_line, _pid_re)   # raw text integer
 
-    entry_data = f"{ts}|{agent}|{usd}|{pid}|{expected_prev}"
+    # cost_record_full (PR #60) extends the hash with token fields when present.
+    # Detect by checking for the input_tokens field (only emitted by full-variant).
+    if 'input_tokens' in entry:
+        it = entry.get('input_tokens', 0)
+        ct = entry.get('cached_input_tokens', 0)
+        ot = entry.get('output_tokens', 0)
+        entry_data = f"{ts}|{agent}|{usd}|{pid}|{expected_prev}|{it}|{ct}|{ot}"
+    else:
+        entry_data = f"{ts}|{agent}|{usd}|{pid}|{expected_prev}"
     expected_entry_hash = sha256(entry_data)
 
     stored_entry_hash = entry.get('entry_hash', '')
