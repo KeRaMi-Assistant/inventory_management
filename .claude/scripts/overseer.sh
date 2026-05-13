@@ -783,21 +783,27 @@ _pool_spawn() {
   # (We do this after fork, so worker_pid is known.)
   local final_exitfile
   final_exitfile="$(_pool_exit_file "$worker_pid")"
-  # Rename happens in background so we don't block; poll briefly.
+  # Rename happens in background — must outlive the worker so the file
+  # actually appears (worker writes uuid_exitfile only at its own exit).
+  # Wait until worker_pid is gone OR worker timeout + 60s elapses.
   (
-    local deadline2=$(( $(date +%s) + 5 ))
-    while (( $(date +%s) < deadline2 )); do
+    local hard_deadline=$(( $(date +%s) + timeout_sec + 60 ))
+    while (( $(date +%s) < hard_deadline )); do
       if [ -f "$uuid_exitfile" ]; then
         mv "$uuid_exitfile" "$final_exitfile" 2>/dev/null || true
-        break
+        exit 0
       fi
-      sleep 0.2
+      # Worker dead and no uuid file → it crashed before writing; let reaper default to 1.
+      if ! kill -0 "$worker_pid" 2>/dev/null; then
+        # Give a tiny grace window for filesystem visibility after worker exit.
+        sleep 0.5
+        if [ -f "$uuid_exitfile" ]; then
+          mv "$uuid_exitfile" "$final_exitfile" 2>/dev/null || true
+        fi
+        exit 0
+      fi
+      sleep 1
     done
-    # Note: if worker crashed before writing the uuid file, the exit file will
-    # simply not exist. The reaper's default code=1 handles this case correctly.
-    # We intentionally do NOT write a fallback here to avoid cross-test
-    # contamination: a stale renamer writing after _reset would corrupt the
-    # freshly-recreated state/workers/ dir of the next test.
   ) &
 
   # Register PID-file immediately so reaper can track it
@@ -1353,9 +1359,10 @@ while [ "$SHUTDOWN_REQUESTED" -eq 0 ]; do
     _last_heartbeat_ts="$_now"
   fi
 
-  set +e
-  process_pool_iteration
-  iter_rc=$?
+  iter_rc=0
+  process_pool_iteration || iter_rc=$?
+  # Defensive: process_pool_iteration mutates `set -e` internally (line ~1212);
+  # ensure errexit is back on for the loop body's other commands.
   set -e
 
   if [ "$iter_rc" -eq 1 ]; then
