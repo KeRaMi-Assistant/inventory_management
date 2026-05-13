@@ -358,6 +358,10 @@ export function stripBody(
     delivery_method: parsed.deliveryMethod,
     cancellation_reason: parsed.cancellationReason,
     seller: parsed.seller,
+    // ── T3c: Strict-Tracking Felder ────────────────────────────────────
+    tracking_confidence: parsed.trackingConfidence ?? 'none',
+    tracking_candidates: parsed.trackingCandidates,
+    tracking_needs_review: parsed.trackingNeedsReview ?? false,
   }
   // Re-Parse-Quelle: nur wenn KEIN tracking extrahiert werden konnte und
   // die Mail aussieht wie ein Versand-Update. Sonst Speicher sparen.

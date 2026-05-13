@@ -2827,4 +2827,84 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsDemoWipeError(Object error) {
     return 'Deletion failed: $error';
   }
+
+  @override
+  String get trackingAmazonShipmentIdHint =>
+      'Amazon-internal shipment ID — not a real carrier tracking number';
+
+  @override
+  String get trackingBannerImprovedDetection =>
+      'We improved tracking detection. Please review the items in \"Review\".';
+
+  @override
+  String get trackingCarrierAmazonLogisticsHintShort => 'Amazon Logistics';
+
+  @override
+  String get trackingCarrierUnknown => 'Unknown carrier';
+
+  @override
+  String get trackingConfidenceLabelManual => 'Manual';
+
+  @override
+  String get trackingConfidenceLabelNone => 'Unclear';
+
+  @override
+  String get trackingConfidenceLabelStrong => 'Verified';
+
+  @override
+  String get trackingEnterManuallyCta => 'Enter manually';
+
+  @override
+  String get trackingNoneDetectedSubtitle =>
+      'We could not find a verified tracking number in this message.';
+
+  @override
+  String get trackingNoneDetectedTitle => 'No tracking number detected';
+
+  @override
+  String get trackingReparseCta => 'Re-evaluate tracking numbers';
+
+  @override
+  String get trackingReparseConfirmBody =>
+      'Existing tracking numbers will be re-checked with the improved detector. Manual entries stay untouched.';
+
+  @override
+  String get trackingReparseConfirmTitle => 'Start re-evaluation?';
+
+  @override
+  String get trackingReparseFailed => 'Re-evaluation failed';
+
+  @override
+  String get trackingReparseOffline => 'No connection — please try again later';
+
+  @override
+  String get trackingReparseRunning => 'Re-evaluating tracking numbers…';
+
+  @override
+  String trackingReparseSuccessCount(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString tracking numbers updated',
+      one: '1 tracking number updated',
+      zero: 'No tracking number updated',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get trackingReviewAcceptCta => 'Accept';
+
+  @override
+  String get trackingReviewDismissCta => 'Dismiss';
+
+  @override
+  String get trackingReviewNeededBadge => 'Review';
+
+  @override
+  String get trackingStatusBlockA11yLabel => 'Tracking status';
 }

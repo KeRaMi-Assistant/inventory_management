@@ -14,6 +14,7 @@
 //                          die Mail im Unklassifiziert-Tab mit shop_key, der
 //                          User kann manuell daraus einen Deal machen.
 
+
 export interface ParsedOrderItem {
   product: string
   quantity: number
@@ -70,6 +71,20 @@ export interface ParsedOrder {
   /// Verkäufer/Marketplace-Seller (Top-Level — bei Marketplace-Mails
   /// häufig pro Item nochmal in `items[].seller`).
   seller?: string
+
+  // ── T3c: Strict-Tracking Felder ──────────────────────────────────────
+  /// Confidence der primary Tracking-Nr (`tracking`). Strict-Mapping:
+  /// `'strong'` wenn ein Candidate die Gate-Schwelle erreicht hat,
+  /// sonst `'none'`.
+  trackingConfidence?: 'strong' | 'none'
+  /// Forensik-Liste aller gefundenen Candidates (auch medium/weak/none),
+  /// max 10 Einträge — Plan §3.2. Wird in `parsed_payload.tracking_candidates`
+  /// abgelegt.
+  trackingCandidates?: TrackingCandidate[]
+  /// `true` wenn die Mail Tracking-relevant ist (shipped/delivered), aber
+  /// kein Candidate die Strong-Schwelle erreicht hat → UI zeigt
+  /// „Manuell eingeben".
+  trackingNeedsReview?: boolean
 }
 
 export interface MailContext {
@@ -90,49 +105,354 @@ interface Adapter {
 // ── Helpers ────────────────────────────────────────────────────────────
 const moneyRe = /([\d.]+,\d{2}|\d+\.\d{2})\s*(EUR|€|USD|\$|GBP|£|PLN|zł)?/i
 
-// Tracking-Detection ist bewusst RESTRIKTIV: lieber gar keine Nummer als
-// eine erfundene. Amazon, DHL etc. bauen interne Shipment-IDs in URLs
-// ("?shipmentId=1776971660745"), die wie Tracking-Nrn aussehen, aber
-// keine sind. Wir akzeptieren deshalb nur:
-//   1. Carrier-Strong-Pattern: 1Z…, TBA…, JJD…, [LL]NNN…NN[LL] (DE-DHL).
-//   2. Numerische Nummern, die direkt hinter dem Wort
-//      "Tracking" / "Sendungsnummer" / "Paketnummer" stehen.
-const STRONG_TRACKING_PATTERNS: Array<{ re: RegExp; carrier?: string }> = [
-  { re: /\b(1Z[A-Z0-9]{16})\b/, carrier: 'UPS' },
-  { re: /\b(TBA\d{9,14})\b/i, carrier: 'Amazon Logistics' },
-  { re: /\b(JJD\d{10,18})\b/, carrier: 'DHL' },
-  { re: /\b([A-Z]{2}\d{9}DE)\b/, carrier: 'DHL' },
-  { re: /\b(\d{20,22})\b/, carrier: 'DHL' },
-  // DE-Tracking mit Country-Code AM ANFANG + 8–14 Digits ("DE5455279839"
-  // aus echten Versand-Mails, 12 Zeichen). Wird sowohl von Amazon Logistics
-  // als auch von DHL national genutzt — ohne Body-Kontext NICHT eindeutig.
-  // Bewusst KEIN hardcoded `carrier` hier: `inferCarrier(tn, body)` liest
-  // statt dessen Carrier-Hinweise aus dem Body ("Amazon Logistics", "DHL",
-  // "Hermes", …). Wenn der Body keinen Hinweis hat → carrier=undefined →
-  // UI zeigt nur die Tracking-Nummer ohne Label (lieber kein Label als
-  // falsches). Begrenzung 8–14 Digits, damit wir nicht versehentlich PLZs
-  // ("DE12345") matchen — Tracking ist immer ≥ 10-stellig.
-  { re: /\b(DE\d{8,14})\b/ },
+// T3c: `STRONG_TRACKING_PATTERNS` + `CONTEXT_TRACKING_RE` sind entfernt.
+// Ersatz: `TRACKING_PATTERNS`-Tabelle weiter unten (Single-Source-of-Truth)
+// + `ANCHOR_WORDS`-Liste (DE/EN/FR/IT/ES/PL) + sync `findAllTrackings()`,
+// die Candidates mit Confidence-Klassifikation zurückgibt.
+
+// Body-Cap für Tracking-Scan (Plan §3.7, ReDoS-Mitigation).
+export const MAX_BODY_LEN = 256 * 1024
+
+// ── REJECT_PATTERNS (T3a) ──────────────────────────────────────────────
+// Negativ-Liste: läuft AUSSCHLIESSLICH gegen den bereits-gematchten Token
+// (3-30 chars), NIEMALS gegen den vollen Mail-Body. So bleibt der Scan
+// O(token-länge) und ReDoS-sicher.
+//
+// WICHTIG (Plan §3.5 + Council-Finding #6): KEIN `^\d{20}$`-Reject — das
+// würde echte DHL-20-stellige Trackings blocken. DHL-20 wird stattdessen
+// via jkeen-Checksum (T2b) validiert.
+//
+// Forensik-Report Sektion B (Falsch-Positive heute) ist die Quelle für
+// jeden Eintrag hier. Reject-Hits werden NICHT silent gedroppt, sondern
+// in `tracking_candidates[].validation.rejectedBy` geloggt (T3b liefert
+// den Persistenz-Pfad). Heute (T3a): die Logging-Struktur ist vorbereitet,
+// der konsumierende Code kommt in T3b.
+export const REJECT_PATTERNS: Array<{ name: string; re: RegExp; reason: string }> = [
+  {
+    // Amazon-Order-IDs: 3-7-7-Block, z.B. `303-1234567-1234567`.
+    // Forensik B#1.
+    name: 'amazon_order_id',
+    re: /^\d{3}-\d{7}-\d{7}$/,
+    reason: 'amazon-order-id',
+  },
+  {
+    // IBAN-Prefix DE + 20 Ziffern (DE-IBAN = 22 Zeichen). Forensik B#4.
+    // Nach Whitespace-Normalisierung (T3c) trifft das alle DE-IBANs.
+    name: 'iban_de',
+    re: /^DE\d{20}$/,
+    reason: 'iban-de',
+  },
+  {
+    // Telefon-Form: optionales `+`, dann 2-4 Vorwahl-Stellen, dann ≥3
+    // Stellen. Greift Reste wie `+498912345678`. Forensik B#6.
+    name: 'phone_intl',
+    re: /^\+\d{2,4}\d{3,}$/,
+    reason: 'phone-intl',
+  },
+  {
+    // PLZ-Fragment: 5 Ziffern, dann optionaler Whitespace, dann 6-12
+    // Telefon-Ziffern. Defensiv für „PLZ + Phone in Footer". Forensik B#5+B#6.
+    // Whitespace MANDATORY zwischen PLZ und Phone — sonst würde das
+    // Pattern legitime 11-17-stellige Carrier-Trackings (DHL 14-stellig
+    // u.a.) blocken. Whitespace im Token bleibt heute erhalten
+    // (Normalisierung erst in T3c).
+    name: 'plz_phone_combo',
+    re: /^\d{5}\s\d{6,12}$/,
+    reason: 'plz-phone-combo',
+  },
+  {
+    // 5-stellige PLZ allein als Token (würde nur durch Context-RE matchen,
+    // wenn Anchor + zu kurzes Folge-Token — defensiv). Forensik B#5.
+    name: 'plz_only',
+    re: /^\d{5}$/,
+    reason: 'plz-only',
+  },
+  {
+    // Zu kurze rein numerische IDs (1-7 Stellen). Sind nie echte
+    // Carrier-Trackings (min. UPS=18, TBA=12, JJD=13, DHL=20, S10=13).
+    // Heute matcht das CONTEXT_TRACKING_RE nicht (≥8 chars), aber Pattern
+    // wie `\d{20,22}`-Fragmente nach Whitespace-Normalisierung könnten
+    // theoretisch hier landen.
+    name: 'too_short_numeric',
+    re: /^\d{1,7}$/,
+    reason: 'too-short-numeric',
+  },
+  {
+    // Generische Auftragsnummer-Form 6-6-6. Forensik B (generischer Schutz).
+    name: 'generic_order_3block',
+    re: /^\d{6}-\d{6}-\d{6}$/,
+    reason: 'generic-order-3block',
+  },
 ]
 
-// Mehrsprachig: DE (Sendungsnummer / Tracking-Nr / Paketnummer),
-// EN (tracking number / tracking id / tracking #), FR (numéro de suivi),
-// IT (numero di tracciamento / numero tracciamento), ES (número de
-// seguimiento), PL (numer przesyłki).
+// T3b: TrackingCandidate-Vollform + Pattern-Tabelle + Anchor-Logic.
+// `findAllTrackings()` ist die neue async Variante, die Candidates
+// zurückgibt (siehe weiter unten). Der bestehende sync-Pfad bleibt
+// als `findAllTrackingsLegacy(s, html?)` erhalten — Cutover in T3c.
+export type TrackingConfidence = 'strong' | 'medium' | 'weak' | 'none'
+
+export type TrackingCandidate = {
+  /// Normalisierter Wert: Whitespace gestrippt, uppercased.
+  value: string
+  /// Roh-Token aus dem Mail-Body (vor Normalisierung).
+  rawValue: string
+  /// Carrier-Name, wenn aus Pattern oder Validator ableitbar.
+  /// Validator-Carrier (jkeen-DB) gewinnt über Pattern-Carrier.
+  carrier?: string
+  /// Quelle des Matches.
+  source:
+    | 'strong-pattern'
+    | 'context-anchor'
+    | 'html-href'
+    | 'amazon-shipment-id'
+    | 'unknown'
+  /// Confidence-Klassifikation. Persistenz erlaubt nur 'strong'.
+  confidence: TrackingConfidence
+  validation: {
+    /// Anchor-Wort aus dem 80-Zeichen-Fenster vor dem Match. Max 50
+    /// Zeichen (PII-Schutz, Council-Finding #7).
+    anchorMatched?: string
+    /// Reject-Grund, falls Token von REJECT_PATTERNS abgewiesen.
+    rejectedBy?: string
+    /// jkeen-Checksum-Result (undefined wenn Validator nicht gelaufen).
+    checksumValid?: boolean
+    /// `true` wenn Whitespace gestrippt wurde (rawValue != value).
+    normalized: boolean
+    /// ID des Patterns aus TRACKING_PATTERNS, das gegriffen hat.
+    patternId?: string
+  }
+}
+
+// ── Pattern-Tabelle (T3b) ──────────────────────────────────────────────
+// Single-Source-of-Truth für Body-Pattern-Matching. Strong-Patterns sind
+// format-eindeutig (UPS 1Z, Amazon TBA, DHL JJD, S10-UPU). Context-
+// Patterns matchen generische Tokens, die NUR mit Anchor-Wort akzeptiert
+// werden.
 //
-// Bug-Fix #1: vorher `nr[uú]mero` — das matchte "nrúmero", nicht das
-// tatsächliche Spanisch "número".
-//
-// Bug-Fix #2: Amazon-Versand-Mails formulieren "Your tracking number
-// IS: DE5455279839" / "Deine Sendungsnummer LAUTET: …". Der vorherige
-// Regex erlaubte nur Whitespace/Trenner zwischen Keyword und Nummer
-// und fiel deshalb stumm auf den HTML-href-Fallback (`orderingShipmentId`)
-// zurück — User sah die interne Amazon-Package-ID statt der echten
-// Carrier-Tracking-Nummer. Der `is/ist/lautet/est/es/jest`-Slot ist
-// optional, damit ältere Pattern ohne Verb (z.B. "Sendungsnummer:")
-// weiterhin matchen.
-const CONTEXT_TRACKING_RE =
-  /(?:tracking(?:[-\s]?(?:id|nummer|nr\.?|number|no\.?|#))?|sendungs?(?:[-\s]?(?:nummer|nr\.?))|paket(?:[-\s]?(?:nummer|nr\.?))|n[uú]mero\s+de\s+seguimiento|num[eé]ro\s+de\s+suivi|numero\s+(?:di\s+)?tracciamento|numer\s+przesy(?:ł|l)ki)(?:\s+(?:is|ist|lautet|est|es|jest))?\s*[:\s#=-]*\s*([A-Z0-9-]{8,30})/i
+// T3c: Ersetzt `STRONG_TRACKING_PATTERNS` + `CONTEXT_TRACKING_RE`.
+export type AdapterPatternValidator = 'jkeen' | 'length-only' | 'no-validation'
+
+export type AdapterPattern = {
+  /// Eindeutiger Pattern-Identifier (für Logging + Forensik).
+  id: string
+  /// Regex (wird global ausgewertet — Flags werden in `findAllTrackings`
+  /// gesetzt).
+  re: RegExp
+  /// Wenn `true`: Anchor-Wort muss im 80-char-Fenster vor dem Match
+  /// stehen, sonst wird confidence reduziert.
+  requiresAnchor: boolean
+  /// Default-Confidence wenn Pattern matcht + Validator OK.
+  defaultConfidence: TrackingConfidence
+  /// Bekannter Carrier (Validator-Output gewinnt aber).
+  carrier?: string
+  /// Source-Tag im Candidate.
+  source: TrackingCandidate['source']
+  /// Welcher Validator wird auf den normalisierten Wert angewandt.
+  validator?: AdapterPatternValidator
+  /// T3c: Wenn `true`, läuft ein zweiter Pass auf einer Whitespace-
+  /// gestripten Body-Variante. Match-Position wird via Index-Map zurück
+  /// auf den Original-Body gemappt (für Anchor-Detection). Pflicht für
+  /// Patterns, deren Tokens in Mails häufig mit Spaces formatiert sind
+  /// (UPS 1Z, DHL JJD, S10).
+  normalizable?: boolean
+}
+
+export const TRACKING_PATTERNS: AdapterPattern[] = [
+  // ── Strong patterns (eindeutig, kein Anchor nötig) ─────────────────
+  {
+    id: 'ups-1z',
+    re: /\b1Z[A-Z0-9]{16}\b/g,
+    requiresAnchor: false,
+    defaultConfidence: 'strong',
+    carrier: 'UPS',
+    source: 'strong-pattern',
+    validator: 'jkeen',
+    normalizable: true,
+  },
+  {
+    id: 'amazon-tba',
+    re: /\bTBA\d{9,14}\b/gi,
+    requiresAnchor: false,
+    defaultConfidence: 'strong',
+    carrier: 'Amazon Logistics',
+    source: 'strong-pattern',
+    validator: 'no-validation',
+  },
+  {
+    id: 'dhl-jjd',
+    re: /\bJJD\d{10,18}\b/g,
+    requiresAnchor: false,
+    defaultConfidence: 'strong',
+    carrier: 'DHL',
+    source: 'strong-pattern',
+    validator: 'jkeen',
+    normalizable: true,
+  },
+  {
+    id: 'dhl-de-suffix',
+    // [LL]NNN…NN[LL] mit `DE`-Suffix — eindeutiger DHL-Code.
+    re: /\b[A-Z]{2}\d{9}DE\b/g,
+    requiresAnchor: false,
+    defaultConfidence: 'strong',
+    carrier: 'DHL',
+    source: 'strong-pattern',
+    validator: 'jkeen',
+  },
+  {
+    id: 's10-upu',
+    // Universal Postal Union S10: 2 Buchstaben + 8 Ziffern + 2 Buchstaben.
+    re: /\b[A-Z]{2}\d{8}[A-Z]{2}\b/g,
+    requiresAnchor: false,
+    defaultConfidence: 'strong',
+    carrier: 'S10',
+    source: 'strong-pattern',
+    validator: 'jkeen',
+    normalizable: true,
+  },
+  {
+    id: 'dhl-de-prefix',
+    // DE-Prefix + 8–14 Digits ("DE5455279839", 12 Zeichen). Format wird
+    // sowohl von Amazon Logistics als auch von DHL national genutzt —
+    // der konkrete Carrier wird via `inferCarrier(tn, body)` aus
+    // Body-Hinweisen abgeleitet (nicht hardcoded). Bewusst kein Anchor
+    // gefordert: das Format ist spezifisch genug (DE + 10–12 Ziffern),
+    // dass die FP-Risiken (PLZ, IBAN-Fragmente) durch REJECT_PATTERNS
+    // abgedeckt sind. Plan-Bug-Fix #2 + Test-Compat (Amazon DE-Tracking).
+    re: /\bDE\d{8,14}\b/g,
+    requiresAnchor: false,
+    defaultConfidence: 'strong',
+    source: 'strong-pattern',
+    validator: 'length-only',
+  },
+  // ── Context-required (zu generisch ohne Anchor) ───────────────────
+  {
+    id: 'context-numeric-10-22',
+    re: /\b\d{10,22}\b/g,
+    requiresAnchor: true,
+    defaultConfidence: 'strong',
+    source: 'context-anchor',
+    validator: 'jkeen',
+  },
+  {
+    id: 'context-alphanumeric-tracking',
+    re: /\b[A-Z0-9]{8,30}\b/g,
+    requiresAnchor: true,
+    defaultConfidence: 'weak',
+    source: 'context-anchor',
+    validator: 'length-only',
+  },
+]
+
+// ── Anchor-Worte (DE/EN/FR/IT/ES/PL) ──────────────────────────────────
+// Quellen: Plan §3.3 + bestehende CONTEXT_TRACKING_RE-Tokens. Reihenfolge
+// nach Spezifität (Mehrwort-Anker zuerst), damit `findAnchorBefore` den
+// längsten Treffer bevorzugt — case-insensitive Suche.
+export const ANCHOR_WORDS: string[] = [
+  // DE
+  'Sendungsnummer',
+  'Sendungs-Nummer',
+  'Sendungsnr',
+  'Sendungsverfolgung',
+  'Sendung',
+  'Versandnummer',
+  'Versand-Nr',
+  'Paketnummer',
+  'Paket-Nr',
+  'Tracking-Nummer',
+  'Tracking-Nr',
+  'Trackingnummer',
+  'Tracking',
+  'Identcode',
+  'Auftragsnummer',
+  // EN
+  'Tracking number',
+  'Tracking Number',
+  'Tracking ID',
+  'Tracking #',
+  'Tracking no',
+  'Shipment ID',
+  'Shipment',
+  // FR
+  'Numéro de suivi',
+  'Numero de suivi',
+  'Numéro de colis',
+  'Suivi',
+  // IT
+  'Numero di tracciamento',
+  'Numero tracciamento',
+  'Numero di spedizione',
+  // ES
+  'Número de seguimiento',
+  'Numero de seguimiento',
+  'Número de envío',
+  // PL
+  'Numer przesyłki',
+  'Numer przesylki',
+  'Numer śledzenia',
+]
+
+/**
+ * Prüft, ob im 80-Zeichen-Fenster VOR dem Match-Start ein Anchor-Wort
+ * vorkommt. Liefert das kürzeste matched Anchor-Token zurück
+ * (max 50 chars — PII-Schutz, Council-Finding #7).
+ *
+ * @param body Voller Mail-Body (oder normalisiert auf 256 KB).
+ * @param matchStart Offset des Match-Beginns im Body.
+ * @returns Anchor-Wort als String oder `null` wenn keiner gefunden.
+ */
+export function findAnchorBefore(body: string, matchStart: number): string | null {
+  const start = Math.max(0, matchStart - 80)
+  const window = body.slice(start, matchStart)
+  const lower = window.toLowerCase()
+  let bestIdx = -1
+  let bestLen = -1
+  let bestWord: string | null = null
+  for (const word of ANCHOR_WORDS) {
+    const idx = lower.lastIndexOf(word.toLowerCase())
+    if (idx < 0) continue
+    // Prefer (a) later anchor (closer to match), (b) on tie, longer word.
+    if (idx > bestIdx || (idx === bestIdx && word.length > bestLen)) {
+      bestIdx = idx
+      bestLen = word.length
+      // Realen Cased-Token aus dem Original-Window holen (kein lower).
+      bestWord = window.slice(idx, idx + word.length)
+    }
+  }
+  if (!bestWord) return null
+  // PII-Schutz: max 50 chars zurückgeben.
+  return bestWord.slice(0, 50)
+}
+
+/**
+ * Prüft, ob ein bereits gematchter Token von einem REJECT_PATTERN
+ * abgewiesen wird.
+ *
+ * **ReDoS-Schutz:** Läuft AUSSCHLIESSLICH auf dem Token (3-30 Zeichen),
+ * niemals auf der vollen Mail. Length-Cap + Patterns sind alle anchored
+ * (`^…$`) → O(token-länge) worst case.
+ *
+ * Whitespace-Normalisierung passiert NICHT hier (kommt in T3c). Tokens
+ * mit Whitespace geben `null` zurück (greifen Reject-Patterns nicht).
+ *
+ * @param token bereits extrahierter Tracking-Kandidat
+ * @returns Reject-Grund-String, oder `null` wenn nichts matcht.
+ */
+export function checkRejectPatterns(token: string | null | undefined): string | null {
+  // Defensiver Length-Cap als ReDoS-Schutz + Null-Safety.
+  if (!token || typeof token !== 'string') return null
+  if (token.length < 3 || token.length > 30) return null
+  for (const p of REJECT_PATTERNS) {
+    if (p.re.test(token)) {
+      // PII-frei: nur Pattern-Name + Token-Prefix (max 4 chars).
+      // Council-Security-Finding zu PII-Leaks.
+      const tokPrefix = token.slice(0, 4)
+      // deno-lint-ignore no-console
+      console.log(`reject: ${p.name} matched (tok=${tokPrefix}…)`)
+      return p.reason
+    }
+  }
+  return null
+}
 
 const stripHtml = (html: string): string =>
   html
@@ -201,21 +521,21 @@ function inferCarrier(tn: string, body: string): string | undefined {
   return undefined
 }
 
-const findTracking = (s: string): { tracking?: string; carrier?: string } => {
-  const all = findAllTrackings(s)
-  if (all.trackings.length === 0) return {}
-  return { tracking: all.trackings[0], carrier: all.carrier }
-}
-
 /// HTML-spezifische Tracking-Extraktion: liest `href`-Attribute aus dem
 /// Roh-HTML und matcht typische Carrier-URL-Schemes. Wichtig für Amazon
 /// & Co., die Tracking-Nummern oft NUR im Link-Ziel haben (text-Strip
 /// schmeißt die `href`-Werte weg).
-function findTrackingsInHtml(html: string): { trackings: string[]; carrier?: string } {
-  if (!html) return { trackings: [] }
-  const seen = new Set<string>()
-  const out: string[] = []
-  let carrier: string | undefined
+///
+/// T3c: Gibt Candidates zurück (statt String-Liste). Bekannte Carrier-
+/// Domains → `confidence: 'strong'`, `source: 'html-href'`. Generic-
+/// URL-Catch → `confidence: 'medium'`. Amazon `orderingShipmentId` ist
+/// ein Sonderfall (Council-Finding: interne Amazon-Logistics-Shipment-ID,
+/// kein echtes Carrier-Tracking) → `source: 'amazon-shipment-id'`,
+/// `confidence: 'medium'` — bleibt in der Candidate-Liste sichtbar,
+/// aber nie primary.
+function findTrackingsInHtml(html: string): TrackingCandidate[] {
+  if (!html) return []
+  const byValue = new Map<string, TrackingCandidate>()
 
   // Common Carrier-URL-Patterns. Reihenfolge: spezifisch → generisch.
   // Wichtig für Amazon: deren Versand-Mails wrappen jeden Tracking-Link
@@ -223,67 +543,83 @@ function findTrackingsInHtml(html: string): { trackings: string[]; carrier?: str
   // Redirect. Die echten Carrier-URL-Parameter (`piececode`, `trackingId`,
   // `orderingShipmentId`) stehen also doppelt URL-encoded im href. Wir
   // matchen daher gegen RAW + decoded(URL) — siehe Loop unten.
-  const URL_PATTERNS: Array<{ re: RegExp; carrier?: string }> = [
+  //
+  // T3c: Pro Pattern entscheidet `source` über die Confidence:
+  //   - 'html-href' + bekannter Carrier → 'strong'
+  //   - 'amazon-shipment-id' (orderingShipmentId) → 'medium' (Council:
+  //     interne Amazon-Logistics-ID, kein echtes Carrier-Tracking).
+  //   - 'unknown' → 'medium' (generischer URL-Param-Catch).
+  type UrlPattern = {
+    re: RegExp
+    carrier?: string
+    source: TrackingCandidate['source']
+    confidence: TrackingConfidence
+  }
+  const URL_PATTERNS: UrlPattern[] = [
     // Amazon Logistics: track.amazon.de/123ABC oder ?trackingId=...
-    { re: /track\.amazon\.[a-z.]+\/(?:tracking\/)?([A-Z0-9]{10,30})\b/i, carrier: 'Amazon Logistics' },
-    { re: /[?&]trackingId=([A-Z0-9-]{8,30})/i, carrier: 'Amazon Logistics' },
-    // Amazon-Logistics-Shipment-ID aus shiptrack/view.html — der einzige
-    // ID, den Amazon in Versandbestätigungen für eigene Logistik mit-
-    // schickt. Pure numerisch, 12–18 Stellen. Kein Carrier-Tracking im
-    // klassischen Sinn, aber für den User klickbar (`amazon.<tld>/
-    // progress-tracker/...`) und der einzige Anker, an dem Statusupdates
-    // hängen können. Klare Trennung zu `packageId` (häufig nur "1").
-    { re: /[?&]orderingShipmentId=([0-9]{8,20})/i, carrier: 'Amazon Logistics' },
+    { re: /track\.amazon\.[a-z.]+\/(?:tracking\/)?([A-Z0-9]{10,30})\b/i, carrier: 'Amazon Logistics', source: 'html-href', confidence: 'strong' },
+    { re: /[?&]trackingId=([A-Z0-9-]{8,30})/i, carrier: 'Amazon Logistics', source: 'html-href', confidence: 'strong' },
+    // Amazon-Logistics-Shipment-ID (Sonderfall: T4-Notiz).
+    { re: /[?&]orderingShipmentId=([0-9]{8,20})/i, carrier: 'Amazon Logistics', source: 'amazon-shipment-id', confidence: 'medium' },
     // DHL: nolp.dhl.de/?piececode=... oder /track/123
-    { re: /[?&]piececode=([A-Z0-9]{8,30})/i, carrier: 'DHL' },
-    { re: /nolp\.dhl\.[a-z.]+\/.*?[?&]idc=([A-Z0-9]{10,30})/i, carrier: 'DHL' },
-    { re: /dhl\.[a-z.]+\/.*?\/track[^?]*\?(?:trackingNumber|tracking)=([A-Z0-9]{8,30})/i, carrier: 'DHL' },
+    { re: /[?&]piececode=([A-Z0-9]{8,30})/i, carrier: 'DHL', source: 'html-href', confidence: 'strong' },
+    { re: /nolp\.dhl\.[a-z.]+\/.*?[?&]idc=([A-Z0-9]{10,30})/i, carrier: 'DHL', source: 'html-href', confidence: 'strong' },
+    { re: /dhl\.[a-z.]+\/.*?\/track[^?]*\?(?:trackingNumber|tracking)=([A-Z0-9]{8,30})/i, carrier: 'DHL', source: 'html-href', confidence: 'strong' },
     // UPS
-    { re: /ups\.com\/.*?[?&]tracknum(?:s)?=(1Z[A-Z0-9]{16})/i, carrier: 'UPS' },
-    // DPD: parcelno-Param (DE) UND /parcels/<nr> Pfad (UK / track.dpd.co.uk).
-    { re: /dpd\.[a-z.]+\/.*?[?&]parcelno(?:r)?=(\d{10,20})/i, carrier: 'DPD' },
-    { re: /tracking\.dpd\.[a-z.]+\/.*?\/(\d{10,20})/i, carrier: 'DPD' },
-    { re: /(?:track\.)?dpd\.[a-z.]+\/parcels?\/(\d{10,20})/i, carrier: 'DPD' },
+    { re: /ups\.com\/.*?[?&]tracknum(?:s)?=(1Z[A-Z0-9]{16})/i, carrier: 'UPS', source: 'html-href', confidence: 'strong' },
+    // DPD
+    { re: /dpd\.[a-z.]+\/.*?[?&]parcelno(?:r)?=(\d{10,20})/i, carrier: 'DPD', source: 'html-href', confidence: 'strong' },
+    { re: /tracking\.dpd\.[a-z.]+\/.*?\/(\d{10,20})/i, carrier: 'DPD', source: 'html-href', confidence: 'strong' },
+    { re: /(?:track\.)?dpd\.[a-z.]+\/parcels?\/(\d{10,20})/i, carrier: 'DPD', source: 'html-href', confidence: 'strong' },
     // GLS
-    { re: /gls-?(?:pakete|group)\.[a-z.]+\/.*?[?&]match=([A-Z0-9]{8,30})/i, carrier: 'GLS' },
+    { re: /gls-?(?:pakete|group)\.[a-z.]+\/.*?[?&]match=([A-Z0-9]{8,30})/i, carrier: 'GLS', source: 'html-href', confidence: 'strong' },
     // Hermes
-    { re: /hermesworld\.[a-z.]+\/.*?[?&]Barcode=([A-Z0-9]{8,30})/i, carrier: 'Hermes' },
-    // Chronopost (FR): /tracking-no-cms/suivi-page?listeNumerosLT=...
-    { re: /chronopost\.[a-z.]+\/.*?[?&]listeNumerosLT=([A-Z0-9]{8,30})/i, carrier: 'Chronopost' },
-    // SEUR (ES): /livetracking/?segOnLine=...
-    { re: /seur\.[a-z.]+\/.*?[?&]segOnLine=([A-Z0-9]{8,30})/i, carrier: 'SEUR' },
+    { re: /hermesworld\.[a-z.]+\/.*?[?&]Barcode=([A-Z0-9]{8,30})/i, carrier: 'Hermes', source: 'html-href', confidence: 'strong' },
+    // Chronopost (FR)
+    { re: /chronopost\.[a-z.]+\/.*?[?&]listeNumerosLT=([A-Z0-9]{8,30})/i, carrier: 'Chronopost', source: 'html-href', confidence: 'strong' },
+    // SEUR (ES)
+    { re: /seur\.[a-z.]+\/.*?[?&]segOnLine=([A-Z0-9]{8,30})/i, carrier: 'SEUR', source: 'html-href', confidence: 'strong' },
     // GLS variant (US/UK)
-    { re: /gls-?[a-z]*\.[a-z.]+\/.*?[?&]trackingNumber=([A-Z0-9]{8,30})/i, carrier: 'GLS' },
-    // Generic: any tracknum/tracking/trk parameter (last resort).
-    // packageId wurde aus dem generischen Block entfernt — Amazon liefert
-    // dafür typischerweise "1" / "2", was als Tracking-Nummer wertlos ist.
-    { re: /[?&](?:trk|tracking_?number|tracknum|tracking_id|trackingnr)=([A-Z0-9-]{8,30})/i },
+    { re: /gls-?[a-z]*\.[a-z.]+\/.*?[?&]trackingNumber=([A-Z0-9]{8,30})/i, carrier: 'GLS', source: 'html-href', confidence: 'strong' },
+    // Generic: any tracknum/tracking/trk parameter (last resort) — unknown carrier.
+    { re: /[?&](?:trk|tracking_?number|tracknum|tracking_id|trackingnr)=([A-Z0-9-]{8,30})/i, source: 'unknown', confidence: 'medium' },
   ]
 
-  // Erst spezifische URL-Patterns, dann generische tracking-Wörter im Pfad.
-  // URL-Cap auf 2000 erhöht: Amazon-Redirect-URLs sind häufig 600–1200
-  // Zeichen lang (Click-Tracking-Tokens + URL-encoded Ziel-URL).
   const hrefRe = /href\s*=\s*["']([^"']{8,2000})["']/gi
   let h: RegExpExecArray | null
   while ((h = hrefRe.exec(html)) !== null) {
     const url = h[1]
-    // decodeURIComponent throws bei `%`-Sequenzen ohne valides Hex —
-    // skip in dem Fall und arbeite mit dem Roh-URL weiter.
     let decoded = url
     if (url.includes('%')) {
       try { decoded = decodeURIComponent(url) } catch { /* ignore */ }
     }
-    const candidates = decoded === url ? [url] : [url, decoded]
+    const urlVariants = decoded === url ? [url] : [url, decoded]
     for (const p of URL_PATTERNS) {
       let matched = false
-      for (const candidate of candidates) {
-        const m = p.re.exec(candidate)
+      for (const variant of urlVariants) {
+        const m = p.re.exec(variant)
         if (m && m[1]) {
-          const tn = m[1]
-          if (!seen.has(tn)) {
-            seen.add(tn)
-            out.push(tn)
-            carrier ??= p.carrier ?? inferCarrier(tn, candidate)
+          const rawValue = m[1]
+          const value = rawValue.replace(/\s+/g, '').toUpperCase()
+          const rejectedBy = checkRejectPatterns(value) ?? undefined
+          const carrier = p.carrier ?? inferCarrier(value, variant)
+          let confidence: TrackingConfidence = p.confidence
+          if (rejectedBy) confidence = 'none'
+          const candidate: TrackingCandidate = {
+            value,
+            rawValue,
+            carrier,
+            source: p.source,
+            confidence,
+            validation: {
+              rejectedBy,
+              normalized: value !== rawValue,
+              patternId: `html:${p.source}`,
+            },
+          }
+          const prev = byValue.get(value)
+          if (!prev || _CONFIDENCE_ORDER[confidence] > _CONFIDENCE_ORDER[prev.confidence]) {
+            byValue.set(value, candidate)
           }
           matched = true
           break
@@ -292,56 +628,254 @@ function findTrackingsInHtml(html: string): { trackings: string[]; carrier?: str
       if (matched) break // nur das erste Match pro URL
     }
   }
-  return { trackings: out, carrier }
+  return Array.from(byValue.values())
 }
 
-/// Sucht ALLE Tracking-Nrn in der Mail, dedupliziert. Strong-Patterns
-/// werden global gescannt; Context-Bound-Pattern auch (mehrere
-/// "Sendungsnummer:"-Blöcke in einer Versandbestätigung). HTML-href-
-/// Werte werden separat gescannt — viele Shops setzen die Tracking-Nr
-/// nur in den Link, nicht in den sichtbaren Text.
-function findAllTrackings(s: string, html?: string): { trackings: string[]; carrier?: string } {
-  const seen = new Set<string>()
-  const out: string[] = []
-  let carrier: string | undefined
+// ── findAllTrackings (T3c: Sync, Candidate-aware) ──────────────────────
+//
+// Scannt den Body mit der zentralen `TRACKING_PATTERNS`-Tabelle, deduppt
+// auf normalisiertem Wert, gibt `TrackingCandidate[]` sortiert nach
+// Confidence (strong > medium > weak > none) zurück. Pro Token:
+//   1. Body-Cap auf `MAX_BODY_LEN` (ReDoS-Mitigation).
+//   2. Pattern-Match auf Original-Body (für Anchor-Lookup-Indizes).
+//   3. Wenn `pattern.normalizable`: zweiter Pass auf Whitespace-gestripptem
+//      Body-Clone, Index zurückmappen via Index-Map (für Patterns wie
+//      `1Z 999 AA1 0123456784`, die User-Mails häufig mit Spaces formatieren).
+//   4. Normalisierung (Whitespace-strip + uppercase) → `value`.
+//   5. Reject-Pattern-Check (Forensik-Log via validation.rejectedBy).
+//   6. Anchor-Detection wenn `pattern.requiresAnchor`.
+//   7. Confidence-Adjustment (Reject → 'none', Anchor-Miss → step down).
+//   8. HTML-href-Scan optional, wenn `html` mitgegeben.
+//
+// **Sync per Default** — der jkeen-Validator (T2b) ist nicht eingebunden,
+// um die Adapter-Pipeline (`Adapter.parse`) ohne async-Cascade zu halten.
+// Eine optionale jkeen-Validation kann als Post-Step gegen die Candidate-
+// Liste laufen.
+export interface FindAllTrackingsOptions {
+  /// Wenn true: Patterns mit `requiresAnchor: true` aber ohne Anchor
+  /// werden komplett geskippt (statt nur Confidence runter). Default
+  /// false → alle Matches landen mit reduzierter Confidence in der
+  /// Forensik-Liste.
+  skipUnanchoredContext?: boolean
+}
 
-  for (const p of STRONG_TRACKING_PATTERNS) {
-    const re = new RegExp(p.re.source, p.re.flags.includes('g') ? p.re.flags : `${p.re.flags}g`)
+export const _CONFIDENCE_ORDER: Record<TrackingConfidence, number> = {
+  strong: 3,
+  medium: 2,
+  weak: 1,
+  none: 0,
+}
+
+function _stepDownConfidence(c: TrackingConfidence): TrackingConfidence {
+  if (c === 'strong') return 'medium'
+  if (c === 'medium') return 'weak'
+  if (c === 'weak') return 'none'
+  return 'none'
+}
+
+/// Baut eine whitespace-gestripte Variante des Bodies UND eine Index-
+/// Map: `strippedIdx[i] = origIdx` mappt jedes Zeichen im stripped-Body
+/// zurück auf seine Position im Original-Body. Wird für die
+/// `normalizable: true` Patterns benutzt, damit `findAnchorBefore` auf
+/// dem Original arbeiten kann.
+function _buildStrippedBodyAndMap(body: string): { stripped: string; map: number[] } {
+  const map: number[] = []
+  let stripped = ''
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i]
+    if (/\s/.test(ch)) continue
+    stripped += ch
+    map.push(i)
+  }
+  return { stripped, map }
+}
+
+export function findAllTrackings(
+  body: string,
+  options?: FindAllTrackingsOptions & { html?: string },
+): TrackingCandidate[] {
+  if (!body || typeof body !== 'string') {
+    if (options?.html) return findTrackingsInHtml(options.html)
+    return []
+  }
+
+  // T3c: Hard Body-Cap auf MAX_BODY_LEN = 256 KB.
+  const scan = body.length > MAX_BODY_LEN ? body.slice(0, MAX_BODY_LEN) : body
+
+  // Lazy: stripped-Variante nur bauen, wenn ein normalizable-Pattern
+  // sie braucht.
+  let strippedCache: { stripped: string; map: number[] } | null = null
+  const getStripped = () => {
+    if (!strippedCache) strippedCache = _buildStrippedBodyAndMap(scan)
+    return strippedCache
+  }
+
+  // Deduplizierung auf normalisiertem Wert.
+  const byValue = new Map<string, TrackingCandidate>()
+
+  const addCandidate = (
+    pattern: AdapterPattern,
+    rawValue: string,
+    origMatchStart: number,
+    normalizedViaStrippedPass: boolean,
+  ) => {
+    const value = rawValue.replace(/\s+/g, '').toUpperCase()
+    const normalized = normalizedViaStrippedPass || value !== rawValue
+
+    const rejectedBy = checkRejectPatterns(value) ?? undefined
+
+    let anchorMatched: string | undefined
+    if (pattern.requiresAnchor) {
+      const a = findAnchorBefore(scan, origMatchStart)
+      if (a) anchorMatched = a
+    }
+
+    let confidence: TrackingConfidence = pattern.defaultConfidence
+    if (rejectedBy) {
+      confidence = 'none'
+    } else if (pattern.requiresAnchor && !anchorMatched) {
+      confidence = _stepDownConfidence(confidence)
+    }
+
+    if (options?.skipUnanchoredContext && pattern.requiresAnchor && !anchorMatched) {
+      return
+    }
+
+    const carrier = pattern.carrier ?? inferCarrier(value, scan)
+
+    const candidate: TrackingCandidate = {
+      value,
+      rawValue,
+      carrier,
+      source: pattern.source,
+      confidence,
+      validation: {
+        anchorMatched,
+        rejectedBy,
+        normalized,
+        patternId: pattern.id,
+      },
+    }
+    const prev = byValue.get(value)
+    if (!prev) {
+      byValue.set(value, candidate)
+    } else if (_CONFIDENCE_ORDER[confidence] > _CONFIDENCE_ORDER[prev.confidence]) {
+      byValue.set(value, candidate)
+    } else if (
+      _CONFIDENCE_ORDER[confidence] === _CONFIDENCE_ORDER[prev.confidence] &&
+      candidate.carrier && !prev.carrier
+    ) {
+      // Confidence-Tie: bevorzuge Candidate mit bekanntem Carrier
+      // (z.B. HTML-Pattern liefert SEUR-Label, Body-Pattern nicht).
+      byValue.set(value, candidate)
+    }
+  }
+
+  for (const pattern of TRACKING_PATTERNS) {
+    const flags = pattern.re.flags.includes('g') ? pattern.re.flags : `${pattern.re.flags}g`
+    const re = new RegExp(pattern.re.source, flags)
+
+    // Pass 1: Original-Body.
     let m: RegExpExecArray | null
-    while ((m = re.exec(s)) !== null) {
-      const tn = m[1]
-      if (!tn || seen.has(tn)) continue
-      seen.add(tn)
-      out.push(tn)
-      carrier ??= p.carrier ?? inferCarrier(tn, s)
+    while ((m = re.exec(scan)) !== null) {
+      addCandidate(pattern, m[0], m.index, false)
+    }
+
+    // Pass 2: Whitespace-gestripped-Body (nur für normalizable-Patterns).
+    // T3c-Council-Finding #4: User-Mails formatieren UPS/JJD/S10 oft mit
+    // Spaces ("1Z 999 AA1 0123456784"). Pattern matchen auf Pass-1 nicht,
+    // deshalb zweiter Pass auf gestripptem Body. Index-Map mappt Match-
+    // Start zurück auf Original, damit Anchor-Lookup funktioniert.
+    //
+    // **Wichtig**: Auf stripped-Body fehlen die Whitespace-Boundaries, also
+    // matchen `\b…\b`-Anchored-Patterns oft nicht (Beispiel: `1Z…784is`).
+    // Wir transformieren `\b` → `(?:^|(?<=[^A-Z0-9]))…(?=[^A-Z0-9]|$)` für
+    // Pass-2. Defensiv: wenn der Source-Regex kein `\b` enthält, fallback
+    // auf das Original.
+    if (pattern.normalizable) {
+      const { stripped, map } = getStripped()
+      const src = pattern.re.source
+      // Trailing `\b` ist auf stripped-Body wertlos, weil das Folge-Token
+      // (z.B. `is on its way.` → `isonitsway.`) am Anfang Wort-Zeichen
+      // hat. Wir entfernen es. Leading `\b` belassen wir, damit das
+      // Pattern nicht mitten in einem alphanumerischen Block matcht.
+      // Fix-Length-Pattern wie `1Z[A-Z0-9]{16}` (UPS) sind durch die
+      // exakte Längenvorgabe trotzdem eindeutig.
+      const pass2Src = src.replace(/\\b$/, '')
+      const re2 = new RegExp(pass2Src, flags)
+      let m2: RegExpExecArray | null
+      while ((m2 = re2.exec(stripped)) !== null) {
+        const rawValue = m2[0]
+        const strippedIdx = m2.index
+        const origIdx = map[strippedIdx] ?? 0
+        // Skip, wenn das identische Token bereits aus Pass 1 vorliegt.
+        const candidateValue = rawValue.replace(/\s+/g, '').toUpperCase()
+        if (byValue.has(candidateValue)) continue
+        addCandidate(pattern, rawValue, origIdx, true)
+      }
     }
   }
 
-  // Context-bound — global iterieren.
-  const ctxRe = new RegExp(CONTEXT_TRACKING_RE.source, 'gi')
-  let m: RegExpExecArray | null
-  while ((m = ctxRe.exec(s)) !== null) {
-    const tn = (m[1] ?? '').trim()
-    if (tn.length < 8 || !/\d{4,}/.test(tn) || seen.has(tn)) continue
-    seen.add(tn)
-    out.push(tn)
-    carrier ??= inferCarrier(tn, s)
-  }
-
-  // HTML-Trackings (href-Attribute) als zusätzliche Quelle. Wird vor
-  // allem für Amazon gebraucht: deren Versand-Mails enthalten die
-  // Tracking-Nr oft nur als URL-Parameter im "Sendung verfolgen"-Button.
-  if (html) {
-    const htmlShip = findTrackingsInHtml(html)
-    for (const tn of htmlShip.trackings) {
-      if (seen.has(tn)) continue
-      seen.add(tn)
-      out.push(tn)
+  // HTML-Pfad: Candidates aus href-Attributen.
+  if (options?.html) {
+    const htmlCandidates = findTrackingsInHtml(options.html)
+    for (const hc of htmlCandidates) {
+      const prev = byValue.get(hc.value)
+      if (!prev) {
+        byValue.set(hc.value, hc)
+      } else if (_CONFIDENCE_ORDER[hc.confidence] > _CONFIDENCE_ORDER[prev.confidence]) {
+        byValue.set(hc.value, hc)
+      } else if (
+        _CONFIDENCE_ORDER[hc.confidence] === _CONFIDENCE_ORDER[prev.confidence] &&
+        hc.carrier && !prev.carrier
+      ) {
+        byValue.set(hc.value, hc)
+      }
     }
-    carrier ??= htmlShip.carrier
   }
 
-  return { trackings: out, carrier }
+  const candidates = Array.from(byValue.values())
+  candidates.sort(
+    (a, b) => _CONFIDENCE_ORDER[b.confidence] - _CONFIDENCE_ORDER[a.confidence],
+  )
+  return candidates
+}
+
+// ── gateTracking (T3c, Candidate-aware) ────────────────────────────────
+/// Filtert eine Candidate-Liste nach minimaler Confidence-Schwelle.
+/// Returns:
+///   - `primary`: höchster Candidate, der durch das Gate kommt (oder null)
+///   - `rest`: alle anderen Candidates (Forensik-Liste)
+///
+/// Plan §3.7: `minConfidence` Default 'strong'.
+export type GateOptions = {
+  /// Mindest-Confidence für primary. Default: `'strong'`.
+  minConfidence?: TrackingConfidence
+  /// Wenn true: primary muss `carrier !== undefined` haben. Default false.
+  requireCarrier?: boolean
+}
+
+export function gateTracking(
+  candidates: TrackingCandidate[],
+  opts?: GateOptions,
+): { primary: TrackingCandidate | null; rest: TrackingCandidate[] } {
+  const min = opts?.minConfidence ?? 'strong'
+  const requireCarrier = opts?.requireCarrier ?? false
+  const minOrder = _CONFIDENCE_ORDER[min]
+  let primary: TrackingCandidate | null = null
+  const rest: TrackingCandidate[] = []
+  for (const c of candidates) {
+    if (
+      !primary &&
+      _CONFIDENCE_ORDER[c.confidence] >= minOrder &&
+      (!requireCarrier || c.carrier !== undefined)
+    ) {
+      primary = c
+    } else {
+      rest.push(c)
+    }
+  }
+  return { primary, rest }
 }
 
 // Status-Detection ist subject-first und nur dann body-second, wenn das
@@ -379,16 +913,69 @@ function detectShipStatus(
 /// versandt/zugestellt ist. Bestellbestätigungen, Stornos und Erstattungen
 /// referenzieren manchmal die ALTE Tracking-Nr im Body — die wollen wir
 /// nicht als gültig durchreichen, weil das den Deal-Status verfälscht.
-function gateTracking(
+///
+/// T3c: heißt jetzt `gateTrackingByStatus` — die neue confidence-aware
+/// Variante `gateTracking(candidates, opts)` ist ein separater Helper
+/// weiter unten in der Pipeline.
+function gateTrackingByStatus(
   status: 'ordered' | 'shipped' | 'delivered' | 'cancelled' | 'refunded',
-  trackings: string[],
-  carrier?: string,
-): { tracking?: string; trackings?: string[]; carrier?: string } {
-  if (status !== 'shipped' && status !== 'delivered') {
-    return { tracking: undefined, trackings: undefined, carrier: undefined }
+  candidates: TrackingCandidate[],
+): TrackingCandidate[] {
+  if (status !== 'shipped' && status !== 'delivered') return []
+  return candidates
+}
+
+/// Adapter-internes Helper: kombiniert `findAllTrackings` + Status-Gate +
+/// Candidate-Gate (min='strong') zu einem Block, der die existierenden
+/// 18 Call-Sites kurzhält. Liefert das Property-Bundle, das `ParsedOrder`
+/// erwartet.
+function resolveTrackingForAdapter(
+  body: string,
+  html: string,
+  status: 'ordered' | 'shipped' | 'delivered' | 'cancelled' | 'refunded',
+): {
+  tracking?: string
+  trackings?: string[]
+  carrier?: string
+  trackingConfidence: 'strong' | 'none'
+  trackingCandidates: TrackingCandidate[]
+  trackingNeedsReview: boolean
+} {
+  const allCandidates = findAllTrackings(body, { html })
+  // Erst Status-Gate (Bestellbestätigungen ohne shipped/delivered →
+  // Tracking-Nrn dropped).
+  const statusGated = gateTrackingByStatus(status, allCandidates)
+  // Dann Confidence-Gate (min='strong').
+  const { primary } = gateTracking(statusGated, { minConfidence: 'strong' })
+  // Max 10 Candidates in Forensik (Plan §3.2).
+  const trackingCandidates = allCandidates.slice(0, 10)
+
+  if (!primary) {
+    // needs_review = true wenn der Mail-Status shipped/delivered ist,
+    // aber kein strong-Candidate da ist.
+    const shippedLike = status === 'shipped' || status === 'delivered'
+    return {
+      tracking: undefined,
+      trackings: undefined,
+      carrier: undefined,
+      trackingConfidence: 'none',
+      trackingCandidates,
+      trackingNeedsReview: shippedLike && allCandidates.length > 0,
+    }
   }
-  if (trackings.length === 0) return { carrier: undefined }
-  return { tracking: trackings[0], trackings, carrier }
+
+  const strongList = statusGated
+    .filter((c) => _CONFIDENCE_ORDER[c.confidence] >= _CONFIDENCE_ORDER['strong'])
+    .map((c) => c.value)
+
+  return {
+    tracking: primary.value,
+    trackings: strongList.length > 0 ? strongList : [primary.value],
+    carrier: primary.carrier,
+    trackingConfidence: 'strong',
+    trackingCandidates,
+    trackingNeedsReview: false,
+  }
 }
 
 // Subjects, die garantiert KEINE Order sind (Promo/Newsletter/Account-Stuff).
@@ -925,10 +1512,11 @@ const amazon: Adapter = {
     const qty = Number(/(?:Menge|Anzahl|Quantity|Cantidad)\s*[:\s]+(\d{1,3})/i.exec(s)?.[1] ?? '1')
     const totalSrc = /(?:Gesamtsumme|Order Total|Zwischensumme|Total|Importe)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     const etaDate = extractEtaDate(ctx.html, s)
     const shippedAt = extractShippedAt(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -944,6 +1532,7 @@ const amazon: Adapter = {
       shopKey: 'amazon', shopLabel: 'Amazon',
       orderId, product, quantity: Math.max(1, qty),
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, shippedAt, orderTotal, taxRatePct, seller,
       deliveryMethod, cancellationReason,
     }
@@ -969,10 +1558,11 @@ const mediamarkt: Adapter = {
     ])) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -983,6 +1573,7 @@ const mediamarkt: Adapter = {
       shopKey: 'mediamarkt', shopLabel: 'MediaMarkt',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, items: items.length > 0 ? items : undefined,
       shippingAddressCountry, deliveryMethod,
     }
@@ -1007,10 +1598,11 @@ const saturn: Adapter = {
     ) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1021,6 +1613,7 @@ const saturn: Adapter = {
       shopKey: 'saturn', shopLabel: 'Saturn',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, items: items.length > 0 ? items : undefined,
       shippingAddressCountry, deliveryMethod,
     }
@@ -1088,10 +1681,11 @@ const pccomponentes: Adapter = {
     const qty = Number(/Einheiten\s*[:=]\s*(\d{1,3})/i.exec(s)?.[1] ?? '1')
     const totalSrc = /(?:Gesamtbetrag|Gesamtsumme|Zwischensumme|Total|Importe)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1103,6 +1697,7 @@ const pccomponentes: Adapter = {
       orderId, product, quantity: Math.max(1, qty),
       total, currency: currency === 'EUR' ? 'EUR' : currency,
       tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, taxRatePct, seller,
       items: items.length > 0 ? items : undefined,
     }
@@ -1129,10 +1724,11 @@ const xkom: Adapter = {
     ])) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Suma|Razem|Wartość|Total)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1143,6 +1739,7 @@ const xkom: Adapter = {
       orderId, product, quantity: 1,
       total, currency: currency === 'EUR' ? 'PLN' : currency, // x-kom default PLN
       tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, deliveryMethod,
     }
   },
@@ -1178,10 +1775,11 @@ const lego: Adapter = {
     ])) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Gesamtbetrag|Order Total)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1192,6 +1790,7 @@ const lego: Adapter = {
       shopKey: 'lego', shopLabel: 'LEGO',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, taxRatePct, deliveryMethod,
       items: items.length > 0 ? items : undefined,
     }
@@ -1232,10 +1831,11 @@ const tink: Adapter = {
     ])) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const shippedAt = extractShippedAt(ctx.html, s)
@@ -1245,6 +1845,7 @@ const tink: Adapter = {
       shopKey: 'tink', shopLabel: 'tink',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, shippedAt, orderTotal, taxRatePct,
     }
   },
@@ -1276,10 +1877,11 @@ const anker: Adapter = {
     ])) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Gesamtbetrag|Order Total)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1289,6 +1891,7 @@ const anker: Adapter = {
       shopKey: 'anker', shopLabel: 'Anker',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, taxRatePct, deliveryMethod,
     }
   },
@@ -1321,10 +1924,11 @@ const euronics: Adapter = {
     ])) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Gesamtbetrag|Endbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1338,6 +1942,7 @@ const euronics: Adapter = {
       shopKey: 'euronics', shopLabel: 'Euronics',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, taxRatePct, seller,
     }
   },
@@ -1379,10 +1984,11 @@ const kaufland: Adapter = {
     ])) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Endbetrag|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     // Kaufland-Marketplace listet jeden Artikel als eigenen Versandblock
     // mit "Sendungsnummer: <Nr.>". Wir zählen ausschließlich diese
     // Label-Form (nicht URL-Param "?sendungsnummer=…", nicht reine
@@ -1406,6 +2012,7 @@ const kaufland: Adapter = {
       shopKey: 'kaufland', shopLabel: 'Kaufland',
       orderId, product, quantity,
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, taxRatePct, seller, deliveryMethod,
     }
   },
@@ -1430,10 +2037,11 @@ const dell: Adapter = {
     ])) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Order\s+Total|Bestellsumme|Gesamt)\s*[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1443,6 +2051,7 @@ const dell: Adapter = {
       shopKey: 'dell', shopLabel: 'Dell',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, taxRatePct,
       items: items.length > 0 ? items : undefined,
     }
@@ -1472,10 +2081,11 @@ const ebay: Adapter = {
     const seller = extractSeller(s)
     const totalSrc = /(?:Total|Gesamt|Importe)\s*[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1483,6 +2093,7 @@ const ebay: Adapter = {
       shopKey: 'ebay', shopLabel: 'eBay',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, seller,
     }
   },
@@ -1512,10 +2123,11 @@ const galaxus: Adapter = {
     // CHF default für galaxus.ch.
     const isCh = /galaxus\.ch/i.test(ctx.from) || /CHF/i.test(s)
     const currency = parsedCurrency === 'EUR' && isCh ? 'CHF' : parsedCurrency
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1526,6 +2138,7 @@ const galaxus: Adapter = {
       shopKey: 'galaxus', shopLabel: 'Galaxus',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, taxRatePct, deliveryMethod,
       items: items.length > 0 ? items : undefined,
     }
@@ -1557,10 +2170,11 @@ const alza: Adapter = {
       : /alza\.co\.uk/i.test(ctx.from) ? 'GBP'
       : /alza\.hu/i.test(ctx.from) ? 'HUF'
       : parsedCurrency
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1570,6 +2184,7 @@ const alza: Adapter = {
       shopKey: 'alza', shopLabel: 'Alza',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, taxRatePct,
       items: items.length > 0 ? items : undefined,
     }
@@ -1598,10 +2213,11 @@ const xxxlutz: Adapter = {
     const totalSrc = /(?:Gesamtsumme(?:\s+inkl\.\s+MwSt)?|Gesamt|Endbetrag)\s*[:\s]+([^\n]{1,40})/i
       .exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const rawShip = findAllTrackings(s, ctx.html)
-    const status = detectShipStatus(ctx.subject, s, rawShip.trackings.length > 0)
-    const { tracking, trackings, carrier: rawCarrier } = gateTracking(
-      status, rawShip.trackings, rawShip.carrier)
+    const _trkScan = findAllTrackings(s, { html: ctx.html })
+    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
+    const status = detectShipStatus(ctx.subject, s, _hasStrong)
+    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
+    const { tracking, trackings, carrier: rawCarrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
     // Carrier-Override: wenn Spedition genannt, ist das wichtiger.
     const speditionMatch = /Versand\s+durch:\s*([A-Z][A-Za-z\s]{2,40})/i.exec(s)
     const carrier = speditionMatch
@@ -1616,6 +2232,7 @@ const xxxlutz: Adapter = {
       shopKey: 'xxxlutz', shopLabel: 'XXXLutz',
       orderId, product, quantity: 1,
       total, currency, tracking, trackings, carrier, status,
+      trackingConfidence, trackingCandidates, trackingNeedsReview,
       etaDate, orderTotal, taxRatePct, deliveryMethod,
     }
   },

@@ -1026,5 +1026,33 @@
   "settingsDemoWipeSuccess": "{count} Demo-Einträge gelöscht.",
   "@settingsDemoWipeSuccess": { "placeholders": { "count": { "type": "int" } } },
   "settingsDemoWipeError": "Löschen fehlgeschlagen: {error}",
-  "@settingsDemoWipeError": { "placeholders": { "error": {} } }
+  "@settingsDemoWipeError": { "placeholders": { "error": {} } },
+
+  "trackingAmazonShipmentIdHint": "Amazon-interne Shipment-ID — kein vollwertiges Carrier-Tracking",
+  "trackingBannerImprovedDetection": "Wir haben die Tracking-Erkennung verbessert. Bitte einmal in „Prüfen“ schauen.",
+  "trackingCarrierAmazonLogisticsHintShort": "Amazon Logistics",
+  "trackingCarrierUnknown": "Unbekannter Versender",
+  "trackingConfidenceLabelManual": "Manuell",
+  "trackingConfidenceLabelNone": "Unklar",
+  "trackingConfidenceLabelStrong": "Verifiziert",
+  "trackingEnterManuallyCta": "Manuell eingeben",
+  "trackingNoneDetectedSubtitle": "Wir konnten in dieser Mail keine eindeutige Sendungsnummer finden.",
+  "trackingNoneDetectedTitle": "Keine Sendungsnummer erkannt",
+  "trackingReparseCta": "Sendungsnummern neu bewerten",
+  "trackingReparseConfirmBody": "Bestehende Sendungsnummern werden mit der verbesserten Erkennung neu geprüft. Manuelle Einträge bleiben unverändert.",
+  "trackingReparseConfirmTitle": "Neubewertung starten?",
+  "trackingReparseFailed": "Neubewertung fehlgeschlagen",
+  "trackingReparseOffline": "Keine Verbindung — bitte später erneut versuchen",
+  "trackingReparseRunning": "Sendungsnummern werden neu bewertet…",
+  "trackingReparseSuccessCount": "{count, plural, =0{Keine Sendungsnummer aktualisiert} =1{1 Sendungsnummer aktualisiert} other{{count} Sendungsnummern aktualisiert}}",
+  "@trackingReparseSuccessCount": {
+    "description": "Number of tracking numbers updated during a re-evaluation run",
+    "placeholders": {
+      "count": { "type": "int", "format": "decimalPattern" }
+    }
+  },
+  "trackingReviewAcceptCta": "Übernehmen",
+  "trackingReviewDismissCta": "Verwerfen",
+  "trackingReviewNeededBadge": "Prüfen",
+  "trackingStatusBlockA11yLabel": "Sendungsnummern-Status"
 }

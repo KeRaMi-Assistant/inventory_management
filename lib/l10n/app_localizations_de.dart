@@ -2830,4 +2830,85 @@ class AppLocalizationsDe extends AppLocalizations {
   String settingsDemoWipeError(Object error) {
     return 'Löschen fehlgeschlagen: $error';
   }
+
+  @override
+  String get trackingAmazonShipmentIdHint =>
+      'Amazon-interne Shipment-ID — kein vollwertiges Carrier-Tracking';
+
+  @override
+  String get trackingBannerImprovedDetection =>
+      'Wir haben die Tracking-Erkennung verbessert. Bitte einmal in „Prüfen“ schauen.';
+
+  @override
+  String get trackingCarrierAmazonLogisticsHintShort => 'Amazon Logistics';
+
+  @override
+  String get trackingCarrierUnknown => 'Unbekannter Versender';
+
+  @override
+  String get trackingConfidenceLabelManual => 'Manuell';
+
+  @override
+  String get trackingConfidenceLabelNone => 'Unklar';
+
+  @override
+  String get trackingConfidenceLabelStrong => 'Verifiziert';
+
+  @override
+  String get trackingEnterManuallyCta => 'Manuell eingeben';
+
+  @override
+  String get trackingNoneDetectedSubtitle =>
+      'Wir konnten in dieser Mail keine eindeutige Sendungsnummer finden.';
+
+  @override
+  String get trackingNoneDetectedTitle => 'Keine Sendungsnummer erkannt';
+
+  @override
+  String get trackingReparseCta => 'Sendungsnummern neu bewerten';
+
+  @override
+  String get trackingReparseConfirmBody =>
+      'Bestehende Sendungsnummern werden mit der verbesserten Erkennung neu geprüft. Manuelle Einträge bleiben unverändert.';
+
+  @override
+  String get trackingReparseConfirmTitle => 'Neubewertung starten?';
+
+  @override
+  String get trackingReparseFailed => 'Neubewertung fehlgeschlagen';
+
+  @override
+  String get trackingReparseOffline =>
+      'Keine Verbindung — bitte später erneut versuchen';
+
+  @override
+  String get trackingReparseRunning => 'Sendungsnummern werden neu bewertet…';
+
+  @override
+  String trackingReparseSuccessCount(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString Sendungsnummern aktualisiert',
+      one: '1 Sendungsnummer aktualisiert',
+      zero: 'Keine Sendungsnummer aktualisiert',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get trackingReviewAcceptCta => 'Übernehmen';
+
+  @override
+  String get trackingReviewDismissCta => 'Verwerfen';
+
+  @override
+  String get trackingReviewNeededBadge => 'Prüfen';
+
+  @override
+  String get trackingStatusBlockA11yLabel => 'Sendungsnummern-Status';
 }

@@ -1,14 +1,14 @@
 {
-  "ts": "2026-05-09T22:25:50Z",
-  "panic": true,
+  "ts": "2026-05-13T19:06:47Z",
+  "panic": false,
   "checks": {
     "disk": {
       "free_pct": 60,
-      "free_gb": 100,
+      "free_gb": 261,
       "ok": true
     },
     "worktrees": {
-      "count": 0,
+      "count": 1,
       "ok": true
     },
     "inbox": {
@@ -17,12 +17,12 @@
       "ok": true
     },
     "stash": {
-      "count": 0,
+      "count": 5,
       "ok": true
     },
     "cost": {
-      "today_usd": 0.0,
-      "week_usd": 0.0,
+      "today_usd": 2.75,
+      "week_usd": 6.88,
       "ok": true
     }
   },

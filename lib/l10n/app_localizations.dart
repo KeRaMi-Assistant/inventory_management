@@ -5203,6 +5203,132 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Löschen fehlgeschlagen: {error}'**
   String settingsDemoWipeError(Object error);
+
+  /// No description provided for @trackingAmazonShipmentIdHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Amazon-interne Shipment-ID — kein vollwertiges Carrier-Tracking'**
+  String get trackingAmazonShipmentIdHint;
+
+  /// No description provided for @trackingBannerImprovedDetection.
+  ///
+  /// In de, this message translates to:
+  /// **'Wir haben die Tracking-Erkennung verbessert. Bitte einmal in „Prüfen“ schauen.'**
+  String get trackingBannerImprovedDetection;
+
+  /// No description provided for @trackingCarrierAmazonLogisticsHintShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Amazon Logistics'**
+  String get trackingCarrierAmazonLogisticsHintShort;
+
+  /// No description provided for @trackingCarrierUnknown.
+  ///
+  /// In de, this message translates to:
+  /// **'Unbekannter Versender'**
+  String get trackingCarrierUnknown;
+
+  /// No description provided for @trackingConfidenceLabelManual.
+  ///
+  /// In de, this message translates to:
+  /// **'Manuell'**
+  String get trackingConfidenceLabelManual;
+
+  /// No description provided for @trackingConfidenceLabelNone.
+  ///
+  /// In de, this message translates to:
+  /// **'Unklar'**
+  String get trackingConfidenceLabelNone;
+
+  /// No description provided for @trackingConfidenceLabelStrong.
+  ///
+  /// In de, this message translates to:
+  /// **'Verifiziert'**
+  String get trackingConfidenceLabelStrong;
+
+  /// No description provided for @trackingEnterManuallyCta.
+  ///
+  /// In de, this message translates to:
+  /// **'Manuell eingeben'**
+  String get trackingEnterManuallyCta;
+
+  /// No description provided for @trackingNoneDetectedSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wir konnten in dieser Mail keine eindeutige Sendungsnummer finden.'**
+  String get trackingNoneDetectedSubtitle;
+
+  /// No description provided for @trackingNoneDetectedTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Sendungsnummer erkannt'**
+  String get trackingNoneDetectedTitle;
+
+  /// No description provided for @trackingReparseCta.
+  ///
+  /// In de, this message translates to:
+  /// **'Sendungsnummern neu bewerten'**
+  String get trackingReparseCta;
+
+  /// No description provided for @trackingReparseConfirmBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestehende Sendungsnummern werden mit der verbesserten Erkennung neu geprüft. Manuelle Einträge bleiben unverändert.'**
+  String get trackingReparseConfirmBody;
+
+  /// No description provided for @trackingReparseConfirmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Neubewertung starten?'**
+  String get trackingReparseConfirmTitle;
+
+  /// No description provided for @trackingReparseFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Neubewertung fehlgeschlagen'**
+  String get trackingReparseFailed;
+
+  /// No description provided for @trackingReparseOffline.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Verbindung — bitte später erneut versuchen'**
+  String get trackingReparseOffline;
+
+  /// No description provided for @trackingReparseRunning.
+  ///
+  /// In de, this message translates to:
+  /// **'Sendungsnummern werden neu bewertet…'**
+  String get trackingReparseRunning;
+
+  /// Number of tracking numbers updated during a re-evaluation run
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Keine Sendungsnummer aktualisiert} =1{1 Sendungsnummer aktualisiert} other{{count} Sendungsnummern aktualisiert}}'**
+  String trackingReparseSuccessCount(int count);
+
+  /// No description provided for @trackingReviewAcceptCta.
+  ///
+  /// In de, this message translates to:
+  /// **'Übernehmen'**
+  String get trackingReviewAcceptCta;
+
+  /// No description provided for @trackingReviewDismissCta.
+  ///
+  /// In de, this message translates to:
+  /// **'Verwerfen'**
+  String get trackingReviewDismissCta;
+
+  /// No description provided for @trackingReviewNeededBadge.
+  ///
+  /// In de, this message translates to:
+  /// **'Prüfen'**
+  String get trackingReviewNeededBadge;
+
+  /// No description provided for @trackingStatusBlockA11yLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Sendungsnummern-Status'**
+  String get trackingStatusBlockA11yLabel;
 }
 
 class _AppLocalizationsDelegate
