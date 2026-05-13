@@ -262,7 +262,7 @@ class _ActivityItem extends StatelessWidget {
             child: Container(
               width: 6,
               height: 6,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppTheme.accent,
                 shape: BoxShape.circle,
               ),

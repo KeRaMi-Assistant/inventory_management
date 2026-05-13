@@ -481,7 +481,7 @@ class _HelpSearchField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
+          borderSide: BorderSide(
             color: AppTheme.accent,
             width: 1.4,
           ),

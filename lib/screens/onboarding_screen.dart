@@ -435,7 +435,7 @@ class _StepWelcome extends StatelessWidget {
                 width: 2,
               ),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.inventory_2_outlined,
               size: 56,
               color: AppTheme.accent,
@@ -477,7 +477,7 @@ class _StepWorkspace extends StatelessWidget {
                 color: AppTheme.accentLightOf(context),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.workspaces_outlined,
+              child: Icon(Icons.workspaces_outlined,
                   color: AppTheme.accent),
             ),
             const SizedBox(width: 14),

@@ -93,7 +93,7 @@ class _InvitesDialog extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
               child: Row(
                 children: [
-                  const Icon(Icons.notifications_active_outlined,
+                  Icon(Icons.notifications_active_outlined,
                       size: 18, color: AppTheme.accent),
                   const SizedBox(width: 8),
                   Expanded(
@@ -237,7 +237,7 @@ class _InviteRowState extends State<_InviteRow> {
                   color: AppTheme.accentLight,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Icon(Icons.workspaces_outlined,
+                child: Icon(Icons.workspaces_outlined,
                     size: 16, color: AppTheme.accent),
               ),
               const SizedBox(width: 10),
