@@ -1,4 +1,5 @@
 import '../models/inbox_message.dart';
+import '../models/tracking_confidence.dart';
 
 /// Reine Mapping-/Diff-Logik für die "Mail aus dem Postfach updated einen
 /// bestehenden Deal"-Pipeline.
@@ -44,11 +45,66 @@ class InboxMatchService {
     }
   }
 
+  /// Entscheidet, ob [newTracking] auf den Deal geschrieben werden soll.
+  ///
+  /// Regeln (in Priorität):
+  /// 1. [currentTracking] ist null/leer → **immer schreiben** (alter Default).
+  /// 2. [currentConfidence] == `manual` → **NIE überschreiben** (User-Eingabe
+  ///    ist heilig).
+  /// 3. [currentNeedsReview] == true UND [newConfidence] == `strong`
+  ///    → **überschreiben** (korrigiert bekannt-schlechten Wert).
+  /// 4. [currentConfidence] == `strong` UND [newConfidence] == `strong` UND
+  ///    Werte unterschiedlich → **skip** (Konflikt, alten Wert behalten).
+  /// 5. Sonst kein Downgrade → **skip**.
+  static bool shouldWriteTracking({
+    required String? currentTracking,
+    required TrackingConfidence? currentConfidence,
+    required bool currentNeedsReview,
+    required String? newTracking,
+    required TrackingConfidence? newConfidence,
+  }) {
+    // Kein neuer Wert — nichts zu schreiben.
+    if (newTracking == null || newTracking.isEmpty) return false;
+
+    // Regel 1: aktuell leer → immer schreiben (unabhängig von confidence).
+    if (currentTracking == null || currentTracking.isEmpty) return true;
+
+    // Regel 2: manual ist sakrosankt.
+    if (currentConfidence == TrackingConfidence.manual) return false;
+
+    // Regel 3: needs_review + neuer strong → Korrektur erlaubt.
+    if (currentNeedsReview && newConfidence == TrackingConfidence.strong) {
+      return true;
+    }
+
+    // Regel 4: Beide strong, aber unterschiedliche Werte → Konflikt, skip.
+    if (currentConfidence == TrackingConfidence.strong &&
+        newConfidence == TrackingConfidence.strong &&
+        currentTracking != newTracking) {
+      // Warn-Log: zwei Strong-Quellen widersprechen sich.
+      // ignore: avoid_print
+      print(
+        '[InboxMatchService] Tracking-Konflikt: '
+        'current=$currentTracking vs new=$newTracking — behalte alten Wert.',
+      );
+      return false;
+    }
+
+    // Regel 5: kein Upgrade durch schwächere Confidence → skip.
+    return false;
+  }
+
   /// Berechnet die Felder, die auf den Deal geschrieben werden sollen.
-  /// Forward-Only-Semantik:
-  ///   - `tracking` nur wenn aktuell leer.
+  ///
+  /// Tracking-Forward-Only mit Confidence-Logik:
+  ///   - `tracking` nur wenn [shouldWriteTracking] true ergibt.
   ///   - `arrival_date` nur wenn aktuell leer.
   ///   - `status` nur wenn der neue Rank > alter Rank ist.
+  ///
+  /// [currentTrackingConfidence] und [currentTrackingNeedsReview] werden für
+  /// die neue Tracking-Schreib-Logik benötigt; sie werden aus dem Deal
+  /// übergeben und dürfen `null`/`false` sein (Legacy-Deals).
+  ///
   /// `mailReceivedAt` wird verwendet, wenn die Mail "delivered" ist, aber
   /// keine explizite ETA mitliefert — dann gilt das Mail-Empfangsdatum
   /// als Lieferdatum.
@@ -57,17 +113,32 @@ class InboxMatchService {
     required String? currentTracking,
     required DateTime? currentArrivalDate,
     String? parsedTracking,
+    TrackingConfidence? parsedConfidence,
     SuggestionShipStatus? parsedShipStatus,
     DateTime? parsedEta,
     DateTime? mailReceivedAt,
+    // Legacy-Felder, die bisher nicht übergeben wurden, bleiben optional.
+    TrackingConfidence? currentTrackingConfidence,
+    bool currentTrackingNeedsReview = false,
   }) {
     final updates = <String, Object?>{};
     final changes = <String>[];
 
-    if (parsedTracking != null
-        && parsedTracking.isNotEmpty
-        && (currentTracking == null || currentTracking.isEmpty)) {
+    final writeTracking = shouldWriteTracking(
+      currentTracking: currentTracking,
+      currentConfidence: currentTrackingConfidence,
+      currentNeedsReview: currentTrackingNeedsReview,
+      newTracking: parsedTracking,
+      newConfidence: parsedConfidence,
+    );
+
+    if (writeTracking && parsedTracking != null) {
       updates['tracking'] = parsedTracking;
+      // Schreibe confidence + review-Flag nur wenn confidence gesetzt.
+      if (parsedConfidence != null) {
+        updates['tracking_confidence'] = parsedConfidence.toJson();
+        updates['tracking_needs_review'] = false;
+      }
       changes.add('Tracking $parsedTracking');
     }
 
@@ -88,7 +159,9 @@ class InboxMatchService {
     if (arrival != null && currentArrivalDate == null) {
       updates['arrival_date'] = arrival.toUtc().toIso8601String();
       // ISO ohne Uhrzeit für die Aktivitäts-Zeile.
-      changes.add('Lieferdatum ${arrival.toUtc().toIso8601String().substring(0, 10)}');
+      changes.add(
+        'Lieferdatum ${arrival.toUtc().toIso8601String().substring(0, 10)}',
+      );
     }
 
     return DealUpdateDiff(updates: updates, changes: changes);

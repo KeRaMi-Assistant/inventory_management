@@ -111,12 +111,27 @@ Cron-Secret oder service_role. Keine User-JWT-Pfade.
   reparse_unclassified?: boolean
   reparse_no_tracking?: boolean
   reparse_forensics?: boolean
-  workspace_id?: string  // bei reparse_no_tracking + reparse_forensics
+  reparse_low_confidence?: boolean     // T12, Strict-Tracking
+  workspace_id?: string  // bei reparse_no_tracking + reparse_forensics + reparse_low_confidence
   shop_key?: string      // optional, beschränkt auf einen Shop
 }
 ```
 
 Ohne Body: normaler `runParseSweep(limit=200)` über pending Rows.
+
+### Endpoint-Contract (Strict-Tracking-Re-Parse)
+
+- `workspace_id` wird AUSSCHLIESSLICH aus `auth.uid()` →
+  `mailbox_accounts`-Lookup abgeleitet. Body-`workspace_id` darf nur
+  INNERHALB des User-Scopes filtern, niemals erweitern.
+- Service-Role-Bearer-Pfad nur für Cron / Maintenance.
+- KEINE `message_id` im Body — Scope ist immer Workspace, nicht
+  Einzel-Message.
+- Rate-Limit: `mailbox_accounts.last_reparse_at < NOW() - INTERVAL '5
+  min'` (per Workspace-Owner-Account). Sonst `429`.
+- Body-Quellen beim Re-Parse: liest **beide** Quellen (`_raw_html`
+  UND `_raw.text`) — sonst Regression auf Plain-Text-only-Mails aus
+  PRs #48/#51.
 
 ### Outputs
 
@@ -161,6 +176,9 @@ Cron-Secret. Keine anderen Pfade.
 2. Pro Workspace: lade alle offenen Deals (`status='Unterwegs'`,
    `tracking IS NOT NULL`, `arrival_date IS NULL`).
 3. Pro Deal:
+   - **Skip**, wenn `tracking_needs_review = TRUE` UND
+     `tracking_confidence = 'none'` (T16, Strict-Tracking) — sonst
+     würden API-Calls gegen leere/unsichere Trackings laufen.
    - Carrier-Adapter erkennen (Tracking-Pattern).
    - API-Call mit gespeichertem Key.
    - Bei `delivered`: setze Deal `status='Angekommen'`, `arrival_date`,

@@ -1,3 +1,5 @@
+import 'tracking_confidence.dart';
+
 /// Persistente Dismiss-Marke pro Workspace. Identität ist entweder
 /// (shopKey, orderId) für Bestellungen mit Order-Nr — alle zukünftigen
 /// Mails zu derselben Bestellung werden ignoriert — ODER die
@@ -197,6 +199,13 @@ class PendingDealSuggestion {
   final String? resolvedAction;
   final int? createdDealId;
 
+  /// Confidence-Stufe der erkannten Tracking-Nummer.
+  /// `null` = Legacy-Vorschlag (behandle wie `none`).
+  final TrackingConfidence? trackingConfidence;
+
+  /// `true` wenn die Tracking-Nummer als unzuverlässig markiert ist.
+  final bool trackingNeedsReview;
+
   const PendingDealSuggestion({
     required this.id,
     required this.workspaceId,
@@ -219,6 +228,8 @@ class PendingDealSuggestion {
     this.resolvedAt,
     this.resolvedAction,
     this.createdDealId,
+    this.trackingConfidence,
+    this.trackingNeedsReview = false,
   });
 
   factory PendingDealSuggestion.fromSupabase(Map<String, dynamic> row) {
@@ -259,6 +270,10 @@ class PendingDealSuggestion {
           : null,
       resolvedAction: row['resolved_action'] as String?,
       createdDealId: (row['created_deal_id'] as num?)?.toInt(),
+      trackingConfidence: TrackingConfidence.fromString(
+        row['tracking_confidence'] as String?,
+      ),
+      trackingNeedsReview: row['tracking_needs_review'] as bool? ?? false,
     );
   }
 }

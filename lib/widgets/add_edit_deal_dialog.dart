@@ -10,6 +10,7 @@ import '../utils/url_helper.dart';
 import '../utils/validators.dart';
 import 'attachment_gallery.dart';
 import 'deal_comments_section.dart';
+import 'tracking_status_block.dart';
 
 class AddEditDealDialog extends StatefulWidget {
   final Deal? deal;
@@ -594,6 +595,90 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             maxLength: 100,
                           ),
                         ]),
+                        // TrackingStatusBlock: nur bei bestehendem Deal mit
+                        // Tracking-Confidence-Daten (Confidence-Feature ab T7).
+                        if (widget.deal != null &&
+                            (widget.deal!.trackingNeedsReview ||
+                             widget.deal!.trackingConfidence != null)) ...[
+                          const SizedBox(height: 10),
+                          TrackingStatusBlock(
+                            key: const Key('deal-detail-tracking-status-block'),
+                            trackingNumber: widget.deal!.tracking,
+                            confidence: widget.deal!.trackingConfidence,
+                            carrier: null,
+                            needsReview: widget.deal!.trackingNeedsReview,
+                            amazonShipmentIdHint: false,
+                            liveStatus: widget.deal!.liveStatus,
+                            liveStatusLastEvent:
+                                widget.deal!.liveStatusLastEvent,
+                            liveStatusUpdatedAt:
+                                widget.deal!.liveStatusUpdatedAt,
+                            onManualInput: () async {
+                              final ctrl = TextEditingController(
+                                text: _trackingCtrl.text,
+                              );
+                              final newValue = await showDialog<String>(
+                                context: ctx,
+                                builder: (dlgCtx) => AlertDialog(
+                                  title: Text(l10n.trackingEnterManuallyCta),
+                                  content: TextField(
+                                    controller: ctrl,
+                                    autofocus: true,
+                                    textInputAction: TextInputAction.done,
+                                    onSubmitted: (v) =>
+                                        Navigator.pop(dlgCtx, v.trim()),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(dlgCtx),
+                                      child: Text(l10n.actionCancel),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(
+                                          dlgCtx, ctrl.text.trim()),
+                                      child: Text(l10n.actionOk),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              ctrl.dispose();
+                              if (newValue == null || newValue.isEmpty) return;
+                              setState(() => _trackingCtrl.text = newValue);
+                              if (!ctx.mounted) return;
+                              try {
+                                await ctx
+                                    .read<InventoryProvider>()
+                                    .updateDealTrackingManually(
+                                        widget.deal!.id, newValue);
+                              } catch (_) {
+                                // Fehler beim sofortigen Update —
+                                // der Dialog-Save übernimmt es.
+                              }
+                            },
+                            onAcceptAsCorrect:
+                                widget.deal!.trackingNeedsReview
+                                    ? () async {
+                                        try {
+                                          await ctx
+                                              .read<InventoryProvider>()
+                                              .acceptDealTrackingAsManual(
+                                                  widget.deal!.id);
+                                        } catch (_) {}
+                                      }
+                                    : null,
+                            onDiscard: (widget.deal!.tracking != null ||
+                                    widget.deal!.trackingNeedsReview)
+                                ? () async {
+                                    try {
+                                      await ctx
+                                          .read<InventoryProvider>()
+                                          .discardDealTracking(widget.deal!.id);
+                                      setState(() => _trackingCtrl.text = '');
+                                    } catch (_) {}
+                                  }
+                                : null,
+                          ),
+                        ],
                         // Discord status hint
                         if (_ticketCtrl.text.isNotEmpty) ...[
                           const SizedBox(height: 6),

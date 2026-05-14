@@ -38,10 +38,26 @@ interface DealRow {
   user_id: string
   product: string
   tracking: string | null
+  tracking_confidence: 'strong' | 'manual' | 'none' | null
+  tracking_needs_review: boolean | null
   status: string
   arrival_date: string | null
   order_date: string
+  live_status: LiveStatus | null
+  live_status_last_event: string | null
+  live_status_updated_at: string | null
 }
+
+/// Carrier-übergreifender Live-Status, der dem Deal-Row beigeschrieben wird.
+/// Mappt 1:1 auf `ParsedTracking.status` (siehe tracking_adapters.ts).
+/// CHECK-Enum in `20260515000000_deals_live_status.sql`.
+export type LiveStatus =
+  | 'pending'
+  | 'in_transit'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'exception'
+  | 'unknown'
 
 interface PollStats {
   workspace_id: string
@@ -137,19 +153,41 @@ async function pollWorkspace(
   }
 
   // Offene Deals: Status "Unterwegs", tracking gesetzt, kein Arrival.
+  // T16: Skip Deals mit needs_review=true UND confidence='none' (Legacy/Weak)
+  //      → poll nur wenn (needs_review=false) ODER confidence IN ('strong','manual').
   const { data: dealRows, error: dealsErr } = await admin
     .from('deals')
-    .select('id, workspace_id, user_id, product, tracking, status, arrival_date, order_date')
+    .select(
+      'id, workspace_id, user_id, product, tracking, tracking_confidence, tracking_needs_review, status, arrival_date, order_date, live_status, live_status_last_event, live_status_updated_at',
+    )
     .eq('workspace_id', workspaceId)
     .eq('status', 'Unterwegs')
     .is('arrival_date', null)
     .not('tracking', 'is', null)
+    .or(
+      'tracking_needs_review.is.false,tracking_needs_review.is.null,tracking_confidence.eq.strong,tracking_confidence.eq.manual',
+    )
     .order('order_date', { ascending: true })
     .limit(Math.min(budget, MAX_DEALS_PER_RUN))
   if (dealsErr) {
     console.error('Failed to load deals', workspaceId, dealsErr)
     stat.errors++
     return stat
+  }
+
+  // Belt-and-Suspenders: Post-Filter, falls Spalten in der DB noch nicht
+  // existieren (Migration T5 nicht angewandt) oder die OR-Query unerwartete
+  // Rows zurückgibt. Logik identisch zur Query-Bedingung.
+  const allRows = (dealRows ?? []) as DealRow[]
+  const eligible = allRows.filter((d) => {
+    if (d.tracking_needs_review !== true) return true
+    return d.tracking_confidence === 'strong' || d.tracking_confidence === 'manual'
+  })
+  const skipped = allRows.length - eligible.length
+  if (skipped > 0) {
+    console.log(
+      `tracking-poll: skipped ${skipped} deals (needs_review + confidence weak/none) in workspace`,
+    )
   }
 
   // Cache decrypted API-Keys pro Carrier (max 3 Aufrufe pro Workspace).
@@ -170,7 +208,7 @@ async function pollWorkspace(
     return key
   }
 
-  for (const deal of (dealRows ?? []) as DealRow[]) {
+  for (const deal of eligible) {
     if (!deal.tracking || deal.tracking.trim().length === 0) continue
     const adapter = detectAdapter(deal.tracking)
     if (!adapter) continue
@@ -197,48 +235,101 @@ async function pollWorkspace(
       .eq('workspace_id', workspaceId)
       .eq('carrier_id', adapter.id)
 
-    if (parsed.status === 'delivered') {
-      const ok = await markDealDelivered(admin, deal, adapter, parsed)
-      if (ok) stat.delivered++
-    }
+    // Klarna-style Live-Visibility: bei JEDEM erfolgreichen Parse den
+    // Live-Status persistieren — nicht nur bei 'delivered'. Duplikate (gleicher
+    // Status wie zuletzt) werden geskippt (Spam-Schutz).
+    const ok = await persistLiveStatus(admin, deal, adapter, parsed)
+    if (ok && parsed.status === 'delivered') stat.delivered++
   }
 
   return stat
 }
 
-async function markDealDelivered(
+async function persistLiveStatus(
   admin: ReturnType<typeof createClient>,
   deal: DealRow,
   adapter: TrackingAdapter,
   parsed: ParsedTracking,
 ): Promise<boolean> {
-  const arrivalDate = parsed.deliveredAt ?? new Date().toISOString()
-  const { error: updErr } = await admin
+  const nowIso = new Date().toISOString()
+  const update = buildLiveStatusUpdate(deal, parsed, nowIso)
+  if (!update) {
+    // Duplicate (live_status unverändert) → kein DB-Roundtrip, kein
+    // activity_log-Spam.
+    return false
+  }
+
+  // Race-Schutz für den Delivered-Pfad: nur wenn Deal noch im erwarteten
+  // Zustand ist. Für reine live_status-Updates entfällt der Schutz, dann
+  // ist der Update idempotent über die Duplicate-Check.
+  let query = admin
     .from('deals')
-    .update({ status: 'Angekommen', arrival_date: arrivalDate })
+    .update(update)
     .eq('id', deal.id)
     .eq('workspace_id', deal.workspace_id)
-    // Race-Schutz: nur updaten, wenn der Deal noch im erwarteten Zustand ist.
-    .eq('status', 'Unterwegs')
-    .is('arrival_date', null)
+  if (parsed.status === 'delivered') {
+    query = query.eq('status', 'Unterwegs').is('arrival_date', null)
+  }
+  const { error: updErr } = await query
   if (updErr) {
     console.warn('deal update failed', deal.id, updErr.message)
     return false
   }
 
-  // Activity-Log-Eintrag (workspace + user_id beibehalten — user_id=Erfasser).
-  const message = parsed.lastEvent
-    ? `Sendung "${deal.product}" via ${adapter.label} angekommen: ${parsed.lastEvent}`
-    : `Sendung "${deal.product}" via ${adapter.label} angekommen`
-  await admin.from('activity_log').insert({
-    workspace_id: deal.workspace_id,
-    user_id: deal.user_id,
-    type: 'tracking_delivered',
-    message,
-    date: arrivalDate,
-  })
+  // Activity-Log + Push: bisher nur bei 'delivered'. Intermediate-Status
+  // werden vorerst still in deals.live_status persistiert (UI zeigt sie an).
+  // TODO future: push on transition in_transit → out_for_delivery.
+  if (parsed.status === 'delivered') {
+    const message = parsed.lastEvent
+      ? `Sendung "${deal.product}" via ${adapter.label} angekommen: ${parsed.lastEvent}`
+      : `Sendung "${deal.product}" via ${adapter.label} angekommen`
+    await admin.from('activity_log').insert({
+      workspace_id: deal.workspace_id,
+      user_id: deal.user_id,
+      type: 'tracking_delivered',
+      message,
+      date: update.arrival_date ?? nowIso,
+    })
+  }
 
   return true
+}
+
+/// Reine Funktion: berechnet das `UPDATE`-Patch für einen Deal anhand des
+/// Parser-Outputs. Gibt `null` zurück, wenn nichts zu schreiben ist
+/// (Duplicate-Status, ohne neue Information). Exportiert für Unit-Tests.
+export function buildLiveStatusUpdate(
+  deal: Pick<DealRow, 'live_status' | 'live_status_last_event'>,
+  parsed: ParsedTracking,
+  nowIso: string,
+): Record<string, unknown> | null {
+  // 'unknown' niemals persistieren — würde echte Status überschreiben.
+  if (parsed.status === 'unknown') return null
+
+  const newLiveStatus = parsed.status as LiveStatus
+  const newLastEvent = parsed.lastEvent ?? null
+
+  const sameStatus = deal.live_status === newLiveStatus
+  const sameEvent = (deal.live_status_last_event ?? null) === newLastEvent
+
+  // Duplicate: identischer Status UND identischer Last-Event → skip.
+  // (Bei 'delivered' trotzdem updaten, falls arrival_date noch fehlt.)
+  if (sameStatus && sameEvent && newLiveStatus !== 'delivered') {
+    return null
+  }
+
+  const update: Record<string, unknown> = {
+    live_status: newLiveStatus,
+    live_status_last_event: newLastEvent,
+    live_status_updated_at: nowIso,
+  }
+
+  if (parsed.status === 'delivered') {
+    update.status = 'Angekommen'
+    update.arrival_date = parsed.deliveredAt ?? nowIso
+  }
+
+  return update
 }
 
 async function markCarrierError(
@@ -267,3 +358,16 @@ function jsonResp(body: unknown, status = 200): Response {
 // Re-exports für Tests (Deno-Test importiert den Edge-Fn-Code, ruft aber
 // nur die reinen Adapter-Funktionen auf).
 export { ADAPTERS }
+
+// T16: pure helper, exported for tests. Returns true if a deal-row may be
+// polled against carrier APIs. Skip when needs_review=true AND confidence
+// is not strong/manual (i.e. legacy 'none' or weak/null).
+export function isPollEligible(deal: {
+  tracking_needs_review?: boolean | null
+  tracking_confidence?: 'strong' | 'manual' | 'none' | null
+}): boolean {
+  if (deal.tracking_needs_review !== true) return true
+  return (
+    deal.tracking_confidence === 'strong' || deal.tracking_confidence === 'manual'
+  )
+}

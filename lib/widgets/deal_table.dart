@@ -13,6 +13,7 @@ import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import 'add_edit_deal_dialog.dart';
 import 'deal_card.dart';
+import 'tracking_banner_improved_detection.dart';
 import 'tracking_chip.dart';
 
 class _ColDef {
@@ -120,13 +121,25 @@ class _DealTableState extends State<DealTable> {
         final allVisibleSelected = deals.isNotEmpty &&
             deals.every((d) => filters.selectedDealIds.contains(d.id));
 
+        final needsReviewCount = provider.deals
+            .where((d) => d.trackingNeedsReview)
+            .length;
+
         return LayoutBuilder(
           builder: (context, constraints) {
             final isNarrow = constraints.maxWidth < 700;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _FilterBar(provider: provider, filters: filters),
+                TrackingBannerController(
+                  needsReviewCount: needsReviewCount,
+                  onTap: () => filters.setOnlyNeedsReview(true),
+                ),
+                _FilterBar(
+                  provider: provider,
+                  filters: filters,
+                  needsReviewCount: needsReviewCount,
+                ),
                 if (filters.selectedDealIds.isNotEmpty)
                   _BulkActionBar(provider: provider, filters: filters),
                 if (isNarrow)
@@ -238,7 +251,12 @@ class _DealTableState extends State<DealTable> {
 class _FilterBar extends StatelessWidget {
   final InventoryProvider provider;
   final FilterProvider filters;
-  const _FilterBar({required this.provider, required this.filters});
+  final int needsReviewCount;
+  const _FilterBar({
+    required this.provider,
+    required this.filters,
+    required this.needsReviewCount,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -309,6 +327,38 @@ class _FilterBar extends StatelessWidget {
               icon: const Icon(Icons.date_range_outlined, size: 16),
               label: Text(_dateLabel(l10n)),
             ),
+            if (needsReviewCount > 0)
+              FilterChip(
+                key: const Key('filter-chip-tracking-needs-review'),
+                avatar: Icon(
+                  Icons.warning_amber_rounded,
+                  size: 16,
+                  color: filters.onlyNeedsReview
+                      ? AppTheme.warningTextOf(context)
+                      : AppTheme.warningTextOf(context),
+                ),
+                label: Text(
+                  l10n.trackingNeedsReviewFilterChip(needsReviewCount),
+                ),
+                selected: filters.onlyNeedsReview,
+                onSelected: filters.setOnlyNeedsReview,
+                backgroundColor: AppTheme.warningBgOf(context),
+                selectedColor: AppTheme.warningBgOf(context),
+                side: BorderSide(
+                  color: filters.onlyNeedsReview
+                      ? AppTheme.warning
+                      : AppTheme.warningBorderOf(context),
+                ),
+                labelStyle: TextStyle(
+                  color: AppTheme.warningTextOf(context),
+                  fontWeight: filters.onlyNeedsReview
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                  fontSize: 13,
+                ),
+                showCheckmark: false,
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              ),
             IconButton(
               tooltip: l10n.dealsFilterReset,
               onPressed: filters.reset,

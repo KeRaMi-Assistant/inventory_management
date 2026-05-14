@@ -551,6 +551,12 @@
   "helpFaqA15": "Inbox-Tab → Suchsymbol oben rechts. Du kannst nach Absender, Betreff oder Tracking-Nummer suchen. Die Suche filtert alle drei Tabs (Vorschläge / Aktualisiert / Unklassifiziert) gleichzeitig.",
   "helpFaqQ16": "Warum sehe ich Deals anderer Mitglieder nicht?",
   "helpFaqA16": "Du bist möglicherweise im falschen Workspace. Prüfe oben rechts den Workspace-Namen und wechsle ggf. Auch Filter (Käufer/Shop/Datum) können Deals ausblenden — Filter zurücksetzen mit dem „Filter leeren\"-Button.",
+  "helpFaqQ17": "Was bedeutet das „Prüfen\"-Badge an einer Sendung?",
+  "helpFaqA17": "Die App hat den Tracking-Wert zwar gespeichert, aber unsere neue Erkennung ist sich nicht sicher, ob es wirklich eine echte Sendungsnummer ist (z. B. weil sie aus einer älteren Mail mit unklarem Format kommt). Tippe auf den Deal und prüfe in der Sendungsnummer-Karte: „Übernehmen\" bestätigt den Wert, „Verwerfen\" leert ihn. In der Deals-Liste oben filtert der Chip „Prüfen\" alle betroffenen Deals auf einen Schlag.",
+  "helpFaqQ18": "Wie funktioniert „Sendungsnummern neu bewerten\" in den Einstellungen?",
+  "helpFaqA18": "Einstellungen → Allgemein → „Sendungsnummern neu bewerten\" prüft alle gespeicherten Mails dieses Workspaces nochmal mit der neuesten, strikteren Erkennung. Falsch gespeicherte Werte werden auf „Prüfen\" gesetzt, neu erkannte echte Trackings ersetzen leere Einträge. Manuell eingetragene Sendungsnummern bleiben unangetastet. Aus Schutz vor Doppelläufen läuft das maximal einmal alle 5 Minuten pro Workspace.",
+  "helpFaqQ19": "Warum ist eine Sendungsnummer manchmal leer, obwohl die Versandmail da ist?",
+  "helpFaqA19": "Seit Mai 2026 speichert die App eine Tracking-Nummer nur, wenn sie strukturell verifiziert ist (Carrier-Pattern + Längen-/Prüfsummen-Check). Wenn die Mail nur eine interne Shop-ID enthält (z. B. Amazon-Logistics-Shipment-ID) oder die Nummer unklar formatiert ist, lässt die App das Feld bewusst leer statt einen falschen Wert zu speichern. Du kannst die Sendungsnummer direkt im Deal manuell eintragen — manuelle Eingaben werden nie automatisch überschrieben.",
 
   "helpTroubleSection": "Fehlerbehebung",
   "helpTroubleConnectionTitle": "„Keine Verbindung zum Server\"",
@@ -1026,5 +1032,67 @@
   "settingsDemoWipeSuccess": "{count} Demo-Einträge gelöscht.",
   "@settingsDemoWipeSuccess": { "placeholders": { "count": { "type": "int" } } },
   "settingsDemoWipeError": "Löschen fehlgeschlagen: {error}",
-  "@settingsDemoWipeError": { "placeholders": { "error": {} } }
+  "@settingsDemoWipeError": { "placeholders": { "error": {} } },
+
+  "trackingAmazonShipmentIdHint": "Amazon-interne Shipment-ID — kein vollwertiges Carrier-Tracking",
+  "trackingBannerImprovedDetection": "Wir haben die Tracking-Erkennung verbessert. Bitte einmal in „Prüfen“ schauen.",
+  "trackingCarrierAmazonLogisticsHintShort": "Amazon Logistics",
+  "trackingCarrierUnknown": "Unbekannter Versender",
+  "trackingConfidenceLabelManual": "Manuell",
+  "trackingConfidenceLabelNone": "Unklar",
+  "trackingConfidenceLabelStrong": "Verifiziert",
+  "trackingEnterManuallyCta": "Manuell eingeben",
+  "trackingNoneDetectedSubtitle": "Wir konnten in dieser Mail keine eindeutige Sendungsnummer finden.",
+  "trackingNoneDetectedTitle": "Keine Sendungsnummer erkannt",
+  "trackingReparseCta": "Sendungsnummern neu bewerten",
+  "trackingReparseConfirmBody": "Bestehende Sendungsnummern werden mit der verbesserten Erkennung neu geprüft. Manuelle Einträge bleiben unverändert.",
+  "trackingReparseConfirmTitle": "Neubewertung starten?",
+  "trackingReparseFailed": "Neubewertung fehlgeschlagen",
+  "trackingReparseOffline": "Keine Verbindung — bitte später erneut versuchen",
+  "trackingReparseRunning": "Sendungsnummern werden neu bewertet…",
+  "trackingReparseSuccessCount": "{count, plural, =0{Keine Sendungsnummer aktualisiert} =1{1 Sendungsnummer aktualisiert} other{{count} Sendungsnummern aktualisiert}}",
+  "@trackingReparseSuccessCount": {
+    "description": "Number of tracking numbers updated during a re-evaluation run",
+    "placeholders": {
+      "count": { "type": "int", "format": "decimalPattern" }
+    }
+  },
+  "trackingNeedsReviewFilterChip": "{count, plural, =1{Prüfen (1)} other{Prüfen ({count})}}",
+  "@trackingNeedsReviewFilterChip": {
+    "description": "Filter chip label showing number of deals needing tracking review",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "trackingReviewAcceptCta": "Übernehmen",
+  "trackingReviewDismissCta": "Verwerfen",
+  "trackingReviewListTitle": "Sendungsnummern prüfen",
+  "trackingReviewNeededBadge": "Prüfen",
+  "trackingStatusBlockA11yLabel": "Sendungsnummern-Status",
+
+  "inboxSectionOrder": "Bestellung",
+  "inboxSectionShipping": "Versand",
+  "inboxSectionLinkedTo": "Verknüpft mit",
+  "inboxFieldOrderId": "Order-ID",
+  "inboxFieldProduct": "Produkt",
+  "inboxFieldAmount": "Betrag",
+  "inboxFieldEta": "ETA",
+  "inboxFieldDeal": "Deal",
+
+  "dealTrackingStatusTitle": "Sendungsnummer",
+  "dealSectionTrackingStatus": "Sendungsstatus",
+
+  "trackingUpdateError": "Tracking-Update fehlgeschlagen: {error}",
+  "@trackingUpdateError": { "placeholders": { "error": {} } },
+  "trackingAcceptError": "Tracking-Akzeptanz fehlgeschlagen: {error}",
+  "@trackingAcceptError": { "placeholders": { "error": {} } },
+  "trackingDiscardError": "Tracking-Verwerfen fehlgeschlagen: {error}",
+  "@trackingDiscardError": { "placeholders": { "error": {} } },
+
+  "liveStatusPending": "Wird vorbereitet",
+  "liveStatusInTransit": "Unterwegs",
+  "liveStatusOutForDelivery": "In Zustellung",
+  "liveStatusDelivered": "Zugestellt",
+  "liveStatusException": "Problem — bitte prüfen",
+  "liveStatusExpired": "Status veraltet"
 }

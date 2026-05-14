@@ -1139,6 +1139,84 @@ class SupabaseRepository {
         })
         .eq('id', parsedMessageId);
   }
+
+  // ── Tracking-Confidence-Updates ──────────────────────────────────────────
+
+  /// Akzeptiert das `needs_review`-Tracking einer Suggestion als korrekt.
+  /// Setzt `tracking_confidence = 'manual'`, `tracking_needs_review = false`.
+  Future<void> acceptSuggestionTrackingAsManual(String suggestionId) async {
+    await _client
+        .from('pending_deal_suggestions')
+        .update({
+          'tracking_confidence': 'manual',
+          'tracking_needs_review': false,
+        })
+        .eq('id', suggestionId);
+  }
+
+  /// Verwirft das Tracking einer Suggestion.
+  /// Setzt `tracking = null`, `tracking_confidence = 'none'`,
+  /// `tracking_needs_review = false`.
+  Future<void> discardSuggestionTracking(String suggestionId) async {
+    await _client
+        .from('pending_deal_suggestions')
+        .update({
+          'tracking': null,
+          'tracking_confidence': 'none',
+          'tracking_needs_review': false,
+        })
+        .eq('id', suggestionId);
+  }
+
+  /// Setzt eine manuell eingegebene Tracking-Nummer auf einer Suggestion.
+  Future<void> updateSuggestionTrackingManually(
+    String suggestionId,
+    String tracking,
+  ) async {
+    await _client
+        .from('pending_deal_suggestions')
+        .update({
+          'tracking': tracking,
+          'tracking_confidence': 'manual',
+          'tracking_needs_review': false,
+        })
+        .eq('id', suggestionId);
+  }
+
+  /// Akzeptiert das `needs_review`-Tracking eines Deals als korrekt (manual).
+  Future<void> acceptDealTrackingAsManual(int dealId) async {
+    await _client
+        .from('deals')
+        .update({
+          'tracking_confidence': 'manual',
+          'tracking_needs_review': false,
+        })
+        .eq('id', dealId);
+  }
+
+  /// Verwirft das Tracking eines Deals.
+  Future<void> discardDealTracking(int dealId) async {
+    await _client
+        .from('deals')
+        .update({
+          'tracking': null,
+          'tracking_confidence': 'none',
+          'tracking_needs_review': false,
+        })
+        .eq('id', dealId);
+  }
+
+  /// Setzt eine manuell eingegebene Tracking-Nummer auf einem Deal.
+  Future<void> updateDealTrackingManually(int dealId, String tracking) async {
+    await _client
+        .from('deals')
+        .update({
+          'tracking': tracking,
+          'tracking_confidence': 'manual',
+          'tracking_needs_review': false,
+        })
+        .eq('id', dealId);
+  }
 }
 
 /// Rückgabe von [SupabaseRepository.triggerInboxPoll]. Felder enthalten die

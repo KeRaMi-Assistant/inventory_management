@@ -9,6 +9,7 @@ import '../models/pricing_plan.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
+import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/csv_service.dart';
 import '../widgets/add_edit_deal_dialog.dart';
@@ -166,12 +167,20 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  void _goToDealsReview() {
+    context.read<FilterProvider>().setOnlyNeedsReview(true);
+    setState(() => _selectedIndex = 1);
+  }
+
   Widget _buildBody() {
     return switch (_selectedIndex) {
       0 => const DashboardScreen(),
       1 => DealsScreen(onOpenTicket: _openTicket),
       2 => TicketsScreen(initialTicket: _selectedTicket),
-      3 => InboxScreen(onOpenTicket: _openTicket),
+      3 => InboxScreen(
+          onOpenTicket: _openTicket,
+          onGoToDealsReview: _goToDealsReview,
+        ),
       4 => const InventoryScreen(),
       5 => const SuppliersScreen(),
       6 => const StatisticsScreen(),
@@ -199,6 +208,12 @@ class _MainScreenState extends State<MainScreen> {
           });
         }
         final body = _buildBody();
+
+        // Counter badge on the Inbox tab: show tracking needs-review count.
+        final trackingBadgeCount = provider.trackingNeedsReviewCount;
+        final navBadgeCounts = trackingBadgeCount > 0
+            ? {_inboxNavIndex: trackingBadgeCount}
+            : const <int, int>{};
 
         final fab = _selectedIndex == 1 || _selectedIndex == 2
             ? FloatingActionButton.extended(
@@ -237,6 +252,7 @@ class _MainScreenState extends State<MainScreen> {
                       labels: labels,
                       visibility: visibility,
                       onSelect: _select,
+                      badgeCounts: navBadgeCounts,
                     ),
                   ),
                 ),
@@ -254,6 +270,7 @@ class _MainScreenState extends State<MainScreen> {
                       visibility: visibility,
                       extended: extended,
                       onSelect: _select,
+                      badgeCounts: navBadgeCounts,
                     ),
                     Expanded(
                       child: Column(
@@ -298,6 +315,8 @@ class _Sidebar extends StatelessWidget {
   final List<bool> visibility;
   final bool extended;
   final ValueChanged<int> onSelect;
+  /// Optional badge counts per nav-index. Key = nav index, value = count > 0.
+  final Map<int, int> badgeCounts;
 
   const _Sidebar({
     required this.selectedIndex,
@@ -306,6 +325,7 @@ class _Sidebar extends StatelessWidget {
     required this.visibility,
     required this.extended,
     required this.onSelect,
+    this.badgeCounts = const {},
   });
 
   @override
@@ -362,6 +382,10 @@ class _Sidebar extends StatelessWidget {
                       isSelected: selectedIndex == i,
                       extended: extended,
                       onTap: () => onSelect(i),
+                      badgeCount: badgeCounts[i] ?? 0,
+                      badgeKey: i == 3
+                          ? const Key('mobile-nav-inbox-badge')
+                          : null,
                     ),
               ],
             ),
@@ -381,6 +405,10 @@ class _NavItem extends StatefulWidget {
   final bool isSelected;
   final bool extended;
   final VoidCallback onTap;
+  /// When > 0, shows a badge on the icon.
+  final int badgeCount;
+  /// Optional key for the Badge widget (used by browser-tester / widget-tests).
+  final Key? badgeKey;
 
   const _NavItem({
     required this.icon,
@@ -389,6 +417,8 @@ class _NavItem extends StatefulWidget {
     required this.isSelected,
     required this.extended,
     required this.onTap,
+    this.badgeCount = 0,
+    this.badgeKey,
   });
 
   @override
@@ -434,10 +464,22 @@ class _NavItemState extends State<_NavItem> {
                 SizedBox(
                   width: widget.isSelected ? 61 : 64,
                   child: Center(
-                    child: Icon(
-                      widget.isSelected ? widget.activeIcon : widget.icon,
-                      color: iconColor,
-                      size: 20,
+                    child: Badge(
+                      key: widget.badgeKey,
+                      isLabelVisible: widget.badgeCount > 0,
+                      label: Text(
+                        '${widget.badgeCount}',
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      backgroundColor: AppTheme.warning,
+                      child: Icon(
+                        widget.isSelected ? widget.activeIcon : widget.icon,
+                        color: iconColor,
+                        size: 20,
+                      ),
                     ),
                   ),
                 ),
@@ -869,6 +911,8 @@ class _MobileNavList extends StatelessWidget {
   final List<String> labels;
   final List<bool> visibility;
   final ValueChanged<int> onSelect;
+  /// Optional badge counts per nav-index.
+  final Map<int, int> badgeCounts;
 
   const _MobileNavList({
     required this.selectedIndex,
@@ -876,6 +920,7 @@ class _MobileNavList extends StatelessWidget {
     required this.labels,
     required this.visibility,
     required this.onSelect,
+    this.badgeCounts = const {},
   });
 
   @override
@@ -921,6 +966,10 @@ class _MobileNavList extends StatelessWidget {
                     isSelected: selectedIndex == i,
                     extended: true,
                     onTap: () => onSelect(i),
+                    badgeCount: badgeCounts[i] ?? 0,
+                    badgeKey: i == 3
+                        ? const Key('mobile-nav-inbox-badge')
+                        : null,
                   ),
             ],
           ),

@@ -129,11 +129,16 @@ tax_rate_pct    NUMERIC(5,2),                   -- 20260503000800
 currency        TEXT DEFAULT 'EUR',             -- 20260503000800
 internal_invoice_sent BOOLEAN DEFAULT FALSE,    -- 20260504000000
 internal_invoice_paid BOOLEAN DEFAULT FALSE,    -- 20260504000000
+tracking_confidence   TEXT CHECK (... 'strong','manual','none'),  -- 20260513183000
+tracking_needs_review BOOLEAN NOT NULL DEFAULT FALSE,             -- 20260513183000
 created_at, updated_at, deleted_at TIMESTAMPTZ
 ```
 
 Indexe auf `workspace_id`, `(workspace_id, order_date DESC)`, `ticket_id`,
-`tracking`.
+`tracking` und Partial-Index `deals_needs_tracking_review_idx`
+(`(workspace_id, tracking_needs_review) WHERE tracking_needs_review = TRUE`).
+Siehe [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#strict-tracking-extraction-confidence-modell)
+für die Semantik der beiden neuen Spalten.
 
 ### `inventory_items`
 
@@ -204,11 +209,24 @@ parsed_payload  JSONB,
 status          TEXT NOT NULL DEFAULT 'pending',
 match_deal_id   BIGINT REFERENCES deals(id),
 error           TEXT,
+tracking_confidence    TEXT CHECK (... 'strong','medium','weak','none'),  -- 20260513183500
+tracking_needs_review  BOOLEAN NOT NULL DEFAULT FALSE,                    -- 20260513183500
 created_at, processed_at TIMESTAMPTZ
 ```
 
 UNIQUE-Indexe: `(account_id, message_uid)` und `(account_id, message_hash)`
 — siehe Dedup-Logik in [04-inbox-mail-pipeline.md](04-inbox-mail-pipeline.md#dedup-logik).
+Partial-Index `parsed_messages_needs_tracking_review_idx` auf
+`(workspace_id, tracking_needs_review) WHERE tracking_needs_review = TRUE`
+für den Re-Parse-Sweep (siehe [Strict-Tracking-Pipeline](04-inbox-mail-pipeline.md#strict-tracking-extraction-confidence-modell)).
+
+Zusätzliche Strict-Tracking-Spalten:
+
+- `pending_deal_suggestions.tracking_confidence TEXT CHECK (... 'strong','none')`
+  (Migration `20260513183000_strict_tracking_schema.sql`).
+- `mailbox_accounts.last_reparse_at TIMESTAMPTZ` — 5-Minuten-Cooldown
+  für den Re-Parse-Trigger aus den Settings (siehe
+  [07 — Edge Functions](07-edge-functions.md#inbox-parse)).
 
 ### `workspace_carrier_credentials`
 

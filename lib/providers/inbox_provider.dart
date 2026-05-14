@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/inbox_message.dart';
 import '../models/mailbox_account.dart';
+import '../models/tracking_confidence.dart';
 import '../services/supabase_repository.dart';
 
 /// Hält den lokalen Cache rund um die Postfach-Integration: konfigurierte
@@ -413,6 +414,11 @@ class InboxProvider extends ChangeNotifier {
       resolvedAt: newest.resolvedAt,
       resolvedAction: newest.resolvedAction,
       createdDealId: newest.createdDealId,
+      // Confidence vom neuesten Eintrag beibehalten (der hat die aktuellste
+      // Bewertung). needs_review = true wenn IRGENDEIN Eintrag needs_review
+      // hat — so bleibt der Hinweis sichtbar bis alle bestätigt sind.
+      trackingConfidence: newest.trackingConfidence,
+      trackingNeedsReview: sorted.any((s) => s.trackingNeedsReview),
     );
   }
 
@@ -737,6 +743,92 @@ class InboxProvider extends ChangeNotifier {
     _recent = _recent.where((m) => m.id != message.id).toList(growable: false);
     notifyListeners();
   }
+
+  // ── Tracking-Confidence-Updates ──────────────────────────────────────────
+
+  /// Akzeptiert das `needs_review`-Tracking einer Suggestion als korrekt.
+  /// Setzt `tracking_confidence = 'manual'`, `tracking_needs_review = false`.
+  /// Aktualisiert lokal den Cache, ohne einen vollen Refresh auszulösen.
+  Future<void> acceptSuggestionTrackingAsManual(String suggestionId) async {
+    await _repository.acceptSuggestionTrackingAsManual(suggestionId);
+    _updateSuggestionLocally(
+      suggestionId,
+      trackingConfidence: TrackingConfidence.manual,
+      trackingNeedsReview: false,
+    );
+  }
+
+  /// Verwirft das Tracking einer Suggestion.
+  Future<void> discardSuggestionTracking(String suggestionId) async {
+    await _repository.discardSuggestionTracking(suggestionId);
+    _updateSuggestionLocally(
+      suggestionId,
+      tracking: null,
+      trackingConfidence: TrackingConfidence.none,
+      trackingNeedsReview: false,
+    );
+  }
+
+  /// Setzt eine manuell eingegebene Tracking-Nummer auf einer Suggestion.
+  Future<void> updateSuggestionTrackingManually(
+    String suggestionId,
+    String tracking,
+  ) async {
+    await _repository.updateSuggestionTrackingManually(suggestionId, tracking);
+    _updateSuggestionLocally(
+      suggestionId,
+      tracking: tracking,
+      trackingConfidence: TrackingConfidence.manual,
+      trackingNeedsReview: false,
+    );
+  }
+
+  /// Hilfsmethode: aktualisiert eine Suggestion lokal in beiden Caches.
+  void _updateSuggestionLocally(
+    String suggestionId, {
+    Object? tracking = _kSentinel,
+    TrackingConfidence? trackingConfidence,
+    bool? trackingNeedsReview,
+  }) {
+    PendingDealSuggestion patch(PendingDealSuggestion s) {
+      if (s.id != suggestionId) return s;
+      return PendingDealSuggestion(
+        id: s.id,
+        workspaceId: s.workspaceId,
+        parsedMessageId: s.parsedMessageId,
+        messageId: s.messageId,
+        shopKey: s.shopKey,
+        shopLabel: s.shopLabel,
+        orderId: s.orderId,
+        product: s.product,
+        quantity: s.quantity,
+        total: s.total,
+        currency: s.currency,
+        tracking: tracking == _kSentinel ? s.tracking : tracking as String?,
+        trackings: tracking == _kSentinel
+            ? s.trackings
+            : (tracking == null
+                ? const []
+                : [tracking as String]),
+        carrier: s.carrier,
+        eta: s.eta,
+        status: s.status,
+        createdAt: s.createdAt,
+        receivedAt: s.receivedAt,
+        resolvedAt: s.resolvedAt,
+        resolvedAction: s.resolvedAction,
+        createdDealId: s.createdDealId,
+        trackingConfidence: trackingConfidence ?? s.trackingConfidence,
+        trackingNeedsReview: trackingNeedsReview ?? s.trackingNeedsReview,
+      );
+    }
+
+    _suggestionsRaw = _suggestionsRaw.map(patch).toList(growable: false);
+    _suggestions = _suggestions.map(patch).toList(growable: false);
+    notifyListeners();
+  }
+
+  static const Object _kSentinel = Object();
 
   void clear() {
     _accounts = [];

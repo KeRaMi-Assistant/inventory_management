@@ -1,3 +1,6 @@
+import 'live_tracking_status.dart';
+import 'tracking_confidence.dart';
+
 class Deal {
   final int id;
   final String product;
@@ -23,6 +26,26 @@ class Deal {
   final List<String> inventoryItemIds;
   final List<String> attachmentPaths;
 
+  /// Confidence-Stufe der zuletzt geschriebenen Tracking-Nummer.
+  /// `null` = Legacy-Deal vor der Confidence-Migration (behandle wie `none`).
+  final TrackingConfidence? trackingConfidence;
+
+  /// `true` wenn die Tracking-Nummer als unzuverlässig markiert ist und vom
+  /// User oder Re-Parse korrigiert werden sollte.
+  final bool trackingNeedsReview;
+
+  /// Live-Status der Sendung, befüllt vom `tracking-poll`-Adapter.
+  /// `null` = Legacy-Deal oder noch nie gepollt.
+  final LiveTrackingStatus? liveStatus;
+
+  /// Letztes Carrier-Event als Freitext (z.B. "Out for delivery, Berlin").
+  /// `null` wenn kein Event bekannt.
+  final String? liveStatusLastEvent;
+
+  /// Zeitpunkt des letzten Live-Status-Updates.
+  /// `null` wenn noch nie gepollt.
+  final DateTime? liveStatusUpdatedAt;
+
   const Deal({
     required this.id,
     required this.product,
@@ -47,6 +70,11 @@ class Deal {
     this.currency = 'EUR',
     this.inventoryItemIds = const [],
     this.attachmentPaths = const [],
+    this.trackingConfidence,
+    this.trackingNeedsReview = false,
+    this.liveStatus,
+    this.liveStatusLastEvent,
+    this.liveStatusUpdatedAt,
   });
 
   /// Sentinel id used for deals not yet persisted (server assigns BIGSERIAL).
@@ -101,6 +129,11 @@ class Deal {
         'currency': currency,
         'inventoryItemIds': inventoryItemIds,
         'attachmentPaths': attachmentPaths,
+        'trackingConfidence': trackingConfidence?.toJson(),
+        'trackingNeedsReview': trackingNeedsReview,
+        'liveStatus': liveStatus?.toJson(),
+        'liveStatusLastEvent': liveStatusLastEvent,
+        'liveStatusUpdatedAt': liveStatusUpdatedAt?.toIso8601String(),
       };
 
   factory Deal.fromJson(Map<String, dynamic> json) => Deal(
@@ -137,6 +170,15 @@ class Deal {
                 ?.map((e) => e as String)
                 .toList() ??
             const [],
+        trackingConfidence:
+            TrackingConfidence.fromString(json['trackingConfidence'] as String?),
+        trackingNeedsReview: json['trackingNeedsReview'] as bool? ?? false,
+        liveStatus:
+            LiveTrackingStatus.fromString(json['liveStatus'] as String?),
+        liveStatusLastEvent: json['liveStatusLastEvent'] as String?,
+        liveStatusUpdatedAt: json['liveStatusUpdatedAt'] != null
+            ? DateTime.parse(json['liveStatusUpdatedAt'] as String)
+            : null,
       );
 
   // ── Supabase (PostgreSQL, snake_case) ─────────────────────────────────────
@@ -163,6 +205,11 @@ class Deal {
         'tax_rate': taxRate,
         'currency': currency,
         'attachment_paths': attachmentPaths,
+        'tracking_confidence': trackingConfidence?.toJson(),
+        'tracking_needs_review': trackingNeedsReview,
+        'live_status': liveStatus?.toJson(),
+        'live_status_last_event': liveStatusLastEvent,
+        'live_status_updated_at': liveStatusUpdatedAt?.toIso8601String(),
       };
 
   factory Deal.fromSupabase(
@@ -200,6 +247,15 @@ class Deal {
       currency: row['currency'] as String? ?? 'EUR',
       inventoryItemIds: inventoryItemIds,
       attachmentPaths: paths,
+      trackingConfidence:
+          TrackingConfidence.fromString(row['tracking_confidence'] as String?),
+      trackingNeedsReview: row['tracking_needs_review'] as bool? ?? false,
+      liveStatus:
+          LiveTrackingStatus.fromString(row['live_status'] as String?),
+      liveStatusLastEvent: row['live_status_last_event'] as String?,
+      liveStatusUpdatedAt: row['live_status_updated_at'] != null
+          ? DateTime.parse(row['live_status_updated_at'] as String)
+          : null,
     );
   }
 
@@ -242,6 +298,11 @@ class Deal {
     String? currency,
     List<String>? inventoryItemIds,
     List<String>? attachmentPaths,
+    Object? trackingConfidence = _sentinel,
+    bool? trackingNeedsReview,
+    Object? liveStatus = _sentinel,
+    Object? liveStatusLastEvent = _sentinel,
+    Object? liveStatusUpdatedAt = _sentinel,
   }) =>
       Deal(
         id: id ?? this.id,
@@ -275,6 +336,19 @@ class Deal {
         currency: currency ?? this.currency,
         inventoryItemIds: inventoryItemIds ?? this.inventoryItemIds,
         attachmentPaths: attachmentPaths ?? this.attachmentPaths,
+        trackingConfidence: trackingConfidence == _sentinel
+            ? this.trackingConfidence
+            : trackingConfidence as TrackingConfidence?,
+        trackingNeedsReview: trackingNeedsReview ?? this.trackingNeedsReview,
+        liveStatus: liveStatus == _sentinel
+            ? this.liveStatus
+            : liveStatus as LiveTrackingStatus?,
+        liveStatusLastEvent: liveStatusLastEvent == _sentinel
+            ? this.liveStatusLastEvent
+            : liveStatusLastEvent as String?,
+        liveStatusUpdatedAt: liveStatusUpdatedAt == _sentinel
+            ? this.liveStatusUpdatedAt
+            : liveStatusUpdatedAt as DateTime?,
       );
 }
 

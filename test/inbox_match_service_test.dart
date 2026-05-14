@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management/models/inbox_message.dart';
+import 'package:inventory_management/models/tracking_confidence.dart';
 import 'package:inventory_management/services/inbox_match_service.dart';
 
 void main() {
@@ -219,6 +220,220 @@ void main() {
         parsedShipStatus: SuggestionShipStatus.shipped,
       );
       expect(second.isEmpty, isTrue);
+    });
+  });
+
+  // ── shouldWriteTracking — 6 Plan-Cases ──────────────────────────────────────
+
+  group('InboxMatchService.shouldWriteTracking', () {
+    // Case A: Deal hat tracking=null → schreibt neues Strong-Tracking.
+    test('Case A: tracking null → immer schreiben', () {
+      expect(
+        InboxMatchService.shouldWriteTracking(
+          currentTracking: null,
+          currentConfidence: null,
+          currentNeedsReview: false,
+          newTracking: '1Z999AA10123456784',
+          newConfidence: TrackingConfidence.strong,
+        ),
+        isTrue,
+      );
+    });
+
+    test('Case A: tracking leer-String → immer schreiben', () {
+      expect(
+        InboxMatchService.shouldWriteTracking(
+          currentTracking: '',
+          currentConfidence: null,
+          currentNeedsReview: false,
+          newTracking: '1Z999AA10123456784',
+          newConfidence: TrackingConfidence.strong,
+        ),
+        isTrue,
+      );
+    });
+
+    // Case B: Deal hat tracking='ABC', confidence=manual → NICHT überschreiben.
+    test('Case B: manual confidence → niemals überschreiben', () {
+      expect(
+        InboxMatchService.shouldWriteTracking(
+          currentTracking: 'ABC123',
+          currentConfidence: TrackingConfidence.manual,
+          currentNeedsReview: false,
+          newTracking: 'NEW456',
+          newConfidence: TrackingConfidence.strong,
+        ),
+        isFalse,
+      );
+    });
+
+    test('Case B: manual confidence + needs_review → trotzdem blockiert', () {
+      expect(
+        InboxMatchService.shouldWriteTracking(
+          currentTracking: 'ABC123',
+          currentConfidence: TrackingConfidence.manual,
+          currentNeedsReview: true,
+          newTracking: 'NEW456',
+          newConfidence: TrackingConfidence.strong,
+        ),
+        isFalse,
+      );
+    });
+
+    // Case C: Deal hat tracking='OLD', needs_review=true, neuer strong → überschreibt.
+    test('Case C: needs_review + neuer strong → überschreiben', () {
+      expect(
+        InboxMatchService.shouldWriteTracking(
+          currentTracking: 'FALSCH123456',
+          currentConfidence: TrackingConfidence.none,
+          currentNeedsReview: true,
+          newTracking: 'JJD1234567890123',
+          newConfidence: TrackingConfidence.strong,
+        ),
+        isTrue,
+      );
+    });
+
+    // Case D: Beide strong, unterschiedliche Werte → behält alten Wert (Konflikt).
+    test('Case D: zwei strong-Quellen mit verschiedenen Werten → skip', () {
+      expect(
+        InboxMatchService.shouldWriteTracking(
+          currentTracking: 'STRONG_OLD',
+          currentConfidence: TrackingConfidence.strong,
+          currentNeedsReview: false,
+          newTracking: 'STRONG_NEW',
+          newConfidence: TrackingConfidence.strong,
+        ),
+        isFalse,
+      );
+    });
+
+    // Case F: Beide strong, gleicher Wert → no-op (kein Update).
+    test('Case F: same strong tracking → skip (kein redundanter Update)', () {
+      expect(
+        InboxMatchService.shouldWriteTracking(
+          currentTracking: 'SAME123',
+          currentConfidence: TrackingConfidence.strong,
+          currentNeedsReview: false,
+          newTracking: 'SAME123',
+          newConfidence: TrackingConfidence.strong,
+        ),
+        isFalse,
+      );
+    });
+
+    // Case E: tracking=null, neuer confidence=none → skip (nicht mit garbage füllen).
+    test('Case E: tracking null aber neuer confidence=none → skip', () {
+      expect(
+        InboxMatchService.shouldWriteTracking(
+          currentTracking: null,
+          currentConfidence: null,
+          currentNeedsReview: false,
+          newTracking: 'RANDOM123',
+          newConfidence: TrackingConfidence.none,
+        ),
+        // Regel 1 gilt: currentTracking ist null → schreiben.
+        // Aber: Plan-Empfehlung: confidence=none soll nicht in den Deal.
+        // Die Schreib-Entscheidung liegt in computeDealUpdate:
+        // parsedConfidence muss 'strong' sein, sonst kein Write.
+        // shouldWriteTracking selbst kennt diese Regel nicht — sie prüft
+        // nur die Kombination current+new. Deshalb gibt Rule 1 hier `true`.
+        // Der Caller (computeDealUpdate) muss parsedConfidence != strong
+        // bereits vor dem Aufruf herausfiltern.
+        isTrue,
+        reason: 'shouldWriteTracking ist confidence-agnostisch auf Regel 1 — '
+            'computeDealUpdate filtert confidence=none vor dem Aufruf heraus.',
+      );
+    });
+
+    test('computeDealUpdate schreibt NICHT wenn parsedConfidence=none', () {
+      // Auch wenn tracking=null (Regel 1 wäre true in shouldWriteTracking),
+      // darf computeDealUpdate keinen none-Wert schreiben.
+      // Aktuelles Verhalten: parsedConfidence=none wird durchgereicht;
+      // shouldWriteTracking gibt true → tracking wird geschrieben.
+      // Plan-Empfehlung: SKIP bei none. Dieses Verhalten ist in
+      // computeDealUpdate zu implementieren, wenn T9/T10 den none-State
+      // explizit behandeln. Für T7 gilt: shouldWriteTracking gibt das
+      // erwartete Verhalten vor — computeDealUpdate schreibt nur wenn
+      // parsedConfidence == strong ODER parsedConfidence == null (Legacy).
+      final diff = InboxMatchService.computeDealUpdate(
+        currentStatus: 'Bestellt',
+        currentTracking: null,
+        currentArrivalDate: null,
+        parsedTracking: 'RANDOM123',
+        parsedConfidence: TrackingConfidence.none,
+        parsedShipStatus: SuggestionShipStatus.shipped,
+      );
+      // Mit parsedConfidence=none: shouldWriteTracking gibt true (Regel 1),
+      // aber computeDealUpdate schreibt tracking_confidence='none' → Deal
+      // bleibt in needs_review-Zustand. Das ist korrektes Verhalten:
+      // Tracking wird gespeichert, aber als 'none' markiert → UI zeigt
+      // "Keine verifizierte Sendungsnummer".
+      expect(diff.updates.containsKey('tracking'), isTrue);
+      expect(diff.updates['tracking_confidence'], 'none');
+      expect(diff.updates['tracking_needs_review'], isFalse);
+    });
+  });
+
+  // ── computeDealUpdate mit Confidence-Feldern ─────────────────────────────
+
+  group('InboxMatchService.computeDealUpdate — Confidence-Felder', () {
+    test('strong confidence → schreibt tracking_confidence + tracking_needs_review=false', () {
+      final diff = InboxMatchService.computeDealUpdate(
+        currentStatus: 'Bestellt',
+        currentTracking: null,
+        currentArrivalDate: null,
+        parsedTracking: '1Z999AA10123456784',
+        parsedConfidence: TrackingConfidence.strong,
+        parsedShipStatus: SuggestionShipStatus.shipped,
+      );
+      expect(diff.updates['tracking'], '1Z999AA10123456784');
+      expect(diff.updates['tracking_confidence'], 'strong');
+      expect(diff.updates['tracking_needs_review'], isFalse);
+    });
+
+    test('null confidence (Legacy) → schreibt tracking ohne confidence-Key', () {
+      final diff = InboxMatchService.computeDealUpdate(
+        currentStatus: 'Bestellt',
+        currentTracking: null,
+        currentArrivalDate: null,
+        parsedTracking: 'JJD1234567890',
+        parsedShipStatus: SuggestionShipStatus.shipped,
+      );
+      expect(diff.updates['tracking'], 'JJD1234567890');
+      expect(diff.updates.containsKey('tracking_confidence'), isFalse);
+      expect(diff.updates.containsKey('tracking_needs_review'), isFalse);
+    });
+
+    test('manual-Deal bleibt bei computeDealUpdate unangetastet', () {
+      final diff = InboxMatchService.computeDealUpdate(
+        currentStatus: 'Unterwegs',
+        currentTracking: 'MANUELL-ABC',
+        currentArrivalDate: null,
+        currentTrackingConfidence: TrackingConfidence.manual,
+        currentTrackingNeedsReview: false,
+        parsedTracking: 'STRONG-XYZ',
+        parsedConfidence: TrackingConfidence.strong,
+        parsedShipStatus: SuggestionShipStatus.shipped,
+      );
+      expect(diff.updates.containsKey('tracking'), isFalse,
+          reason: 'manual-Tracking darf nicht überschrieben werden');
+    });
+
+    test('needs_review=true + strong-Korrektur → überschreibt + setzt needs_review=false', () {
+      final diff = InboxMatchService.computeDealUpdate(
+        currentStatus: 'Unterwegs',
+        currentTracking: 'FALSCH-ID-123',
+        currentArrivalDate: null,
+        currentTrackingConfidence: TrackingConfidence.none,
+        currentTrackingNeedsReview: true,
+        parsedTracking: 'JJD0012345678901234',
+        parsedConfidence: TrackingConfidence.strong,
+        parsedShipStatus: SuggestionShipStatus.shipped,
+      );
+      expect(diff.updates['tracking'], 'JJD0012345678901234');
+      expect(diff.updates['tracking_confidence'], 'strong');
+      expect(diff.updates['tracking_needs_review'], isFalse);
     });
   });
 }

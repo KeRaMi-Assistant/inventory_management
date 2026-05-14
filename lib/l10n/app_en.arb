@@ -551,6 +551,12 @@
   "helpFaqA15": "Inbox tab → search icon top-right. You can search by sender, subject or tracking number. The search filters all three tabs (Suggestions / Updated / Unclassified) at the same time.",
   "helpFaqQ16": "Why don't I see deals from other members?",
   "helpFaqA16": "You may be in the wrong workspace. Check the workspace name top-right and switch if needed. Filters (buyer/shop/date) can also hide deals — clear them with the \"Clear filters\" button.",
+  "helpFaqQ17": "What does the \"Review\" badge on a shipment mean?",
+  "helpFaqA17": "The app has stored a tracking value, but our new detector isn't sure it really is a valid tracking number (e.g. because it comes from an older mail with an unclear format). Tap the deal and check the tracking card: \"Accept\" confirms the value, \"Dismiss\" clears it. On the deals list, the \"Review\" chip filters all affected deals at once.",
+  "helpFaqQ18": "How does \"Re-evaluate tracking numbers\" in Settings work?",
+  "helpFaqA18": "Settings → General → \"Re-evaluate tracking numbers\" rechecks every stored mail in this workspace with the latest, stricter detector. Wrongly stored values get flagged as \"Review\", newly recognised real trackings replace empty entries. Manually entered tracking numbers stay untouched. To protect against runaway loops, this runs at most once every 5 minutes per workspace.",
+  "helpFaqQ19": "Why is a tracking number sometimes empty even though the shipping mail is there?",
+  "helpFaqA19": "Since May 2026 the app only stores a tracking number when it is structurally verified (carrier pattern + length/checksum check). When the mail only contains an internal shop ID (e.g. an Amazon Logistics shipment ID) or the number is ambiguously formatted, the app deliberately leaves the field empty instead of saving a wrong value. You can always enter the tracking number manually on the deal — manual entries are never overwritten automatically.",
 
   "helpTroubleSection": "Troubleshooting",
   "helpTroubleConnectionTitle": "\"No connection to server\"",
@@ -1026,5 +1032,67 @@
   "settingsDemoWipeSuccess": "{count} demo entries deleted.",
   "@settingsDemoWipeSuccess": { "placeholders": { "count": { "type": "int" } } },
   "settingsDemoWipeError": "Deletion failed: {error}",
-  "@settingsDemoWipeError": { "placeholders": { "error": {} } }
+  "@settingsDemoWipeError": { "placeholders": { "error": {} } },
+
+  "trackingAmazonShipmentIdHint": "Amazon-internal shipment ID — not a real carrier tracking number",
+  "trackingBannerImprovedDetection": "We improved tracking detection. Please review the items in \"Review\".",
+  "trackingCarrierAmazonLogisticsHintShort": "Amazon Logistics",
+  "trackingCarrierUnknown": "Unknown carrier",
+  "trackingConfidenceLabelManual": "Manual",
+  "trackingConfidenceLabelNone": "Unclear",
+  "trackingConfidenceLabelStrong": "Verified",
+  "trackingEnterManuallyCta": "Enter manually",
+  "trackingNoneDetectedSubtitle": "We could not find a verified tracking number in this message.",
+  "trackingNoneDetectedTitle": "No tracking number detected",
+  "trackingReparseCta": "Re-evaluate tracking numbers",
+  "trackingReparseConfirmBody": "Existing tracking numbers will be re-checked with the improved detector. Manual entries stay untouched.",
+  "trackingReparseConfirmTitle": "Start re-evaluation?",
+  "trackingReparseFailed": "Re-evaluation failed",
+  "trackingReparseOffline": "No connection — please try again later",
+  "trackingReparseRunning": "Re-evaluating tracking numbers…",
+  "trackingReparseSuccessCount": "{count, plural, =0{No tracking number updated} =1{1 tracking number updated} other{{count} tracking numbers updated}}",
+  "@trackingReparseSuccessCount": {
+    "description": "Number of tracking numbers updated during a re-evaluation run",
+    "placeholders": {
+      "count": { "type": "int", "format": "decimalPattern" }
+    }
+  },
+  "trackingNeedsReviewFilterChip": "{count, plural, =1{Review (1)} other{Review ({count})}}",
+  "@trackingNeedsReviewFilterChip": {
+    "description": "Filter chip label showing number of deals needing tracking review",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "trackingReviewAcceptCta": "Accept",
+  "trackingReviewDismissCta": "Dismiss",
+  "trackingReviewListTitle": "Review tracking numbers",
+  "trackingReviewNeededBadge": "Review",
+  "trackingStatusBlockA11yLabel": "Tracking status",
+
+  "inboxSectionOrder": "Order",
+  "inboxSectionShipping": "Shipping",
+  "inboxSectionLinkedTo": "Linked to",
+  "inboxFieldOrderId": "Order ID",
+  "inboxFieldProduct": "Product",
+  "inboxFieldAmount": "Amount",
+  "inboxFieldEta": "ETA",
+  "inboxFieldDeal": "Deal",
+
+  "dealTrackingStatusTitle": "Tracking number",
+  "dealSectionTrackingStatus": "Shipping status",
+
+  "trackingUpdateError": "Tracking update failed: {error}",
+  "@trackingUpdateError": { "placeholders": { "error": {} } },
+  "trackingAcceptError": "Tracking acceptance failed: {error}",
+  "@trackingAcceptError": { "placeholders": { "error": {} } },
+  "trackingDiscardError": "Tracking discard failed: {error}",
+  "@trackingDiscardError": { "placeholders": { "error": {} } },
+
+  "liveStatusPending": "Pending",
+  "liveStatusInTransit": "In transit",
+  "liveStatusOutForDelivery": "Out for delivery",
+  "liveStatusDelivered": "Delivered",
+  "liveStatusException": "Issue — please check",
+  "liveStatusExpired": "Status outdated"
 }

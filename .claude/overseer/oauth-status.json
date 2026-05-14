@@ -1,0 +1,12 @@
+{
+  "ts": "2026-05-14T22:38:41Z",
+  "gh": {
+    "status": "ok"
+  },
+  "anthropic": {
+    "status": "unreachable"
+  },
+  "supabase": {
+    "status": "ok"
+  }
+}
