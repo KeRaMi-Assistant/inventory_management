@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/inbox_message.dart';
+import '../models/live_tracking_status.dart';
 import '../models/tracking_confidence.dart';
 import '../providers/inbox_provider.dart';
 import 'tracking_status_block.dart';
@@ -24,12 +25,20 @@ class InboxMessageDetails extends StatelessWidget {
   /// Wenn null, wird das Tracking aus `parsedPayload` als plain text gezeigt.
   final PendingDealSuggestion? suggestion;
 
+  /// Optionaler Live-Status aus dem verknüpften Deal (A1/A2-Feature).
+  final LiveTrackingStatus? dealLiveStatus;
+  final String? dealLiveStatusLastEvent;
+  final DateTime? dealLiveStatusUpdatedAt;
+
   final List<Widget> actions;
 
   const InboxMessageDetails({
     super.key,
     required this.message,
     this.suggestion,
+    this.dealLiveStatus,
+    this.dealLiveStatusLastEvent,
+    this.dealLiveStatusUpdatedAt,
     this.actions = const [],
   });
 
@@ -37,6 +46,9 @@ class InboxMessageDetails extends StatelessWidget {
     BuildContext context, {
     required ParsedMessage message,
     PendingDealSuggestion? suggestion,
+    LiveTrackingStatus? dealLiveStatus,
+    String? dealLiveStatusLastEvent,
+    DateTime? dealLiveStatusUpdatedAt,
     List<Widget> actions = const [],
   }) {
     return showModalBottomSheet(
@@ -45,6 +57,9 @@ class InboxMessageDetails extends StatelessWidget {
       builder: (_) => InboxMessageDetails(
         message: message,
         suggestion: suggestion,
+        dealLiveStatus: dealLiveStatus,
+        dealLiveStatusLastEvent: dealLiveStatusLastEvent,
+        dealLiveStatusUpdatedAt: dealLiveStatusUpdatedAt,
         actions: actions,
       ),
     );
@@ -197,6 +212,9 @@ class InboxMessageDetails extends StatelessWidget {
               onDiscard: (sug != null && (tracking != null || needsReview))
                   ? () => _discardTracking(ctx, sug)
                   : null,
+              liveStatus: dealLiveStatus,
+              liveStatusLastEvent: dealLiveStatusLastEvent,
+              liveStatusUpdatedAt: dealLiveStatusUpdatedAt,
             ),
             if (etaStr != null) ...[
               const SizedBox(height: 6),

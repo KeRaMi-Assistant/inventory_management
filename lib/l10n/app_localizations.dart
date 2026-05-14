@@ -5455,6 +5455,42 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Tracking-Verwerfen fehlgeschlagen: {error}'**
   String trackingDiscardError(Object error);
+
+  /// No description provided for @liveStatusPending.
+  ///
+  /// In de, this message translates to:
+  /// **'Wird vorbereitet'**
+  String get liveStatusPending;
+
+  /// No description provided for @liveStatusInTransit.
+  ///
+  /// In de, this message translates to:
+  /// **'Unterwegs'**
+  String get liveStatusInTransit;
+
+  /// No description provided for @liveStatusOutForDelivery.
+  ///
+  /// In de, this message translates to:
+  /// **'In Zustellung'**
+  String get liveStatusOutForDelivery;
+
+  /// No description provided for @liveStatusDelivered.
+  ///
+  /// In de, this message translates to:
+  /// **'Zugestellt'**
+  String get liveStatusDelivered;
+
+  /// No description provided for @liveStatusException.
+  ///
+  /// In de, this message translates to:
+  /// **'Problem — bitte prüfen'**
+  String get liveStatusException;
+
+  /// No description provided for @liveStatusExpired.
+  ///
+  /// In de, this message translates to:
+  /// **'Status veraltet'**
+  String get liveStatusExpired;
 }
 
 class _AppLocalizationsDelegate

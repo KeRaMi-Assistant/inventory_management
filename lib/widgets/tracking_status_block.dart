@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 
 import '../app_theme.dart';
+import '../models/live_tracking_status.dart';
 import '../models/tracking_confidence.dart';
+import '../utils/relative_time.dart';
 
 /// Interne Enum für die 5 Display-States des Widgets.
 enum TrackingDisplayState {
@@ -53,6 +55,15 @@ class TrackingStatusBlock extends StatelessWidget {
   /// Callback "Verwerfen" — entfernt das needs_review-Tracking.
   final VoidCallback? onDiscard;
 
+  /// Live-Status aus dem externen Adapter-Poll. `null` = noch nie gepollt.
+  final LiveTrackingStatus? liveStatus;
+
+  /// Letztes Carrier-Event als Freitext (z.B. "Out for delivery, Berlin").
+  final String? liveStatusLastEvent;
+
+  /// Zeitpunkt des letzten Adapter-Polls.
+  final DateTime? liveStatusUpdatedAt;
+
   const TrackingStatusBlock({
     super.key,
     this.trackingNumber,
@@ -63,6 +74,9 @@ class TrackingStatusBlock extends StatelessWidget {
     this.onManualInput,
     this.onAcceptAsCorrect,
     this.onDiscard,
+    this.liveStatus,
+    this.liveStatusLastEvent,
+    this.liveStatusUpdatedAt,
   });
 
   TrackingDisplayState _resolveState() {
@@ -99,6 +113,20 @@ class TrackingStatusBlock extends StatelessWidget {
     );
   }
 
+  /// Gibt den lokalisierten Label-String für einen LiveTrackingStatus zurück.
+  static String? _liveStatusLabel(
+      AppLocalizations l10n, LiveTrackingStatus? status) {
+    if (status == null) return null;
+    return switch (status) {
+      LiveTrackingStatus.pending => l10n.liveStatusPending,
+      LiveTrackingStatus.inTransit => l10n.liveStatusInTransit,
+      LiveTrackingStatus.outForDelivery => l10n.liveStatusOutForDelivery,
+      LiveTrackingStatus.delivered => l10n.liveStatusDelivered,
+      LiveTrackingStatus.exception => l10n.liveStatusException,
+      LiveTrackingStatus.expired => l10n.liveStatusExpired,
+    };
+  }
+
   Widget _buildForState(
     BuildContext context,
     TrackingDisplayState state,
@@ -112,6 +140,10 @@ class TrackingStatusBlock extends StatelessWidget {
           confidenceLabel: l10n.trackingConfidenceLabelStrong,
           onManualInput: onManualInput,
           editLabel: l10n.actionEdit,
+          liveStatus: liveStatus,
+          liveStatusLastEvent: liveStatusLastEvent,
+          liveStatusUpdatedAt: liveStatusUpdatedAt,
+          liveStatusLabel: _liveStatusLabel(l10n, liveStatus),
         );
       case TrackingDisplayState.manual:
         return _ManualState(
@@ -161,6 +193,10 @@ class _StrongState extends StatelessWidget {
     required this.editLabel,
     this.carrier,
     this.onManualInput,
+    this.liveStatus,
+    this.liveStatusLabel,
+    this.liveStatusLastEvent,
+    this.liveStatusUpdatedAt,
   });
 
   final String trackingNumber;
@@ -168,6 +204,10 @@ class _StrongState extends StatelessWidget {
   final String confidenceLabel;
   final String editLabel;
   final VoidCallback? onManualInput;
+  final LiveTrackingStatus? liveStatus;
+  final String? liveStatusLabel;
+  final String? liveStatusLastEvent;
+  final DateTime? liveStatusUpdatedAt;
 
   @override
   Widget build(BuildContext context) {
@@ -223,6 +263,23 @@ class _StrongState extends StatelessWidget {
                       color: AppTheme.textPrimaryOf(context),
                     ),
                   ),
+                  // ── Live-Status-Slot ─────────────────────────────────
+                  if (liveStatus != null) ...[
+                    const SizedBox(height: 8),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: AppTheme.successBorderOf(context),
+                    ),
+                    const SizedBox(height: 8),
+                    _LiveStatusSlot(
+                      key: const Key('live-status-slot'),
+                      liveStatus: liveStatus!,
+                      liveStatusLabel: liveStatusLabel ?? '',
+                      liveStatusLastEvent: liveStatusLastEvent,
+                      liveStatusUpdatedAt: liveStatusUpdatedAt,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -659,6 +716,112 @@ class _AmazonShipmentIdState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Live-Status-Slot (nur in strong-State sichtbar)
+// ---------------------------------------------------------------------------
+
+/// Zeigt Icon + Status-Label + optionalen Last-Event-Text + relative Zeit.
+///
+/// Layout: [Icon]  [status-label]  ·  [last-event ellipsis]  [relativezeit]
+/// Mobile-First: auf 360px kein Overflow — last-event ist maxLines:1 + ellipsis.
+class _LiveStatusSlot extends StatelessWidget {
+  const _LiveStatusSlot({
+    super.key,
+    required this.liveStatus,
+    required this.liveStatusLabel,
+    this.liveStatusLastEvent,
+    this.liveStatusUpdatedAt,
+  });
+
+  final LiveTrackingStatus liveStatus;
+  final String liveStatusLabel;
+  final String? liveStatusLastEvent;
+  final DateTime? liveStatusUpdatedAt;
+
+  /// Gibt das passende Icon für den Status zurück.
+  static IconData _iconFor(LiveTrackingStatus s) => switch (s) {
+        LiveTrackingStatus.pending => Icons.schedule,
+        LiveTrackingStatus.inTransit => Icons.local_shipping_outlined,
+        LiveTrackingStatus.outForDelivery => Icons.delivery_dining_outlined,
+        LiveTrackingStatus.delivered => Icons.check_circle_outline,
+        LiveTrackingStatus.exception => Icons.warning_amber_rounded,
+        LiveTrackingStatus.expired => Icons.help_outline,
+      };
+
+  /// Gibt die passende Farbe für den Status zurück (context-aware).
+  static Color _colorFor(BuildContext context, LiveTrackingStatus s) =>
+      switch (s) {
+        LiveTrackingStatus.pending => AppTheme.textMutedOf(context),
+        LiveTrackingStatus.inTransit => AppTheme.accentTextOf(context),
+        LiveTrackingStatus.outForDelivery => AppTheme.warningTextOf(context),
+        LiveTrackingStatus.delivered => AppTheme.successTextOf(context),
+        LiveTrackingStatus.exception => AppTheme.dangerTextOf(context),
+        LiveTrackingStatus.expired => AppTheme.textMutedOf(context),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _colorFor(context, liveStatus);
+    final relTime = liveStatusUpdatedAt != null
+        ? formatRelativeTime(context, liveStatusUpdatedAt!)
+        : null;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(_iconFor(liveStatus), size: 16, color: color),
+        const SizedBox(width: 6),
+        // Status-Label — fest, nie abschneiden
+        Text(
+          liveStatusLabel,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+        // Last-Event (optional, flexibel, ellipsis)
+        if (liveStatusLastEvent != null &&
+            liveStatusLastEvent!.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Text(
+              '·',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.textMutedOf(context),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              liveStatusLastEvent!,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.textMutedOf(context),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ] else
+          const Spacer(),
+        // Relative-Zeit (optional)
+        if (relTime != null) ...[
+          const SizedBox(width: 6),
+          Text(
+            relTime,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppTheme.textMutedOf(context),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

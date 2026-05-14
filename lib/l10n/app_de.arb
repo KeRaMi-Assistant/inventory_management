@@ -1087,5 +1087,12 @@
   "trackingAcceptError": "Tracking-Akzeptanz fehlgeschlagen: {error}",
   "@trackingAcceptError": { "placeholders": { "error": {} } },
   "trackingDiscardError": "Tracking-Verwerfen fehlgeschlagen: {error}",
-  "@trackingDiscardError": { "placeholders": { "error": {} } }
+  "@trackingDiscardError": { "placeholders": { "error": {} } },
+
+  "liveStatusPending": "Wird vorbereitet",
+  "liveStatusInTransit": "Unterwegs",
+  "liveStatusOutForDelivery": "In Zustellung",
+  "liveStatusDelivered": "Zugestellt",
+  "liveStatusException": "Problem — bitte prüfen",
+  "liveStatusExpired": "Status veraltet"
 }

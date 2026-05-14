@@ -608,6 +608,11 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             carrier: null,
                             needsReview: widget.deal!.trackingNeedsReview,
                             amazonShipmentIdHint: false,
+                            liveStatus: widget.deal!.liveStatus,
+                            liveStatusLastEvent:
+                                widget.deal!.liveStatusLastEvent,
+                            liveStatusUpdatedAt:
+                                widget.deal!.liveStatusUpdatedAt,
                             onManualInput: () async {
                               final ctrl = TextEditingController(
                                 text: _trackingCtrl.text,

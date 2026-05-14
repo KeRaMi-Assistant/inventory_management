@@ -2993,4 +2993,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String trackingDiscardError(Object error) {
     return 'Tracking-Verwerfen fehlgeschlagen: $error';
   }
+
+  @override
+  String get liveStatusPending => 'Wird vorbereitet';
+
+  @override
+  String get liveStatusInTransit => 'Unterwegs';
+
+  @override
+  String get liveStatusOutForDelivery => 'In Zustellung';
+
+  @override
+  String get liveStatusDelivered => 'Zugestellt';
+
+  @override
+  String get liveStatusException => 'Problem — bitte prüfen';
+
+  @override
+  String get liveStatusExpired => 'Status veraltet';
 }

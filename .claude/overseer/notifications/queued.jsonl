@@ -123,3 +123,8 @@
 {"ts":"2026-05-14T22:04:04Z","severity":"info","topic":"claude-kerami-3kf2j","title":"\ud83d\udca4 Pipeline idle","body":"1 Tasks warten in Inbox, kein aktiver Task. 0 done, 0 failed (heute).","actions":null}
 {"ts":"2026-05-14T22:10:07Z","severity":"info","topic":"claude-kerami-3kf2j","title":"\ud83d\udca4 Pipeline idle","body":"1 Tasks warten in Inbox, kein aktiver Task. 0 done, 0 failed (heute).","actions":null}
 {"ts":"2026-05-14T22:14:04Z","severity":"info","topic":"claude-kerami-3kf2j","title":"\ud83d\udca4 Pipeline idle","body":"1 Tasks warten in Inbox, kein aktiver Task. 0 done, 0 failed (heute).","actions":null}
+{"ts":"2026-05-14T22:20:07Z","severity":"info","topic":"claude-kerami-3kf2j","title":"\ud83d\udca4 Pipeline idle","body":"1 Tasks warten in Inbox, kein aktiver Task. 0 done, 0 failed (heute).","actions":null}
+{"ts":"2026-05-14T22:24:04Z","severity":"info","topic":"claude-kerami-3kf2j","title":"\ud83d\udca4 Pipeline idle","body":"1 Tasks warten in Inbox, kein aktiver Task. 0 done, 0 failed (heute).","actions":null}
+{"ts":"2026-05-14T22:30:07Z","severity":"info","topic":"claude-kerami-3kf2j","title":"\ud83d\udca4 Pipeline idle","body":"1 Tasks warten in Inbox, kein aktiver Task. 0 done, 0 failed (heute).","actions":null}
+{"ts":"2026-05-14T22:34:05Z","severity":"info","topic":"claude-kerami-3kf2j","title":"\ud83d\udca4 Pipeline idle","body":"1 Tasks warten in Inbox, kein aktiver Task. 0 done, 0 failed (heute).","actions":null}
+{"ts":"2026-05-14T22:39:13Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}

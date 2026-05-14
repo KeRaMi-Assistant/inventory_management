@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management/l10n/app_localizations.dart';
+import 'package:inventory_management/models/live_tracking_status.dart';
 import 'package:inventory_management/models/tracking_confidence.dart';
 import 'package:inventory_management/widgets/tracking_status_block.dart';
 
@@ -300,6 +301,142 @@ void main() {
       await tester.pumpAndSettle();
       expect(
           find.byKey(const Key('tracking-status-block-empty')), findsOneWidget);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Live-Status-Slot tests (A3)
+  // -------------------------------------------------------------------------
+  group('TrackingStatusBlock — Live-Status-Slot', () {
+    testWidgets(
+        'strong + liveStatus=inTransit → slot visible, correct icon key',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+            carrier: 'UPS',
+            liveStatus: LiveTrackingStatus.inTransit,
+            liveStatusLastEvent: 'Versendet',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // Slot muss sichtbar sein
+      expect(find.byKey(const Key('live-status-slot')), findsOneWidget);
+      // DE-Label "Unterwegs" muss erscheinen
+      expect(find.text('Unterwegs'), findsOneWidget);
+      // Last-Event-Text
+      expect(find.text('Versendet'), findsOneWidget);
+    });
+
+    testWidgets('strong + liveStatus=null → kein Slot', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('live-status-slot')), findsNothing);
+    });
+
+    testWidgets('liveStatus=exception → DE-Label "Problem — bitte prüfen"',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+            liveStatus: LiveTrackingStatus.exception,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Problem — bitte prüfen'), findsOneWidget);
+    });
+
+    testWidgets('liveStatus=delivered → DE-Label "Zugestellt"',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+            liveStatus: LiveTrackingStatus.delivered,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Zugestellt'), findsOneWidget);
+    });
+
+    testWidgets(
+        'long last_event → ellipsis: widget renders without overflow on narrow viewport',
+        (tester) async {
+      // 360px Phone viewport
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        _wrap(
+          const TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+            liveStatus: LiveTrackingStatus.inTransit,
+            liveStatusLastEvent:
+                'Das ist ein sehr langer Carrier-Event-Text der sicher '
+                'nicht in eine Zeile passt und truncated werden muss',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // Widget muss ohne Exception rendern
+      expect(find.byKey(const Key('live-status-slot')), findsOneWidget);
+      // Kein RenderFlex-Overflow — pumpAndSettle würde bei Overflow eine Exception werfen
+    });
+
+    testWidgets('relative time: updatedAt 5min ago → "vor 5 min" (DE)',
+        (tester) async {
+      final fiveMinAgo =
+          DateTime.now().subtract(const Duration(minutes: 5));
+      await tester.pumpWidget(
+        _wrap(
+          TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+            liveStatus: LiveTrackingStatus.inTransit,
+            liveStatusUpdatedAt: fiveMinAgo,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('vor 5 min'), findsOneWidget);
+    });
+
+    testWidgets(
+        'relative time in EN locale: updatedAt 10min ago → "10 min ago"',
+        (tester) async {
+      final tenMinAgo =
+          DateTime.now().subtract(const Duration(minutes: 10));
+      await tester.pumpWidget(
+        _wrap(
+          TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+            liveStatus: LiveTrackingStatus.inTransit,
+            liveStatusUpdatedAt: tenMinAgo,
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('10 min ago'), findsOneWidget);
     });
   });
 }

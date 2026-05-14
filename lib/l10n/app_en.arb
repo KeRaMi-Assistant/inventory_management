@@ -1087,5 +1087,12 @@
   "trackingAcceptError": "Tracking acceptance failed: {error}",
   "@trackingAcceptError": { "placeholders": { "error": {} } },
   "trackingDiscardError": "Tracking discard failed: {error}",
-  "@trackingDiscardError": { "placeholders": { "error": {} } }
+  "@trackingDiscardError": { "placeholders": { "error": {} } },
+
+  "liveStatusPending": "Pending",
+  "liveStatusInTransit": "In transit",
+  "liveStatusOutForDelivery": "Out for delivery",
+  "liveStatusDelivered": "Delivered",
+  "liveStatusException": "Issue — please check",
+  "liveStatusExpired": "Status outdated"
 }

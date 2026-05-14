@@ -2989,4 +2989,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String trackingDiscardError(Object error) {
     return 'Tracking discard failed: $error';
   }
+
+  @override
+  String get liveStatusPending => 'Pending';
+
+  @override
+  String get liveStatusInTransit => 'In transit';
+
+  @override
+  String get liveStatusOutForDelivery => 'Out for delivery';
+
+  @override
+  String get liveStatusDelivered => 'Delivered';
+
+  @override
+  String get liveStatusException => 'Issue — please check';
+
+  @override
+  String get liveStatusExpired => 'Status outdated';
 }
