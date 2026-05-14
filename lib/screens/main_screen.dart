@@ -383,6 +383,9 @@ class _Sidebar extends StatelessWidget {
                       extended: extended,
                       onTap: () => onSelect(i),
                       badgeCount: badgeCounts[i] ?? 0,
+                      badgeKey: i == 3
+                          ? const Key('mobile-nav-inbox-badge')
+                          : null,
                     ),
               ],
             ),
@@ -404,6 +407,8 @@ class _NavItem extends StatefulWidget {
   final VoidCallback onTap;
   /// When > 0, shows a badge on the icon.
   final int badgeCount;
+  /// Optional key for the Badge widget (used by browser-tester / widget-tests).
+  final Key? badgeKey;
 
   const _NavItem({
     required this.icon,
@@ -413,6 +418,7 @@ class _NavItem extends StatefulWidget {
     required this.extended,
     required this.onTap,
     this.badgeCount = 0,
+    this.badgeKey,
   });
 
   @override
@@ -459,6 +465,7 @@ class _NavItemState extends State<_NavItem> {
                   width: widget.isSelected ? 61 : 64,
                   child: Center(
                     child: Badge(
+                      key: widget.badgeKey,
                       isLabelVisible: widget.badgeCount > 0,
                       label: Text(
                         '${widget.badgeCount}',
@@ -960,6 +967,9 @@ class _MobileNavList extends StatelessWidget {
                     extended: true,
                     onTap: () => onSelect(i),
                     badgeCount: badgeCounts[i] ?? 0,
+                    badgeKey: i == 3
+                        ? const Key('mobile-nav-inbox-badge')
+                        : null,
                   ),
             ],
           ),

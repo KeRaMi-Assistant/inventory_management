@@ -231,7 +231,7 @@ manuelle Trigger-Tasks sind nicht nötig. Bugfixes ohne UI-Wirkung
 dürfen mit dem engeren Smoke-Szenario auskommen
 (z. B. `smoke-inbox`, `smoke-help`).
 
-**Web-Server:** `bash .claude/scripts/dev-web.sh` startet `flutter build web` + `python -m http.server 8123`. `bash .claude/scripts/stop-web.sh` stoppt sauber.
+**Web-Server:** `bash .claude/scripts/dev-web.sh` startet `flutter build web` + `python -m http.server 8123`. Mit `--profile` (oder `--audit-build`) für Audit-Builds mit Dart-Exception-Sichtbarkeit und Source-Maps (`flutter build web --profile --source-maps`). `bash .claude/scripts/stop-web.sh` stoppt sauber.
 
 **Reports:** Markdown + Screenshots landen unter `.claude/test-runs/<timestamp>/` (gitignored).
 

@@ -27,6 +27,59 @@ import { runParseSweep, stripBody } from '../_shared/inbox_parse_runner.ts'
 // T12: Rate-Limit für User-getriggerte Re-Parse-Calls (5 min Cooldown).
 const REPARSE_COOLDOWN_MS = 5 * 60 * 1000
 
+// TA0c (Plan 2026-05-14_strict_tracking_smoke_audit, Security-Finding #3):
+// Authentifizierter Test-Mode-Override für den Smoke-Audit-Step S3
+// (Rate-Limit-Test). Erlaubt EINER allow-listed Test-User-E-Mail, den
+// Re-Parse-Cooldown auf den eigenen Workspaces zu resetten — ohne dass
+// wir einen SQL-UPDATE-Bypass auf `mailbox_accounts` brauchen.
+//
+// Sicherheits-Constraints:
+//   • Allowlist wird aus ENV `AUDIT_TEST_USER_EMAIL` gelesen (kein Hard-Code,
+//     niemals via Body steuerbar). Ist die ENV unset → Set ist leer → kein
+//     User passt → Override ist effektiv aus.
+//   • Konstante wird beim Function-Init eingefroren (Object.freeze auf Set
+//     via getter); nach Init nicht mehr mutierbar.
+//   • Service-Role-Pfad (Cron/Backend) bekommt den Override NIE — explizite
+//     403-Wall vor User-Auth-Pfad.
+//   • Allowlist matched gegen den vom Auth-Provider gelieferten `user.email`
+//     (nicht gegen Body-Input).
+//   • Logs PII-frei: nur 3-Char-Prefix der E-Mail.
+const TEST_MODE_ALLOWED_EMAILS: ReadonlySet<string> = buildAllowedEmails(
+  Deno.env.get('AUDIT_TEST_USER_EMAIL') ?? '',
+)
+
+export function buildAllowedEmails(raw: string): ReadonlySet<string> {
+  const set = new Set<string>()
+  const trimmed = raw.trim()
+  if (trimmed.length > 0) set.add(trimmed.toLowerCase())
+  return set
+}
+
+// TA0c: Pure Validierungs-Logik des Test-Mode-Override — extrahiert, damit
+// die Branch-Entscheidungen ohne Deno.serve / Supabase-Mock testbar sind.
+// Liefert eine von vier Decisions:
+//   • 'allow'  — Caller darf reset_cooldown ausführen.
+//   • 'deny'   — 403 zurückgeben.
+//   • 'ignore' — Override-Wert wird ignoriert (durchfallen zur normalen Logik).
+//   • 'none'   — Kein Override im Body, normale Logik.
+export type TestModeDecision = 'allow' | 'deny' | 'ignore' | 'none'
+
+export function evaluateTestModeOverride(input: {
+  overrideValue: string | undefined
+  isCron: boolean
+  isService: boolean
+  userEmail: string | null
+  allowedEmails: ReadonlySet<string>
+}): TestModeDecision {
+  if (typeof input.overrideValue !== 'string') return 'none'
+  if (input.isCron || input.isService) return 'deny'
+  if (input.overrideValue !== 'reset_cooldown') return 'ignore'
+  const email = (input.userEmail ?? '').toLowerCase()
+  if (email.length === 0) return 'deny'
+  if (!input.allowedEmails.has(email)) return 'deny'
+  return 'allow'
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -49,6 +102,7 @@ Deno.serve(async (req) => {
   // wir scopen alles harten auf die Workspaces des Users — kein
   // Cross-Workspace-Zugriff möglich.
   let scopedUserId: string | null = null
+  let scopedUserEmail: string | null = null
   let scopedWorkspaceIds: string[] | null = null
   if (!isCron && !isService) {
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -63,6 +117,7 @@ Deno.serve(async (req) => {
       return jsonResp({ error: 'Unauthorized' }, 401)
     }
     scopedUserId = userData.user.id
+    scopedUserEmail = (userData.user.email ?? '').toLowerCase()
   }
 
   let body: {
@@ -83,6 +138,10 @@ Deno.serve(async (req) => {
     // gespeichert hat (z.B. orderingShipmentId aus progress-tracker-URL
     // statt der echten Carrier-Nummer aus dem Plain-Text-Body).
     force_overwrite?: boolean
+    // TA0c: Test-Mode-Override für Smoke-Audit S3 (Rate-Limit-Test). Nur
+    // gültig wenn (a) User-JWT-Pfad, (b) user.email ∈ Allowlist,
+    // (c) value === 'reset_cooldown'. Andere Werte werden ignoriert.
+    test_mode_override?: string
   } = {}
   if (req.method === 'POST') {
     try {
@@ -116,6 +175,47 @@ Deno.serve(async (req) => {
     if (body.workspace_id && !scopedWorkspaceIds.includes(body.workspace_id)) {
       return jsonResp({ error: 'workspace_id not in user scope' }, 403)
     }
+  }
+
+  // TA0c: Test-Mode-Override für Smoke-Audit S3 (Rate-Limit-Test).
+  // Reset von `last_reparse_at` auf den Workspaces des authentifizierten
+  // Test-Users — strikt allow-listed via ENV, Service-Role-Pfad gesperrt.
+  {
+    const decision = evaluateTestModeOverride({
+      overrideValue: body.test_mode_override,
+      isCron: !!isCron,
+      isService: !!isService,
+      userEmail: scopedUserEmail,
+      allowedEmails: TEST_MODE_ALLOWED_EMAILS,
+    })
+    if (decision === 'deny') {
+      return jsonResp({ error: 'test_mode_not_allowed' }, 403)
+    }
+    if (decision === 'allow') {
+      if (!scopedWorkspaceIds || scopedWorkspaceIds.length === 0) {
+        return jsonResp({ ok: true, reset: true, affected: 0 }, 200)
+      }
+      const { error: resetErr } = await admin
+        .from('mailbox_accounts')
+        .update({ last_reparse_at: null })
+        .in('workspace_id', scopedWorkspaceIds)
+      if (resetErr) {
+        return jsonResp({
+          error: 'reset_failed',
+          details: resetErr.message,
+        }, 500)
+      }
+      // PII-frei: nur 3-Char-Prefix der E-Mail.
+      const prefix = (scopedUserEmail ?? '').slice(0, 3)
+      console.log(
+        `[audit-test-mode] reset_cooldown for user=${prefix}… workspaces=${scopedWorkspaceIds.length}`,
+      )
+      return jsonResp({ ok: true, reset: true }, 200)
+    }
+    if (decision === 'ignore') {
+      console.warn('[audit-test-mode] unknown override value, ignoring')
+    }
+    // decision === 'none' → kein Override, normale Logik unten.
   }
 
   if (body.reparse_unclassified === true) {

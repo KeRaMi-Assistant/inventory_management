@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
@@ -36,8 +37,23 @@ import 'services/session_manager.dart';
 import 'services/supabase_repository.dart';
 import 'services/workspace_service.dart';
 
+/// Compile-Time-Flag: aktiviert Flutter-Semantics für Playwright-Tests.
+/// Aktivierung: `flutter build web --dart-define=ENABLE_SEMANTICS=true`
+/// Nur im Test-Build setzen — Semantics-Overlay hat messbaren Render-Overhead.
+const bool kEnableSemanticsForTests = bool.fromEnvironment(
+  'ENABLE_SEMANTICS',
+  defaultValue: false,
+);
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Test-Build: Semantics aktivieren, damit <flt-semantics>-Elemente im
+  // Web-DOM erscheinen und Playwright getByLabel() / getByRole() greifen kann.
+  if (kEnableSemanticsForTests && kIsWeb) {
+    SemanticsBinding.instance.ensureSemantics();
+  }
+
   await initializeDateFormatting('de_DE');
   await Supabase.initialize(
     url: SupabaseConfig.url,
