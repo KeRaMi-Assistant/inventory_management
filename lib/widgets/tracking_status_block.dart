@@ -283,9 +283,10 @@ class _StrongState extends StatelessWidget {
                 ],
               ),
             ),
-            // Edit-Button — Touch-Target 48×48 via padding
+            // Edit-Button — Touch-Target 48×48 via SizedBox
             if (onManualInput != null)
               _IconCta(
+                key: const Key('tracking-edit-cta-strong'),
                 icon: Icons.edit_outlined,
                 semanticsLabel: editLabel,
                 onTap: onManualInput,
@@ -378,6 +379,7 @@ class _ManualState extends StatelessWidget {
             ),
             if (onManualInput != null)
               _IconCta(
+                key: const Key('tracking-edit-cta-manual'),
                 icon: Icons.edit_outlined,
                 semanticsLabel: editLabel,
                 onTap: onManualInput,
@@ -831,8 +833,12 @@ class _LiveStatusSlot extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 /// Icon-Button mit mind. 48×48 dp Touch-Target.
+///
+/// Hit-Box: SizedBox 48×48 → 48dp unabhängig von Icon-Größe.
+/// Das 18px-Icon bleibt visuell unverändert — nur die Hit-Box wächst.
 class _IconCta extends StatelessWidget {
   const _IconCta({
+    super.key,
     required this.icon,
     required this.semanticsLabel,
     required this.color,
@@ -848,12 +854,15 @@ class _IconCta extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: semanticsLabel,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Icon(icon, size: 18, color: color),
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Center(
+            child: Icon(icon, size: 18, color: color),
+          ),
         ),
       ),
     );

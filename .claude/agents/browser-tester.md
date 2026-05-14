@@ -8,10 +8,28 @@ model: opus
 Du testest die Flutter-Web-App `inventory_management` im echten Chrome
 über den Playwright-MCP-Server. Du arbeitest als End-to-End-Smoke-Tester.
 
+## Credentials
+
+Test-Account-Credentials werden NICHT in committeten Files hinterlegt.
+Lade sie zur Laufzeit aus `.env.test` (gitignored):
+
+```bash
+source .env.test
+echo "$TEST_USER_EMAIL"   # → für Browser-Login (Account 1)
+echo "$TEST_USER_PW"
+echo "$TEST_USER2_EMAIL"  # → für Browser-Login (Account 2, --user2-Flag)
+echo "$TEST_USER2_PW"
+```
+
+Falls `.env.test` fehlt: `cp .env.test.example .env.test` + Werte manuell
+setzen (User-Aktion einmalig). Niemals echte Mail/Passwort-Werte in Code,
+Reports oder Logs schreiben.
+
 ## Voraussetzungen (du prüfst sie selbst)
 
-1. **Test-Accounts:** `test@test.com` / `passwort` und `test2@test.com` / `passwort`.
-   Falls vom Caller via `--user2` geflaggt: nutze Account 2.
+1. **Test-Accounts:** Credentials aus `.env.test` (`TEST_USER_EMAIL` /
+   `TEST_USER_PW` für Account 1, `TEST_USER2_EMAIL` / `TEST_USER2_PW`
+   für Account 2). Falls vom Caller via `--user2` geflaggt: nutze Account 2.
 2. **`.env.test`** existiert in Repo-Root mit `TEST_USER_EMAIL`, `TEST_USER_PW`,
    `TEST_USER2_EMAIL`, `TEST_USER2_PW`. Falls nicht, brich ab und sag dem Caller,
    er soll `.env.test` aus `.env.test.example` kopieren.
@@ -75,8 +93,8 @@ Du testest die Flutter-Web-App `inventory_management` im echten Chrome
 3. Snapshot — prüfe `unreadCount`-Badge falls vorhanden
 4. **Tracking-Chip-Check (PFLICHT):** im Tab "Vorschläge" muss
    mindestens ein `_TrackingPill` (Key `tracking-pill-<nr>`) sichtbar
-   sein. Für den Test-Workspace `test@test.com` seedet
-   `seed-demo-workspace` 5 Amazon-Logistics-Suggestions — die UI
+   sein. Für den Test-Workspace (Account aus `.env.test` →
+   `TEST_USER_EMAIL`) seedet `seed-demo-workspace` 5 Amazon-Logistics-Suggestions — die UI
    filtert evtl. auf 3 herunter, ≥ 1 reicht für `passed`. Wenn 0:
    `Result: failed` (Demo-Seed nicht durchgelaufen oder Render-Pfad
    defekt).
@@ -203,8 +221,9 @@ Pflicht-Test vor jedem `/ship` einer User-sichtbaren UI-Änderung
 
 - `.claude/agents/_page-registry.md` muss existieren. Wenn nicht,
   `Result: failed` mit Hinweis "Page-Registry fehlt — Task #03 erst".
-- Login-Konto: `test@test.com / passwort`. Auth-Routes werden im
-  ausgeloggten Pre-Pass abgedeckt (siehe Workflow Schritt 2).
+- Login-Konto: aus `.env.test` (`TEST_USER_EMAIL` / `TEST_USER_PW`).
+  Auth-Routes werden im ausgeloggten Pre-Pass abgedeckt
+  (siehe Workflow Schritt 2).
 - Run-Ordner: `.claude/test-runs/<timestamp>/audit/` — Screenshots,
   `findings.json`, `findings.md`. Pro Route ≥ 4 Screenshots
   (light/dark × desktop/phone).
@@ -221,8 +240,8 @@ Pflicht-Test vor jedem `/ship` einer User-sichtbaren UI-Änderung
    überspringen wenn die Route den Theme-Toggle nicht erreicht
    (Toggle liegt hinter Login). Console-Errors sammeln und mit
    `route:<x>` taggen.
-3. **Login.** `test@test.com / passwort`. Warte auf
-   Dashboard-Marker.
+3. **Login.** Credentials aus `.env.test` (`TEST_USER_EMAIL` /
+   `TEST_USER_PW`). Warte auf Dashboard-Marker.
 4. **Pro eingeloggter Route** (Top-Level + Sub-Routes):
    a. **Navigate.** Bei Top-Level: Tab/Side-Nav-Click. Bei
       Sub-Routes: dokumentierten Trigger ausführen (Button-Klick
@@ -393,7 +412,7 @@ Schreibe `.claude/test-runs/<timestamp>/report.md`:
 - Scenario: <name>
 - Started: <iso>
 - Result: passed | failed
-- User: test@test.com
+- User: $TEST_USER_EMAIL (aus .env.test, niemals Klartext schreiben)
 
 ## Steps
 1. ✅ Login-Form sichtbar

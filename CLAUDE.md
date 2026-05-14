@@ -206,7 +206,7 @@ um Regressionen zu finden, die `flutter analyze` + `flutter test` nicht sehen.
 
 **Setup (einmalig, manuell):**
 1. `cp .env.test.example .env.test` — `.env.test` ist gitignored.
-2. Test-Accounts in Supabase Dev: `test@test.com` / `passwort` und `test2@test.com` / `passwort` müssen existieren (sonst Login-Fehler).
+2. Test-Accounts in Supabase Dev: Die in `.env.test` hinterlegten Accounts (`TEST_USER_EMAIL` / `TEST_USER_PW` und `TEST_USER2_EMAIL` / `TEST_USER2_PW`) müssen existieren (sonst Login-Fehler). Klartext-Credentials NIE committen.
 3. Playwright-MCP ist project-scoped registriert in `.mcp.json` — der erste `npx`-Run lädt Chromium (~1× pro Maschine).
 
 **Nutzung:**
