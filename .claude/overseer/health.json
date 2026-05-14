@@ -1,5 +1,5 @@
 {
-  "ts": "2026-05-13T20:57:39Z",
+  "ts": "2026-05-14T00:19:44Z",
   "panic": false,
   "checks": {
     "disk": {
@@ -21,7 +21,7 @@
       "ok": true
     },
     "cost": {
-      "today_usd": 2.75,
+      "today_usd": 0.0,
       "week_usd": 6.88,
       "ok": true
     }
