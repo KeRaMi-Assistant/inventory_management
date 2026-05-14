@@ -49,6 +49,7 @@ INTERVAL="${HEARTBEAT_INTERVAL:-600}"  # 10 Min Default
 # --stop / --once shortcut
 case "${1:-}" in
   --stop)
+    # Read lock-holder PID first (graceful TERM, then helper kills via parent-watch).
     if [ -f "$LOCK_FILE" ]; then
       HOLDER="$(cat "$LOCK_FILE" 2>/dev/null || echo 0)"
       if [ -n "$HOLDER" ] && kill -0 "$HOLDER" 2>/dev/null; then
@@ -56,9 +57,27 @@ case "${1:-}" in
         echo "[heartbeat] sent TERM to pid=$HOLDER"
       fi
     fi
-    # Force-kill any stray heartbeat.sh (defensive — alte Instanzen ohne Lock)
-    pkill -f "scripts/heartbeat\.sh" 2>/dev/null || true
-    rm -f "$LOCK_FILE"
+    # Force-kill ALL stray heartbeat.sh + their python flock-helpers via pgrep
+    # (defensive — also handles cases where lock-file was deleted but procs survive).
+    for pid in $(pgrep -f "scripts/heartbeat\.sh" 2>/dev/null); do
+      # Skip ourselves (the --stop invocation)
+      [ "$pid" = "$$" ] && continue
+      [ "$pid" = "$PPID" ] && continue
+      kill -TERM "$pid" 2>/dev/null || true
+    done
+    # Helper-Python processes too (they reference the lock-file path)
+    for pid in $(pgrep -f "\.heartbeat\.lock" 2>/dev/null); do
+      kill -TERM "$pid" 2>/dev/null || true
+    done
+    sleep 1
+    # Hard kill leftovers
+    pkill -KILL -f "scripts/heartbeat\.sh" 2>/dev/null || true
+    pkill -KILL -f "\.heartbeat\.lock" 2>/dev/null || true
+    # NOTE: do NOT rm the lock file here. Orphaned-inode race: if a new
+    # heartbeat starts before stray helper dies, the deleted-and-recreated
+    # inode lets BOTH "exclusive" flocks succeed simultaneously. We just
+    # truncate it instead (preserves inode).
+    : > "$LOCK_FILE" 2>/dev/null || true
     echo "[heartbeat] stopped"
     exit 0
     ;;
