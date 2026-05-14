@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../app_theme.dart';
 import '../models/billing_profile.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
@@ -338,7 +339,7 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                       'Diese Daten werden ausschließlich für Rechnungen und '
                       'gesetzlich vorgeschriebene Pflichtangaben verwendet.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.black54,
+                            color: AppTheme.textMutedOf(context),
                           ),
                     ),
                   ],

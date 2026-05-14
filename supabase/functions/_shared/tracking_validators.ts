@@ -83,6 +83,20 @@ export interface ValidationResult {
   checksumName?: string
   checksumValid?: boolean
   serial?: string
+  /**
+   * Wenn mehrere Pattern matchen und keiner durch Checksum-Disambiguation
+   * eindeutig gewinnt, listen wir alle Kandidaten — und `carrier` bleibt
+   * `'ambiguous'`. Konsumenten sollen in dem Fall KEINEN Carrier annehmen
+   * (lieber "kein Tracking" als falscher Carrier).
+   */
+  ambiguous?: boolean
+  candidates?: Array<{
+    carrier: string
+    carrierSlug: string
+    matchedPattern: string
+    checksumName?: string
+    checksumValid?: boolean | null
+  }>
 }
 
 let _specsCache: CarrierSpec[] | null = null
@@ -158,6 +172,16 @@ function normalizeChecksum(c: Record<string, unknown>): ChecksumSpec {
 
 // ---- Validator --------------------------------------------------------------
 
+interface CandidateMatch {
+  carrier: string
+  carrierSlug: string
+  matchedPattern: string
+  checksumName?: string
+  /** true=valid, false=fail, null=kein Validator vorhanden */
+  checksumValid: boolean | null
+  serial?: string
+}
+
 export async function validateTrackingNumber(
   value: string,
 ): Promise<ValidationResult> {
@@ -167,40 +191,106 @@ export async function validateTrackingNumber(
   const trimmed = value.trim()
   const stripped = trimmed.replace(/\s+/g, '')
 
+  // Sammle ALLE matchenden Patterns, um Multi-Carrier-Ambiguität (z.B.
+  // USPS-22 vs DHL/Deutsche-Post-Numeric-20) per Checksum aufzulösen
+  // statt den ersten Treffer zu nehmen.
+  const matches: CandidateMatch[] = []
+  // Dedupe-Set über (carrierSlug, pattern.description, serial) — sonst
+  // matched dasselbe Pattern für `trimmed` UND `stripped` doppelt.
+  const seen = new Set<string>()
+
   for (const spec of specs) {
     for (const pattern of spec.patterns) {
-      const candidates = [trimmed, stripped]
-      for (const candidate of candidates) {
+      const inputs = [trimmed, stripped]
+      for (const candidate of inputs) {
         const m = pattern.regex.exec(candidate)
         if (!m) continue
-        // Checksum prüfen, falls vorhanden.
-        if (!pattern.validation) {
-          return {
-            isValid: true,
-            carrier: spec.carrier,
-            carrierSlug: spec.carrierSlug,
-            matchedPattern: pattern.description,
-            serial: m.groups?.SerialNumber?.replace(/\s+/g, ''),
-          }
+        const serial = m.groups?.SerialNumber?.replace(/\s+/g, '')
+        const dedupeKey = `${spec.carrierSlug}::${pattern.description}::${serial ?? candidate}`
+        if (seen.has(dedupeKey)) continue
+        seen.add(dedupeKey)
+        let checksumValid: boolean | null = null
+        if (pattern.validation) {
+          checksumValid = runChecksum(pattern.validation, m, candidate, pattern.serialFormat)
         }
-        const csValid = runChecksum(pattern.validation, m, candidate, pattern.serialFormat)
-        if (csValid) {
-          return {
-            isValid: true,
-            carrier: spec.carrier,
-            carrierSlug: spec.carrierSlug,
-            matchedPattern: pattern.description,
-            checksumName: pattern.validation.name,
-            checksumValid: true,
-            serial: m.groups?.SerialNumber?.replace(/\s+/g, ''),
-          }
-        }
-        // Match aber Checksum schlägt fehl → nicht als valid akzeptieren,
-        // andere Patterns dürfen weiter probieren.
+        matches.push({
+          carrier: spec.carrier,
+          carrierSlug: spec.carrierSlug,
+          matchedPattern: pattern.description,
+          checksumName: pattern.validation?.name,
+          checksumValid,
+          serial,
+        })
       }
     }
   }
+
+  if (matches.length === 0) return { isValid: false }
+
+  // Disambiguation-Strategie:
+  //  1) Genau ein Match, der entweder checksum-valid ist ODER keinen
+  //     Validator hat → eindeutig.
+  //  2) Mehrere Matches: bevorzuge die mit checksumValid === true.
+  //     - Genau einer → der gewinnt.
+  //     - Mehrere → ambiguous (alle als Kandidaten zurück, KEINEN als
+  //       primary auswählen).
+  //  3) Keiner mit checksumValid === true:
+  //     - Wenn ALLE checksumValid === null (kein Validator) und alle
+  //       gehören zu unterschiedlichen Carriern → ambiguous.
+  //     - Wenn ALLE checksumValid === null und nur EIN Carrier vertreten
+  //       → akzeptiere ihn (Match-only, ohne Checksum).
+  //     - Sonst (alle checksumValid === false) → invalid (kein false-
+  //       positive, lieber "kein Tracking").
+  const passes = matches.filter((m) => m.checksumValid === true)
+  if (passes.length === 1) {
+    return resultFromMatch(passes[0])
+  }
+  if (passes.length > 1) {
+    // Mehrere Checksum-Winner: nur dann eindeutig, wenn sie alle zum
+    // SELBEN Carrier gehören (mehrere Patterns desselben Couriers).
+    const carriers = new Set(passes.map((p) => p.carrierSlug))
+    if (carriers.size === 1) return resultFromMatch(passes[0])
+    return ambiguousResult(passes)
+  }
+  // Kein Checksum-Winner.
+  const noValidator = matches.filter((m) => m.checksumValid === null)
+  if (noValidator.length === matches.length) {
+    // ALLE ohne Validator → nur als eindeutig akzeptieren wenn ein Carrier.
+    const carriers = new Set(matches.map((m) => m.carrierSlug))
+    if (carriers.size === 1) return resultFromMatch(matches[0])
+    return ambiguousResult(matches)
+  }
+  // Irgendein Pattern hatte Validator und failed → nicht akzeptieren
+  // (auch wenn andere Patterns ohne Validator matchen würden, lieber
+  // invalid melden als falschen Carrier).
   return { isValid: false }
+}
+
+function resultFromMatch(m: CandidateMatch): ValidationResult {
+  return {
+    isValid: true,
+    carrier: m.carrier,
+    carrierSlug: m.carrierSlug,
+    matchedPattern: m.matchedPattern,
+    checksumName: m.checksumName,
+    checksumValid: m.checksumValid === null ? undefined : m.checksumValid,
+    serial: m.serial,
+  }
+}
+
+function ambiguousResult(matches: CandidateMatch[]): ValidationResult {
+  return {
+    isValid: false,
+    carrier: 'ambiguous',
+    ambiguous: true,
+    candidates: matches.map((m) => ({
+      carrier: m.carrier,
+      carrierSlug: m.carrierSlug,
+      matchedPattern: m.matchedPattern,
+      checksumName: m.checksumName,
+      checksumValid: m.checksumValid,
+    })),
+  }
 }
 
 // ---- Checksums --------------------------------------------------------------
@@ -232,9 +322,7 @@ function runChecksum(
     case 'sum_product_with_weightings_and_modulo':
       return checkSumProduct(serial, check, spec)
     case 'mod_37_36':
-      // Followup: Alphanumerisches Modulo. Nicht im ersten Wurf — DPD-Tests
-      // werden als known-fail markiert.
-      return false
+      return checkMod37_36(serial, check)
     default:
       return false
   }
@@ -340,6 +428,51 @@ function checkSumProduct(
   return calc === parseInt(check, 10)
 }
 
+/**
+ * ISO 7064 MOD 37, 36 — Standard-Algorithmus für alphanumerische
+ * Check-Digits (DPD nutzt das exakt so laut jkeen-Spec, ohne weitere
+ * Parameter wie `weightings` — siehe `tracking_data/couriers/dpd.json`,
+ * Feld `validation.checksum.name`).
+ *
+ * Algorithmus:
+ *   - Zeichen-Alphabet: 0..9 (Wert 0..9), A..Z (Wert 10..35), '*' = 36
+ *     (Pad-Char, nicht genutzt von DPD).
+ *   - p := 36 (Initialwert)
+ *   - Für jedes Zeichen c in BODY (ohne Check-Digit):
+ *       v := charValue(c)
+ *       s := (p + v) mod 36
+ *       if s == 0 then s := 36
+ *       p := (2 * s) mod 37
+ *   - Final: erwartete Check-Digit-Value cd = (37 - p) mod 36
+ *     → falls cd == 36, dann '*' (nicht relevant für DPD).
+ *
+ * Quelle: ISO/IEC 7064:2003 (System Pure MOD 37, 36). jkeen-DPD-JSON
+ * referenziert den Algo nur per Name, ohne `weightings`-Array — daher
+ * die parameterlose Standard-Variante.
+ */
+function checkMod37_36(serial: string, check: string): boolean {
+  const body = serial.replace(/\s+/g, '').toUpperCase()
+  const cd = check.replace(/\s+/g, '').toUpperCase()
+  if (cd.length !== 1) return false
+  const charVal = (c: string): number => {
+    if (c >= '0' && c <= '9') return c.charCodeAt(0) - 48
+    if (c >= 'A' && c <= 'Z') return c.charCodeAt(0) - 65 + 10
+    return -1
+  }
+  let p = 36
+  for (const ch of body) {
+    const v = charVal(ch)
+    if (v < 0) return false
+    let s = (p + v) % 36
+    if (s === 0) s = 36
+    p = (2 * s) % 37
+  }
+  const expected = (37 - p) % 36
+  const got = charVal(cd)
+  if (got < 0) return false
+  return expected === got
+}
+
 // Re-export für Helper, falls Adapter einzelne Checksum-Algos isoliert
 // brauchen (z.B. für Confidence-Stufen).
 export const _internal = {
@@ -348,6 +481,7 @@ export const _internal = {
   checkMod7,
   checkS10,
   checkSumProduct,
+  checkMod37_36,
 }
 
 // Stop unused-import warning für `dirname`/`fromFileUrl`/`join`.
