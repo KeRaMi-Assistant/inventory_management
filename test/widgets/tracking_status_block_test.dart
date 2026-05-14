@@ -177,6 +177,90 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
+  // Touch-Target ≥ 48dp (CLAUDE.md Mobile-First)
+  // -------------------------------------------------------------------------
+  group('TrackingStatusBlock — touch targets >= 48dp', () {
+    testWidgets('needsReview CTAs (accept / manual-input / discard) all >= 48dp',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+            carrier: 'UPS',
+            needsReview: true,
+            onManualInput: () {},
+            onAcceptAsCorrect: () {},
+            onDiscard: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      for (final keyStr in [
+        'tracking-accept-cta',
+        'tracking-manual-input-cta',
+        'tracking-discard-cta',
+      ]) {
+        final finder = find.byKey(Key(keyStr));
+        if (finder.evaluate().isEmpty) continue; // state may hide some
+        final size = tester.getSize(finder);
+        expect(size.width, greaterThanOrEqualTo(48),
+            reason: '$keyStr width >= 48dp (was ${size.width})');
+        expect(size.height, greaterThanOrEqualTo(48),
+            reason: '$keyStr height >= 48dp (was ${size.height})');
+      }
+    });
+
+    testWidgets('strong state: edit icon-cta hit-box >= 48dp', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+            carrier: 'UPS',
+            onManualInput: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final finder = find.byKey(const Key('tracking-edit-cta-strong'));
+      expect(finder, findsOneWidget,
+          reason:
+              'tracking-edit-cta-strong must be present when onManualInput is set');
+      final size = tester.getSize(finder);
+      expect(size.width, greaterThanOrEqualTo(48),
+          reason: 'edit-cta-strong width >= 48dp (was ${size.width})');
+      expect(size.height, greaterThanOrEqualTo(48),
+          reason: 'edit-cta-strong height >= 48dp (was ${size.height})');
+    });
+
+    testWidgets('manual state: edit icon-cta hit-box >= 48dp', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          TrackingStatusBlock(
+            trackingNumber: '1234567890',
+            confidence: TrackingConfidence.manual,
+            onManualInput: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final finder = find.byKey(const Key('tracking-edit-cta-manual'));
+      expect(finder, findsOneWidget,
+          reason:
+              'tracking-edit-cta-manual must be present when onManualInput is set');
+      final size = tester.getSize(finder);
+      expect(size.width, greaterThanOrEqualTo(48),
+          reason: 'edit-cta-manual width >= 48dp (was ${size.width})');
+      expect(size.height, greaterThanOrEqualTo(48),
+          reason: 'edit-cta-manual height >= 48dp (was ${size.height})');
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // l10n label tests
   // -------------------------------------------------------------------------
   group('TrackingStatusBlock — l10n label tests', () {

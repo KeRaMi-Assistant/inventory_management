@@ -36,8 +36,9 @@ Ende einen JSON-Report (passed/failed Steps + Screenshots).
 
 ## Test-Scenarios (initial)
 
-1. **smoke-login**: Auf `/`, Login mit `test@test.com`, prüfe dass Dashboard
-   lädt (Element mit `key('dashboard-root')` o.ä. sichtbar).
+1. **smoke-login**: Auf `/`, Login mit Credentials aus `.env.test`
+   (`TEST_USER_EMAIL` / `TEST_USER_PW`), prüfe dass Dashboard lädt
+   (Element mit `key('dashboard-root')` o.ä. sichtbar).
 2. **smoke-inbox**: Login → Inbox-Tab → "Alle als gelesen markieren"
    klicken → Confirm → SnackBar erscheint → unread-Counter ist 0.
 
@@ -64,9 +65,11 @@ Mehr Scenarios kommen je nach Feature dazu, wenn es eingeführt wird.
 2. **Selectors sind fragil** wenn Widgets keine `Key`s haben.
    Mitigation: Subagent benutzt accessible-name / Tooltip / Text-Match
    bevorzugt; bei Bedarf Keys nachträglich in lib/ einfügen.
-3. **Test-Accounts müssen in Supabase Dev existieren.** Wenn `test@test.com`
-   nicht eingerichtet ist, schlägt Login fehl. Manueller Setup-Schritt
-   einmalig (siehe Workflow-Doku in CLAUDE.md).
+3. **Test-Accounts müssen in Supabase Dev existieren.** Die in
+   `.env.test` hinterlegten Accounts (`TEST_USER_EMAIL`,
+   `TEST_USER2_EMAIL`) müssen in Supabase angelegt sein, sonst
+   schlägt Login fehl. Manueller Setup-Schritt einmalig (siehe
+   Workflow-Doku in CLAUDE.md).
 4. **Headless vs Headed:** Lokal default headed (User sieht Klicks).
    In CI später headless via Env-Var.
 5. **Port-Konflikt 8123:** `dev-web.sh` prüft Port und failt früh mit

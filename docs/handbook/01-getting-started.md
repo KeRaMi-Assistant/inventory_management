@@ -98,9 +98,10 @@ Für Google/Apple musst du im Supabase-Dashboard unter "Authentication" →
 nur E-Mail-Login. Für die App-Smoke-Tests reicht E-Mail.
 
 > **Test-Accounts:** Während der Entwicklung legen wir in jedem Supabase-Dev
-> zwei Accounts an: `test@test.com` und `test2@test.com` (Passwort: `passwort`).
-> Diese Accounts sind im Browser-Tester referenziert. Siehe
-> `.env.test.example`. **Keine echten Mailadressen committen.**
+> zwei Accounts an. Mailadressen + Passwörter pflegst du lokal in
+> `.env.test` (gitignored, Template: `.env.test.example`). Der Browser-Tester
+> referenziert die Env-Variablen `TEST_USER_EMAIL` / `TEST_USER_PW` (bzw.
+> `TEST_USER2_*`). **Niemals Klartext-Credentials committen.**
 
 ## Firebase / Push-Notifications
 
@@ -197,8 +198,8 @@ bash .claude/scripts/dev-web.sh   # baut + serviert auf :8123
 # /test-ui smoke-login
 ```
 
-Erwartetes Ergebnis: Login mit `test@test.com` klappt, du landest auf dem
-Dashboard, kein Console-Fehler. Reports liegen unter
+Erwartetes Ergebnis: Login mit dem Account aus `.env.test`
+(`$TEST_USER_EMAIL`) klappt, du landest auf dem Dashboard, kein Console-Fehler. Reports liegen unter
 `.claude/test-runs/<timestamp>/`. Stoppen via
 `bash .claude/scripts/stop-web.sh`.
 
