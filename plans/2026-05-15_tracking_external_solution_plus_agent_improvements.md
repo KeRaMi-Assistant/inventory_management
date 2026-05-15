@@ -1,10 +1,54 @@
-[DRAFT — Pending Committee Review]
+[Partially-Implemented 2026-05-15 — Track-1 verschoben Post-Launch, Track-2 reduziert auf TA3]
 
 # Tracking-External-Solution + Agent-System-Improvements (2-Track-Plan)
 
 > Erstellt: 2026-05-15 · Autor: planner-Subagent
 > Trigger: User-Quote — _„Tracking klappt nicht, heißt agenten system klappt nicht, da noch schlechte ergebnisse rauskommen. Andere Apps wie Klarna können das. Suche externe Lösungen + Task um System zu verbessern."_
->
+
+## ⚠️ Status-Hinweis (2026-05-15)
+
+Council-Run am 2026-05-15 beschloss **radikale Simplifikation** statt der
+2-Track-Vollausführung:
+
+**Track-1 (AfterShip-Integration) verschoben Post-Launch.**
+Gründe (Bug-Hunter + External-Scout):
+- Pre-Launch + 0 echte Nutzer → $109/Mo + 2-4 Wochen DSGVO-Setup unverhältnismäßig
+- Realistisches AfterShip-Pricing ist **$109/Mo Pro**, nicht $43/Mo (Plan war
+  ursprünglich falsch).
+- Bestehende `tracking-poll`-Edge-Function ist VOLL implementiert (DHL/DPD/UPS
+  Adapter) — keine Stub-Function.
+
+**Stattdessen implementiert (radikale Simplifikation):**
+- A1 (Migration `20260515000000_deals_live_status.sql`): 3 Spalten +
+  Partial-Index für Klarna-Style intermediate Status-Sichtbarkeit
+- A2 (`tracking-poll` Extension): schreibt jetzt ALLE Adapter-Status, nicht
+  nur `delivered` (PR via Branch feature/strict-tracking-extraction, mit #69)
+- A3 (UI Live-Status-Slot in `TrackingStatusBlock`)
+- TA3 (`validate-plan.sh`): Pre-Council-Gate, in `/council`-Skill als Phase
+  0.5 integriert (siehe PR #75)
+- Plus später ergänzt: Per-Deal Re-Track-Button (#74), Disambiguation USPS-22
+  vs DHL-20 + DPD mod_37_36 (#73)
+
+**Track-2 reduziert auf TA3 (Plan-Validation-Script).** Die anderen TA1/TA5/
+TA6 (Pre-Planner-Scout, Shared-Context, Forced-Commit-Hook) wurden NICHT
+implementiert weil:
+- `Explore`-Agent existiert bereits (TA1 redundant)
+- Council-Pre-Filter via Phase 1.5 in council.md ist eleganter (TA4-Variante)
+- Forced-Commit-Hook hat Branch-Validation-Risiko (auf main committen)
+
+**Was bleibt als Out-of-Scope:**
+- AfterShip-Integration (Track-1) — re-evaluate nach Launch wenn echte
+  User-Mail-Volume + DSGVO-Setup-Budget vorhanden ist
+- 17track als Budget-Alternative — DSGVO-Risk (CN-Server) verschiebt
+  Entscheidung
+- Patrol für Browser-Tester — Switching-Cost zu hoch, Semantics-Activation
+  in `dev-web.sh --profile` (TA0e) reicht für jetzt
+
+Dieser Plan ist **historische Referenz** — neue Tracking/Agent-Plans
+sollten auf ihn verweisen aber NICHT als TODO-Liste behandelt werden.
+
+---
+
 > Zwei unabhängige Tracks, parallel ausführbar.
 
 ---

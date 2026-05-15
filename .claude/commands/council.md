@@ -56,6 +56,87 @@ für die Phase-3-Synthesis-Tabelle.
 
 ---
 
+## Phase 1.5 — Council-Pre-Filter (Fast-Pass, 2 Reviewer)
+
+**Optional, optimistic-case Speed-Run.** Bevor du das volle 5-Reviewer-
+Council startest (~$1.50): hol dir parallel ein günstigeres 2-Reviewer-
+Sniff-Check (~$0.40). Wenn beide ✓ und kein Security-Marker im Plan →
+direkt zu Phase 4 (User-Entscheidung), Phase 2/3 skip. Spart ~70% der
+Council-Kosten für straight-forward Pläne. Bei jedem 🔴 / ⚠️ oder
+Security-Marker → eskaliere automatisch zu vollem Phase 2.
+
+### Security-Marker (Pflicht-Eskalation, kein Skip möglich)
+
+Wenn der Plan eines dieser Patterns enthält, MUSS volles Phase 2 laufen
+(insb. der security-reviewer):
+- `CREATE TABLE` oder `ALTER TABLE` (Schema-Änderung)
+- `supabase secrets set` (Secret-Operation)
+- `webhook` oder `HMAC` (externe Integration)
+- `SECURITY DEFINER` (Postgres-Function mit RLS-Bypass)
+- `Service-Role` oder `service_role` (admin-key Verwendung)
+- `auth.uid()` (Auth-Logik)
+- Neuer Edge-Function-Pfad `supabase/functions/<name>/`
+
+Erkennung via:
+```bash
+grep -lE "CREATE TABLE|ALTER TABLE|supabase secrets|webhook|HMAC|SECURITY DEFINER|service_role|auth\.uid\(\)|^supabase/functions/" "[PLAN_PATH]" && echo "SECURITY-MARKER → Phase 2 erforderlich"
+```
+
+Wenn das `echo SECURITY-MARKER ...` ausgibt → SKIP Phase 1.5 + direkt zu
+Phase 2.
+
+### Pre-Filter Setup (nur wenn KEIN Security-Marker)
+
+**Spawne 2 Agents parallel in EINEM Tool-Use-Block:**
+
+#### Pre-Reviewer A — Architekt (Sonnet, billiger als Opus)
+`subagent_type: planner`
+
+> Du bist Senior-Architekt. **Lies zuerst:** `[PLAN_PATH]`, dann CLAUDE.md
+> (§Stack, §Code-Konventionen). Mach einen schnellen Sniff-Check:
+> - Bricht der Plan grundlegend mit dem Provider-/Service-Pattern?
+> - Sind Tasks atomar genug für einzelne PRs?
+> - Gibt es eine offensichtliche einfachere Lösung (Wiederverwendung)?
+>
+> Max 200 Wörter Output. Verdict: ✅ / ⚠️ / 🔴. Nur ⚠️/🔴 wenn ein
+> konkretes Problem das eine größere Anpassung erforderlich macht. Wenn
+> du nur Nice-to-Haves siehst → ✅.
+
+#### Pre-Reviewer B — Pessimist (Opus — User-Memory: Pessimist Pflicht-Opus)
+`subagent_type: general-purpose`
+
+> **Du suchst kritische Bugs.** Reflexives "sieht gut aus" ist verboten.
+> **Lies zuerst:** `[PLAN_PATH]`, CLAUDE.md (§Sicherheit, §Mobile-First),
+> + ein ähnliches existierendes File für Annahmen-Check.
+>
+> Schnell-Suche nach:
+> - Falsche Annahmen über bestehenden Code (Tabellennamen, Methoden-
+>   Existenz, Provider-Pfade)
+> - Race-Conditions, Migration-Risiken, Performance-Cliffs
+> - Daten-Verlust-Pfade
+>
+> Max 250 Wörter. Verdict: KRITISCH / HOCH / MITTEL / KEIN. Bei
+> KRITISCH oder HOCH eskaliert das Council automatisch zu vollem
+> Phase 2.
+
+### Pre-Filter Resolution
+
+| Pre-A Verdict | Pre-B Severity | Nächste Phase |
+|---|---|---|
+| ✅ | KEIN oder MITTEL | **Skip Phase 2** → direkt Phase 3 Synthesis (mit den 2 Pre-Reviews als Council-Output) → Phase 4 |
+| ✅ | HOCH oder KRITISCH | Phase 2 (eskaliert) |
+| ⚠️ | * | Phase 2 (eskaliert) |
+| 🔴 | * | Phase 2 (eskaliert) |
+
+**Wichtig:** Phase 1.5 ist NUR ein Speed-Optimizer. User-Memory
+`feedback_council_design.md` sagt explizit "Pessimist Pflicht-Opus" —
+das bleibt erhalten, nur Architekt darf in Pre-Filter Sonnet sein.
+
+Notiere `[PRE_FILTER_DECISION]` (skip oder escalate) für Phase-3-
+Synthesis-Tabelle.
+
+---
+
 ## Phase 2 — Fünf parallele Reviews
 
 **Spawne ALLE 5 Agents in EINEM Tool-Use-Block** (gleicher Message-Block, mehrere Agent-Calls). Reihenfolge unwichtig — sie laufen wirklich parallel.
