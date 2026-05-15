@@ -23,6 +23,39 @@ Notiere den Plan-Pfad als `[PLAN_PATH]`.
 
 ---
 
+## Phase 0.5 — Plan-Validation (Pre-Council-Gate)
+
+Bevor du die 5 Reviewer spawnst: Lasse den frischen Plan-Draft durch
+das Validate-Plan-Script laufen. Das fängt ~80% der Codebase-Annahmen-
+Mismatches (Tabellennamen, Provider-Methoden, ARB-Keys, Edge-Functions)
+deterministisch zu $0, bevor teure Opus-Reviewer Token verbrennen.
+
+Bash-Aufruf:
+
+```bash
+bash .claude/scripts/validate-plan.sh "[PLAN_PATH]"
+```
+
+- **Exit 0 (clean):** Weiter zu Phase 2.
+- **Exit 1 (Mismatches):** STDERR enthält Liste von Symbolen die im Plan stehen aber nicht in der Codebase existieren. Optionen:
+  - **a)** Plan-Update durch Planner (re-spawn mit Mismatch-Liste als
+       Context) und erneut Phase 0.5.
+  - **b)** Plan-Autor markiert Mismatches mit `[NEW]`-Marker (für
+       wirklich neue Tabellen/Functions/etc. die der Plan einführt) +
+       erneut Phase 0.5.
+  - **c)** Stakeholder entscheidet: weiter zu Phase 2 trotz Mismatches
+       (overrule), mit Pflicht-Vermerk im Council-Output.
+- **Exit 2 (Usage-Fehler):** Plan-Pfad falsch o.ä. — Phase 0.5 skippen.
+
+Token-Cost-Argument: ~$0 für Phase 0.5 vs. ~$1.50 für vollständigen
+5-Reviewer-Council. Wenn Mismatches gefangen werden bevor Reviewer
+starten, ist das pure Ersparnis.
+
+Notiere Exit-Code + Mismatch-Count (falls > 0) als `[PRE_VALIDATION]`
+für die Phase-3-Synthesis-Tabelle.
+
+---
+
 ## Phase 2 — Fünf parallele Reviews
 
 **Spawne ALLE 5 Agents in EINEM Tool-Use-Block** (gleicher Message-Block, mehrere Agent-Calls). Reihenfolge unwichtig — sie laufen wirklich parallel.
@@ -175,6 +208,7 @@ Jeder Reviewer bekommt eine spezifische Rolle und ein bewusst gewähltes Modell.
 - `[PLAN_PATH]` jeweils mit dem Pfad aus Phase 1 ersetzen.
 - Warte auf alle 5 Antworten, bevor du Phase 3 startest.
 - Token-Kosten dieser Phase sind hoch und beabsichtigt — Wall-Clock bleibt unter 5 Minuten weil parallel.
+- Phase 0.5 ist OPTIONAL aber empfohlen. Skip bei reinen Architektur-Plänen ohne Code-Refs.
 
 ---
 
@@ -190,11 +224,16 @@ Lies alle 5 Reviews. Schreibe folgenden Block für den User:
 
 | Reviewer | Verdict | Top-Befund |
 |---|---|---|
+| Pre-Validation | exit 0 / exit 1 (N findings) / skipped | <kurz: welche Kategorie(n) — Tabellen/Methoden/ARB/Functions — oder "alle ok"> |
 | Architekt | ✅/⚠️/🔴 | <1-Zeile> |
 | Bug-Hunter | <N gefunden, schwerstes <severity>> | <1-Zeile> |
 | External-Scout | IMPORT/HYBRID/EIGENBAU | <Package o. "kein passendes"> |
 | Security | pass/warn/block | <1-Zeile> |
 | UX/Mobile | ✅/⚠️/🔴 | <1-Zeile> |
+
+> Wenn Pre-Validation 🔴 (Exit 1 mit > 0 Mismatches) und nicht durch
+> Stakeholder-Overrule freigegeben: Mismatch-Liste in "Pflicht-Änderungen
+> am Plan" einfügen (jeder Mismatch = ein Bullet mit `L<n>: <symbol>`).
 
 ### 🔴 Pflicht-Änderungen am Plan (Blocker für Implementierung)
 1. ...

@@ -168,9 +168,16 @@ abfragen.
 
 ### Auth
 
-Cron-Secret. Keine anderen Pfade.
+Zwei Pfade:
 
-### Logik
+1. **Cron-Secret** — Sweep-Mode (alle 4h, alle Workspaces).
+2. **User-JWT** mit `body.deal_id` — Single-Deal-Re-Track aus der UI
+   (Refresh-Button im
+   [`TrackingStatusBlock`](../../lib/widgets/tracking_status_block.dart),
+   siehe [03 — Screens](03-screens-walkthrough.md#deals)). User muss
+   Mitglied des Deal-Workspaces sein (`workspace_members`-Check).
+
+### Logik (Sweep-Mode)
 
 1. Lade alle `workspace_carrier_credentials` mit `enabled=TRUE`.
 2. Pro Workspace: lade alle offenen Deals (`status='Unterwegs'`,
@@ -184,6 +191,23 @@ Cron-Secret. Keine anderen Pfade.
    - Bei `delivered`: setze Deal `status='Angekommen'`, `arrival_date`,
      schreib `activity_log`.
 4. Cap: 200 Calls pro Lauf.
+
+### Logik (Single-Deal-Mode, PR #74)
+
+POST mit `{ "deal_id": <int> }` + User-JWT:
+
+- Pure Body-Validierung via `parseDealIdFromBody()`.
+- Membership-Check: `workspace_members.user_id = auth.uid()` für den
+  Workspace des Deals.
+- **30s-Cooldown** via `deals.live_status_updated_at`
+  (`computeRetrackCooldown()`). Schon vor `< 30s` zurückgegeben → HTTP
+  `429` mit `Retry-After`-Header (Sekunden bis Cooldown-Ende).
+- Sonst: gleicher Adapter-Lookup wie im Sweep, danach
+  `live_status_updated_at = NOW()` als Cooldown-Marker. Kein extra
+  Schema nötig — die Spalten kamen mit Migration
+  [`20260515000000_deals_live_status.sql`](../../supabase/migrations/20260515000000_deals_live_status.sql).
+- Cron-Polls nehmen diesen Pfad nie und sind vom Cooldown nicht
+  betroffen.
 
 ### Konfiguration
 
@@ -355,6 +379,28 @@ Tracking-API-Adapter (DHL, DPD, UPS). Pro Carrier:
 - `matches(tracking)` — erkennt Carrier aus der Nummer.
 - `lookup(tracking, apiKey)` — ruft API auf, parst Response.
 - Returns: `{ status, deliveredAt?, eta?, raw? }`.
+
+### `_shared/tracking_validators.ts` (PR #73)
+
+Strukturelle Validierung (Länge + Charset + Checksum) für Tracking-
+Nummern aus dem strict-Tracking-Pfad. Wichtige Eigenschaft seit PR #73:
+
+- **Multi-Candidate-Disambiguation.** `validateTrackingNumber()` sammelt
+  ALLE matchenden Pattern-Kandidaten statt First-Match. Auflösung:
+  - 1 Kandidat → eindeutig.
+  - N Kandidaten, genau 1 mit gültiger Checksum → Checksum-Winner.
+  - N Kandidaten, alle Checksum-valid → `{ ambiguous: true,
+    candidates: [...] }`, `isValid = false`. Konsumenten nehmen in dem
+    Fall **keinen** Carrier an (lieber „kein Tracking" als falscher
+    Carrier). Konkret betroffen: USPS-22 vs. DHL-20 auf reinen
+    Ziffernfolgen (z.B. `420…`-Partner-Numbers aus DHL-eCommerce↔USPS-
+    Cross-Refs).
+- **DPD MOD 37,36 Checksum** implementiert (ISO 7064, parameter-less
+  Form). 14- und 28-stellige DPD-Patterns laufen jetzt durch alle vier
+  `valid`-Samples und rejecten alle drei `invalid`-Samples.
+
+Tests: `tracking_validators_test.ts` + `tracking_disambiguation_test.ts`
+(23/23 grün).
 
 ## Lokal testen
 

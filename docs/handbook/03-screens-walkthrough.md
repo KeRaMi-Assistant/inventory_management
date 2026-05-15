@@ -137,6 +137,15 @@ Sehr dünn — die eigentliche Liste rendert
 - Datumsbereich
 - "Beleg fehlt"-Toggle
 
+Pro Deal mit Strong-Tracking zeigt
+[`tracking_status_block.dart`](../../lib/widgets/tracking_status_block.dart)
+einen **Re-Track-Button** (Refresh-Icon, 48dp Touch-Target). Tap →
+`InventoryProvider.retrackDeal(dealId)` → Edge-Function
+`tracking-poll` mit `body.deal_id`. 30s-Cooldown pro Deal (siehe
+[07 — Edge Functions](07-edge-functions.md#tracking-poll)). SnackBars
+für success / 429 / failed / offline. Cron-Polls (alle 4h) sind davon
+unberührt.
+
 Inline-Aktionen (Status ändern, Buyer ändern, Tracking eintragen) gehen
 über [`InventoryProvider`](../../lib/providers/inventory_provider.dart) und
 landen via
@@ -263,6 +272,14 @@ Datei: [`lib/screens/settings_screen.dart`](../../lib/screens/settings_screen.da
 Sehr großer Screen (≈3400 LoC) mit vielen Sektionen:
 
 - **Profil** — Name, Email, Sprache, Theme.
+- **Farbpalette** — User wählt zwischen fünf vorgefertigten Akzent-
+  Paletten (`blue`, `indigo`, `violet`, `teal`, `rose`). Persistiert via
+  `AppPreferencesProvider.setPalette(...)`. Die Tokens aus
+  [`lib/app_theme.dart`](../../lib/app_theme.dart) (`AppTheme.accent`,
+  `AppTheme.accentBg` etc.) sind seit PR #68 **runtime-getter**, keine
+  `const Color` mehr — d.h. Konsumenten dürfen sie nicht in `const`-
+  Kontexten verwenden. Siehe
+  [05 — Architektur](05-architecture.md#theme).
 - **Workspace** — Name ändern, Mitglieder verwalten, Einladungen senden,
   Workspace löschen (mit harter Bestätigung).
 - **Subscription / Plan** — Aktueller Plan, Upgrade-Pfad, Link zum

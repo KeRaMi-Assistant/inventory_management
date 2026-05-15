@@ -131,12 +131,19 @@ internal_invoice_sent BOOLEAN DEFAULT FALSE,    -- 20260504000000
 internal_invoice_paid BOOLEAN DEFAULT FALSE,    -- 20260504000000
 tracking_confidence   TEXT CHECK (... 'strong','manual','none'),  -- 20260513183000
 tracking_needs_review BOOLEAN NOT NULL DEFAULT FALSE,             -- 20260513183000
+live_status           TEXT,                                       -- 20260515000000
+live_status_last_event TEXT,                                      -- 20260515000000
+live_status_updated_at TIMESTAMPTZ,                               -- 20260515000000
 created_at, updated_at, deleted_at TIMESTAMPTZ
 ```
 
 Indexe auf `workspace_id`, `(workspace_id, order_date DESC)`, `ticket_id`,
-`tracking` und Partial-Index `deals_needs_tracking_review_idx`
-(`(workspace_id, tracking_needs_review) WHERE tracking_needs_review = TRUE`).
+`tracking`, Partial-Index `deals_needs_tracking_review_idx`
+(`(workspace_id, tracking_needs_review) WHERE tracking_needs_review = TRUE`)
+und `deals_live_status_idx` für den Live-Status-Filter (`live_status` IS NOT NULL).
+`live_status_updated_at` dient zusätzlich als implizites Cooldown-Feld für
+den Single-Deal-Re-Track-Pfad (siehe
+[07 — Edge Functions](07-edge-functions.md#tracking-poll)).
 Siehe [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#strict-tracking-extraction-confidence-modell)
 für die Semantik der beiden neuen Spalten.
 

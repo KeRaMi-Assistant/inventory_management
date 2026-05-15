@@ -10,6 +10,24 @@ Begriff im Kontext erklärt ist.
 
 ## A
 
+### Akzent-Palette
+
+Eine von fünf vordefinierten Farbpaletten (`blue`, `indigo`, `violet`,
+`teal`, `rose`), die der User in den Settings auswählt. Persistenz via
+`AppPreferencesProvider`. Die `AppTheme.accent*`-Tokens sind seit PR #68
+runtime-getter (kein `const Color` mehr). Siehe
+[03 — Screens](03-screens-walkthrough.md#settings) und
+[05 — Architektur](05-architecture.md#akzent-paletten-pr-68).
+
+### Ambiguous-Tracking
+
+Auflösungs-Outcome von `validateTrackingNumber()` (in
+[`tracking_validators.ts`](../../supabase/functions/_shared/tracking_validators.ts)):
+mehrere Carrier-Pattern matchen, alle haben gültige Checksum → kein
+Carrier wird angenommen, `isValid = false`. Beispiel: USPS-22 vs.
+DHL-20 auf `420…`-Partner-Numbers. Siehe
+[07 — Edge Functions](07-edge-functions.md#_sharedtracking_validatorsts-pr-73).
+
 ### Adapter
 
 Eine Mini-Klasse pro Quell-Shop in
@@ -145,6 +163,15 @@ Siehe [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#html-forensik).
 
 ## H
 
+### Heartbeat-Daemon
+
+LaunchAgent `com.inventory.heartbeat`
+([`heartbeat.sh`](../../.claude/scripts/heartbeat.sh)) — pulsed alle
+10 min an ntfy, aber **nur**, wenn ein Worker läuft, Items wartend
+sind, Recent Failures vorhanden oder ein PANIC-Marker präsent ist
+(Activity-Detection). Singleton-Lock via Python `fcntl.flock`. Siehe
+[05 — Architektur](05-architecture.md#heartbeat-daemon-prs-70-71).
+
 ### Handle (Public-Profile)
 
 Ein URL-fähiger Slug pro Workspace, über den unter `https://app/u/<handle>`
@@ -179,6 +206,16 @@ Lagerbestand. Tabelle `inventory_items` + `inventory_movements` +
 `inventory_batches`. Siehe [02 — Konzepte](02-concepts.md#inventory).
 
 ## L
+
+### Live-Status (Deal)
+
+Drei Spalten auf `deals` (`live_status`, `live_status_last_event`,
+`live_status_updated_at`, Migration `20260515000000_deals_live_status.sql`).
+Speichern den jüngsten Carrier-API-Status pro Deal. Der
+`live_status_updated_at`-Timestamp dient zusätzlich als implizites
+30s-Cooldown-Feld für den Single-Deal-Re-Track-Pfad. Siehe
+[07 — Edge Functions](07-edge-functions.md#tracking-poll) und
+[06 — Datenbank](06-database.md#deals).
 
 ### Lokalisierung (l10n)
 
@@ -364,7 +401,10 @@ Persistenz-Feldern, der Rest bleibt in
 
 Edge-Function `tracking-poll`, die alle 4h offene Deals beim
 [Carrier](#carrier) abfragt und bei `delivered` den Deal auf
-"Angekommen" setzt. Siehe [07 — Edge Functions](07-edge-functions.md#tracking-poll).
+"Angekommen" setzt. Zusätzlich Single-Deal-Mode via `body.deal_id` +
+User-JWT für den Refresh-Button im UI (30s-Cooldown via
+[Live-Status](#live-status-deal)). Siehe
+[07 — Edge Functions](07-edge-functions.md#tracking-poll).
 
 ## V
 
