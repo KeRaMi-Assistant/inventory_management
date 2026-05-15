@@ -5378,6 +5378,42 @@ abstract class AppLocalizations {
   /// **'Sendungsnummern-Status'**
   String get trackingStatusBlockA11yLabel;
 
+  /// No description provided for @trackingRetrackCta.
+  ///
+  /// In de, this message translates to:
+  /// **'Status aktualisieren'**
+  String get trackingRetrackCta;
+
+  /// No description provided for @trackingRetrackRunning.
+  ///
+  /// In de, this message translates to:
+  /// **'Status wird abgerufen…'**
+  String get trackingRetrackRunning;
+
+  /// No description provided for @trackingRetrackSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Status aktualisiert'**
+  String get trackingRetrackSuccess;
+
+  /// No description provided for @trackingRetrackRateLimited.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte 30s warten'**
+  String get trackingRetrackRateLimited;
+
+  /// No description provided for @trackingRetrackFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Status konnte nicht abgerufen werden'**
+  String get trackingRetrackFailed;
+
+  /// No description provided for @trackingRetrackOffline.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Verbindung'**
+  String get trackingRetrackOffline;
+
   /// No description provided for @inboxSectionOrder.
   ///
   /// In de, this message translates to:
@@ -5491,6 +5527,84 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Status veraltet'**
   String get liveStatusExpired;
+
+  /// No description provided for @inboxFilterResetLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Filter zurücksetzen'**
+  String get inboxFilterResetLabel;
+
+  /// No description provided for @inboxFilterResetTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Filter zurücksetzen?'**
+  String get inboxFilterResetTitle;
+
+  /// No description provided for @inboxCopyMessageIdSnackbar.
+  ///
+  /// In de, this message translates to:
+  /// **'Message-ID in die Zwischenablage kopiert.'**
+  String get inboxCopyMessageIdSnackbar;
+
+  /// No description provided for @inboxNoMailLinkSnackbar.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Mail-Link verfügbar.'**
+  String get inboxNoMailLinkSnackbar;
+
+  /// No description provided for @inboxNoTrackingSnackbar.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Mail enthält kein Tracking.'**
+  String get inboxNoTrackingSnackbar;
+
+  /// No description provided for @inboxOpenMailInBrowserMenuItem.
+  ///
+  /// In de, this message translates to:
+  /// **'Mail im Browser öffnen'**
+  String get inboxOpenMailInBrowserMenuItem;
+
+  /// No description provided for @inboxOpenMailLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Mail öffnen'**
+  String get inboxOpenMailLabel;
+
+  /// No description provided for @inboxOpenTicketLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Ticket öffnen'**
+  String get inboxOpenTicketLabel;
+
+  /// No description provided for @inventoryDiscordTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Discord-Ticket öffnen'**
+  String get inventoryDiscordTooltip;
+
+  /// No description provided for @inventoryProductHelperText.
+  ///
+  /// In de, this message translates to:
+  /// **'Aus Ticket auswählen oder frei eingeben'**
+  String get inventoryProductHelperText;
+
+  /// No description provided for @settingsAddAmazonShops.
+  ///
+  /// In de, this message translates to:
+  /// **'Amazon-Shops hinzufügen'**
+  String get settingsAddAmazonShops;
+
+  /// No description provided for @suppliersAddCarriers.
+  ///
+  /// In de, this message translates to:
+  /// **'Versanddienste hinzufügen'**
+  String get suppliersAddCarriers;
+
+  /// No description provided for @urlHelperLinkOpenError.
+  ///
+  /// In de, this message translates to:
+  /// **'Link konnte nicht geöffnet werden.'**
+  String get urlHelperLinkOpenError;
 }
 
 class _AppLocalizationsDelegate

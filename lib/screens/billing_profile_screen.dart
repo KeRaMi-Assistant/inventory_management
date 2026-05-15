@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../app_theme.dart';
+import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
@@ -167,7 +168,7 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Speichern'),
+                : Text(AppLocalizations.of(context).actionSave),
           ),
         ],
       ),

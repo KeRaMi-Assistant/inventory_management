@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../providers/inventory_provider.dart';
+import '../services/supabase_repository.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../utils/validators.dart';
@@ -51,6 +52,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
   List<String> _attachmentPaths = const [];
 
   bool _saving = false;
+  bool _retracking = false;
 
   static const List<String> _currencyOptions = [
     'EUR',
@@ -155,6 +157,33 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     setState(() {
       if (value.trim().isEmpty) _ticketUrlCtrl.text = '';
     });
+  }
+
+  /// User-initiierter Re-Track für genau diesen Deal. SnackBars zeigen
+  /// Erfolg / Rate-Limit / Fehler. Bei Erfolg refresht der Provider den
+  /// vollen Snapshot, der Dialog rendert die neuen liveStatus-Felder über
+  /// `provider.deals.firstWhere(...)`.
+  Future<void> _handleRetrack(BuildContext ctx, AppLocalizations l10n) async {
+    if (_retracking || widget.deal == null) return;
+    setState(() => _retracking = true);
+    final messenger = ScaffoldMessenger.maybeOf(ctx);
+    messenger?.showSnackBar(SnackBar(
+      content: Text(l10n.trackingRetrackRunning),
+      duration: const Duration(seconds: 2),
+    ));
+    final result = await ctx
+        .read<InventoryProvider>()
+        .retrackDeal(widget.deal!.id);
+    if (!mounted) return;
+    setState(() => _retracking = false);
+    final msg = switch (result) {
+      RetrackResult.success => l10n.trackingRetrackSuccess,
+      RetrackResult.rateLimited => l10n.trackingRetrackRateLimited,
+      RetrackResult.failed => l10n.trackingRetrackFailed,
+      RetrackResult.offline => l10n.trackingRetrackOffline,
+    };
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(SnackBar(content: Text(msg)));
   }
 
   Future<void> _pickDate(BuildContext context, bool isArrival) async {
@@ -601,18 +630,31 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             (widget.deal!.trackingNeedsReview ||
                              widget.deal!.trackingConfidence != null)) ...[
                           const SizedBox(height: 10),
-                          TrackingStatusBlock(
+                          Builder(builder: (_) {
+                            // Resolve aktuellen Deal-State aus Provider, damit
+                            // Re-Track-Refresh (loadData()) den live_status
+                            // sofort im Dialog spiegelt — `widget.deal` ist
+                            // beim Dialog-Open eingefroren.
+                            final liveDeal = provider.deals.firstWhere(
+                              (d) => d.id == widget.deal!.id,
+                              orElse: () => widget.deal!,
+                            );
+                            return TrackingStatusBlock(
                             key: const Key('deal-detail-tracking-status-block'),
-                            trackingNumber: widget.deal!.tracking,
-                            confidence: widget.deal!.trackingConfidence,
+                            trackingNumber: liveDeal.tracking,
+                            confidence: liveDeal.trackingConfidence,
                             carrier: null,
-                            needsReview: widget.deal!.trackingNeedsReview,
+                            needsReview: liveDeal.trackingNeedsReview,
                             amazonShipmentIdHint: false,
-                            liveStatus: widget.deal!.liveStatus,
+                            liveStatus: liveDeal.liveStatus,
                             liveStatusLastEvent:
-                                widget.deal!.liveStatusLastEvent,
+                                liveDeal.liveStatusLastEvent,
                             liveStatusUpdatedAt:
-                                widget.deal!.liveStatusUpdatedAt,
+                                liveDeal.liveStatusUpdatedAt,
+                            onRetrack: _retracking
+                                ? null
+                                : () => _handleRetrack(ctx, l10n),
+                            retrackInProgress: _retracking,
                             onManualInput: () async {
                               final ctrl = TextEditingController(
                                 text: _trackingCtrl.text,
@@ -656,7 +698,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                               }
                             },
                             onAcceptAsCorrect:
-                                widget.deal!.trackingNeedsReview
+                                liveDeal.trackingNeedsReview
                                     ? () async {
                                         try {
                                           await ctx
@@ -666,8 +708,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                         } catch (_) {}
                                       }
                                     : null,
-                            onDiscard: (widget.deal!.tracking != null ||
-                                    widget.deal!.trackingNeedsReview)
+                            onDiscard: (liveDeal.tracking != null ||
+                                    liveDeal.trackingNeedsReview)
                                 ? () async {
                                     try {
                                       await ctx
@@ -677,7 +719,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                     } catch (_) {}
                                   }
                                 : null,
-                          ),
+                          );
+                          }),
                         ],
                         // Discord status hint
                         if (_ticketCtrl.text.isNotEmpty) ...[

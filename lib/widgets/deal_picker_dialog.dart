@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/deal.dart';
 import '../providers/inventory_provider.dart';
 
@@ -113,7 +114,7 @@ class _DealPickerDialogState extends State<DealPickerDialog> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Abbrechen'),
+              child: Text(AppLocalizations.of(context).actionCancel),
             ),
           ],
         );

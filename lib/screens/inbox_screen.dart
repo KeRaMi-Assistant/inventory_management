@@ -335,7 +335,7 @@ class _InboxFilterBar extends StatelessWidget {
             const Spacer(),
             TextButton.icon(
               icon: const Icon(Icons.clear_all, size: 16),
-              label: const Text('Filter zurücksetzen'),
+              label: Text(AppLocalizations.of(context).inboxFilterResetLabel),
               style: TextButton.styleFrom(
                 foregroundColor: AppTheme.accentTextOf(context),
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -519,24 +519,27 @@ Future<void> _confirmClearDismissals(
   final messenger = ScaffoldMessenger.of(context);
   final ok = await showDialog<bool>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Filter zurücksetzen?'),
-      content: Text(
-        '${provider.dismissalCount} verworfene Einträge werden wieder '
-        'angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut '
-        'gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Abbrechen'),
+    builder: (ctx) {
+      final l10n = AppLocalizations.of(ctx);
+      return AlertDialog(
+        title: Text(l10n.inboxFilterResetTitle),
+        content: Text(
+          '${provider.dismissalCount} verworfene Einträge werden wieder '
+          'angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut '
+          'gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.',
         ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Zurücksetzen'),
-        ),
-      ],
-    ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.actionCancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.actionReset),
+          ),
+        ],
+      );
+    },
   );
   if (ok != true) return;
   try {
@@ -684,15 +687,19 @@ Future<void> _openMail(
   if (url == null) {
     if (messageId != null && messageId.isNotEmpty) {
       await Clipboard.setData(ClipboardData(text: messageId));
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Message-ID in die Zwischenablage kopiert.'),
-        behavior: SnackBarBehavior.floating,
-      ));
+      if (context.mounted) {
+        messenger.showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).inboxCopyMessageIdSnackbar),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
     } else {
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Kein Mail-Link verfügbar.'),
-        behavior: SnackBarBehavior.floating,
-      ));
+      if (context.mounted) {
+        messenger.showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).inboxNoMailLinkSnackbar),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
     }
     return;
   }
@@ -708,24 +715,27 @@ Future<void> _confirmDismissMessage(
   final messenger = ScaffoldMessenger.of(context);
   final ok = await showDialog<bool>(
     context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Mail verwerfen?'),
-      content: Text(
-        'Die Mail "${message.subject ?? ""}" wird aus der Inbox entfernt '
-        'und nicht mehr angezeigt.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Abbrechen'),
+    builder: (ctx) {
+      final l10n = AppLocalizations.of(ctx);
+      return AlertDialog(
+        title: const Text('Mail verwerfen?'),
+        content: Text(
+          'Die Mail "${message.subject ?? ""}" wird aus der Inbox entfernt '
+          'und nicht mehr angezeigt.',
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Verwerfen', style: TextStyle(color: Colors.white)),
-        ),
-      ],
-    ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.actionCancel),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Verwerfen', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      );
+    },
   );
   if (ok != true) return;
   try {
@@ -858,8 +868,8 @@ class _SuggestionCard extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     final inbox = context.read<InboxProvider>();
     if (suggestion.tracking == null || suggestion.tracking!.isEmpty) {
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Diese Mail enthält kein Tracking.'),
+      messenger.showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).inboxNoTrackingSnackbar),
         behavior: SnackBarBehavior.floating,
       ));
       return;
@@ -989,7 +999,9 @@ class _SuggestionCard extends StatelessWidget {
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, size: 18),
                   tooltip: 'Aktionen',
-                  itemBuilder: (_) => [
+                  itemBuilder: (ctx) {
+                    final l10n = AppLocalizations.of(ctx);
+                    return [
                     const PopupMenuItem(
                       value: 'details',
                       child: ListTile(
@@ -1015,11 +1027,11 @@ class _SuggestionCard extends StatelessWidget {
                       ),
                     ),
                     if (hasMailLink || suggestion.messageId != null)
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'mail',
                         child: ListTile(
-                          leading: Icon(Icons.open_in_new),
-                          title: Text('Mail im Browser öffnen'),
+                          leading: const Icon(Icons.open_in_new),
+                          title: Text(l10n.inboxOpenMailInBrowserMenuItem),
                           dense: true,
                         ),
                       ),
@@ -1032,7 +1044,8 @@ class _SuggestionCard extends StatelessWidget {
                         dense: true,
                       ),
                     ),
-                  ],
+                  ];
+                  },
                   onSelected: (v) {
                     switch (v) {
                       case 'details':
@@ -1131,7 +1144,7 @@ class _SuggestionCard extends StatelessWidget {
                       messageId: suggestion.messageId,
                       imapHost: imapHost,
                     ),
-                    label: const Text('Mail öffnen'),
+                    label: Text(AppLocalizations.of(context).inboxOpenMailLabel),
                   ),
                 const SizedBox(width: 4),
                 ElevatedButton.icon(
@@ -1262,7 +1275,7 @@ class _MatchedTab extends StatelessWidget {
       if (orderId != null && onOpenTicket != null)
         ElevatedButton.icon(
           icon: const Icon(Icons.open_in_new, size: 16),
-          label: const Text('Ticket öffnen'),
+          label: Text(AppLocalizations.of(context).inboxOpenTicketLabel),
           onPressed: () {
             Navigator.pop(context);
             onOpenTicket!(orderId);
@@ -1271,7 +1284,7 @@ class _MatchedTab extends StatelessWidget {
       if (canOpenMail)
         OutlinedButton.icon(
           icon: const Icon(Icons.mail_outline, size: 16),
-          label: const Text('Mail öffnen'),
+          label: Text(AppLocalizations.of(context).inboxOpenMailLabel),
           onPressed: () {
             Navigator.pop(context);
             _openMail(context, messageId: msg.messageId, imapHost: imapHost);
@@ -1374,8 +1387,8 @@ class _UnclassifiedRow extends StatelessWidget {
     final inbox = context.read<InboxProvider>();
     final tn = _trackingFromMessage();
     if (tn == null || tn.isEmpty) {
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Diese Mail enthält kein Tracking.'),
+      messenger.showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).inboxNoTrackingSnackbar),
         behavior: SnackBarBehavior.floating,
       ));
       return;
@@ -1436,7 +1449,7 @@ class _UnclassifiedRow extends StatelessWidget {
         if (hasMailLink)
           OutlinedButton.icon(
             icon: const Icon(Icons.mail_outline, size: 16),
-            label: const Text('Mail öffnen'),
+            label: Text(AppLocalizations.of(context).inboxOpenMailLabel),
             onPressed: () {
               Navigator.pop(context);
               _openMail(
@@ -1519,7 +1532,9 @@ class _UnclassifiedRow extends StatelessWidget {
         trailing: PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, size: 20),
           tooltip: 'Aktionen',
-          itemBuilder: (_) => [
+          itemBuilder: (ctx) {
+            final l10n = AppLocalizations.of(ctx);
+            return [
             const PopupMenuItem(
               value: 'create',
               child: ListTile(
@@ -1546,11 +1561,11 @@ class _UnclassifiedRow extends StatelessWidget {
               ),
             ),
             if (hasMailLink)
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'mail',
                 child: ListTile(
-                  leading: Icon(Icons.mail_outline),
-                  title: Text('Mail öffnen'),
+                  leading: const Icon(Icons.mail_outline),
+                  title: Text(l10n.inboxOpenMailLabel),
                   dense: true,
                 ),
               ),
@@ -1563,7 +1578,8 @@ class _UnclassifiedRow extends StatelessWidget {
                 dense: true,
               ),
             ),
-          ],
+          ];
+          },
           onSelected: (v) {
             switch (v) {
               case 'create':

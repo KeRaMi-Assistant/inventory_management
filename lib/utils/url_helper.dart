@@ -6,6 +6,7 @@ export 'url_helper_stub.dart'
     if (dart.library.io) 'url_helper_native.dart';
 
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'url_helper_stub.dart'
     if (dart.library.html) 'url_helper_web.dart'
     if (dart.library.io) 'url_helper_native.dart';
@@ -37,7 +38,7 @@ Future<void> openUrlWithFallback(BuildContext context, String url) async {
   if (!success && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Link konnte nicht geöffnet werden.'),
+        content: Text(AppLocalizations.of(context).urlHelperLinkOpenError),
         action: SnackBarAction(
           label: 'Link kopieren',
           onPressed: () => copyToClipboard(url),

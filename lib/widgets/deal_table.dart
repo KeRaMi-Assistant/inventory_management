@@ -772,7 +772,7 @@ class _DealRowState extends State<_DealRow> {
                   _ActionBtn(
                     icon: Icons.edit_outlined,
                     color: AppTheme.accent,
-                    tooltip: 'Bearbeiten',
+                    tooltip: AppLocalizations.of(context).actionEdit,
                     onTap: () => showDialog(
                       context: context,
                       barrierDismissible: false,
@@ -782,7 +782,7 @@ class _DealRowState extends State<_DealRow> {
                   _ActionBtn(
                     icon: Icons.delete_outline,
                     color: AppTheme.danger,
-                    tooltip: 'Löschen',
+                    tooltip: AppLocalizations.of(context).actionDelete,
                     onTap: () => _confirmDelete(context, provider, deal),
                   ),
                 ],
