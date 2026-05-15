@@ -118,7 +118,14 @@ if echo "$cmd" | grep -qE 'git[[:space:]]+commit\b'; then
   # Aktuellen Branch ermitteln (best-effort, fail-silent wenn nicht in Git-Repo)
   cur_branch=$(cd "${CLAUDE_PROJECT_DIR:-.}" && git branch --show-current 2>/dev/null || echo "")
   if [ "$cur_branch" = "main" ] || [ "$cur_branch" = "master" ]; then
-    if [ "${MAIN_COMMIT_OVERRIDE:-0}" != "1" ]; then
+    override_ok=0
+    if [ "${MAIN_COMMIT_OVERRIDE:-0}" = "1" ]; then
+      override_ok=1
+    fi
+    if echo "$cmd" | grep -qE '(^|[[:space:]])MAIN_COMMIT_OVERRIDE=1([[:space:]]|$)'; then
+      override_ok=1
+    fi
+    if [ "$override_ok" != "1" ]; then
       block "git commit auf '$cur_branch' verboten — feature/<slug>- oder fix/<slug>-Branch erst. CLAUDE.md §Branching. Override: MAIN_COMMIT_OVERRIDE=1."
     fi
   fi
@@ -127,9 +134,20 @@ fi
 # gh pr merge --admin nur mit MERGE_ADMIN_OVERRIDE=1 (CLAUDE.md §Verbotene Aktionen)
 # Bug 2026-05-15: 6× --admin-Merges ohne Override durchgewunken, Hook hat nicht gefangen.
 # Root-Cause: BSD grep -E kennt kein `\s` — nur POSIX-`[[:space:]]`.
-# Audit-Log-Eintrag bei legitimer Override-Verwendung.
+# Hook-Bug-Fix: env-var im Command-Prefix (MERGE_ADMIN_OVERRIDE=1 gh pr merge ...)
+# wird auch erkannt — bash inherited env wird vom Hook NICHT gesehen, nur
+# der raw command-string. Audit-Log-Eintrag bei legitimer Override-Verwendung.
 if echo "$cmd" | grep -qE 'gh[[:space:]]+pr[[:space:]]+merge[[:space:]].*--admin([[:space:]]|$)'; then
-  if [ "${MERGE_ADMIN_OVERRIDE:-0}" != "1" ]; then
+  # Check both: (a) Hook-process env (für direct test calls) und
+  # (b) Command-Prefix MERGE_ADMIN_OVERRIDE=1 (für inline-Aufrufe).
+  override_ok=0
+  if [ "${MERGE_ADMIN_OVERRIDE:-0}" = "1" ]; then
+    override_ok=1
+  fi
+  if echo "$cmd" | grep -qE '(^|[[:space:]])MERGE_ADMIN_OVERRIDE=1([[:space:]]|$)'; then
+    override_ok=1
+  fi
+  if [ "$override_ok" != "1" ]; then
     block "gh pr merge --admin verboten — setze MERGE_ADMIN_OVERRIDE=1 explizit (CLAUDE.md §565). Default: --auto + warte auf CI."
   fi
   # Override-Use auditieren (Best-effort, fail-silent)
