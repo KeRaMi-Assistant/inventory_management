@@ -11,6 +11,12 @@
 - **Test:** `flutter_test` (Widget + Unit), aktuell minimal — wird ausgebaut
 - **i18n:** Flutter `flutter_localizations` + ARB-Files in `lib/l10n/`
 - **Lint:** `flutter_lints` ^6.0.0 via `analysis_options.yaml`
+- **Deal-Status:** `deals.live_status` (Postgres-Column) hält den
+  Klarna-Style-Zwischenstatus pro Deal (z. B. `in_transit`, `out_for_delivery`,
+  `delivered`, `delay`). Seit PR #74 schreibt der `tracking-poll`-Edge-Function-
+  Run nicht nur Endzustände, sondern auch intermediate States in diese Column
+  — die UI (Inventory-Liste, Deal-Detail) liest ausschließlich aus
+  `live_status` für Badge-/Farb-Logik, niemals aus rohen Carrier-Payloads.
 
 ## Projekt-Status
 
@@ -60,6 +66,28 @@ Die App läuft primär auf iOS + Android. Tablet/Desktop sind sekundär.
 - **`SafeArea`** um Content (Notch, Home-Indicator); bei TextFields `MediaQuery.viewInsetsOf` damit Tastatur den Input nicht verdeckt.
 - **Listen:** auf Phone vertikale Cards, nicht Tabellen mit horizontalem Scroll.
 - **Browser-Tester** prüft jedes UI-Smoke-Szenario zuerst auf Phone-Viewport (390×844). Desktop nur via `--also-desktop`.
+
+### Tracking-Detection (Strict-Pattern als Standard)
+
+Trackings (Sendungsnummern + Carrier) werden ausschließlich über die
+zentrale Pipeline in [`supabase/functions/_shared/inbox_adapters.ts`](supabase/functions/_shared/inbox_adapters.ts)
+extrahiert:
+
+- **Extraction:** `findAllTrackings(subject, body, html?)` liefert alle
+  Candidates inkl. Confidence-Score (`weak | medium | strong`) und
+  Carrier-Hinweis aus Body-Text — keine hardcoded Carrier-Defaults.
+- **Gating:** `gateTracking(candidates, { minConfidence: 'strong' })` wählt
+  den Best-Match. Default ist `strong` (Plan §3.7) — niedrigere Schwellen
+  nur in Test- oder Debug-Pfaden, nie in Production-Adaptern.
+- **Verboten:** Eigene Regex-/Pattern-Detection in einzelnen Adaptern
+  (Amazon, DHL, Hermes, …) parallel zur Shared-Pipeline implementieren.
+  Wenn ein Carrier-Pattern fehlt → in `inbox_adapters.ts` ergänzen
+  (ANCHOR_WORDS / Candidate-Patterns), nicht im konsumierenden Adapter
+  doppeln. Sonst driften Detection-Regeln und der `scan-tech-debt`-
+  Analyzer schlägt Alarm.
+- **Re-Parse-Trigger:** Wenn neue Patterns ergänzt wurden, kann ein
+  Re-Parse über bestehende Mails ausgelöst werden — siehe
+  §User-Triggered Actions weiter unten.
 
 ### Supabase
 
@@ -199,6 +227,28 @@ LaunchAgent ist deaktiviert und entfernt. Der Overseer (`com.inventory.overseer`
 
 Verify: `bash .claude/scripts/verify/launchagent-state.sh`
 
+### Heartbeat / Activity-Detection
+
+Lebenszeichen-Push an `ntfy.sh`, nur wenn der Swarm **tatsächlich aktiv**
+ist. Spamfreie Stille-Garantie: wenn nichts läuft, kein Push.
+
+- **LaunchAgent:** `bash .claude/scripts/install-heartbeat.sh` —
+  installiert `com.inventory.heartbeat`. Default-Intervall siehe Script;
+  stoppen via `launchctl unload`.
+- **Singleton-Lock:** `fcntl`-Lock auf einer PID-Datei verhindert
+  überlappende Heartbeat-Runs (wichtig auf Suspend/Resume-Zyklen).
+- **Activity-Detection** (Push nur, wenn mindestens eine Bedingung wahr):
+  - aktiver `worker.sh`-Prozess
+  - `.claude/backlog/inbox/` enthält ≥ 1 Item
+  - kürzlich nach `.claude/backlog/failed/` verschobene Items
+  - PANIC-Flag gesetzt
+  - `.claude/stakeholder/pending-approval/` enthält ungeklärte Verdicts
+- **Silent-Idle:** alle Bedingungen falsch → **kein** Push, kein Log-
+  Spam. Dadurch bleibt das Phone ruhig, wenn keine User-Aktion nötig ist.
+- **Komplement** zum `cloud-heartbeat-ping.sh` (60min cloud-side Ping):
+  Heartbeat-LaunchAgent ist die lokale Activity-Stimme, der Cloud-Ping
+  die Liveness-Stimme.
+
 ## Browser-Smoke-Tests (Playwright MCP)
 
 Claude kann die Flutter-Web-App in Chrome starten, einloggen und durchklicken,
@@ -237,6 +287,24 @@ dürfen mit dem engeren Smoke-Szenario auskommen
 
 **Selector-Regel:** Browser-Tester nutzt Accessibility-Names / Roles / Tooltips, keine brittle CSS-Selektoren. Wenn ein Widget keinen erkennbaren Anker hat, schlägt der Tester eine `Key('...')`-Ergänzung in `lib/...` vor — Implementer fügt sie nachträglich ein.
 
+### User-Triggered Actions (Re-Parse + Retrack)
+
+Manuelle Trigger für Pipelines, die normalerweise vom Edge-Function-
+Polling laufen:
+
+- **Re-Parse aller Inbox-Mails** — Settings → „Sendungsnummern neu prüfen".
+  Setzt für alle Mails des aktuellen Workspaces den Re-Parse-Marker und
+  lässt die Inbox-Pipeline (`inbox_adapters.ts` →
+  `findAllTrackings`/`gateTracking`) erneut über die gespeicherten
+  Bodies laufen. Nutzbar nach Strict-Pattern-Erweiterungen oder
+  Carrier-Pattern-Fixes, ohne dass User die Mails neu importieren
+  müssen.
+- **Retrack Single Deal** — Refresh-Icon im Deal-Detail-Screen.
+  Erzwingt einen sofortigen `tracking-poll`-Run für genau diesen Deal
+  (Carrier-API-Call → schreibt `deals.live_status`). **Cooldown:** 30 s
+  pro Deal, um Carrier-Rate-Limits nicht zu reißen — Button bleibt
+  während Cooldown disabled mit Tooltip.
+
 ## Ressourcen-Check
 
 Statische Validierung von Projekt-Ressourcen (Strings, künftig auch Assets/
@@ -273,6 +341,34 @@ Exit-Codes: `0` = clean, `1` = Findings, `2` = ARB-IO/Parse-Fehler.
 **Grenzen:** Hardcoded-Strings werden nur gemeldet, nicht refaktoriert —
 das übernimmt ein `flutter-coder`-Agent. Übersetzungen für `[TODO en]`-
 Marker macht der `l10n-checker` selbst (nicht maschinell, idiomatisch).
+
+### Plan-Validation (`validate-plan.sh`)
+
+Statischer Sanity-Check für Plan-Drafts in `plans/`, bevor sie in die
+Council-Phase oder Implementation gehen. Fängt fehlende Pflicht-Sektionen,
+nicht existente Pfade in „touches:" und Schema-Fehler ab — ohne dass
+Tokens für einen Reviewer-Agent verbrannt werden.
+
+**Aufruf:**
+
+```bash
+bash .claude/scripts/validate-plan.sh plans/<YYYY-MM-DD_slug>.md
+```
+Exit-Codes: `0` = clean, `1` = Findings, `2` = IO/Parse-Fehler.
+
+**Eingebunden in `/council`:** Vor der 5-Reviewer-Phase-2 (Architekt,
+Pessimist/Bug-Hunter, External-Solutions-Scout, Security, UX/Mobile)
+läuft `validate-plan.sh` automatisch (siehe
+[`.claude/commands/council.md`](.claude/commands/council.md)). Findings
+gehen als Pre-Flight-Failure zurück — Council startet erst, wenn der
+Plan strukturell sauber ist. Das spart pro Lauf $1–$3 an vergeudeten
+Reviewer-Calls.
+
+**Wann manuell ausführen:**
+
+- Nach jedem Plan-Edit, bevor `/council <plan>` aufgerufen wird.
+- Im Headless-Loop als Pre-Check, bevor ein Plan-basiertes Backlog-
+  Item den Worker erreicht.
 
 ## Handbook pflegen
 

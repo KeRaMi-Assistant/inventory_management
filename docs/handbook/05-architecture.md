@@ -304,6 +304,27 @@ Tokens:
 > `AppTheme` an**, nicht als ad-hoc-`Color`. Sonst zerlegt sich Dark-Mode
 > bei der nächsten Erweiterung.
 
+### Akzent-Paletten (PR #68)
+
+Seit Mai 2026 wählt der User zwischen fünf Akzent-Paletten (`blue`,
+`indigo`, `violet`, `teal`, `rose`). Persistenz via
+[`AppPreferencesProvider`](../../lib/providers/app_preferences_provider.dart)
+in `SharedPreferences`. UI-Picker im
+[Settings-Screen](03-screens-walkthrough.md#settings).
+
+Konsequenz für Caller-Code: `AppTheme.accent`, `AppTheme.accentBg`,
+`AppTheme.accentBorder` u.a. sind **runtime-getter** (lesen die aktive
+Palette aus dem `AppTheme`-Singleton), nicht `static const Color`.
+Verwendung in `const`-Kontexten (`const Icon(...)`, `const BoxDecoration(...)`)
+führt zu Compile-Errors — siehe Folge-Commit zu PR #68, der 13 Call-Sites
+auf `final` umgestellt hat.
+
+Dark-Mode-Refactor (PR #73): `pricing_screen.dart` + `billing_profile_screen.dart`
+nutzen jetzt durchgängig `AppTheme.bgSurfaceOf(context)`,
+`AppTheme.textMutedOf(context)` etc. statt hardcoded `Colors.black54` /
+`Colors.white`. Brand-pinned `Colors.white` (Foreground auf Accent-
+Buttons) und ultra-low-alpha Shadows bleiben.
+
 ## Localization
 
 Datei: [`lib/l10n/`](../../lib/l10n/)
@@ -394,7 +415,25 @@ Opus, Routine-Coding auf Sonnet.
 
 Vollständig autonomer Multi-Agent-Loop für unbeaufsichtigte Backlog-Abarbeitung. Implementiert in Phase 0-3 (PRs #52, #53, #54).
 
-Kernkomponenten: **Stakeholder-Triage** (ntfy / Telegram → Backlog-Inbox), **Overseer-Daemon** (pick_next_item → Worktree → Worker), **Analyzer-Daemon** (stündliche Code-Scans → automatische Backlog-Items), **Watchdog + Recovery** (Disk, Cost-Cap, tote PIDs), **Briefing + Digest** (tägliche/wöchentliche Zusammenfassungen).
+Kernkomponenten: **Stakeholder-Triage** (ntfy / Telegram → Backlog-Inbox), **Overseer-Daemon** (pick_next_item → Worktree → Worker), **Analyzer-Daemon** (stündliche Code-Scans → automatische Backlog-Items), **Watchdog + Recovery** (Disk, Cost-Cap, tote PIDs), **Briefing + Digest** (tägliche/wöchentliche Zusammenfassungen), **Heartbeat-Daemon** (10-Min-Activity-Aware-Pulse via ntfy).
+
+### Heartbeat-Daemon (PRs #70, #71)
+
+Skript [`.claude/scripts/heartbeat.sh`](../../.claude/scripts/heartbeat.sh)
++ LaunchAgent `com.inventory.heartbeat` (Install:
+[`install-heartbeat.sh`](../../.claude/scripts/install-heartbeat.sh)).
+
+- **Singleton-Lock** via Python `fcntl.flock` (`heartbeat.lock`,
+  Inode-preserving Truncate beim Stop — verhindert Orphan-Inode-Bug
+  bei dem zwei Instanzen gleichzeitig exclusive-flocken).
+- **Activity-Detection** vor jedem Push: pusht nur, wenn ein aktiver
+  Worker läuft, Items in `overseer/in_progress/`, wartende Inbox-Items,
+  Recent Failures (< 30 min), Stakeholder-Pending oder ein PANIC-Marker
+  präsent sind. Sonst silent-idle (nur Log-Zeile, kein ntfy).
+- **`--stop`-Flag** beendet den Daemon kontrolliert (SIGTERM via Lock-
+  PID, `pgrep`-Fallback gegen Strays, eigene PID/PPID ausgeschlossen).
+
+Pattern identisch zu `telegram-bot.py` und `live-status`-Daemon.
 
 Mensch-im-Loop-Stops (u. a. `supabase db push`, Cost-Cap, PANIC nach 3 Failures) sind hart in den Skripten verankert.
 
