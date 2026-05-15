@@ -120,6 +120,39 @@ extrahiert:
 - `flutter pub publish`
 - Schreiben in `lib/config/supabase_config.dart`, `google-services.json`, `GoogleService-Info.plist`
 - `supabase link --project-ref <prod>` (sobald Prod-Project existiert)
+- **`git commit` auf `main`/`master`-Branch** (seit 2026-05-15) — Bug-Fix
+  D+F: Auto-Commit-Hook hat `auto:`-Commits auf main durchgehen lassen.
+  Override: `MAIN_COMMIT_OVERRIDE=1` für explizit Stakeholder-initiierte
+  Aktion. Andernfalls: erst `git checkout -b feature/<slug>` oder
+  `fix/<slug>`.
+- **`gh pr merge --admin`** ohne `MERGE_ADMIN_OVERRIDE=1` (seit 2026-05-15)
+  — Bug-Fix A: 6× Policy-Verletzung gefunden im Audit-Log. Default ist
+  jetzt `--auto` (CI-Gates erforderlich). Override + Audit-Log-Eintrag
+  bei legitimer Anwendung.
+
+## Subagent-Output-Review-Pflicht (seit 2026-05-15)
+
+**Bug-Fix B:** Subagent-Outputs wurden in der Vergangenheit blind
+gecommitted ("0 issues, X/Y Tests passing" → glaubwürdig). Realität:
+3 Subagent-PRs hatten Regressionen oder Anti-Pattern-Code, die erst
+beim manuellen Real-World-Test sichtbar wurden.
+
+**Pflicht-Pattern für JEDEN Subagent-Output mit > 50 Zeilen Diff:**
+
+1. **Vor dem Commit:** `git diff --cached` lesen — selbst. Nicht skim,
+   nicht "Subagent sagt OK" — echte Code-Review.
+2. **Spezifische Trigger zum Hinterfragen:**
+   - Subagent berichtet "Pre-existing Issues" → was ist neu, was alt?
+   - Test-Counts (z.B. "162/162 green") → was wurde NEU getestet?
+   - "Geänderte Files: 22, +909 Zeilen" → mind. die kritischsten 3 Files
+     komplett im Diff lesen.
+   - "TODO future"-Marker → was bleibt offen, ist das akzeptabel?
+3. **Real-World-Smoke optional:** Bei UI- oder Daten-Pipeline-Changes
+   (Inbox-Parser, Tracking, Theme): einen Real-Sample-Test (10+ Cases)
+   gegen die Pipeline laufen lassen, nicht nur Unit-Tests.
+4. **Pre-Merge-Gate** `bash .claude/scripts/check-smoke-passed.sh`
+   (Bug-Fix C, seit 2026-05-15): bei UI-Pfaden ist ein aktueller (< 24h)
+   `smoke-full-app-audit`-Pass Pflicht.
 
 ## Subagent-Modell-Routing
 
@@ -363,6 +396,14 @@ läuft `validate-plan.sh` automatisch (siehe
 gehen als Pre-Flight-Failure zurück — Council startet erst, wenn der
 Plan strukturell sauber ist. Das spart pro Lauf $1–$3 an vergeudeten
 Reviewer-Calls.
+
+**Pflicht seit 2026-05-15 (Bug-Fix D):** Jeder `/council`-Aufruf MUSS
+Phase 0.5 (validate-plan-Gate) UND Phase 1.5 (Pre-Filter Fast-Pass mit
+2 Reviewern) durchlaufen, nicht optional. Falls Stakeholder die Phasen
+überspringen will → explizit als "Phase-0.5-Skip" / "Phase-1.5-Skip"
+in den Council-Output dokumentieren mit Begründung. Bisher (vor 05-15)
+war das beides optional und in den letzten 5 Council-Runs nicht genutzt
+worden — das war Pure-Theater.
 
 **Wann manuell ausführen:**
 

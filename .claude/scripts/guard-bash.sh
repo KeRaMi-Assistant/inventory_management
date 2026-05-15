@@ -111,4 +111,36 @@ if echo "$cmd" | grep -qE 'git\s+add\s+(\.|--all|-A)\s*$'; then
   block "git add . / --all / -A verboten — nutze Whitelist (lib/, supabase/, test/, etc.)"
 fi
 
+# git commit auf main blockieren (Bug-Fix D+F 2026-05-15):
+# CLAUDE.md §Branching: NIE direkt auf main committen. Hook fängt das jetzt.
+# Auto-Commit-Hook hat `auto:`-Commits auf main durchgehen lassen.
+if echo "$cmd" | grep -qE 'git[[:space:]]+commit\b'; then
+  # Aktuellen Branch ermitteln (best-effort, fail-silent wenn nicht in Git-Repo)
+  cur_branch=$(cd "${CLAUDE_PROJECT_DIR:-.}" && git branch --show-current 2>/dev/null || echo "")
+  if [ "$cur_branch" = "main" ] || [ "$cur_branch" = "master" ]; then
+    if [ "${MAIN_COMMIT_OVERRIDE:-0}" != "1" ]; then
+      block "git commit auf '$cur_branch' verboten — feature/<slug>- oder fix/<slug>-Branch erst. CLAUDE.md §Branching. Override: MAIN_COMMIT_OVERRIDE=1."
+    fi
+  fi
+fi
+
+# gh pr merge --admin nur mit MERGE_ADMIN_OVERRIDE=1 (CLAUDE.md §Verbotene Aktionen)
+# Bug 2026-05-15: 6× --admin-Merges ohne Override durchgewunken, Hook hat nicht gefangen.
+# Root-Cause: BSD grep -E kennt kein `\s` — nur POSIX-`[[:space:]]`.
+# Audit-Log-Eintrag bei legitimer Override-Verwendung.
+if echo "$cmd" | grep -qE 'gh[[:space:]]+pr[[:space:]]+merge[[:space:]].*--admin([[:space:]]|$)'; then
+  if [ "${MERGE_ADMIN_OVERRIDE:-0}" != "1" ]; then
+    block "gh pr merge --admin verboten — setze MERGE_ADMIN_OVERRIDE=1 explizit (CLAUDE.md §565). Default: --auto + warte auf CI."
+  fi
+  # Override-Use auditieren (Best-effort, fail-silent)
+  audit_file="$CLAUDE_PROJECT_DIR/.claude/audit/$(date -u +%Y-%m-%d).md"
+  if [ -d "$(dirname "$audit_file")" ]; then
+    {
+      printf '\n---\naction: merge_admin_override\nts: %s\nsubject: %s\nreason: MERGE_ADMIN_OVERRIDE=1 explizit gesetzt\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        "$(echo "$cmd" | grep -oE 'gh pr merge [0-9]+' | head -1)"
+    } >> "$audit_file" 2>/dev/null || true
+  fi
+fi
+
 exit 0

@@ -408,14 +408,29 @@ export function findAnchorBefore(body: string, matchStart: number): string | nul
   let bestLen = -1
   let bestWord: string | null = null
   for (const word of ANCHOR_WORDS) {
-    const idx = lower.lastIndexOf(word.toLowerCase())
-    if (idx < 0) continue
+    const needle = word.toLowerCase()
+    // Word-Boundary-Check: anchor muss als eigenes Wort vorkommen, NICHT
+    // als Substring innerhalb anderer Wörter. Bug 2026-05-15:
+    // `Shipment` matchte als Substring von `orderingShipmentId` →
+    // shipment-id wurde fälschlich als strong-context-tracking gewertet.
+    // Erlaubt: Start-of-window / Whitespace / Punctuation vor + nach.
+    const re = new RegExp(`(?:^|[^a-z0-9])${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=[^a-z0-9]|$)`, 'g')
+    let m: RegExpExecArray | null
+    let lastIdx = -1
+    while ((m = re.exec(lower)) !== null) {
+      // m.index ist der char VOR dem Anchor (oder 0 wenn am Start).
+      // Den Anchor-Start ermitteln: wenn m.index===0 und der erste char
+      // ist der Anchor → idx=0; sonst idx = m.index + 1.
+      const matched = m[0]
+      const anchorStart = matched.toLowerCase().startsWith(needle) ? m.index : m.index + 1
+      lastIdx = anchorStart
+    }
+    if (lastIdx < 0) continue
     // Prefer (a) later anchor (closer to match), (b) on tie, longer word.
-    if (idx > bestIdx || (idx === bestIdx && word.length > bestLen)) {
-      bestIdx = idx
+    if (lastIdx > bestIdx || (lastIdx === bestIdx && word.length > bestLen)) {
+      bestIdx = lastIdx
       bestLen = word.length
-      // Realen Cased-Token aus dem Original-Window holen (kein lower).
-      bestWord = window.slice(idx, idx + word.length)
+      bestWord = window.slice(lastIdx, lastIdx + word.length)
     }
   }
   if (!bestWord) return null
