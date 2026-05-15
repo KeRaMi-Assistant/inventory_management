@@ -523,4 +523,95 @@ void main() {
       expect(find.text('10 min ago'), findsOneWidget);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Re-Track CTA (Klarna-Pattern) — sichtbar nur im strong-State, wenn ein
+  // Callback gesetzt ist. Spinner ersetzt das Refresh-Icon während eines
+  // laufenden Polls.
+  // -------------------------------------------------------------------------
+  group('TrackingStatusBlock — re-track CTA', () {
+    testWidgets('strong + onRetrack → button visible + tap fires callback',
+        (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        _wrap(
+          TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+            carrier: 'UPS',
+            onRetrack: () => taps++,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final btn = find.byKey(const Key('tracking-retrack-cta'));
+      expect(btn, findsOneWidget);
+      await tester.tap(btn);
+      await tester.pumpAndSettle();
+      expect(taps, 1);
+    });
+
+    testWidgets('strong without onRetrack → no refresh button rendered',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+            carrier: 'UPS',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('tracking-retrack-cta')), findsNothing);
+    });
+
+    testWidgets('retrackInProgress=true → spinner shown, taps blocked',
+        (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        _wrap(
+          TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+            carrier: 'UPS',
+            onRetrack: () => taps++,
+            retrackInProgress: true,
+          ),
+        ),
+      );
+      await tester.pump(); // do NOT pumpAndSettle (spinner animates forever)
+      final btn = find.byKey(const Key('tracking-retrack-cta'));
+      expect(btn, findsOneWidget);
+      expect(
+        find.descendant(
+          of: btn,
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+      // Tap while in-progress should not invoke callback (onTap=null).
+      await tester.tap(btn);
+      await tester.pump();
+      expect(taps, 0);
+    });
+
+    testWidgets('refresh button has 48dp touch target', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          TrackingStatusBlock(
+            trackingNumber: '1Z999AA10123456784',
+            confidence: TrackingConfidence.strong,
+            carrier: 'UPS',
+            onRetrack: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final btn = find.byKey(const Key('tracking-retrack-cta'));
+      final size = tester.getSize(btn);
+      expect(size.width, greaterThanOrEqualTo(48));
+      expect(size.height, greaterThanOrEqualTo(48));
+    });
+  });
 }

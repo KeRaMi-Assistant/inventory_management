@@ -524,7 +524,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                     ),
                     if (item.ticketUrl != null)
                       IconButton(
-                        tooltip: 'Discord-Ticket öffnen',
+                        tooltip: AppLocalizations.of(context).inventoryDiscordTooltip,
                         icon: const Icon(Icons.open_in_new, size: 18, color: Color(0xFF5865F2)),
                         onPressed: () => openUrlWithFallback(context, resolveDiscordUrl(item.ticketUrl!)),
                         padding: EdgeInsets.zero,
@@ -880,10 +880,10 @@ class _InventoryDialogState extends State<_InventoryDialog> {
           return TextFormField(
             controller: ctrl,
             focusNode: focusNode,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Produkt *',
-              suffixIcon: Icon(Icons.arrow_drop_down, size: 20),
-              helperText: 'Aus Ticket auswählen oder frei eingeben',
+              suffixIcon: const Icon(Icons.arrow_drop_down, size: 20),
+              helperText: AppLocalizations.of(context).inventoryProductHelperText,
             ),
             validator: (v) => v == null || v.trim().isEmpty ? 'Pflichtfeld' : null,
             onChanged: (v) => _name.text = v,
@@ -1396,7 +1396,7 @@ class _LowStockBannerState extends State<_LowStockBanner> {
       actions: [
         TextButton(
           onPressed: () => setState(() => _dismissed = true),
-          child: Text('Schließen',
+          child: Text(AppLocalizations.of(context).actionClose,
               style: TextStyle(color: AppTheme.dangerTextOf(context))),
         ),
       ],

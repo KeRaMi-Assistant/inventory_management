@@ -1069,6 +1069,12 @@
   "trackingReviewListTitle": "Review tracking numbers",
   "trackingReviewNeededBadge": "Review",
   "trackingStatusBlockA11yLabel": "Tracking status",
+  "trackingRetrackCta": "Refresh status",
+  "trackingRetrackRunning": "Refreshing status…",
+  "trackingRetrackSuccess": "Status updated",
+  "trackingRetrackRateLimited": "Please wait 30s",
+  "trackingRetrackFailed": "Status refresh failed",
+  "trackingRetrackOffline": "No connection",
 
   "inboxSectionOrder": "Order",
   "inboxSectionShipping": "Shipping",
@@ -1094,5 +1100,19 @@
   "liveStatusOutForDelivery": "Out for delivery",
   "liveStatusDelivered": "Delivered",
   "liveStatusException": "Issue — please check",
-  "liveStatusExpired": "Status outdated"
+  "liveStatusExpired": "Status outdated",
+
+  "inboxFilterResetLabel": "Reset filter",
+  "inboxFilterResetTitle": "Reset filter?",
+  "inboxCopyMessageIdSnackbar": "Message ID copied to clipboard.",
+  "inboxNoMailLinkSnackbar": "No mail link available.",
+  "inboxNoTrackingSnackbar": "This mail contains no tracking.",
+  "inboxOpenMailInBrowserMenuItem": "Open mail in browser",
+  "inboxOpenMailLabel": "Open mail",
+  "inboxOpenTicketLabel": "Open ticket",
+  "inventoryDiscordTooltip": "Open Discord ticket",
+  "inventoryProductHelperText": "Select from ticket or type freely",
+  "settingsAddAmazonShops": "Add Amazon shops",
+  "suppliersAddCarriers": "Add shipping carriers",
+  "urlHelperLinkOpenError": "Could not open link."
 }

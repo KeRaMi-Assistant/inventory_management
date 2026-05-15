@@ -68,6 +68,12 @@ interface PollStats {
 
 const MAX_DEALS_PER_RUN = 200
 
+/// Re-Track-Cooldown pro Deal: ein User darf einen einzelnen Deal höchstens
+/// alle 30 Sekunden manuell re-tracken. Wir nutzen `deals.live_status_updated_at`
+/// als implizites Cooldown-Feld — kein extra Schema nötig. Cron-Polls (alle
+/// 4h) sind davon nicht betroffen, weil sie nie den deal_id-Pfad nehmen.
+const SINGLE_DEAL_COOLDOWN_MS = 30_000
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -84,25 +90,103 @@ Deno.serve(async (req) => {
   const isCron = !!cronSecret && authHeader === `Bearer ${cronSecret}`
   const isService =
     authHeader === `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-  if (!isCron && !isService) return jsonResp({ error: 'Unauthorized' }, 401)
 
-  const admin = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-  )
-
-  // Optional: gegen einen einzelnen Workspace gezielt pollen (Debug/Manual).
+  // Body-Parsing zuerst, damit wir wissen, ob dies ein User-Single-Deal-Call
+  // ist (dann erlauben wir JWT-User-Auth als Alternative zu cron/service).
   let onlyWorkspace: string | undefined
+  let onlyDealId: number | undefined
   try {
     if (req.headers.get('content-type')?.includes('application/json')) {
       const body = await req.json()
       if (typeof body?.workspace_id === 'string') {
         onlyWorkspace = body.workspace_id
       }
+      const parsed = parseDealIdFromBody(body)
+      if (parsed.error) return jsonResp({ error: parsed.error }, 400)
+      if (parsed.dealId !== undefined) onlyDealId = parsed.dealId
     }
   } catch {
     // body optional
   }
+
+  // Auth-Resolution:
+  //   - cron / service-role:      immer erlaubt (Backend-Pfad).
+  //   - JWT-User + deal_id gesetzt: erlaubt, wenn User Workspace-Mitglied
+  //     ist UND der Deal zu diesem Workspace gehört.
+  //   - alles andere:             401 / 403.
+  if (!isCron && !isService) {
+    if (onlyDealId === undefined) {
+      return jsonResp({ error: 'Unauthorized' }, 401)
+    }
+    // JWT-User-Pfad: Token muss gültig sein, sonst 401.
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } },
+    )
+    const { data: userData, error: userErr } = await userClient.auth.getUser()
+    if (userErr || !userData?.user) {
+      return jsonResp({ error: 'Unauthorized' }, 401)
+    }
+    const userId = userData.user.id
+
+    // Admin-Client für die Lookup-Queries (Service-Role umgeht RLS — wir
+    // prüfen Membership selbst).
+    const adminLookup = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    )
+    const { data: dealRow, error: dealErr } = await adminLookup
+      .from('deals')
+      .select('id, workspace_id, live_status_updated_at')
+      .eq('id', onlyDealId)
+      .maybeSingle()
+    if (dealErr || !dealRow) {
+      // 403 statt 404 — verrät keine Existenz fremder Deals.
+      return jsonResp({ error: 'Forbidden' }, 403)
+    }
+    const dealWorkspaceId = (dealRow as { workspace_id: string }).workspace_id
+
+    const { data: memberRow } = await adminLookup
+      .from('workspace_members')
+      .select('workspace_id')
+      .eq('workspace_id', dealWorkspaceId)
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (!memberRow) {
+      return jsonResp({ error: 'Forbidden' }, 403)
+    }
+
+    // Per-Deal-Cooldown: 30s seit dem letzten live_status_updated_at.
+    const lastIso =
+      (dealRow as { live_status_updated_at: string | null })
+        .live_status_updated_at
+    const retryAfterSec = computeRetrackCooldown(lastIso, Date.now())
+    if (retryAfterSec !== null) {
+      return new Response(
+        JSON.stringify({
+          error: 'rate_limited',
+          retry_after_s: retryAfterSec,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+            'Retry-After': String(retryAfterSec),
+          },
+        },
+      )
+    }
+
+    // Workspace auf den Deal-Workspace pinnen — kein Cross-Workspace-Poll.
+    onlyWorkspace = dealWorkspaceId
+  }
+
+  const admin = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  )
 
   const credQuery = admin
     .from('workspace_carrier_credentials')
@@ -131,7 +215,13 @@ Deno.serve(async (req) => {
   const stats: PollStats[] = []
   for (const [workspaceId, carriers] of byWorkspace.entries()) {
     if (totalBudget <= 0) break
-    const stat = await pollWorkspace(admin, workspaceId, carriers, totalBudget)
+    const stat = await pollWorkspace(
+      admin,
+      workspaceId,
+      carriers,
+      totalBudget,
+      onlyDealId,
+    )
     stats.push(stat)
     totalBudget -= stat.checked
   }
@@ -144,6 +234,7 @@ async function pollWorkspace(
   workspaceId: string,
   carriers: Set<'dhl' | 'dpd' | 'ups'>,
   budget: number,
+  onlyDealId?: number,
 ): Promise<PollStats> {
   const stat: PollStats = {
     workspace_id: workspaceId,
@@ -155,7 +246,7 @@ async function pollWorkspace(
   // Offene Deals: Status "Unterwegs", tracking gesetzt, kein Arrival.
   // T16: Skip Deals mit needs_review=true UND confidence='none' (Legacy/Weak)
   //      → poll nur wenn (needs_review=false) ODER confidence IN ('strong','manual').
-  const { data: dealRows, error: dealsErr } = await admin
+  let dealQuery = admin
     .from('deals')
     .select(
       'id, workspace_id, user_id, product, tracking, tracking_confidence, tracking_needs_review, status, arrival_date, order_date, live_status, live_status_last_event, live_status_updated_at',
@@ -169,6 +260,10 @@ async function pollWorkspace(
     )
     .order('order_date', { ascending: true })
     .limit(Math.min(budget, MAX_DEALS_PER_RUN))
+  if (onlyDealId !== undefined) {
+    dealQuery = dealQuery.eq('id', onlyDealId)
+  }
+  const { data: dealRows, error: dealsErr } = await dealQuery
   if (dealsErr) {
     console.error('Failed to load deals', workspaceId, dealsErr)
     stat.errors++
@@ -358,6 +453,37 @@ function jsonResp(body: unknown, status = 200): Response {
 // Re-exports für Tests (Deno-Test importiert den Edge-Fn-Code, ruft aber
 // nur die reinen Adapter-Funktionen auf).
 export { ADAPTERS }
+
+/// Reine Cooldown-Berechnung für den Single-Deal-Re-Track-Pfad. Gibt
+/// `null` zurück, wenn der Cooldown abgelaufen / nie gesetzt ist; sonst
+/// die Anzahl ganzer Sekunden, die der Caller noch warten muss (für
+/// `Retry-After` Header).
+export function computeRetrackCooldown(
+  lastUpdatedAtIso: string | null,
+  nowMs: number,
+  cooldownMs: number = SINGLE_DEAL_COOLDOWN_MS,
+): number | null {
+  if (!lastUpdatedAtIso) return null
+  const last = new Date(lastUpdatedAtIso).getTime()
+  if (!Number.isFinite(last)) return null
+  const elapsed = nowMs - last
+  if (elapsed < 0) return null // future timestamp → ignore
+  if (elapsed >= cooldownMs) return null
+  return Math.ceil((cooldownMs - elapsed) / 1000)
+}
+
+/// Reine Body-Validierung für `deal_id`. Gibt entweder die geparste
+/// Integer-ID zurück oder einen Fehler-String (für 400-Response).
+export function parseDealIdFromBody(
+  body: unknown,
+): { dealId?: number; error?: string } {
+  if (body === null || typeof body !== 'object') return {}
+  const raw = (body as Record<string, unknown>).deal_id
+  if (raw === undefined || raw === null) return {}
+  const n = Number(raw)
+  if (!Number.isInteger(n) || n <= 0) return { error: 'invalid deal_id' }
+  return { dealId: n }
+}
 
 // T16: pure helper, exported for tests. Returns true if a deal-row may be
 // polled against carrier APIs. Skip when needs_review=true AND confidence

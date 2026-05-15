@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../app_theme.dart';
+import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
 import '../models/pricing_plan.dart';
 import '../providers/billing_provider.dart';
@@ -129,27 +130,30 @@ class _PricingScreenState extends State<PricingScreen> {
     final isDowngradeToFree = plan.plan == BillingPlan.free;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(isDowngradeToFree
-            ? 'Auf Free wechseln?'
-            : 'Auf ${plan.plan.label} upgraden?'),
-        content: Text(
-          isDowngradeToFree
-              ? 'Du verlierst Zugang zu Pro-Features. Bestehende Daten bleiben erhalten.'
-              : 'Hinweis: Dies ist ein Demo-Switch ohne Zahlungsabwicklung. '
-                  'Sobald Stripe/Paddle integriert ist, läuft hier der echte Checkout.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Abbrechen'),
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx);
+        return AlertDialog(
+          title: Text(isDowngradeToFree
+              ? 'Auf Free wechseln?'
+              : 'Auf ${plan.plan.label} upgraden?'),
+          content: Text(
+            isDowngradeToFree
+                ? 'Du verlierst Zugang zu Pro-Features. Bestehende Daten bleiben erhalten.'
+                : 'Hinweis: Dies ist ein Demo-Switch ohne Zahlungsabwicklung. '
+                    'Sobald Stripe/Paddle integriert ist, läuft hier der echte Checkout.',
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.actionCancel),
+            ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(isDowngradeToFree ? 'Wechseln' : 'Plan aktivieren'),
           ),
         ],
-      ),
+      );
+      },
     );
     if (ok != true || !mounted) return;
     setState(() => _activating = true);

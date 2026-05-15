@@ -1069,6 +1069,12 @@
   "trackingReviewListTitle": "Sendungsnummern prüfen",
   "trackingReviewNeededBadge": "Prüfen",
   "trackingStatusBlockA11yLabel": "Sendungsnummern-Status",
+  "trackingRetrackCta": "Status aktualisieren",
+  "trackingRetrackRunning": "Status wird abgerufen…",
+  "trackingRetrackSuccess": "Status aktualisiert",
+  "trackingRetrackRateLimited": "Bitte 30s warten",
+  "trackingRetrackFailed": "Status konnte nicht abgerufen werden",
+  "trackingRetrackOffline": "Keine Verbindung",
 
   "inboxSectionOrder": "Bestellung",
   "inboxSectionShipping": "Versand",
@@ -1094,5 +1100,19 @@
   "liveStatusOutForDelivery": "In Zustellung",
   "liveStatusDelivered": "Zugestellt",
   "liveStatusException": "Problem — bitte prüfen",
-  "liveStatusExpired": "Status veraltet"
+  "liveStatusExpired": "Status veraltet",
+
+  "inboxFilterResetLabel": "Filter zurücksetzen",
+  "inboxFilterResetTitle": "Filter zurücksetzen?",
+  "inboxCopyMessageIdSnackbar": "Message-ID in die Zwischenablage kopiert.",
+  "inboxNoMailLinkSnackbar": "Kein Mail-Link verfügbar.",
+  "inboxNoTrackingSnackbar": "Diese Mail enthält kein Tracking.",
+  "inboxOpenMailInBrowserMenuItem": "Mail im Browser öffnen",
+  "inboxOpenMailLabel": "Mail öffnen",
+  "inboxOpenTicketLabel": "Ticket öffnen",
+  "inventoryDiscordTooltip": "Discord-Ticket öffnen",
+  "inventoryProductHelperText": "Aus Ticket auswählen oder frei eingeben",
+  "settingsAddAmazonShops": "Amazon-Shops hinzufügen",
+  "suppliersAddCarriers": "Versanddienste hinzufügen",
+  "urlHelperLinkOpenError": "Link konnte nicht geöffnet werden."
 }

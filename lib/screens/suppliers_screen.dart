@@ -88,7 +88,7 @@ class SuppliersScreen extends StatelessWidget {
                       onPressed: () => _seedCarriers(context, provider),
                       icon: const Icon(Icons.local_shipping_outlined,
                           size: 16),
-                      label: const Text('Versanddienste hinzufügen'),
+                      label: Text(AppLocalizations.of(context).suppliersAddCarriers),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 8),

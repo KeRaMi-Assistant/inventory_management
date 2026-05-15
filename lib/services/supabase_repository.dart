@@ -844,6 +844,33 @@ class SupabaseRepository {
     );
   }
 
+  /// Triggert `tracking-poll` Edge-Function für genau einen Deal (Klarna-
+  /// Pattern: User-initiierter Refresh statt 4h-Cron-Tick).
+  ///
+  /// Server-seitig:
+  ///   * JWT-User-Auth wird gegen workspace_members geprüft (Cross-Workspace-
+  ///     Aufruf → 403).
+  ///   * 30s-Cooldown pro Deal via `deals.live_status_updated_at` → 429.
+  ///   * Bei Erfolg läuft genau die gleiche `pollWorkspace`-Logik wie im
+  ///     4h-Cron, nur eq('id', dealId) statt full Workspace-Scan.
+  ///
+  /// Wirft nie — alle Fehler werden in einen [RetrackResult] gemappt, damit
+  /// die UI nicht try/catch um den Provider-Call legen muss.
+  Future<RetrackResult> retrackDeal(int dealId) async {
+    try {
+      final response = await _client.functions.invoke(
+        'tracking-poll',
+        body: {'deal_id': dealId},
+      );
+      final status = response.status;
+      if (status == 429) return RetrackResult.rateLimited;
+      if (status >= 400) return RetrackResult.failed;
+      return RetrackResult.success;
+    } on Exception {
+      return RetrackResult.offline;
+    }
+  }
+
   // ── Carrier-API-Credentials (Sprint 7) ───────────────────────────────────
 
   /// Lädt die maskierten Credentials aller Carrier des aktiven Workspaces
@@ -1258,4 +1285,22 @@ class InboxReparseResult {
     required this.unchanged,
     required this.errors,
   });
+}
+
+/// Ergebnis eines manuellen Re-Track-Triggers für einen einzelnen Deal.
+/// Wird in der UI in SnackBars übersetzt (siehe `trackingRetrack*` ARB-Keys).
+enum RetrackResult {
+  /// Edge-Function hat den Status erfolgreich aktualisiert (oder zumindest
+  /// gepollt — UI lädt Deal neu).
+  success,
+
+  /// 429: 30-Sekunden-Cooldown noch nicht abgelaufen.
+  rateLimited,
+
+  /// 4xx/5xx (außer 429) — Adapter/Carrier-API-Fehler, fehlende Credentials,
+  /// fehlende Auth (sollte UI nie sehen, weil App-Auth da ist).
+  failed,
+
+  /// Netzwerk-Exception (kein HTTP-Status).
+  offline,
 }

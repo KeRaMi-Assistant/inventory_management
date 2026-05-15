@@ -904,6 +904,20 @@ class InventoryProvider extends ChangeNotifier {
     _patchDeal(dealId, tracking: tracking, trackingConfidence: TrackingConfidence.manual, trackingNeedsReview: false);
   }
 
+  /// User-initiiertes Re-Tracking eines einzelnen Deals (Klarna-Pattern).
+  /// Triggert die `tracking-poll` Edge-Function mit `{ deal_id }`, was den
+  /// regulären Cron-Pfad für genau diesen Deal sofort ausführt. Bei Erfolg
+  /// wird der lokale Cache via `loadData()` resynchronisiert — kein delta-
+  /// Patch, weil der Server live_status, last_event, updated_at,
+  /// arrival_date + status atomar setzt.
+  Future<RetrackResult> retrackDeal(int dealId) async {
+    final result = await _repository.retrackDeal(dealId);
+    if (result == RetrackResult.success) {
+      await loadData();
+    }
+    return result;
+  }
+
   void _patchDeal(
     int dealId, {
     Object? tracking = _kSentinel,

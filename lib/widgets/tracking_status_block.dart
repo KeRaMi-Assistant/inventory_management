@@ -64,6 +64,16 @@ class TrackingStatusBlock extends StatelessWidget {
   /// Zeitpunkt des letzten Adapter-Polls.
   final DateTime? liveStatusUpdatedAt;
 
+  /// Callback "Status aktualisieren" — triggert sofortigen Re-Track für
+  /// genau diesen Deal (Klarna-Pattern). Wenn null, wird der Refresh-Button
+  /// nicht angezeigt (z.B. in der Inbox-Vorschau, wo es noch keinen Deal
+  /// gibt).
+  final VoidCallback? onRetrack;
+
+  /// Wenn true, wird der Refresh-Button als Spinner gerendert + disabled.
+  /// Caller setzt das während des Edge-Function-Calls.
+  final bool retrackInProgress;
+
   const TrackingStatusBlock({
     super.key,
     this.trackingNumber,
@@ -77,6 +87,8 @@ class TrackingStatusBlock extends StatelessWidget {
     this.liveStatus,
     this.liveStatusLastEvent,
     this.liveStatusUpdatedAt,
+    this.onRetrack,
+    this.retrackInProgress = false,
   });
 
   TrackingDisplayState _resolveState() {
@@ -144,6 +156,9 @@ class TrackingStatusBlock extends StatelessWidget {
           liveStatusLastEvent: liveStatusLastEvent,
           liveStatusUpdatedAt: liveStatusUpdatedAt,
           liveStatusLabel: _liveStatusLabel(l10n, liveStatus),
+          onRetrack: onRetrack,
+          retrackInProgress: retrackInProgress,
+          retrackLabel: l10n.trackingRetrackCta,
         );
       case TrackingDisplayState.manual:
         return _ManualState(
@@ -197,6 +212,9 @@ class _StrongState extends StatelessWidget {
     this.liveStatusLabel,
     this.liveStatusLastEvent,
     this.liveStatusUpdatedAt,
+    this.onRetrack,
+    this.retrackInProgress = false,
+    this.retrackLabel,
   });
 
   final String trackingNumber;
@@ -208,6 +226,9 @@ class _StrongState extends StatelessWidget {
   final String? liveStatusLabel;
   final String? liveStatusLastEvent;
   final DateTime? liveStatusUpdatedAt;
+  final VoidCallback? onRetrack;
+  final bool retrackInProgress;
+  final String? retrackLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -283,6 +304,18 @@ class _StrongState extends StatelessWidget {
                 ],
               ),
             ),
+            // Re-Track-Button — Touch-Target 48×48. Sichtbar nur, wenn
+            // ein Callback gesetzt ist (Deal-Detail), nicht in der Inbox-
+            // Vorschau.
+            if (onRetrack != null)
+              _IconCta(
+                key: const Key('tracking-retrack-cta'),
+                icon: Icons.refresh_rounded,
+                semanticsLabel: retrackLabel ?? '',
+                onTap: retrackInProgress ? null : onRetrack,
+                color: AppTheme.textMutedOf(context),
+                showSpinner: retrackInProgress,
+              ),
             // Edit-Button — Touch-Target 48×48 via SizedBox
             if (onManualInput != null)
               _IconCta(
@@ -843,12 +876,14 @@ class _IconCta extends StatelessWidget {
     required this.semanticsLabel,
     required this.color,
     this.onTap,
+    this.showSpinner = false,
   });
 
   final IconData icon;
   final String semanticsLabel;
   final Color color;
   final VoidCallback? onTap;
+  final bool showSpinner;
 
   @override
   Widget build(BuildContext context) {
@@ -861,7 +896,16 @@ class _IconCta extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
           child: Center(
-            child: Icon(icon, size: 18, color: color),
+            child: showSpinner
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                    ),
+                  )
+                : Icon(icon, size: 18, color: color),
           ),
         ),
       ),

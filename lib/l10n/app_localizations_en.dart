@@ -2946,6 +2946,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackingStatusBlockA11yLabel => 'Tracking status';
 
   @override
+  String get trackingRetrackCta => 'Refresh status';
+
+  @override
+  String get trackingRetrackRunning => 'Refreshing status…';
+
+  @override
+  String get trackingRetrackSuccess => 'Status updated';
+
+  @override
+  String get trackingRetrackRateLimited => 'Please wait 30s';
+
+  @override
+  String get trackingRetrackFailed => 'Status refresh failed';
+
+  @override
+  String get trackingRetrackOffline => 'No connection';
+
+  @override
   String get inboxSectionOrder => 'Order';
 
   @override
@@ -3007,4 +3025,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get liveStatusExpired => 'Status outdated';
+
+  @override
+  String get inboxFilterResetLabel => 'Reset filter';
+
+  @override
+  String get inboxFilterResetTitle => 'Reset filter?';
+
+  @override
+  String get inboxCopyMessageIdSnackbar => 'Message ID copied to clipboard.';
+
+  @override
+  String get inboxNoMailLinkSnackbar => 'No mail link available.';
+
+  @override
+  String get inboxNoTrackingSnackbar => 'This mail contains no tracking.';
+
+  @override
+  String get inboxOpenMailInBrowserMenuItem => 'Open mail in browser';
+
+  @override
+  String get inboxOpenMailLabel => 'Open mail';
+
+  @override
+  String get inboxOpenTicketLabel => 'Open ticket';
+
+  @override
+  String get inventoryDiscordTooltip => 'Open Discord ticket';
+
+  @override
+  String get inventoryProductHelperText => 'Select from ticket or type freely';
+
+  @override
+  String get settingsAddAmazonShops => 'Add Amazon shops';
+
+  @override
+  String get suppliersAddCarriers => 'Add shipping carriers';
+
+  @override
+  String get urlHelperLinkOpenError => 'Could not open link.';
 }

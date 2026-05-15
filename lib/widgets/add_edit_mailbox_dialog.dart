@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/mailbox_account.dart';
 import '../providers/inbox_provider.dart';
 
@@ -222,7 +223,7 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
       actions: [
         TextButton(
           onPressed: _saving ? null : () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(AppLocalizations.of(context).actionCancel),
         ),
         ElevatedButton(
           onPressed: _saving ? null : _save,
@@ -232,7 +233,7 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Speichern'),
+              : Text(AppLocalizations.of(context).actionSave),
         ),
       ],
     );

@@ -323,7 +323,7 @@ class _ShopsTab extends StatelessWidget {
                     OutlinedButton.icon(
                       onPressed: () => _seedAmazon(context, provider),
                       icon: const Icon(Icons.shopping_bag_outlined, size: 16),
-                      label: const Text('Amazon-Shops hinzufügen'),
+                      label: Text(AppLocalizations.of(context).settingsAddAmazonShops),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 8),
@@ -2269,26 +2269,29 @@ class _MailboxTabState extends State<_MailboxTab> {
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Postfach entfernen'),
-        content: Text(
-            'Soll das IMAP-Konto "${account.label}" wirklich gelöscht werden? '
-            'Auch alle aus diesem Postfach importierten Mails (Vorschläge + '
-            'Unklassifizierte) werden gelöscht. Bereits in Deals übernommene '
-            'Bestellungen bleiben unberührt.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Abbrechen'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Löschen',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx);
+        return AlertDialog(
+          title: const Text('Postfach entfernen'),
+          content: Text(
+              'Soll das IMAP-Konto "${account.label}" wirklich gelöscht werden? '
+              'Auch alle aus diesem Postfach importierten Mails (Vorschläge + '
+              'Unklassifizierte) werden gelöscht. Bereits in Deals übernommene '
+              'Bestellungen bleiben unberührt.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.actionCancel),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: Text(l10n.actionDelete,
+                  style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true) return;
     try {
@@ -2380,29 +2383,32 @@ void _showMailboxLimitReached(
     BuildContext context, BillingPlan plan, int limit) {
   showDialog<void>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Postfach-Limit erreicht'),
-      content: Text(
-        'Dein ${plan.label}-Plan erlaubt $limit '
-        '${limit == 1 ? "Postfach" : "Postfächer"}. '
-        'Upgrade auf einen höheren Plan, um weitere zu verbinden.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('Abbrechen'),
+    builder: (ctx) {
+      final l10n = AppLocalizations.of(ctx);
+      return AlertDialog(
+        title: const Text('Postfach-Limit erreicht'),
+        content: Text(
+          'Dein ${plan.label}-Plan erlaubt $limit '
+          '${limit == 1 ? "Postfach" : "Postfächer"}. '
+          'Upgrade auf einen höheren Plan, um weitere zu verbinden.',
         ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.pop(ctx);
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PricingScreen()),
-            );
-          },
-          child: const Text('Plan upgraden'),
-        ),
-      ],
-    ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.actionCancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PricingScreen()),
+              );
+            },
+            child: const Text('Plan upgraden'),
+          ),
+        ],
+      );
+    },
   );
 }
 

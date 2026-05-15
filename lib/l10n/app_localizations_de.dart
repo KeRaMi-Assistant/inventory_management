@@ -2950,6 +2950,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackingStatusBlockA11yLabel => 'Sendungsnummern-Status';
 
   @override
+  String get trackingRetrackCta => 'Status aktualisieren';
+
+  @override
+  String get trackingRetrackRunning => 'Status wird abgerufen…';
+
+  @override
+  String get trackingRetrackSuccess => 'Status aktualisiert';
+
+  @override
+  String get trackingRetrackRateLimited => 'Bitte 30s warten';
+
+  @override
+  String get trackingRetrackFailed => 'Status konnte nicht abgerufen werden';
+
+  @override
+  String get trackingRetrackOffline => 'Keine Verbindung';
+
+  @override
   String get inboxSectionOrder => 'Bestellung';
 
   @override
@@ -3011,4 +3029,45 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get liveStatusExpired => 'Status veraltet';
+
+  @override
+  String get inboxFilterResetLabel => 'Filter zurücksetzen';
+
+  @override
+  String get inboxFilterResetTitle => 'Filter zurücksetzen?';
+
+  @override
+  String get inboxCopyMessageIdSnackbar =>
+      'Message-ID in die Zwischenablage kopiert.';
+
+  @override
+  String get inboxNoMailLinkSnackbar => 'Kein Mail-Link verfügbar.';
+
+  @override
+  String get inboxNoTrackingSnackbar => 'Diese Mail enthält kein Tracking.';
+
+  @override
+  String get inboxOpenMailInBrowserMenuItem => 'Mail im Browser öffnen';
+
+  @override
+  String get inboxOpenMailLabel => 'Mail öffnen';
+
+  @override
+  String get inboxOpenTicketLabel => 'Ticket öffnen';
+
+  @override
+  String get inventoryDiscordTooltip => 'Discord-Ticket öffnen';
+
+  @override
+  String get inventoryProductHelperText =>
+      'Aus Ticket auswählen oder frei eingeben';
+
+  @override
+  String get settingsAddAmazonShops => 'Amazon-Shops hinzufügen';
+
+  @override
+  String get suppliersAddCarriers => 'Versanddienste hinzufügen';
+
+  @override
+  String get urlHelperLinkOpenError => 'Link konnte nicht geöffnet werden.';
 }
