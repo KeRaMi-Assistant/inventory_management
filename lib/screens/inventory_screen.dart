@@ -5,6 +5,8 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/deal.dart';
 import '../models/inventory_item.dart';
+import '../models/inventory_sort_mode.dart';
+import '../providers/app_preferences_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
@@ -61,11 +63,16 @@ class _InventoryScreenState extends State<InventoryScreen>
                             i.name.toLowerCase().contains(query) ||
                             (i.sku?.toLowerCase().contains(query) ?? false))
                         .toList();
-            final allStock = provider.inventoryItems
-                .where((i) => !_isSold(i))
-                .toList();
-            final allSold =
-                provider.inventoryItems.where(_isSold).toList();
+            final sortMode =
+                context.watch<AppPreferencesProvider>().inventorySortMode;
+            final allStock = sortInventoryItems(
+              provider.inventoryItems.where((i) => !_isSold(i)).toList(),
+              sortMode,
+            );
+            final allSold = sortInventoryItems(
+              provider.inventoryItems.where(_isSold).toList(),
+              sortMode,
+            );
             final stockItems = applySearch(allStock);
             final soldItems = applySearch(allSold);
 
@@ -187,32 +194,118 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget _buildSearchBar() {
     return Builder(builder: (context) {
       final l10n = AppLocalizations.of(context);
+      final sortMode = context.watch<AppPreferencesProvider>().inventorySortMode;
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search, size: 18),
-                  hintText: l10n.inventorySearchHint,
-                  isDense: true,
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search, size: 18),
+                      hintText: l10n.inventorySearchHint,
+                      isDense: true,
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onChanged: (v) => setState(() => _search = v),
+                  ),
                 ),
-                onChanged: (v) => setState(() => _search = v),
-              ),
+                const SizedBox(width: 8),
+                IconButton.outlined(
+                  tooltip: l10n.inventoryScanBarcode,
+                  icon: const Icon(Icons.qr_code_scanner, size: 18),
+                  onPressed: () => _scanAndLookup(context),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            IconButton.outlined(
-              tooltip: l10n.inventoryScanBarcode,
-              icon: const Icon(Icons.qr_code_scanner, size: 18),
-              onPressed: () => _scanAndLookup(context),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ActionChip(
+                key: const Key('inventorySortPill'),
+                avatar: const Icon(Icons.sort, size: 16),
+                label: Text(
+                  l10n.inventorySortLabel(_sortModeLabel(l10n, sortMode)),
+                ),
+                onPressed: () => _showSortSheet(context, sortMode),
+              ),
             ),
           ],
         ),
       );
     });
+  }
+
+  static String _sortModeLabel(AppLocalizations l10n, InventorySortMode mode) {
+    return switch (mode) {
+      InventorySortMode.criticalFirst => l10n.inventorySortByCritical,
+      InventorySortMode.nameAsc => l10n.inventorySortByName,
+      InventorySortMode.stockDesc => l10n.inventorySortByStockDesc,
+      InventorySortMode.stockAsc => l10n.inventorySortByStockAsc,
+      InventorySortMode.valueDesc => l10n.inventorySortByValue,
+    };
+  }
+
+  Future<void> _showSortSheet(
+    BuildContext context,
+    InventorySortMode current,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final prefs = context.read<AppPreferencesProvider>();
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.bgSurfaceOf(context),
+      builder: (sheetCtx) => SafeArea(
+        top: false,
+        child: Column(
+          key: const Key('inventorySortSheet'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.bgSubtleOf(context),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  l10n.inventorySortSheetTitle,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+            for (final mode in InventorySortMode.values)
+              ListTile(
+                key: Key('inventorySortOption-${mode.name}'),
+                leading: Icon(
+                  current == mode ? Icons.radio_button_checked : Icons.radio_button_off,
+                  color: current == mode
+                      ? AppTheme.accentTextOf(context)
+                      : AppTheme.textMutedOf(context),
+                ),
+                title: Text(_sortModeLabel(l10n, mode)),
+                onTap: () {
+                  prefs.setInventorySortMode(mode);
+                  Navigator.pop(sheetCtx);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _scanAndLookup(BuildContext context) async {

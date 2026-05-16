@@ -70,6 +70,7 @@ Dialogs müssen auf 390×844 ohne horizontalen Scroll funktionieren.
 |---|---|---|
 | `/deals` → New-/Edit-Deal | [`lib/widgets/add_edit_deal_dialog.dart`](../../lib/widgets/add_edit_deal_dialog.dart) | smoke-theme, mobile-overflow |
 | `/inventory` → Edit-Item | [`lib/screens/inventory_screen.dart`](../../lib/screens/inventory_screen.dart) (`_AddEditItemDialog`) | smoke-theme, mobile-overflow |
+| `/inventory` → Sort-Sheet (Plan §Task #04) | [`lib/screens/inventory_screen.dart`](../../lib/screens/inventory_screen.dart) (`_showSortSheet`, `Key('inventorySortSheet')`) | smoke-theme, mobile-overflow |
 | `/inventory` → Batch-Sheet | [`lib/widgets/inventory_batches_sheet.dart`](../../lib/widgets/inventory_batches_sheet.dart) | smoke-theme, mobile-overflow |
 | `/inventory` → Barcode-Scan | [`lib/widgets/barcode_scanner_sheet.dart`](../../lib/widgets/barcode_scanner_sheet.dart) | smoke-theme |
 | `/suppliers` → Add-/Edit-Supplier | [`lib/widgets/add_edit_supplier_dialog.dart`](../../lib/widgets/add_edit_supplier_dialog.dart) | smoke-theme, mobile-overflow |

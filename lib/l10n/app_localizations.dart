@@ -3626,6 +3626,48 @@ abstract class AppLocalizations {
   /// **'Name, SKU, EAN, Lagerort suchen'**
   String get inventorySearchHint;
 
+  /// No description provided for @inventorySortLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Sortieren: {mode}'**
+  String inventorySortLabel(Object mode);
+
+  /// No description provided for @inventorySortSheetTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Sortierung wählen'**
+  String get inventorySortSheetTitle;
+
+  /// No description provided for @inventorySortByCritical.
+  ///
+  /// In de, this message translates to:
+  /// **'Kritisch zuerst'**
+  String get inventorySortByCritical;
+
+  /// No description provided for @inventorySortByName.
+  ///
+  /// In de, this message translates to:
+  /// **'Name (A→Z)'**
+  String get inventorySortByName;
+
+  /// No description provided for @inventorySortByStockDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestand (hoch zuerst)'**
+  String get inventorySortByStockDesc;
+
+  /// No description provided for @inventorySortByStockAsc.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestand (niedrig zuerst)'**
+  String get inventorySortByStockAsc;
+
+  /// No description provided for @inventorySortByValue.
+  ///
+  /// In de, this message translates to:
+  /// **'Wert (hoch zuerst)'**
+  String get inventorySortByValue;
+
   /// No description provided for @inventoryAddBatch.
   ///
   /// In de, this message translates to:

@@ -1986,6 +1986,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inventorySearchHint => 'Search name, SKU, EAN, location';
 
   @override
+  String inventorySortLabel(Object mode) {
+    return 'Sort: $mode';
+  }
+
+  @override
+  String get inventorySortSheetTitle => 'Choose sort order';
+
+  @override
+  String get inventorySortByCritical => 'Critical first';
+
+  @override
+  String get inventorySortByName => 'Name (A→Z)';
+
+  @override
+  String get inventorySortByStockDesc => 'Stock (highest first)';
+
+  @override
+  String get inventorySortByStockAsc => 'Stock (lowest first)';
+
+  @override
+  String get inventorySortByValue => 'Value (highest first)';
+
+  @override
   String get inventoryAddBatch => 'Add batch';
 
   @override

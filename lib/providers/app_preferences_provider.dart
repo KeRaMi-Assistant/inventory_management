@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../models/inventory_sort_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppPreferencesProvider extends ChangeNotifier {
@@ -9,6 +10,7 @@ class AppPreferencesProvider extends ChangeNotifier {
   static const _kThemeMode = 'pref_theme_mode';
   static const _kColorPalette = 'pref_color_palette';
   static const _kRecentSearches = 'recent_searches';
+  static const _kInventorySortMode = 'pref_inventory_sort_mode';
   static const _maxRecentSearches = 5;
 
   static const supportedLocales = <Locale>[
@@ -21,6 +23,7 @@ class AppPreferencesProvider extends ChangeNotifier {
   Locale? _locale;
   ThemeMode _themeMode = ThemeMode.system;
   AppColorPalette _colorPalette = AppColorPalette.blue;
+  InventorySortMode _inventorySortMode = InventorySortMode.criticalFirst;
   bool _ready = false;
   List<String> _recentSearches = [];
 
@@ -29,6 +32,7 @@ class AppPreferencesProvider extends ChangeNotifier {
   Locale? get locale => _locale;
   ThemeMode get themeMode => _themeMode;
   AppColorPalette get colorPalette => _colorPalette;
+  InventorySortMode get inventorySortMode => _inventorySortMode;
   bool get isReady => _ready;
 
   /// Returns the in-memory cached list of recent searches (max 5, newest first).
@@ -89,7 +93,25 @@ class AppPreferencesProvider extends ChangeNotifier {
     };
     AppTheme.setActivePalette(_colorPalette);
     _recentSearches = prefs.getStringList(_kRecentSearches) ?? [];
+    final rawSort = prefs.getString(_kInventorySortMode);
+    _inventorySortMode = _sortModeFromString(rawSort);
     _ready = true;
+    notifyListeners();
+  }
+
+  static InventorySortMode _sortModeFromString(String? raw) => switch (raw) {
+        'nameAsc' => InventorySortMode.nameAsc,
+        'stockDesc' => InventorySortMode.stockDesc,
+        'stockAsc' => InventorySortMode.stockAsc,
+        'valueDesc' => InventorySortMode.valueDesc,
+        'criticalFirst' => InventorySortMode.criticalFirst,
+        _ => InventorySortMode.criticalFirst,
+      };
+
+  Future<void> setInventorySortMode(InventorySortMode mode) async {
+    _inventorySortMode = mode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kInventorySortMode, mode.name);
     notifyListeners();
   }
 
