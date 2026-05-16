@@ -103,7 +103,12 @@ Deno.test('Amazon IT Live-Wrap: echte User-Mail mit Plain-Text "DE5455279839" + 
     parsed!.tracking, 'DE5455279839',
     'Plain-Text Carrier-Tracking muss gegen orderingShipmentId-Fallback gewinnen',
   )
-  assertEquals(parsed!.carrier, 'Amazon Logistics')
+  // Plan 2026-05-16 §D1: `inferCarrier` entfernt — `pattern.carrier`
+  // ist die einzige Quelle. `dhl-de-prefix` hat jetzt `carrier: 'DHL'`,
+  // die "Amazon Logistics"-Body-Inferenz ist weg. Final entscheidet
+  // `enrichWithDhlValidation` per API-Probe (in dieser Test-Pipeline
+  // nicht durchlaufen — wir testen nur Parse-Output).
+  assertEquals(parsed!.carrier, 'DHL')
   // orderingShipmentId aus dem href darf max. als Sekundär-Tracking
   // dazukommen (in trackings[]), niemals als primary `tracking`.
   if (parsed!.trackings && parsed!.trackings.length > 1) {

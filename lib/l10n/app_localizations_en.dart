@@ -1286,14 +1286,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpShippingDhlDesc =>
-      'DHL works out of the box:\n• Create an account on developer.dhl.com (free).\n• Subscribe to the \"Shipment Tracking - Unified\" API there — the free tier is enough for personal use.\n• Copy the API key and paste it under Settings → Shipping → DHL → \"Save API key\".\nFrom now on, deals with a DHL tracking number are refreshed at regular intervals and the status (in transit, out for delivery, delivered) appears directly on the deal.';
+      'DHL works out of the box:\n• Create an account on developer.dhl.com (free).\n• Subscribe to the \"Shipment Tracking - Unified\" API there — the free tier is enough for personal use.\n• Copy the API key and paste it under Settings → Shipping → DHL → \"Save API key\".\n• Right after, tap Settings → \"Re-evaluate tracking numbers\" once so your existing mails are re-parsed by the new DHL-API pipeline.\nFrom now on, deals with a DHL tracking number are refreshed at regular intervals and the status (in transit, out for delivery, delivered) appears directly on the deal.';
 
   @override
-  String get helpShippingComingSoonTitle => 'DPD and UPS — coming soon';
+  String get helpShippingApiOnlyTitle =>
+      'Why DHL API instead of mail heuristics?';
+
+  @override
+  String get helpShippingApiOnlyDesc =>
+      'Until recently the app detected tracking numbers from mails via regex patterns. The result: often multiple candidates per mail, only one of which was real (order no., customer no., invoice no. — every 12-digit number looked like a tracking code). Now the app queries DHL\'s API directly for each candidate: if DHL returns a shipment, the candidate is accepted; otherwise it\'s discarded. You see at most one pill per mail, and it\'s always real.';
+
+  @override
+  String get helpShippingComingSoonTitle =>
+      'DPD, UPS, Hermes, Amazon Logistics — later or never';
 
   @override
   String get helpShippingComingSoonDesc =>
-      'DPD and UPS show up in the list but are currently marked \"Coming soon\" and not editable. The integration ships in a later update — until then, shipments from these carriers are still detected from shipping mails, only the live status is missing. Nothing is broken, this is intentional.';
+      'Automatic tracking detection currently runs exclusively against the DHL API. Other carriers (DPD, UPS, Hermes, Amazon Logistics, GLS) are no longer guessed from shipping mails — that was the main source of false positives. DPD and UPS will get their own API integration in a later update. Hermes and Amazon Logistics don\'t offer a public tracking API — for those carriers, enter the tracking number on the deal manually.';
 
   @override
   String get helpShippingKeySafetyTitle => 'What happens to my API key?';
