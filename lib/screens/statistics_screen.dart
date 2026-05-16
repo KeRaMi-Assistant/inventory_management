@@ -145,7 +145,14 @@ class _StatisticsScreenState extends State<StatisticsScreen>
               color: AppTheme.bgAppOf(context),
               child: Column(
                 children: [
-                  StatisticsFilterBar(onExport: () => _onExport(stats)),
+                  // Plan §Task #09: Filter-Bar ist via Column-Layout
+                  // bereits "sticky" — sie liegt ueber dem scrollbaren
+                  // TabBarView und bewegt sich nicht beim Chart-Scroll.
+                  // Key fuer Browser-Tester-Anchor.
+                  StatisticsFilterBar(
+                    key: const Key('statisticsFilterBarSticky'),
+                    onExport: () => _onExport(stats),
+                  ),
                   Material(
                     color: AppTheme.bgSurfaceOf(context),
                     elevation: 0,
