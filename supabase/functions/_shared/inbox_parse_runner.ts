@@ -244,7 +244,11 @@ export async function processOne(
 /// DHL-API-bestaetigten Werten. Wenn kein API-Key fuer den Workspace
 /// gesetzt ist, raeumt der Wrapper Trackings/Carrier still ab und
 /// setzt `trackingNeedsReview` fuer shipped/delivered.
-async function applyDhlValidation(
+///
+/// Exportiert, damit `inbox-parse`-Re-Parse-Pfade dieselbe Validation
+/// nutzen koennen wie der reguläre Sweep (sonst sehen Re-Parses die
+/// Pattern-Heuristik, aber ueberspringen die DHL-API).
+export async function applyDhlValidation(
   admin: SbClient,
   parsed: ParsedOrder,
   workspaceId: string,
