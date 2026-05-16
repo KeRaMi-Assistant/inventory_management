@@ -40,7 +40,7 @@ die der Browser-Tester pro Eintrag durchspielt — Definitionen unten.
 | `/inbox` | [`lib/screens/inbox_screen.dart`](../../lib/screens/inbox_screen.dart) | smoke-inbox, smoke-theme | 3 Tabs (Trackings, Bestellungen, Sonstiges). |
 | `/inventory` | [`lib/screens/inventory_screen.dart`](../../lib/screens/inventory_screen.dart) | smoke-theme, mobile-overflow | KPI-Header + Item-Tabelle. |
 | `/suppliers` | [`lib/screens/suppliers_screen.dart`](../../lib/screens/suppliers_screen.dart) | smoke-theme | Lieferanten-CRUD. |
-| `/statistics` | [`lib/screens/statistics_screen.dart`](../../lib/screens/statistics_screen.dart) | smoke-theme, charts-render | KPI + Charts + Drilldown. |
+| `/statistics` | [`lib/screens/statistics_screen.dart`](../../lib/screens/statistics_screen.dart) | smoke-theme, charts-render | KPI + Charts + Drilldown. Sticky Filter-Bar (Plan §Task #09): `Key('statisticsFilterBarSticky')` — Column-Layout, bleibt sichtbar wenn Charts scrollen. |
 | `/activity` | [`lib/screens/activity_screen.dart`](../../lib/screens/activity_screen.dart) | smoke-theme | Workspace-Activity-Log. |
 | `/help` | [`lib/screens/help_screen.dart`](../../lib/screens/help_screen.dart) | smoke-help, smoke-theme | FAQ + Search + Quick-Start. |
 | `/settings` | [`lib/screens/settings_screen.dart`](../../lib/screens/settings_screen.dart) | smoke-theme, all-settings-tabs | 8 Tabs: Buyers, Shops, Team, Push, Postfach, Shipping, Public profile, General. |
