@@ -1255,7 +1255,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpDealsTrackingDesc =>
-      'When a shipping mail with a tracking number arrives (Amazon, DHL, DPD, UPS, Hermes, GLS), the matching deal is set to \"In transit\" automatically. Once the carrier reports delivery, the deal flips to \"Arrived\".';
+      'When a shipping mail with a DHL tracking number arrives, the app queries DHL\'s API directly — only confirmed tracking numbers flip the deal to \"In transit\" automatically. Once DHL reports delivery, the deal flips to \"Arrived\". Other carriers (DPD, UPS, Hermes, Amazon Logistics, GLS) are no longer auto-detected from mails — enter their tracking numbers manually on the deal. See the \"Shipping & carrier API keys\" section for details.';
 
   @override
   String get helpDealsDropShipTitle => 'Multi drop-ship';
