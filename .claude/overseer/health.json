@@ -1,5 +1,5 @@
 {
-  "ts": "2026-05-16T18:40:25Z",
+  "ts": "2026-05-16T18:47:45Z",
   "panic": false,
   "checks": {
     "disk": {
@@ -17,7 +17,7 @@
       "ok": true
     },
     "stash": {
-      "count": 1,
+      "count": 0,
       "ok": true
     },
     "cost": {
