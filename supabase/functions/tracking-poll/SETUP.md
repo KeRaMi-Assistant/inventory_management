@@ -9,24 +9,46 @@ Die Migration `20260508000000_workspace_carrier_credentials.sql` legt RPCs an,
 die API-Keys mit `pgp_sym_encrypt` verschlüsseln. Der Schlüssel kommt aus
 Supabase Vault.
 
-In der SQL-Konsole:
+> **Seit Migration `20260516000000_carrier_master_key_bootstrap.sql`
+> übernimmt eine idempotente Migration den Bootstrap automatisch.** Nach
+> `supabase db push` ist der Vault-Secret angelegt — kein manueller
+> SQL-Schritt nötig. Die folgenden Konsolen-Snippets bleiben als Fallback
+> für Self-Hosting / Sonderfälle erhalten.
 
-```sql
-SELECT vault.create_secret(
-  encode(extensions.gen_random_bytes(32), 'hex'),
-  'carrier_master_key',
-  'Master-Schlüssel für Carrier-API-Keys (Sprint 7)'
-);
-```
-
-Prüfen:
+Verifikation, ob die Migration sauber durchlief:
 
 ```sql
 SELECT name, created_at FROM vault.secrets WHERE name = 'carrier_master_key';
+-- Erwartet: genau 1 Row.
+
+SELECT length(public._carrier_master_key());
+-- Erwartet: 64 (32 Zufallsbytes hex-encoded), kein RAISE EXCEPTION.
 ```
 
-> **Self-hosted ohne Vault**: Alternativ `app.carrier_master_key` per
-> `ALTER DATABASE … SET app.carrier_master_key = '…'` setzen.
+Falls die Migration in einer Umgebung ohne Vault-Extension gelandet ist
+(Self-Hosting), fängt der Bootstrap das via `EXCEPTION WHEN
+invalid_schema_name / undefined_table / undefined_function /
+insufficient_privilege` ab und schreibt einen `NOTICE`. In dem Fall
+manuell setzen:
+
+```sql
+-- Variante A: GUC (Self-Hosting ohne Vault)
+ALTER DATABASE postgres
+  SET app.carrier_master_key = encode(gen_random_bytes(32), 'hex');
+
+-- Variante B: Vault-Secret nachträglich anlegen (sobald Vault verfügbar)
+SELECT vault.create_secret(
+  encode(extensions.gen_random_bytes(32), 'hex'),
+  'carrier_master_key',
+  'Master-Schlüssel für Carrier-API-Keys (Sprint 7, manueller Backfill)'
+);
+```
+
+> **Achtung Rotation**: Wird der Master-Key ausgetauscht, werden alle
+> bereits gespeicherten API-Keys unleserlich. Eine Rotation braucht
+> einen Re-Encrypt-Loop (decrypt-with-old + encrypt-with-new für jede
+> Row in `workspace_carrier_credentials`). Siehe Plan
+> `plans/2026-05-16_dhl_tracking_activation.md` § Future / Nicht-Ziele.
 
 ## 2. CRON_SECRET wiederverwenden
 
@@ -88,11 +110,17 @@ App → Einstellungen → **Versand** → API-Key pro Carrier eingeben. Der Key
 wird sofort verschlüsselt gespeichert; angezeigt wird ab dem nächsten Reload
 nur noch `••••<letzte 4 Zeichen>`.
 
+**Aktueller UI-Stand (Plan `2026-05-16_dhl_tracking_activation`):** Nur
+DHL ist konfigurierbar. DPD und UPS sind sichtbar, aber als „Bald
+verfügbar" disabled — Adapter + DB-Constraints + RPCs bleiben unverändert
+und stehen für eine spätere Reaktivierung bereit (Einzeiler in
+`lib/models/carrier_credential.dart`).
+
 API-Keys bekommt man hier:
 
 - DHL  → <https://developer.dhl.com/api-reference/shipment-tracking>
-- DPD  → DPD-Vertriebspartner / DPD Geopost API-Portal
-- UPS  → <https://developer.ups.com/> (OAuth-Bearer-Token)
+- DPD  → DPD-Vertriebspartner / DPD Geopost API-Portal *(disabled in UI)*
+- UPS  → <https://developer.ups.com/> (OAuth-Bearer-Token) *(disabled in UI)*
 
 ## 6. Manuell triggern (Debug)
 

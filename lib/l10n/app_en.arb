@@ -178,6 +178,9 @@
   "shippingLastError": "Last error: {error}",
   "@shippingLastError": { "placeholders": { "error": {} } },
   "shippingLastNeverPolled": "Not polled yet.",
+  "shippingCarrierComingSoon": "Coming soon",
+  "shippingSetupError": "Setup incomplete: master key not configured. Open help.",
+  "shippingSetupHelpAction": "Open help",
 
   "buyersEmpty": "No buyers yet.",
   "buyersAdd": "Add buyer",

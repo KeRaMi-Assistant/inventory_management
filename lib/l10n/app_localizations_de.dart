@@ -466,6 +466,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get shippingLastNeverPolled => 'Noch nicht gepollt.';
 
   @override
+  String get shippingCarrierComingSoon => 'Bald verfügbar';
+
+  @override
+  String get shippingSetupError =>
+      'Setup unvollständig: Master-Key nicht konfiguriert. Bitte Hilfe öffnen.';
+
+  @override
+  String get shippingSetupHelpAction => 'Hilfe öffnen';
+
+  @override
   String get buyersEmpty => 'Noch keine Käufer angelegt.';
 
   @override

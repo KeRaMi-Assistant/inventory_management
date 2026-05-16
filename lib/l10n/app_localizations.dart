@@ -932,6 +932,24 @@ abstract class AppLocalizations {
   /// **'Noch nicht gepollt.'**
   String get shippingLastNeverPolled;
 
+  /// No description provided for @shippingCarrierComingSoon.
+  ///
+  /// In de, this message translates to:
+  /// **'Bald verfügbar'**
+  String get shippingCarrierComingSoon;
+
+  /// No description provided for @shippingSetupError.
+  ///
+  /// In de, this message translates to:
+  /// **'Setup unvollständig: Master-Key nicht konfiguriert. Bitte Hilfe öffnen.'**
+  String get shippingSetupError;
+
+  /// No description provided for @shippingSetupHelpAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Hilfe öffnen'**
+  String get shippingSetupHelpAction;
+
   /// No description provided for @buyersEmpty.
   ///
   /// In de, this message translates to:

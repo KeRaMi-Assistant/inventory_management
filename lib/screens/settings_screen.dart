@@ -27,6 +27,7 @@ import '../widgets/add_edit_buyer_dialog.dart';
 import '../widgets/add_edit_mailbox_dialog.dart';
 import '../widgets/add_edit_shop_dialog.dart';
 import 'billing_profile_screen.dart';
+import 'help_screen.dart';
 import 'pricing_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -2877,12 +2878,37 @@ class _ShippingTabState extends State<_ShippingTab> {
     );
     if (saved != true || !context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
+    final navigatorRef = Navigator.of(context);
     try {
       await context.read<CarrierCredentialsProvider>().setApiKey(
             carrierId: carrierId,
             apiKey: controller.text.trim(),
           );
+      if (!context.mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(l10n.shippingKeySaved)));
+    } on PostgrestException catch (e) {
+      final isMasterKey = e.code == 'P0001' &&
+          e.message.contains('carrier_master_key');
+      if (isMasterKey) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.shippingSetupError),
+            action: SnackBarAction(
+              label: l10n.shippingSetupHelpAction,
+              onPressed: () {
+                navigatorRef.push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const HelpScreen(),
+                  ),
+                );
+              },
+            ),
+            duration: const Duration(seconds: 8),
+          ),
+        );
+      } else {
+        messenger.showSnackBar(SnackBar(content: Text('$e')));
+      }
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('$e')));
     }
@@ -2957,6 +2983,7 @@ class _ShippingTabState extends State<_ShippingTab> {
                           _CarrierTile(
                             carrierId: id,
                             credential: provider.credentialFor(id),
+                            enabled: enabledCarrierIds.contains(id),
                             onSet: () => _showKeyDialog(
                               context,
                               carrierId: id,
@@ -3030,12 +3057,14 @@ class _CarrierTile extends StatelessWidget {
     required this.credential,
     required this.onSet,
     required this.onDelete,
+    required this.enabled,
   });
 
   final String carrierId;
   final CarrierCredential? credential;
   final VoidCallback onSet;
   final VoidCallback onDelete;
+  final bool enabled;
 
   String _statusLine(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -3062,7 +3091,8 @@ class _CarrierTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final c = credential;
-    return Card(
+
+    final card = Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -3089,12 +3119,39 @@ class _CarrierTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        labelForCarrierId(carrierId),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            labelForCarrierId(carrierId),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                          if (!enabled) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.bgSurfaceOf(context),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: AppTheme.borderOf(context),
+                                ),
+                              ),
+                              child: Text(
+                                l10n.shippingCarrierComingSoon,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.textMutedOf(context),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -3108,7 +3165,7 @@ class _CarrierTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (c != null)
+                if (enabled && c != null)
                   IconButton(
                     tooltip: l10n.shippingDeleteKey,
                     icon: const Icon(Icons.delete_outline),
@@ -3128,10 +3185,18 @@ class _CarrierTile extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: ElevatedButton.icon(
-                onPressed: onSet,
-                icon: Icon(c == null ? Icons.add : Icons.edit_outlined),
+                onPressed: enabled ? onSet : null,
+                icon: Icon(
+                  enabled
+                      ? (c == null ? Icons.add : Icons.edit_outlined)
+                      : Icons.schedule_outlined,
+                ),
                 label: Text(
-                  c == null ? l10n.shippingSetKey : l10n.shippingUpdateKey,
+                  enabled
+                      ? (c == null
+                          ? l10n.shippingSetKey
+                          : l10n.shippingUpdateKey)
+                      : l10n.shippingCarrierComingSoon,
                 ),
               ),
             ),
@@ -3139,6 +3204,11 @@ class _CarrierTile extends StatelessWidget {
         ),
       ),
     );
+
+    if (!enabled) {
+      return Opacity(opacity: 0.55, child: card);
+    }
+    return card;
   }
 }
 

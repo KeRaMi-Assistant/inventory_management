@@ -464,6 +464,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shippingLastNeverPolled => 'Not polled yet.';
 
   @override
+  String get shippingCarrierComingSoon => 'Coming soon';
+
+  @override
+  String get shippingSetupError =>
+      'Setup incomplete: master key not configured. Open help.';
+
+  @override
+  String get shippingSetupHelpAction => 'Open help';
+
+  @override
   String get buyersEmpty => 'No buyers yet.';
 
   @override
