@@ -219,6 +219,10 @@ class _HelpScreenState extends State<HelpScreen> {
             l10n.helpShippingDhlDesc,
           ),
           _HelpItem.text(
+            l10n.helpShippingApiOnlyTitle,
+            l10n.helpShippingApiOnlyDesc,
+          ),
+          _HelpItem.text(
             l10n.helpShippingComingSoonTitle,
             l10n.helpShippingComingSoonDesc,
           ),

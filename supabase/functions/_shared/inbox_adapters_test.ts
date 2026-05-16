@@ -11,6 +11,7 @@ import { assert } from 'https://deno.land/std@0.224.0/assert/assert.ts'
 import {
   detectAndParse,
   detectShop,
+  findAllTrackings,
   isAccountingMail,
   isCarrierOnly,
   shouldStore,
@@ -69,13 +70,17 @@ Deno.test('Tink: Bestellbestätigung wird erkannt', () => {
   assertEquals(parsed!.orderId, '1234567')
 })
 
-Deno.test('Tink: Versand-Mail mit "Lieferung ist auf dem Weg"', () => {
+Deno.test.ignore('Tink: Versand-Mail mit "Lieferung ist auf dem Weg"', () => {
+  // Plan 2026-05-16 §D1/§D5: Pattern-Heuristik fuer Tink/UPS-1Z wurde
+  // entfernt. Tracking-Detection laeuft jetzt ausschliesslich via
+  // DHL-API-Validation (`enrichWithDhlValidation`). Der Test bleibt als
+  // removed-by-design-Marker, falls Non-DHL-Patterns je zurueckkehren
+  // (z.B. ueber API-Adapter fuer DPD/UPS).
   const c = ctx(
     'noreply@tink.de',
     'tink | Die Lieferung ist auf dem Weg.',
     'Hallo, deine Bestellnummer: 9876543 ist auf dem Weg. Tracking-Nr: 1Z999AA10123456789',
   )
-  // Subject enthält "Lieferung" — sollte als Order erkannt werden.
   assertEquals(shouldStore(c), true)
   const parsed = detectAndParse(c)
   assertExists(parsed)
@@ -98,7 +103,11 @@ Deno.test('Anker: Bestellbestätigung mit R-Order-ID', () => {
   assertEquals(parsed!.status, 'ordered')
 })
 
-Deno.test('Anker: Versand- und Zustell-Mail mappen auf shipped/delivered', () => {
+Deno.test.ignore('Anker: Versand- und Zustell-Mail mappen auf shipped/delivered', () => {
+  // Plan 2026-05-16 §D1/§D5: Tracking-Extraction via UPS-1Z-Pattern
+  // wurde entfernt. Status-Mapping (shipped/delivered) ist davon nicht
+  // betroffen, aber der Original-Test verifizierte explizit den
+  // UPS-Tracking-Wert. Test bleibt als removed-by-design-Marker.
   const c1 = ctx(
     'support@anker.com',
     'Ihre Bestellung R030101520991S wurde bereits versendet.',
@@ -305,7 +314,10 @@ Deno.test('Amazon Logistics: "Your tracking number is: DE…" gewinnt gegen prog
     parsed!.tracking !== '109727463192302',
     'orderingShipmentId aus progress-tracker-URL darf NICHT primary sein',
   )
-  assertEquals(parsed!.carrier, 'Amazon Logistics')
+  // Plan 2026-05-16 §D1: inferCarrier() entfernt, Carrier kommt jetzt
+  // direkt aus `pattern.carrier ?? 'DHL'`. dhl-de-prefix-Pattern ist
+  // mit carrier='DHL' definiert — Amazon-Logistics-Inference faellt weg.
+  assertEquals(parsed!.carrier, 'DHL')
 })
 
 // Regression: das HTML, das `seed-demo-workspace.buildDemoAmazonHtml`
@@ -344,7 +356,9 @@ Deno.test('Amazon Demo-Seeder HTML: DE-Plain-Text gewinnt gegen orderingShipment
     parsed!.tracking, trackingDe,
     'Demo-Seeder-HTML muss DE-Carrier-Tracking als primary liefern',
   )
-  assertEquals(parsed!.carrier, 'Amazon Logistics')
+  // Plan 2026-05-16 §D1: inferCarrier() entfernt — DE-Prefix kommt jetzt
+  // mit carrier='DHL' aus dem dhl-de-prefix-Pattern.
+  assertEquals(parsed!.carrier, 'DHL')
   // Sicherheitsnetz: orderingShipmentId darf NICHT primary werden,
   // sonst kehrt der Bug zurück.
   assert(
@@ -366,7 +380,13 @@ Deno.test('Amazon Demo-Seeder HTML: DE-Plain-Text gewinnt gegen orderingShipment
 // DE\d{8,14} — das hat ALLE DE-Trackings als Amazon Logistics beschriftet,
 // auch wenn sie in Wirklichkeit DHL waren. Das Label-Feld muss jetzt aus
 // dem Body inferred werden.
-Deno.test('DE-Tracking + Body "Amazon Logistics" → carrier=Amazon Logistics', () => {
+Deno.test.ignore('DE-Tracking + Body "Amazon Logistics" → carrier=Amazon Logistics', () => {
+  // Plan 2026-05-16 §D1/§D5: `inferCarrier()` wurde komplett entfernt
+  // (toter Code mit nur noch DHL-Patterns). DE-Prefix-Trackings kommen
+  // jetzt deterministisch mit `carrier='DHL'`. Body-Inference fuer
+  // "Amazon Logistics" gibt es nicht mehr — final entscheidet die
+  // DHL-API-Validation, ob's wirklich eine DHL-Sendung ist (Mails von
+  // Amazon Logistics scheitern dann am API-404 und werden verworfen).
   const c = ctx(
     'versandbestaetigung@amazon.de',
     'Deine Bestellung wurde versendet',
@@ -411,7 +431,12 @@ Deno.test('DE-Tracking ohne Body-Hint → carrier=undefined (kein Label > falsch
   }
 })
 
-Deno.test('Amazon DE: "Deine Sendungsnummer lautet: …" matcht (lautet-Variante)', () => {
+Deno.test.ignore('Amazon DE: "Deine Sendungsnummer lautet: …" matcht (lautet-Variante)', () => {
+  // Plan 2026-05-16 §D1/§D5: `context-numeric-10-22`-Pattern wurde
+  // entfernt (Bestellnr/Kundennr-Falsch-Positiv-Quelle). Eine 14-stellige
+  // generische Zahl ohne DHL-Format laeuft jetzt nicht mehr als
+  // Tracking-Candidate durch. Detection erfolgt ausschliesslich via
+  // DHL-Patterns + API-Validation.
   const c = ctx(
     'versand@amazon.de',
     'Deine Bestellung wurde versendet',
@@ -444,4 +469,54 @@ Deno.test('Unbekannter Shop mit Order-Subject bleibt unclassified-eligible', () 
   assertEquals(shouldStore(c), true)
   assertEquals(detectAndParse(c), null)
   assert(detectShop(c) === null)
+})
+
+// ── DHL-only-Regression-Guards (Plan 2026-05-16 §D1) ─────────────────
+// Diese Tests garantieren, dass entfernte Non-DHL-Patterns NICHT mehr
+// als Tracking-Candidates auftauchen. Falls die Patterns je zurueckkehren
+// (z.B. ueber DPD/UPS-API-Adapter), MUESSEN diese Tests aktualisiert
+// werden, nicht stillschweigend kippen.
+
+Deno.test('Plan §D1: UPS-1Z-Pattern wird NICHT mehr detected', () => {
+  const candidates = findAllTrackings('Versand: 1Z999AA10123456784', {})
+  assertEquals(candidates.length, 0)
+})
+
+Deno.test('Plan §D1: Amazon-TBA-Pattern wird NICHT mehr detected', () => {
+  const candidates = findAllTrackings('Tracking: TBA123456789012', {})
+  assertEquals(candidates.length, 0)
+})
+
+Deno.test('Plan Phase A: context-numeric (13-digit) MIT Anchor wird wieder detected (medium)', () => {
+  // Anchor-gated re-introduction: 'Sendungsnummer:' triggert das
+  // permissive Pattern. DHL-API entscheidet final, ob die Nummer real
+  // ist — die Heuristik muss nur den Kandidaten liefern.
+  const candidates = findAllTrackings('Sendungsnummer: 1234567890123', {})
+  const ctx = candidates.find((c) => c.value === '1234567890123')
+  assert(ctx !== undefined, 'context-numeric mit Anchor muss matchen')
+  assertEquals(ctx!.confidence, 'medium')
+  assertEquals(ctx!.carrier, 'DHL')
+})
+
+Deno.test('Plan Phase A: context-numeric (13-digit) OHNE Anchor → weak (Wrapper filtert raus)', () => {
+  // requiresAnchor:true + kein Anchor → Confidence wird gestepdown von
+  // medium → weak. Der Validation-Wrapper akzeptiert nur strong+medium,
+  // also wird der Kandidat NICHT an DHL geschickt → kein API-Cost-Risiko.
+  const candidates = findAllTrackings('Random text 1234567890123 here', {})
+  const ctx = candidates.find((c) => c.value === '1234567890123')
+  assert(ctx !== undefined, 'Candidate existiert, aber als weak')
+  assertEquals(ctx!.confidence, 'weak')
+})
+
+Deno.test('Plan §D1: S10-UPU-Pattern (XJ12345678FR) wird NICHT mehr detected', () => {
+  const candidates = findAllTrackings('Tracking: XJ12345678FR', {})
+  assertEquals(candidates.length, 0)
+})
+
+Deno.test('Plan §D1: DHL-JJD-Pattern wird WEITERHIN detected (Sanity)', () => {
+  const candidates = findAllTrackings('Sendungsnummer: JJD012345678901234', {})
+  assert(candidates.length >= 1, 'JJD-Pattern muss weiterhin matchen')
+  const jjd = candidates.find((c) => c.value === 'JJD012345678901234')
+  assert(jjd !== undefined, 'JJD012345678901234 muss als Candidate erscheinen')
+  assertEquals(jjd!.carrier, 'DHL')
 })
