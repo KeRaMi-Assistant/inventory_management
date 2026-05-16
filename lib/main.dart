@@ -133,12 +133,18 @@ class InventoryApp extends StatelessWidget {
         Provider<NotificationPreferencesService>(
           create: (_) => NotificationPreferencesService(supabase),
         ),
-        ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
+        ChangeNotifierProvider<AppPreferencesProvider>.value(value: preferences),
+        ChangeNotifierProxyProvider<AppPreferencesProvider, AuthProvider>(
+          create: (ctx) => AuthProvider(
+            onBeforeSignOut: ctx.read<AppPreferencesProvider>().clearRecentSearches,
+          ),
+          update: (_, prefs, previous) =>
+              previous ?? AuthProvider(onBeforeSignOut: prefs.clearRecentSearches),
+        ),
         ChangeNotifierProvider<FilterProvider>(create: (_) => FilterProvider()),
         ChangeNotifierProvider<StatisticsFilterProvider>(
           create: (_) => StatisticsFilterProvider(),
         ),
-        ChangeNotifierProvider<AppPreferencesProvider>.value(value: preferences),
         Provider<SessionManager>(
           lazy: false,
           create: (ctx) =>

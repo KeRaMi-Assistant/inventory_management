@@ -2423,6 +2423,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get globalSearchKeyClose => 'Schließen';
 
   @override
+  String get searchRecentTitle => 'Letzte Suchen';
+
+  @override
+  String get searchRecentEmpty => 'Noch keine Suchen';
+
+  @override
+  String get searchRecentClear => 'Zurücksetzen';
+
+  @override
   String get buyerLegendTitle => 'Käufer';
 
   @override

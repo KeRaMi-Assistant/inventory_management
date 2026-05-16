@@ -10,6 +10,7 @@ import '../models/deal.dart';
 import '../models/inventory_item.dart';
 import '../models/supplier.dart';
 import '../models/ticket_summary.dart';
+import '../providers/app_preferences_provider.dart';
 import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../screens/main_tab.dart';
@@ -140,11 +141,27 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
                     _query = v;
                     _highlight = 0;
                   }),
+                  onSubmitted: (v) {
+                    final trimmed = v.trim();
+                    if (trimmed.isNotEmpty) {
+                      context
+                          .read<AppPreferencesProvider>()
+                          .addRecentSearch(trimmed);
+                    }
+                  },
                 ),
                 Divider(height: 1, color: AppTheme.borderOf(context)),
                 Flexible(
                   child: _query.trim().isEmpty
-                      ? const _PlaceholderHint()
+                      ? _RecentSearchesSection(
+                          onSelect: (q) {
+                            _controller.text = q;
+                            setState(() {
+                              _query = q;
+                              _highlight = 0;
+                            });
+                          },
+                        )
                       : results.isEmpty
                           ? const _NoResults()
                           : _Results(
@@ -352,10 +369,12 @@ class _SearchField extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmitted;
   const _SearchField({
     required this.controller,
     required this.focusNode,
     required this.onChanged,
+    required this.onSubmitted,
   });
 
   @override
@@ -377,6 +396,7 @@ class _SearchField extends StatelessWidget {
         ),
         style: GoogleFonts.inter(fontSize: 15),
         onChanged: onChanged,
+        onSubmitted: onSubmitted,
       ),
     );
   }
@@ -485,40 +505,115 @@ class _ResultTile extends StatelessWidget {
   }
 }
 
-class _PlaceholderHint extends StatelessWidget {
-  const _PlaceholderHint();
+class _RecentSearchesSection extends StatelessWidget {
+  final ValueChanged<String> onSelect;
+  const _RecentSearchesSection({required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+    final l10n = AppLocalizations.of(context);
+    final prefs = context.watch<AppPreferencesProvider>();
+    final recent = prefs.recentSearches;
+
+    return SingleChildScrollView(
+      key: const Key('recentSearchesSection'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Tipp:',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textMutedOf(context),
-              letterSpacing: 0.6,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                l10n.searchRecentTitle.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textMutedOf(context),
+                  letterSpacing: 0.6,
+                ),
+              ),
+              if (recent.isNotEmpty)
+                TextButton(
+                  key: const Key('recentSearchesClear'),
+                  onPressed: () => prefs.clearRecentSearches(),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    l10n.searchRecentClear,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textMutedOf(context),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 8),
-          _hint('Produktname, EAN, SKU, Ticket-Nummer, Käufer-Name…', context),
-          _hint('↑ ↓ navigieren · ↵ öffnen · esc schließt.', context),
+          if (recent.isEmpty)
+            Text(
+              l10n.searchRecentEmpty,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.textSecondaryOf(context),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (var i = 0; i < recent.length; i++)
+                  _RecentChip(
+                    key: Key('recentSearchItem-$i'),
+                    label: recent[i],
+                    onTap: () => onSelect(recent[i]),
+                  ),
+              ],
+            ),
         ],
       ),
     );
   }
+}
 
-  Widget _hint(String text, BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Text(
-          text,
-          style: TextStyle(fontSize: 13, color: AppTheme.textSecondaryOf(context)),
+class _RecentChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _RecentChip({super.key, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppTheme.bgSubtleOf(context),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.borderOf(context)),
         ),
-      );
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.history, size: 13, color: AppTheme.textMutedOf(context)),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.textSecondaryOf(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _NoResults extends StatelessWidget {

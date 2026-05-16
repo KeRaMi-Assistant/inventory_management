@@ -2420,6 +2420,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get globalSearchKeyClose => 'Close';
 
   @override
+  String get searchRecentTitle => 'Recent searches';
+
+  @override
+  String get searchRecentEmpty => 'No recent searches';
+
+  @override
+  String get searchRecentClear => 'Clear';
+
+  @override
   String get buyerLegendTitle => 'Buyers';
 
   @override
