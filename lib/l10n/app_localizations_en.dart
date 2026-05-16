@@ -1265,6 +1265,44 @@ class AppLocalizationsEn extends AppLocalizations {
       'If a deal sources from several shops (drop-ship), you can record multiple sources with their purchase prices when creating it. Profit is summed across sources, but the statistic counts the deal as one sale.';
 
   @override
+  String get helpDealsRetrackTitle => 'Refresh shipment status now (Retrack)';
+
+  @override
+  String get helpDealsRetrackDesc =>
+      'In the deal detail view, next to the tracking number, you\'ll find a refresh icon labelled \"Refresh status\". It asks the carrier for the current status right away instead of waiting for the next scheduled poll — handy, for example, just before a planned delivery.\nOne retrack per deal is allowed every 30 seconds. While the lock is active the button is greyed out and shows \"Please wait 30s\" — that protects the carrier API from unnecessary calls and you from rate limits.';
+
+  @override
+  String get helpShippingSection => 'Shipping & carrier API keys';
+
+  @override
+  String get helpShippingIntroTitle => 'Why carrier API keys?';
+
+  @override
+  String get helpShippingIntroDesc =>
+      'So the app can fetch the live status of your shipments straight from the carrier (rather than just reading mails), you store one API key per carrier under Settings → Shipping. One key per carrier per workspace is enough — every member benefits from it.';
+
+  @override
+  String get helpShippingDhlTitle => 'DHL — actively supported';
+
+  @override
+  String get helpShippingDhlDesc =>
+      'DHL works out of the box:\n• Create an account on developer.dhl.com (free).\n• Subscribe to the \"Shipment Tracking - Unified\" API there — the free tier is enough for personal use.\n• Copy the API key and paste it under Settings → Shipping → DHL → \"Save API key\".\nFrom now on, deals with a DHL tracking number are refreshed at regular intervals and the status (in transit, out for delivery, delivered) appears directly on the deal.';
+
+  @override
+  String get helpShippingComingSoonTitle => 'DPD and UPS — coming soon';
+
+  @override
+  String get helpShippingComingSoonDesc =>
+      'DPD and UPS show up in the list but are currently marked \"Coming soon\" and not editable. The integration ships in a later update — until then, shipments from these carriers are still detected from shipping mails, only the live status is missing. Nothing is broken, this is intentional.';
+
+  @override
+  String get helpShippingKeySafetyTitle => 'What happens to my API key?';
+
+  @override
+  String get helpShippingKeySafetyDesc =>
+      'The plaintext key leaves your device exactly once, when you save it, and is then stored encrypted on the server. In the app you only see the last four characters afterwards, e.g. \"••••••••a1b2\". You can replace or delete the key at any time — deleting it pauses the automatic status polls for that carrier.';
+
+  @override
   String get helpInventorySection => 'Inventory';
 
   @override
@@ -1641,6 +1679,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get helpTroubleSlowDesc =>
       'Very long deal/inbox lists? Apply filters (date, status, buyer) to reduce render load. Fully quitting and restarting the app clears volatile in-memory caches. On older devices, archiving old tickets also helps.';
+
+  @override
+  String get helpTroubleCarrierSetupTitle =>
+      '\"Setup incomplete: master key not configured\"';
+
+  @override
+  String get helpTroubleCarrierSetupDesc =>
+      'This message appears when you try to save a carrier API key but the backend has no master key to encrypt it with. It\'s not a problem with your account but a one-off backend setup step:\n• Hosted setup (regular users): wait a moment and try again — we set the master key centrally, usually within a few hours.\n• Self-hoster / Supabase admin: migration `20260516000000_carrier_master_key_bootstrap.sql` must be applied and the `CARRIER_MASTER_KEY` secret has to be set at the Supabase project level. Admin details live in the repo at `supabase/functions/tracking-poll/SETUP.md`.\nUntil it\'s fixed you can keep updating shipments manually — only the automatic per-carrier live status is paused.';
 
   @override
   String get helpPrivacySection => 'Privacy & contact';

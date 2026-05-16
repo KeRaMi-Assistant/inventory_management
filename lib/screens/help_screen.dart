@@ -199,6 +199,33 @@ class _HelpScreenState extends State<HelpScreen> {
             l10n.helpDealsDropShipTitle,
             l10n.helpDealsDropShipDesc,
           ),
+          _HelpItem.text(
+            l10n.helpDealsRetrackTitle,
+            l10n.helpDealsRetrackDesc,
+          ),
+        ],
+      ),
+      _HelpSection(
+        id: 'shipping',
+        title: l10n.helpShippingSection,
+        icon: Icons.local_shipping_outlined,
+        items: [
+          _HelpItem.text(
+            l10n.helpShippingIntroTitle,
+            l10n.helpShippingIntroDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpShippingDhlTitle,
+            l10n.helpShippingDhlDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpShippingComingSoonTitle,
+            l10n.helpShippingComingSoonDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpShippingKeySafetyTitle,
+            l10n.helpShippingKeySafetyDesc,
+          ),
         ],
       ),
       _HelpSection(

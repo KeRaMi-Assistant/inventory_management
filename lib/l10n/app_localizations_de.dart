@@ -1266,6 +1266,45 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wenn ein Deal aus mehreren Shops besteht (Drop-Ship), kannst du beim Anlegen mehrere Bezugsquellen samt Einkaufspreisen hinterlegen. Der Profit wird über alle Quellen summiert. Die Statistik zählt den Deal als einen Verkauf.';
 
   @override
+  String get helpDealsRetrackTitle =>
+      'Sendungsstatus sofort aktualisieren (Retrack)';
+
+  @override
+  String get helpDealsRetrackDesc =>
+      'Im Deal-Detail neben der Sendungsnummer gibt es ein Refresh-Icon „Status aktualisieren\". Damit fragst du den Carrier sofort nach dem aktuellen Status, ohne auf den nächsten automatischen Poll zu warten — praktisch z. B. kurz vor einem geplanten Versand.\nEin Retrack pro Deal ist alle 30 Sekunden möglich. Während der Sperre ist der Button ausgegraut und zeigt „Bitte 30s warten\" — das schützt den Carrier vor unnötigen API-Calls und dich vor Rate-Limits.';
+
+  @override
+  String get helpShippingSection => 'Versand & Carrier-API-Keys';
+
+  @override
+  String get helpShippingIntroTitle => 'Wozu Carrier-API-Keys?';
+
+  @override
+  String get helpShippingIntroDesc =>
+      'Damit die App den Live-Status deiner Sendungen direkt beim Versanddienstleister abfragen kann (statt nur aus Mails zu lesen), hinterlegst du pro Carrier einen API-Key unter Einstellungen → Versand. Pro Workspace ist ein Key je Carrier nötig — alle Mitglieder profitieren davon.';
+
+  @override
+  String get helpShippingDhlTitle => 'DHL — aktiv unterstützt';
+
+  @override
+  String get helpShippingDhlDesc =>
+      'DHL kannst du sofort anbinden:\n• Account auf developer.dhl.com anlegen (kostenlos).\n• Dort die API „Shipment Tracking - Unified\" abonnieren — Free-Tier reicht für privaten Gebrauch.\n• Den API-Key kopieren und unter Einstellungen → Versand → DHL → „API-Key hinterlegen\" einfügen.\nAb sofort werden Deals mit DHL-Trackingnummer in regelmäßigen Abständen aktualisiert und der Status (unterwegs, in Zustellung, zugestellt) erscheint direkt im Deal.';
+
+  @override
+  String get helpShippingComingSoonTitle => 'DPD und UPS — bald verfügbar';
+
+  @override
+  String get helpShippingComingSoonDesc =>
+      'DPD und UPS siehst du in der Liste, sind aber aktuell als „Bald verfügbar\" markiert und nicht eingabebereit. Die Anbindung folgt in einem späteren Update — bis dahin werden Sendungen dieser Carrier weiterhin aus Versandmails erkannt, der Live-Status fehlt nur. Es ist nichts kaputt, das ist Absicht.';
+
+  @override
+  String get helpShippingKeySafetyTitle => 'Was passiert mit meinem API-Key?';
+
+  @override
+  String get helpShippingKeySafetyDesc =>
+      'Der Klartext-Key verlässt dein Gerät nur einmal, beim Speichern, und wird serverseitig in der Datenbank verschlüsselt abgelegt. In der App siehst du danach nur noch die letzten vier Zeichen, z. B. „••••••••a1b2\". Du kannst den Key jederzeit ersetzen oder löschen — beim Löschen pausieren wir die automatischen Status-Abfragen für diesen Carrier.';
+
+  @override
   String get helpInventorySection => 'Lager (Inventory)';
 
   @override
@@ -1642,6 +1681,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get helpTroubleSlowDesc =>
       'Sehr lange Deal-/Inbox-Listen? Filter setzen (Datum, Status, Käufer), das reduziert die Render-Last. App komplett beenden und neu starten leert flüchtige Caches im Speicher. Auf älteren Geräten kann es helfen, alte Tickets zu archivieren.';
+
+  @override
+  String get helpTroubleCarrierSetupTitle =>
+      '„Setup unvollständig: Master-Key nicht konfiguriert\"';
+
+  @override
+  String get helpTroubleCarrierSetupDesc =>
+      'Diese Meldung erscheint, wenn du einen Carrier-API-Key speichern willst, aber das Backend keinen Master-Schlüssel hat, mit dem es deinen Key verschlüsselt ablegen kann. Das ist kein Fehler in deinem Account, sondern ein einmaliger Backend-Setup-Schritt:\n• Hosted-Variante (Standard-Nutzer): kurz warten und nochmal versuchen — wir setzen den Master-Key zentral, normalerweise innerhalb weniger Stunden.\n• Self-Hoster / Admin der Supabase-Instanz: die Migration `20260516000000_carrier_master_key_bootstrap.sql` muss eingespielt sein und der `CARRIER_MASTER_KEY`-Secret auf der Supabase-Projektebene gesetzt sein. Details für Admins liegen im Repo unter `supabase/functions/tracking-poll/SETUP.md`.\nBis das gefixt ist, kannst du deine Sendungen weiter manuell pflegen — nur der automatische Live-Status pro Carrier ist solange aus.';
 
   @override
   String get helpPrivacySection => 'Datenschutz & Kontakt';
