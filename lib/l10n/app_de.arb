@@ -1,6 +1,14 @@
 {
   "@@locale": "de",
-  "appTitle": "Lagerverwaltung",
+  "appTitle": "CanLogistics",
+  "appTagline": "Vom Wareneingang bis zum verkauften Stück.",
+  "@appTagline": {"description": "Brand-Tagline der App. Erscheint auf Splash, Login-Header, Onboarding-Welcome und in About."},
+  "appBrandSubtitle": "Inventar · Sendungen · Verkäufe",
+  "@appBrandSubtitle": {"description": "Kurz-Subtitle unter dem Wordmark — drei Säulen der App."},
+  "loginBrandHeadline": "Willkommen zurück.",
+  "@loginBrandHeadline": {"description": "Marken-Headline über dem Login-Formular."},
+  "onboardingBrandHeadline": "Schön, dass du da bist.",
+  "@onboardingBrandHeadline": {"description": "Marken-Headline auf dem Onboarding-Welcome-Step."},
 
   "actionSave": "Speichern",
   "actionCancel": "Abbrechen",
@@ -999,7 +1007,7 @@
   "publicProfileItemPrice": "Preis",
   "publicProfileItemQuantity": "Verfügbar: {count}",
   "@publicProfileItemQuantity": { "placeholders": { "count": { "type": "int" } } },
-  "publicProfileFooter": "Erstellt mit InventoryOS",
+  "publicProfileFooter": "Erstellt mit CanLogistics",
 
   "settingsDemoSection": "Demo / Daten",
   "settingsDemoReloadTitle": "Demo-Daten neu laden",
@@ -1016,7 +1024,7 @@
   "onboardingBack": "Zurück",
   "onboardingFinish": "Fertig",
   "onboardingStepWelcomeTitle": "Willkommen",
-  "onboardingStepWelcomeSubtitle": "InventoryOS hilft dir, Bestellungen, Lager und Käufer im Blick zu behalten. Wir richten dich in 6 kurzen Schritten ein.",
+  "onboardingStepWelcomeSubtitle": "CanLogistics hält Wareneingang, Lager und Verkäufe in Sync. Wir richten dich in 6 kurzen Schritten ein.",
   "onboardingStepWorkspaceTitle": "Dein Workspace",
   "onboardingStepWorkspaceSubtitle": "Alle Daten landen in einem Workspace. Du kannst später Team-Mitglieder einladen oder weitere Workspaces anlegen.",
   "onboardingWorkspaceFallback": "Mein Workspace",

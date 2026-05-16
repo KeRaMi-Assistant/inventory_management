@@ -9,7 +9,19 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
-  String get appTitle => 'Lagerverwaltung';
+  String get appTitle => 'CanLogistics';
+
+  @override
+  String get appTagline => 'Vom Wareneingang bis zum verkauften Stück.';
+
+  @override
+  String get appBrandSubtitle => 'Inventar · Sendungen · Verkäufe';
+
+  @override
+  String get loginBrandHeadline => 'Willkommen zurück.';
+
+  @override
+  String get onboardingBrandHeadline => 'Schön, dass du da bist.';
 
   @override
   String get actionSave => 'Speichern';
@@ -2764,7 +2776,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get publicProfileFooter => 'Erstellt mit InventoryOS';
+  String get publicProfileFooter => 'Erstellt mit CanLogistics';
 
   @override
   String get settingsDemoSection => 'Demo / Daten';
@@ -2811,7 +2823,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboardingStepWelcomeSubtitle =>
-      'InventoryOS hilft dir, Bestellungen, Lager und Käufer im Blick zu behalten. Wir richten dich in 6 kurzen Schritten ein.';
+      'CanLogistics hält Wareneingang, Lager und Verkäufe in Sync. Wir richten dich in 6 kurzen Schritten ein.';
 
   @override
   String get onboardingStepWorkspaceTitle => 'Dein Workspace';

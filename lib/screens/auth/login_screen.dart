@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/active_workspace_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
+import '../../widgets/brand_logo.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
@@ -127,31 +128,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.inventory_2_rounded,
-                              color: Color(0xFF2563EB),
-                              size: 28,
-                            ),
-                          ),
-                        ],
+                      // Brand-Lockup: Mark + Wordmark, zentriert.
+                      const Center(
+                        child: BrandLockup(
+                          markSize: 52,
+                          fontSize: 24,
+                          withBackground: true,
+                          onDark: false,
+                        ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       Text(
-                        l10n.appTitle,
+                        l10n.loginBrandHeadline,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
                           color: Color(0xFF0F172A),
+                          letterSpacing: -0.2,
                         ),
                       ),
                       const SizedBox(height: 6),

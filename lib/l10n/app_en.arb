@@ -1,6 +1,14 @@
 {
   "@@locale": "en",
-  "appTitle": "Inventory Manager",
+  "appTitle": "CanLogistics",
+  "appTagline": "From parcel to payout — on autopilot.",
+  "@appTagline": {"description": "Brand tagline. Shown on splash, login header, onboarding welcome and in About."},
+  "appBrandSubtitle": "Inventory · Shipments · Sales",
+  "@appBrandSubtitle": {"description": "Short subtitle under the wordmark — three pillars of the app."},
+  "loginBrandHeadline": "Welcome back.",
+  "@loginBrandHeadline": {"description": "Brand headline above the login form."},
+  "onboardingBrandHeadline": "Glad you're here.",
+  "@onboardingBrandHeadline": {"description": "Brand headline on the onboarding welcome step."},
 
   "actionSave": "Save",
   "actionCancel": "Cancel",
@@ -999,7 +1007,7 @@
   "publicProfileItemPrice": "Price",
   "publicProfileItemQuantity": "Available: {count}",
   "@publicProfileItemQuantity": { "placeholders": { "count": { "type": "int" } } },
-  "publicProfileFooter": "Built with InventoryOS",
+  "publicProfileFooter": "Built with CanLogistics",
 
   "settingsDemoSection": "Demo / data",
   "settingsDemoReloadTitle": "Reload demo data",
@@ -1016,7 +1024,7 @@
   "onboardingBack": "Back",
   "onboardingFinish": "Done",
   "onboardingStepWelcomeTitle": "Welcome",
-  "onboardingStepWelcomeSubtitle": "InventoryOS helps you keep track of orders, inventory, and buyers. Six quick steps and you're set up.",
+  "onboardingStepWelcomeSubtitle": "CanLogistics keeps incoming parcels, inventory and sales in sync. Six quick steps and you're set up.",
   "onboardingStepWorkspaceTitle": "Your workspace",
   "onboardingStepWorkspaceSubtitle": "All data lives inside a workspace. You can invite team members or create more workspaces later.",
   "onboardingWorkspaceFallback": "My workspace",

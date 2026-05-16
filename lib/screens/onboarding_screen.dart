@@ -11,6 +11,7 @@ import '../models/supplier.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
+import '../widgets/brand_logo.dart';
 
 /// First-time-user-Flow als Phone-First-PageView. 6 Steps:
 ///   1. Willkommen
@@ -414,34 +415,36 @@ class _StepWelcome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return _StepFrame(
       title: title,
       subtitle: subtitle,
-      child: Center(
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.elasticOut,
-          builder: (context, t, child) =>
-              Transform.scale(scale: t, child: child),
-          child: Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: AppTheme.accentLightOf(context),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppTheme.accentBorderOf(context),
-                width: 2,
-              ),
-            ),
-            child: Icon(
-              Icons.inventory_2_outlined,
-              size: 56,
-              color: AppTheme.accent,
+      child: Column(
+        children: [
+          // Brand-Lockup mit Spring-Animation — erstes Erlebnis nach dem Login.
+          Center(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 620),
+              curve: Curves.elasticOut,
+              builder: (context, t, child) =>
+                  Transform.scale(scale: t, child: child),
+              child: const BrandMark(size: 112, withBackground: true),
             ),
           ),
-        ),
+          const SizedBox(height: 18),
+          const BrandWordmark(fontSize: 26),
+          const SizedBox(height: 8),
+          Text(
+            l10n.appTagline,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: AppTheme.textMutedOf(context),
+              height: 1.4,
+            ),
+          ),
+        ],
       ),
     );
   }

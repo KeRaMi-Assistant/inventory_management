@@ -101,8 +101,32 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In de, this message translates to:
-  /// **'Lagerverwaltung'**
+  /// **'CanLogistics'**
   String get appTitle;
+
+  /// Brand-Tagline der App. Erscheint auf Splash, Login-Header, Onboarding-Welcome und in About.
+  ///
+  /// In de, this message translates to:
+  /// **'Vom Wareneingang bis zum verkauften Stück.'**
+  String get appTagline;
+
+  /// Kurz-Subtitle unter dem Wordmark — drei Säulen der App.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventar · Sendungen · Verkäufe'**
+  String get appBrandSubtitle;
+
+  /// Marken-Headline über dem Login-Formular.
+  ///
+  /// In de, this message translates to:
+  /// **'Willkommen zurück.'**
+  String get loginBrandHeadline;
+
+  /// Marken-Headline auf dem Onboarding-Welcome-Step.
+  ///
+  /// In de, this message translates to:
+  /// **'Schön, dass du da bist.'**
+  String get onboardingBrandHeadline;
 
   /// No description provided for @actionSave.
   ///
@@ -5093,7 +5117,7 @@ abstract class AppLocalizations {
   /// No description provided for @publicProfileFooter.
   ///
   /// In de, this message translates to:
-  /// **'Erstellt mit InventoryOS'**
+  /// **'Erstellt mit CanLogistics'**
   String get publicProfileFooter;
 
   /// No description provided for @settingsDemoSection.
@@ -5177,7 +5201,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingStepWelcomeSubtitle.
   ///
   /// In de, this message translates to:
-  /// **'InventoryOS hilft dir, Bestellungen, Lager und Käufer im Blick zu behalten. Wir richten dich in 6 kurzen Schritten ein.'**
+  /// **'CanLogistics hält Wareneingang, Lager und Verkäufe in Sync. Wir richten dich in 6 kurzen Schritten ein.'**
   String get onboardingStepWelcomeSubtitle;
 
   /// No description provided for @onboardingStepWorkspaceTitle.
