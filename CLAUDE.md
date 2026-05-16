@@ -684,6 +684,25 @@ keinen Code, edit-tet keine Files.
   Push an ntfy.
 - `bash .claude/scripts/uninstall-yota-watch.sh` — Daemon stoppen.
 
+#### Yota Live — Terminal-Dashboard auf dem MacBook
+
+Live-Terminal mit ständig aktualisiertem Swarm-Status. Alter Inhalt wird
+bei jedem Refresh weggeräumt (Clear-Screen), wenn alles fertig ist zeigt
+das Fenster nur die heute erledigten Items.
+
+- `bash .claude/scripts/yota-live.sh` — startet im aktuellen Terminal.
+  Override: `YOTA_LIVE_INTERVAL=5` (default 2s), `YOTA_LIVE_DONE_LIMIT=15`
+  (default 10), `YOTA_LIVE_NO_COLOR=1`. Exit via `Ctrl+C`.
+- `bash .claude/scripts/open-yota-terminal.sh` — öffnet ein neues
+  macOS-Terminal-Fenster (iTerm wenn installiert, sonst Terminal.app) mit
+  Titel „Yota Live" und führt darin `yota-live.sh` aus. Nur macOS.
+
+Auto-Idle-Verhalten: Wenn `status=idle` UND alle Inboxes leer
+(`stakeholder=0`, `backlog=0`, `in_progress=0`, `workers.active=0`),
+switcht der Live-View in den „✓ Alles fertig"-Modus mit den letzten
+`YOTA_LIVE_DONE_LIMIT` heute-erledigten Items aus
+`.claude/overseer/done/` und `.claude/backlog/done/`.
+
 Code-Wünsche im Chat → `bash .claude/scripts/btw.sh "..."` oder `/queue`.
 
 ### Yota auf Telegram
