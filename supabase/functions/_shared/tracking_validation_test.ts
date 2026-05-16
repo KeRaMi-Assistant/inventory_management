@@ -42,6 +42,11 @@ function mockSupabase(
   cacheRows: Record<string, CacheRow>,
   upserts: UpsertRecord[],
 ) {
+  // .from(...).update(...).eq(...).eq(...) wird vom Stamp-Pfad fuer
+  // `workspace_carrier_credentials` benutzt. Test-Mock akzeptiert + droppt.
+  const updateChain = {
+    eq: (_c: string, _v: string) => updateChain,
+  }
   return {
     from: (_table: string) => ({
       select: (_cols: string) => ({
@@ -59,6 +64,7 @@ function mockSupabase(
         })
         return Promise.resolve({ error: null })
       },
+      update: (_row: Record<string, unknown>) => updateChain,
     }),
   }
 }

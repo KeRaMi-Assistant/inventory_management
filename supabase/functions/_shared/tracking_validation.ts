@@ -180,6 +180,8 @@ export async function enrichWithDhlValidation(
   // 3. Per Kandidat: Cache-Lookup, dann ggf. API-Call mit Spike-Arrest.
   const validValues: string[] = []
   let hadPriorApiCall = false
+  let madeAnyApiCall = false
+  let lastApiError: string | null = null
   const nowMs = Date.now()
 
   for (const cand of candidates) {
@@ -210,6 +212,7 @@ export async function enrichWithDhlValidation(
         await sleep(SPIKE_ARREST_MS)
       }
       hadPriorApiCall = true
+      madeAnyApiCall = true
 
       let resultState: ResultState = 'invalid'
       let statusRaw: unknown = null
@@ -224,11 +227,12 @@ export async function enrichWithDhlValidation(
           isValid = false
           statusRaw = null
         }
-      } catch (_err) {
+      } catch (err) {
         // Network-/Fetch-Exception → unknown mit 1h-TTL.
         resultState = 'unknown'
         isValid = false
         statusRaw = null
+        lastApiError = (err instanceof Error) ? err.message.slice(0, 200) : 'fetch failed'
       }
 
       // Cache-Upsert. tracking_norm ist Primary-Key.
@@ -262,6 +266,30 @@ export async function enrichWithDhlValidation(
 
     if (isValid) {
       validValues.push(norm)
+    }
+  }
+
+  // 3b. User-Feedback in Settings → Versand: wenn wir tatsaechlich die
+  //     DHL-API angesprochen haben, last_polled_at auf den Credential-
+  //     Eintrag stempeln. Sonst sieht der User "Noch nicht gepollt",
+  //     obwohl der Key im Inbox-Sweep laufend benutzt wird.
+  if (madeAnyApiCall) {
+    try {
+      // deno-lint-ignore no-explicit-any
+      await (opts.supabaseAdmin as any)
+        .from('workspace_carrier_credentials')
+        .update({
+          last_polled_at: new Date().toISOString(),
+          last_error: lastApiError,
+        })
+        .eq('workspace_id', opts.workspaceId)
+        .eq('carrier_id', 'dhl')
+    } catch (_e) {
+      // deno-lint-ignore no-console
+      console.warn(JSON.stringify({
+        event: 'validation_credential_stamp_failed',
+        workspace_id: opts.workspaceId,
+      }))
     }
   }
 

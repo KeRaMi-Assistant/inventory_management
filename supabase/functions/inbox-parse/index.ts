@@ -22,7 +22,7 @@ import {
   isAccountingMail,
   isCarrierOnly,
 } from '../_shared/inbox_adapters.ts'
-import { runParseSweep, stripBody } from '../_shared/inbox_parse_runner.ts'
+import { applyDhlValidation, runParseSweep, stripBody } from '../_shared/inbox_parse_runner.ts'
 
 // T12: Rate-Limit für User-getriggerte Re-Parse-Calls (5 min Cooldown).
 const REPARSE_COOLDOWN_MS = 5 * 60 * 1000
@@ -445,6 +445,10 @@ async function reparseNoTracking(
   }
   let cursor: string | null = null
   const PAGE = 100
+  // Plan 2026-05-16 §D3: Re-Parse muss durch dieselbe DHL-API-Validation
+  // wie der Live-Sweep. Sonst persistieren wir Pattern-Hits, die DHL
+  // nie bestaetigt hat. KeyCache ist Run-scoped → max 1 RPC pro Workspace.
+  const keyCache = new Map<string, string | null>()
   for (let i = 0; i < 25; i++) {
     // Council-Finding #1: BEIDE Body-Quellen (_raw_html + _raw.text) müssen
     // berücksichtigt werden — Plain-Text-only-Mails (PRs #48/#51) sonst
@@ -500,7 +504,14 @@ async function reparseNoTracking(
           html,
         }
         const parsed = detectAndParse(ctx)
-        if (!parsed || !parsed.tracking) {
+        if (!parsed) {
+          stats.unchanged++
+          continue
+        }
+        // Plan 2026-05-16 §D3: DHL-API-Validation NACH detectAndParse.
+        // Pattern-Heuristik allein reicht nicht — DHL muss bestaetigen.
+        await applyDhlValidation(admin, parsed, row.workspace_id, keyCache)
+        if (!parsed.tracking) {
           stats.unchanged++
           continue
         }
