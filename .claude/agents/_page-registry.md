@@ -43,7 +43,7 @@ die der Browser-Tester pro Eintrag durchspielt — Definitionen unten.
 | `/statistics` | [`lib/screens/statistics_screen.dart`](../../lib/screens/statistics_screen.dart) | smoke-theme, charts-render | KPI + Charts + Drilldown. |
 | `/activity` | [`lib/screens/activity_screen.dart`](../../lib/screens/activity_screen.dart) | smoke-theme | Workspace-Activity-Log. |
 | `/help` | [`lib/screens/help_screen.dart`](../../lib/screens/help_screen.dart) | smoke-help, smoke-theme | FAQ + Search + Quick-Start. |
-| `/settings` | [`lib/screens/settings_screen.dart`](../../lib/screens/settings_screen.dart) | smoke-theme, all-settings-tabs | 8 Tabs: Buyers, Shops, Team, Push, Postfach, Shipping, Public profile, General. |
+| `/settings` | [`lib/screens/settings_screen.dart`](../../lib/screens/settings_screen.dart) | smoke-theme, all-settings-tabs | 8 Tabs: Buyers, Shops, Team, Push, Postfach, Shipping, Public profile, General. **Scroll-Indicator** (Plan §Task #08) auf der `isScrollable: true`-TabBar: `Key('settingsTabsScrollHint')` mit Edge-Fade-ShaderMask + Chevron rechts. |
 | `/pricing` | [`lib/screens/pricing_screen.dart`](../../lib/screens/pricing_screen.dart) | smoke-theme | Plan-Auswahl + Checkout-Trigger. |
 | `/billing-profile` | [`lib/screens/billing_profile_screen.dart`](../../lib/screens/billing_profile_screen.dart) | smoke-theme | Rechnungs-Adresse, push aus Pricing. |
 | `/public-profile/<slug>` | [`lib/screens/public_profile_screen.dart`](../../lib/screens/public_profile_screen.dart) | public-render | **Web-only**, ohne Login. URL `/u/<handle>`. |
