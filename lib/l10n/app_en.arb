@@ -358,6 +358,21 @@
   "dealStatusInvoiced": "Invoiced",
   "dealStatusDone": "Done",
 
+  "dealQuickStatusTitle": "Change status",
+  "dealQuickStatusUndo": "Undo",
+  "dealQuickStatusChanged": "Status changed to {status}",
+  "@dealQuickStatusChanged": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "dealQuickStatusError": "Could not change status: {error}",
+  "@dealQuickStatusError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
   "dealColId": "ID",
   "dealColEkNet": "Cost (net)",
   "dealColEkGross": "Cost (gross)",

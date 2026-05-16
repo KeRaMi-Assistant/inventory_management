@@ -1790,6 +1790,30 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get dealStatusDone;
 
+  /// No description provided for @dealQuickStatusTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Status ändern'**
+  String get dealQuickStatusTitle;
+
+  /// No description provided for @dealQuickStatusUndo.
+  ///
+  /// In de, this message translates to:
+  /// **'Rückgängig'**
+  String get dealQuickStatusUndo;
+
+  /// No description provided for @dealQuickStatusChanged.
+  ///
+  /// In de, this message translates to:
+  /// **'Status auf {status} geändert'**
+  String dealQuickStatusChanged(String status);
+
+  /// No description provided for @dealQuickStatusError.
+  ///
+  /// In de, this message translates to:
+  /// **'Status konnte nicht geändert werden: {error}'**
+  String dealQuickStatusError(String error);
+
   /// No description provided for @dealColId.
   ///
   /// In de, this message translates to:

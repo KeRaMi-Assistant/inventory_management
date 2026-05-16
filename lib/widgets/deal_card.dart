@@ -73,6 +73,13 @@ class DealCard extends StatelessWidget {
           barrierDismissible: false,
           builder: (_) => AddEditDealDialog(deal: deal),
         ),
+        onLongPress: () {
+          if (filters.selectedDealIds.isNotEmpty) {
+            filters.toggleSelected(deal.id);
+          } else {
+            _showQuickStatusSheet(context);
+          }
+        },
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
           child: Column(
@@ -82,14 +89,20 @@ class DealCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: Checkbox(
-                      value: selected,
-                      onChanged: (_) => filters.toggleSelected(deal.id),
-                      visualDensity: VisualDensity.compact,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => filters.toggleSelected(deal.id),
+                    child: SizedBox(
+                      key: Key('dealCardCheckbox-${deal.id}'),
+                      width: 32,
+                      height: 32,
+                      child: Checkbox(
+                        value: selected,
+                        onChanged: (_) => filters.toggleSelected(deal.id),
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -375,6 +388,18 @@ class DealCard extends StatelessWidget {
         ),
     };
   }
+
+  void _showQuickStatusSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _QuickStatusSheet(
+        deal: deal,
+        provider: provider,
+      ),
+    );
+  }
 }
 
 // ─── small parts ─────────────────────────────────────────────────────────────
@@ -493,6 +518,163 @@ class _MetaChip extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
       child: widget,
+    );
+  }
+}
+
+// ─── Quick-Status-Sheet ───────────────────────────────────────────────────────
+
+class _QuickStatusSheet extends StatefulWidget {
+  final Deal deal;
+  final InventoryProvider provider;
+
+  const _QuickStatusSheet({required this.deal, required this.provider});
+
+  @override
+  State<_QuickStatusSheet> createState() => _QuickStatusSheetState();
+}
+
+class _QuickStatusSheetState extends State<_QuickStatusSheet> {
+  bool _loading = false;
+
+  static IconData _iconForStatus(String status) => switch (status) {
+        'Bestellt' => Icons.shopping_cart_outlined,
+        'Unterwegs' => Icons.local_shipping_outlined,
+        'Angekommen' => Icons.inventory_2_outlined,
+        'Rechnung gestellt' => Icons.receipt_long_outlined,
+        'Done' => Icons.check_circle_outline,
+        _ => Icons.circle_outlined,
+      };
+
+  Future<void> _selectStatus(String newStatus) async {
+    if (_loading) return;
+    final oldStatus = widget.deal.status;
+    if (oldStatus == newStatus) {
+      Navigator.pop(context);
+      return;
+    }
+
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = widget.provider;
+    final deal = widget.deal;
+
+    Navigator.pop(context);
+
+    setState(() => _loading = true);
+
+    try {
+      await provider.updateDeal(deal.copyWith(status: newStatus));
+      final statusLabel = _localizedStatusLabel(newStatus);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.dealQuickStatusChanged(statusLabel)),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: l10n.dealQuickStatusUndo,
+            onPressed: () async {
+              try {
+                await provider.updateDeal(deal.copyWith(status: oldStatus));
+              } catch (_) {}
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      try {
+        await provider.updateDeal(deal.copyWith(status: oldStatus));
+      } catch (_) {}
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.dealQuickStatusError(e.toString())),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _localizedStatusLabel(String status) {
+    return localizeDealStatus(context, status);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final currentStatus = widget.deal.status;
+    final statuses = InventoryProvider.statusOptions;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        key: const Key('quickStatusSheet'),
+        decoration: BoxDecoration(
+          color: AppTheme.bgSurfaceOf(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Drag handle ──────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 4),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.borderOf(context),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            // ── Title ────────────────────────────────────────────────────
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Text(
+                l10n.dealQuickStatusTitle,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimaryOf(context),
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            // ── Status options ───────────────────────────────────────────
+            ...statuses.map((status) {
+              final isCurrent = status == currentStatus;
+              return ListTile(
+                key: Key('quickStatusOption-$status'),
+                leading: Icon(
+                  _iconForStatus(status),
+                  color: isCurrent
+                      ? AppTheme.accentTextOf(context)
+                      : AppTheme.textSecondaryOf(context),
+                ),
+                title: Text(
+                  localizeDealStatus(context, status),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight:
+                        isCurrent ? FontWeight.w700 : FontWeight.w400,
+                    color: isCurrent
+                        ? AppTheme.accentTextOf(context)
+                        : AppTheme.textPrimaryOf(context),
+                  ),
+                ),
+                trailing: isCurrent
+                    ? Icon(Icons.check,
+                        color: AppTheme.accentTextOf(context), size: 20)
+                    : null,
+                onTap: _loading ? null : () => _selectStatus(status),
+                minVerticalPadding: 14,
+              );
+            }),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 }

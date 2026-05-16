@@ -87,6 +87,7 @@ Dialogs müssen auf 390×844 ohne horizontalen Scroll funktionieren.
 | `/deals` → Attachment-Gallery | [`lib/widgets/attachment_gallery.dart`](../../lib/widgets/attachment_gallery.dart) | smoke-theme |
 | `/deals` → Tracking-Review-Filter | [`lib/widgets/deal_table.dart`](../../lib/widgets/deal_table.dart) (`_FilterBar`) | smoke-tracking-review-chip | Filter-Chip „Prüfen ({count})" filtert auf `tracking_needs_review=true`. Sichtbar nur wenn Count > 0. Kein eigener Top-Level-Screen (Council-Finding #10). Banner in Inbox + Deals via `lib/widgets/tracking_banner_improved_detection.dart`. Badge auf Inbox-Nav-Tab (Index 3). |
 | `/statistics` → Product-Drilldown | [`lib/widgets/statistics/product_drilldown_sheet.dart`](../../lib/widgets/statistics/product_drilldown_sheet.dart) | smoke-theme, mobile-overflow |
+| `/deals` → Quick-Status-Sheet (DealCard Long-Press) | [`lib/widgets/deal_card.dart`](../../lib/widgets/deal_card.dart) (`_QuickStatusSheet`) | smoke-theme, mobile-overflow | Long-Press auf DealCard im Normal-Modus öffnet Sheet. Im Bulk-Select-Modus toggelt Long-Press stattdessen die Selektion. Sheet-Key: `Key('quickStatusSheet')`. Status-Tiles: `Key('quickStatusOption-{status}')`. Checkbox: `Key('dealCardCheckbox-{id}')`. |
 
 ## Pflicht-Tests-Definitionen
 
