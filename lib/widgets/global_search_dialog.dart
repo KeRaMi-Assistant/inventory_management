@@ -12,6 +12,7 @@ import '../models/supplier.dart';
 import '../models/ticket_summary.dart';
 import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../screens/main_tab.dart';
 
 /// Command-palette-style global search across deals, items, tickets, buyers,
 /// suppliers. The dialog reads from [InventoryProvider] and dispatches the
@@ -24,18 +25,21 @@ class GlobalSearchDialog extends StatefulWidget {
     required this.openTicket,
   });
 
-  final ValueChanged<int> selectTab;
+  final ValueChanged<MainTab> selectTab;
   final ValueChanged<String> openTicket;
 
-  static const int dealsTab = 1;
-  static const int ticketsTab = 2;
-  static const int inboxTab = 3;
-  static const int inventoryTab = 4;
-  static const int suppliersTab = 5;
+  // Plan 2026-05-16 §Task #00: stabile Enum-Targets statt Magic-Numbers.
+  // Wenn die Bottom-Nav-Reihenfolge in Task #01 ändert, brechen Sprünge
+  // hier nicht — Enum-Werte bleiben dieselben.
+  static const MainTab dealsTab = MainTab.deals;
+  static const MainTab ticketsTab = MainTab.tickets;
+  static const MainTab inboxTab = MainTab.inbox;
+  static const MainTab inventoryTab = MainTab.inventory;
+  static const MainTab suppliersTab = MainTab.suppliers;
 
   static Future<void> show(
     BuildContext context, {
-    required ValueChanged<int> selectTab,
+    required ValueChanged<MainTab> selectTab,
     required ValueChanged<String> openTicket,
   }) {
     return showDialog<void>(

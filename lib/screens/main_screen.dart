@@ -25,6 +25,7 @@ import 'pricing_screen.dart';
 import 'settings_screen.dart';
 import 'statistics_screen.dart';
 import 'suppliers_screen.dart';
+import 'main_tab.dart';
 import 'tickets_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -35,7 +36,7 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
+  MainTab _selectedIndex = MainTab.dashboard;
   String? _selectedTicket;
 
   static const _navIcons = [
@@ -125,68 +126,66 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  /// Index 3 (Inbox) ist nur ab `hasInbox` (Starter+) sichtbar. Reihenfolge
+  /// Inbox-Tab ist nur ab `hasInbox` (Starter+) sichtbar. Reihenfolge
   /// im sonstigen Nav bleibt stabil, damit andere Screens (GlobalSearch,
   /// _openTicket, _openSearch) ihre Indizes nicht neu lernen müssen.
-  static const int _inboxNavIndex = 3;
-
-  List<bool> _navVisibility(BillingProvider billing) {
+  Map<MainTab, bool> _navVisibility(BillingProvider billing) {
     final hasInbox =
         PricingPlan.forBillingPlan(billing.currentPlan).hasInbox;
-    return [
-      true, // 0 dashboard
-      true, // 1 deals
-      true, // 2 tickets
-      hasInbox, // 3 inbox
-      true, // 4 inventory
-      true, // 5 suppliers
-      true, // 6 statistics
-      true, // 7 activity
-      true, // 8 help
-      true, // 9 settings
-    ];
+    return {
+      MainTab.dashboard: true,
+      MainTab.deals: true,
+      MainTab.tickets: true,
+      MainTab.inbox: hasInbox,
+      MainTab.inventory: true,
+      MainTab.suppliers: true,
+      MainTab.stats: true,
+      MainTab.activity: true,
+      MainTab.settings: true,
+      MainTab.help: true,
+    };
   }
 
-  void _select(int index) {
-    setState(() => _selectedIndex = index);
+  void _select(MainTab tab) {
+    setState(() => _selectedIndex = tab);
     Navigator.maybePop(context);
   }
 
   void _openTicket(String ticket) {
     setState(() {
       _selectedTicket = ticket;
-      _selectedIndex = 2;
+      _selectedIndex = MainTab.tickets;
     });
   }
 
   void _openSearch() {
     GlobalSearchDialog.show(
       context,
-      selectTab: (i) => setState(() => _selectedIndex = i),
+      selectTab: (tab) => setState(() => _selectedIndex = tab),
       openTicket: _openTicket,
     );
   }
 
   void _goToDealsReview() {
     context.read<FilterProvider>().setOnlyNeedsReview(true);
-    setState(() => _selectedIndex = 1);
+    setState(() => _selectedIndex = MainTab.deals);
   }
 
   Widget _buildBody() {
     return switch (_selectedIndex) {
-      0 => const DashboardScreen(),
-      1 => DealsScreen(onOpenTicket: _openTicket),
-      2 => TicketsScreen(initialTicket: _selectedTicket),
-      3 => InboxScreen(
+      MainTab.dashboard => const DashboardScreen(),
+      MainTab.deals => DealsScreen(onOpenTicket: _openTicket),
+      MainTab.tickets => TicketsScreen(initialTicket: _selectedTicket),
+      MainTab.inbox => InboxScreen(
           onOpenTicket: _openTicket,
           onGoToDealsReview: _goToDealsReview,
         ),
-      4 => const InventoryScreen(),
-      5 => const SuppliersScreen(),
-      6 => const StatisticsScreen(),
-      7 => const ActivityScreen(),
-      8 => const HelpScreen(embedded: true),
-      _ => const SettingsScreen(embedded: true),
+      MainTab.inventory => const InventoryScreen(),
+      MainTab.suppliers => const SuppliersScreen(),
+      MainTab.stats => const StatisticsScreen(),
+      MainTab.activity => const ActivityScreen(),
+      MainTab.settings => const SettingsScreen(embedded: true),
+      MainTab.help => const HelpScreen(embedded: true),
     };
   }
 
@@ -202,9 +201,10 @@ class _MainScreenState extends State<MainScreen> {
         final visibility = _navVisibility(billing);
         // Wenn der User auf einen Plan ohne Postfach downgradet, während
         // er den Inbox-Tab offen hat, automatisch zurück aufs Dashboard.
-        if (_selectedIndex == _inboxNavIndex && !visibility[_inboxNavIndex]) {
+        if (_selectedIndex == MainTab.inbox &&
+            visibility[MainTab.inbox] == false) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() => _selectedIndex = 0);
+            if (mounted) setState(() => _selectedIndex = MainTab.dashboard);
           });
         }
         final body = _buildBody();
@@ -212,28 +212,31 @@ class _MainScreenState extends State<MainScreen> {
         // Counter badge on the Inbox tab: show tracking needs-review count.
         final trackingBadgeCount = provider.trackingNeedsReviewCount;
         final navBadgeCounts = trackingBadgeCount > 0
-            ? {_inboxNavIndex: trackingBadgeCount}
-            : const <int, int>{};
+            ? {MainTab.inbox: trackingBadgeCount}
+            : const <MainTab, int>{};
 
-        final fab = _selectedIndex == 1 || _selectedIndex == 2
-            ? FloatingActionButton.extended(
-                onPressed: () => showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => AddEditDealDialog(
-                    initialTicketNumber:
-                        _selectedIndex == 2 ? _selectedTicket : null,
-                  ),
-                ),
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(l10n.dealNew),
-              )
-            : null;
+        final fab =
+            _selectedIndex == MainTab.deals || _selectedIndex == MainTab.tickets
+                ? FloatingActionButton.extended(
+                    onPressed: () => showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => AddEditDealDialog(
+                        initialTicketNumber:
+                            _selectedIndex == MainTab.tickets
+                                ? _selectedTicket
+                                : null,
+                      ),
+                    ),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(l10n.dealNew),
+                  )
+                : null;
 
         final scaffold = narrow
             ? Scaffold(
                 appBar: AppBar(
-                  title: Text(labels[_selectedIndex]),
+                  title: Text(labels[_selectedIndex.index]),
                   actions: [
                     const InvitesBell(),
                     IconButton(
@@ -277,7 +280,7 @@ class _MainScreenState extends State<MainScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _ContentHeader(
-                            title: labels[_selectedIndex],
+                            title: labels[_selectedIndex.index],
                             provider: provider,
                             onImport: () => _import(context, provider),
                             onExport: () => _export(context, provider),
@@ -308,15 +311,15 @@ class _MainScreenState extends State<MainScreen> {
 // ─── Custom Sidebar ────────────────────────────────────────────────────────────
 
 class _Sidebar extends StatelessWidget {
-  final int selectedIndex;
+  final MainTab selectedIndex;
   final List<(IconData, IconData)> icons;
   final List<String> labels;
-  /// Pro Index: true = sichtbar, false = ausblenden (z.B. Inbox auf Free).
-  final List<bool> visibility;
+  /// Pro Tab: true = sichtbar, false = ausblenden (z.B. Inbox auf Free).
+  final Map<MainTab, bool> visibility;
   final bool extended;
-  final ValueChanged<int> onSelect;
-  /// Optional badge counts per nav-index. Key = nav index, value = count > 0.
-  final Map<int, int> badgeCounts;
+  final ValueChanged<MainTab> onSelect;
+  /// Optional badge counts per tab. Key = MainTab, value = count > 0.
+  final Map<MainTab, int> badgeCounts;
 
   const _Sidebar({
     required this.selectedIndex,
@@ -366,24 +369,24 @@ class _Sidebar extends StatelessWidget {
           ),
           Container(height: 1, color: Colors.white.withAlpha(20)),
           const SizedBox(height: 8),
-          // Nav items — versteckte Indizes (z.B. Inbox auf Free)
-          // werden hier rausgefiltert, der Index-Schlüssel bleibt aber
-          // gleich wie im _buildBody-Switch.
+          // Nav items — versteckte Tabs (z.B. Inbox auf Free)
+          // werden hier rausgefiltert; der Enum-Wert bleibt stabil.
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                for (int i = 0; i < icons.length; i++)
-                  if (i >= visibility.length || visibility[i])
+                for (final tab in MainTab.values)
+                  if (visibility[tab] != false)
                     _NavItem(
-                      icon: icons[i].$1,
-                      activeIcon: icons[i].$2,
-                      label: labels[i],
-                      isSelected: selectedIndex == i,
+                      key: Key('main-tab-${tab.name}'),
+                      icon: icons[tab.index].$1,
+                      activeIcon: icons[tab.index].$2,
+                      label: labels[tab.index],
+                      isSelected: selectedIndex == tab,
                       extended: extended,
-                      onTap: () => onSelect(i),
-                      badgeCount: badgeCounts[i] ?? 0,
-                      badgeKey: i == 3
+                      onTap: () => onSelect(tab),
+                      badgeCount: badgeCounts[tab] ?? 0,
+                      badgeKey: tab == MainTab.inbox
                           ? const Key('mobile-nav-inbox-badge')
                           : null,
                     ),
@@ -411,6 +414,7 @@ class _NavItem extends StatefulWidget {
   final Key? badgeKey;
 
   const _NavItem({
+    super.key,
     required this.icon,
     required this.activeIcon,
     required this.label,
@@ -906,13 +910,15 @@ class _AccountMenu extends StatelessWidget {
 // ─── Mobile Nav List ───────────────────────────────────────────────────────────
 
 class _MobileNavList extends StatelessWidget {
-  final int selectedIndex;
+  final MainTab selectedIndex;
   final List<(IconData, IconData)> icons;
   final List<String> labels;
-  final List<bool> visibility;
-  final ValueChanged<int> onSelect;
-  /// Optional badge counts per nav-index.
-  final Map<int, int> badgeCounts;
+  /// Pro Tab: true = sichtbar, false = ausblenden. Stabil-keyed via MainTab
+  /// (kein Index-Shift bei Visibility-Lücken).
+  final Map<MainTab, bool> visibility;
+  final ValueChanged<MainTab> onSelect;
+  /// Optional badge counts per tab.
+  final Map<MainTab, int> badgeCounts;
 
   const _MobileNavList({
     required this.selectedIndex,
@@ -957,17 +963,18 @@ class _MobileNavList extends StatelessWidget {
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              for (int i = 0; i < icons.length; i++)
-                if (i >= visibility.length || visibility[i])
+              for (final tab in MainTab.values)
+                if (visibility[tab] != false)
                   _NavItem(
-                    icon: icons[i].$1,
-                    activeIcon: icons[i].$2,
-                    label: labels[i],
-                    isSelected: selectedIndex == i,
+                    key: Key('mobile-nav-${tab.name}'),
+                    icon: icons[tab.index].$1,
+                    activeIcon: icons[tab.index].$2,
+                    label: labels[tab.index],
+                    isSelected: selectedIndex == tab,
                     extended: true,
-                    onTap: () => onSelect(i),
-                    badgeCount: badgeCounts[i] ?? 0,
-                    badgeKey: i == 3
+                    onTap: () => onSelect(tab),
+                    badgeCount: badgeCounts[tab] ?? 0,
+                    badgeKey: tab == MainTab.inbox
                         ? const Key('mobile-nav-inbox-badge')
                         : null,
                   ),
