@@ -206,6 +206,12 @@ abstract class AppLocalizations {
   /// **'Suchen'**
   String get actionSearch;
 
+  /// No description provided for @actionHelp.
+  ///
+  /// In de, this message translates to:
+  /// **'Hilfe'**
+  String get actionHelp;
+
   /// No description provided for @actionClear.
   ///
   /// In de, this message translates to:
@@ -356,6 +362,12 @@ abstract class AppLocalizations {
   /// **'Tickets'**
   String get navTickets;
 
+  /// No description provided for @navInbox.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach'**
+  String get navInbox;
+
   /// No description provided for @navInventory.
   ///
   /// In de, this message translates to:
@@ -391,6 +403,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Einstellungen'**
   String get navSettings;
+
+  /// No description provided for @navMore.
+  ///
+  /// In de, this message translates to:
+  /// **'Mehr'**
+  String get navMore;
+
+  /// No description provided for @navMoreSheetTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Weitere Bereiche'**
+  String get navMoreSheetTitle;
 
   /// No description provided for @fieldEmail.
   ///
@@ -4454,6 +4478,24 @@ abstract class AppLocalizations {
   /// **'Schließen'**
   String get globalSearchKeyClose;
 
+  /// No description provided for @searchRecentTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Letzte Suchen'**
+  String get searchRecentTitle;
+
+  /// No description provided for @searchRecentEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Suchen'**
+  String get searchRecentEmpty;
+
+  /// No description provided for @searchRecentClear.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurücksetzen'**
+  String get searchRecentClear;
+
   /// No description provided for @buyerLegendTitle.
   ///
   /// In de, this message translates to:
@@ -5761,6 +5803,42 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Link konnte nicht geöffnet werden.'**
   String get urlHelperLinkOpenError;
+
+  /// No description provided for @inboxAcceptedSnack.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking {tracking} → Deal #{dealId} übernommen'**
+  String inboxAcceptedSnack(Object tracking, int dealId);
+
+  /// No description provided for @inboxAcceptedSnackNoTracking.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal #{dealId} angelegt'**
+  String inboxAcceptedSnackNoTracking(int dealId);
+
+  /// No description provided for @inboxAcceptedShowDeal.
+  ///
+  /// In de, this message translates to:
+  /// **'Anzeigen'**
+  String get inboxAcceptedShowDeal;
+
+  /// No description provided for @inboxSuggestionDismiss.
+  ///
+  /// In de, this message translates to:
+  /// **'Verwerfen'**
+  String get inboxSuggestionDismiss;
+
+  /// No description provided for @inboxSuggestionEdit.
+  ///
+  /// In de, this message translates to:
+  /// **'Vor Übernahme bearbeiten'**
+  String get inboxSuggestionEdit;
+
+  /// No description provided for @inboxSuggestionAccept.
+  ///
+  /// In de, this message translates to:
+  /// **'Annehmen'**
+  String get inboxSuggestionAccept;
 }
 
 class _AppLocalizationsDelegate

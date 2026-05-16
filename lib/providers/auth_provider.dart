@@ -8,8 +8,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// the app can react to sign-in / sign-out without depending on the SDK
 /// directly.
 class AuthProvider extends ChangeNotifier {
-  AuthProvider({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client {
+  AuthProvider({
+    SupabaseClient? client,
+    Future<void> Function()? onBeforeSignOut,
+  })  : _client = client ?? Supabase.instance.client,
+        _onBeforeSignOut = onBeforeSignOut {
     _authSub = _client.auth.onAuthStateChange.listen((state) {
       if (state.event == AuthChangeEvent.passwordRecovery) {
         _passwordRecoveryController.add(true);
@@ -19,6 +22,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   final SupabaseClient _client;
+  final Future<void> Function()? _onBeforeSignOut;
   late final StreamSubscription<AuthState> _authSub;
 
   /// Emit `true` whenever Supabase signals an `AuthChangeEvent.passwordRecovery`
@@ -205,6 +209,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    await _onBeforeSignOut?.call();
     await _client.auth.signOut();
   }
 

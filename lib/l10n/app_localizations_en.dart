@@ -63,6 +63,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionSearch => 'Search';
 
   @override
+  String get actionHelp => 'Help';
+
+  @override
   String get actionClear => 'Clear';
 
   @override
@@ -154,6 +157,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navTickets => 'Tickets';
 
   @override
+  String get navInbox => 'Inbox';
+
+  @override
   String get navInventory => 'Inventory';
 
   @override
@@ -170,6 +176,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get navSettings => 'Settings';
+
+  @override
+  String get navMore => 'More';
+
+  @override
+  String get navMoreSheetTitle => 'More sections';
 
   @override
   String get fieldEmail => 'Email';
@@ -2417,6 +2429,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get globalSearchKeyClose => 'Close';
 
   @override
+  String get searchRecentTitle => 'Recent searches';
+
+  @override
+  String get searchRecentEmpty => 'No recent searches';
+
+  @override
+  String get searchRecentClear => 'Clear';
+
+  @override
   String get buyerLegendTitle => 'Buyers';
 
   @override
@@ -3168,4 +3189,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get urlHelperLinkOpenError => 'Could not open link.';
+
+  @override
+  String inboxAcceptedSnack(Object tracking, int dealId) {
+    return 'Tracking $tracking → Deal #$dealId accepted';
+  }
+
+  @override
+  String inboxAcceptedSnackNoTracking(int dealId) {
+    return 'Deal #$dealId created';
+  }
+
+  @override
+  String get inboxAcceptedShowDeal => 'Show';
+
+  @override
+  String get inboxSuggestionDismiss => 'Dismiss';
+
+  @override
+  String get inboxSuggestionEdit => 'Edit before accepting';
+
+  @override
+  String get inboxSuggestionAccept => 'Accept';
 }

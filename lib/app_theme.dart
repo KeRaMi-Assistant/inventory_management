@@ -155,6 +155,9 @@ class AppTheme {
   static Color accentBorderOf(BuildContext context) =>
       _dark(context) ? accentBorderDark : accentBorderLight;
 
+  // -- Semantic accent variant (purple — used for "Missing Invoice" KPI) --
+  static const Color purple = Color(0xFF8B5CF6);
+
   // -- Semantic status colors --
   static const Color success = Color(0xFF059669);
   static const Color successBg = Color(0xFFECFDF5);

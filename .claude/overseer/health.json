@@ -1,9 +1,9 @@
 {
-  "ts": "2026-05-16T18:47:45Z",
+  "ts": "2026-05-16T22:33:22Z",
   "panic": false,
   "checks": {
     "disk": {
-      "free_pct": 59,
+      "free_pct": 60,
       "free_gb": 254,
       "ok": true
     },
@@ -17,7 +17,7 @@
       "ok": true
     },
     "stash": {
-      "count": 0,
+      "count": 3,
       "ok": true
     },
     "cost": {

@@ -19,6 +19,7 @@
   "actionSelectAll": "Select all",
   "actionDeselect": "Clear selection",
   "actionSearch": "Search",
+  "actionHelp": "Help",
   "actionClear": "Clear",
   "actionFilter": "Filter",
   "actionExport": "Export",
@@ -56,12 +57,15 @@
   "navDashboard": "Dashboard",
   "navDeals": "Deals",
   "navTickets": "Tickets",
+  "navInbox": "Inbox",
   "navInventory": "Inventory",
   "navSuppliers": "Suppliers",
   "navStatistics": "Statistics",
   "navActivity": "Activity",
   "navHelp": "Help",
   "navSettings": "Settings",
+  "navMore": "More",
+  "navMoreSheetTitle": "More sections",
 
   "fieldEmail": "Email",
   "fieldPassword": "Password",
@@ -856,6 +860,9 @@
   "globalSearchKeyNav": "Navigate",
   "globalSearchKeyOpen": "Open",
   "globalSearchKeyClose": "Close",
+  "searchRecentTitle": "Recent searches",
+  "searchRecentEmpty": "No recent searches",
+  "searchRecentClear": "Clear",
   "buyerLegendTitle": "Buyers",
   "statsCompareToPrevious": "vs. previous",
   "statsExportReport": "Report",
@@ -1147,5 +1154,24 @@
   "inventoryProductHelperText": "Select from ticket or type freely",
   "settingsAddAmazonShops": "Add Amazon shops",
   "suppliersAddCarriers": "Add shipping carriers",
-  "urlHelperLinkOpenError": "Could not open link."
+  "urlHelperLinkOpenError": "Could not open link.",
+
+  "inboxAcceptedSnack": "Tracking {tracking} → Deal #{dealId} accepted",
+  "@inboxAcceptedSnack": {
+    "placeholders": {
+      "tracking": {},
+      "dealId": { "type": "int" }
+    }
+  },
+  "inboxAcceptedSnackNoTracking": "Deal #{dealId} created",
+  "@inboxAcceptedSnackNoTracking": {
+    "placeholders": {
+      "dealId": { "type": "int" }
+    }
+  },
+  "inboxAcceptedShowDeal": "Show",
+
+  "inboxSuggestionDismiss": "Dismiss",
+  "inboxSuggestionEdit": "Edit before accepting",
+  "inboxSuggestionAccept": "Accept"
 }
