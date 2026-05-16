@@ -5707,6 +5707,24 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Link konnte nicht geöffnet werden.'**
   String get urlHelperLinkOpenError;
+
+  /// No description provided for @inboxAcceptedSnack.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking {tracking} → Deal #{dealId} übernommen'**
+  String inboxAcceptedSnack(Object tracking, int dealId);
+
+  /// No description provided for @inboxAcceptedSnackNoTracking.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal #{dealId} angelegt'**
+  String inboxAcceptedSnackNoTracking(int dealId);
+
+  /// No description provided for @inboxAcceptedShowDeal.
+  ///
+  /// In de, this message translates to:
+  /// **'Anzeigen'**
+  String get inboxAcceptedShowDeal;
 }
 
 class _AppLocalizationsDelegate

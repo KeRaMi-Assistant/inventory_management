@@ -1132,5 +1132,20 @@
   "inventoryProductHelperText": "Aus Ticket auswählen oder frei eingeben",
   "settingsAddAmazonShops": "Amazon-Shops hinzufügen",
   "suppliersAddCarriers": "Versanddienste hinzufügen",
-  "urlHelperLinkOpenError": "Link konnte nicht geöffnet werden."
+  "urlHelperLinkOpenError": "Link konnte nicht geöffnet werden.",
+
+  "inboxAcceptedSnack": "Tracking {tracking} → Deal #{dealId} übernommen",
+  "@inboxAcceptedSnack": {
+    "placeholders": {
+      "tracking": {},
+      "dealId": { "type": "int" }
+    }
+  },
+  "inboxAcceptedSnackNoTracking": "Deal #{dealId} angelegt",
+  "@inboxAcceptedSnackNoTracking": {
+    "placeholders": {
+      "dealId": { "type": "int" }
+    }
+  },
+  "inboxAcceptedShowDeal": "Anzeigen"
 }

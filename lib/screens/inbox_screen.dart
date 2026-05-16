@@ -123,6 +123,7 @@ class _InboxScreenState extends State<InboxScreen> {
                         suggestions: provider.pendingSuggestions,
                         accounts: provider.accounts,
                         onRefresh: _refresh,
+                        onGoToDeals: widget.onGoToDealsReview,
                       ),
                       _MatchedTab(
                         messages: provider.matchedRecently,
@@ -769,10 +770,12 @@ class _SuggestionsTab extends StatelessWidget {
   final List<PendingDealSuggestion> suggestions;
   final List<MailboxAccount> accounts;
   final Future<void> Function() onRefresh;
+  final VoidCallback? onGoToDeals;
   const _SuggestionsTab({
     required this.suggestions,
     required this.accounts,
     required this.onRefresh,
+    this.onGoToDeals,
   });
 
   @override
@@ -791,6 +794,7 @@ class _SuggestionsTab extends StatelessWidget {
               itemBuilder: (context, i) => _SuggestionCard(
                 suggestion: suggestions[i],
                 imapHost: _imapHostFor(accounts),
+                onGoToDeals: onGoToDeals,
               ),
             ),
     );
@@ -800,7 +804,12 @@ class _SuggestionsTab extends StatelessWidget {
 class _SuggestionCard extends StatelessWidget {
   final PendingDealSuggestion suggestion;
   final String? imapHost;
-  const _SuggestionCard({required this.suggestion, this.imapHost});
+  final VoidCallback? onGoToDeals;
+  const _SuggestionCard({
+    required this.suggestion,
+    this.imapHost,
+    this.onGoToDeals,
+  });
 
   Deal _toDraftDeal() {
     final shopName = suggestion.shopLabel ?? suggestion.shopKey;
@@ -829,7 +838,9 @@ class _SuggestionCard extends StatelessWidget {
 
   Future<void> _accept(BuildContext context) async {
     final inbox = context.read<InboxProvider>();
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final goToDeals = onGoToDeals;
     final saved = await showDialog<Deal>(
       context: context,
       barrierDismissible: false,
@@ -839,9 +850,22 @@ class _SuggestionCard extends StatelessWidget {
     if (saved == null || saved.id == Deal.unsavedId) return;
     try {
       await inbox.markSuggestionAccepted(suggestion.id, createdDealId: saved.id);
+      final tracking = suggestion.tracking;
+      final snackContent = (tracking != null && tracking.isNotEmpty)
+          ? l10n.inboxAcceptedSnack(tracking, saved.id)
+          : l10n.inboxAcceptedSnackNoTracking(saved.id);
       messenger.showSnackBar(SnackBar(
-        content: Text('Deal #${saved.id} aus Vorschlag erstellt.'),
+        key: const Key('inboxAcceptedSnack'),
+        content: Text(snackContent),
+        duration: const Duration(seconds: 6),
         behavior: SnackBarBehavior.floating,
+        action: goToDeals != null
+            ? SnackBarAction(
+                key: const Key('inboxAcceptedShowDealAction'),
+                label: l10n.inboxAcceptedShowDeal,
+                onPressed: goToDeals,
+              )
+            : null,
       ));
     } catch (e) {
       messenger.showSnackBar(SnackBar(

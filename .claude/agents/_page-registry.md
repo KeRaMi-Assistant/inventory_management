@@ -80,6 +80,7 @@ Dialogs müssen auf 390×844 ohne horizontalen Scroll funktionieren.
 | `/main` → Global-Search (Cmd+K) | [`lib/widgets/global_search_dialog.dart`](../../lib/widgets/global_search_dialog.dart) | smoke-theme, mobile-overflow |
 | `/main` → Invites-Bell | [`lib/widgets/invites_bell.dart`](../../lib/widgets/invites_bell.dart) | smoke-theme |
 | `/inbox` → Message-Details | [`lib/widgets/inbox_message_details.dart`](../../lib/widgets/inbox_message_details.dart) | smoke-theme, mobile-overflow |
+| `/inbox` → Suggestion-Accept-Snackbar | [`lib/screens/inbox_screen.dart`](../../lib/screens/inbox_screen.dart) (`_SuggestionCard._accept`) | smoke-theme | Accept-Snackbar mit `Key('inboxAcceptedSnack')` + Action-Button `Key('inboxAcceptedShowDealAction')` → wechselt in Deals-Tab. |
 | `/deals` → Comments-Section | [`lib/widgets/deal_comments_section.dart`](../../lib/widgets/deal_comments_section.dart) | smoke-theme |
 | `/deals` → Attachment-Gallery | [`lib/widgets/attachment_gallery.dart`](../../lib/widgets/attachment_gallery.dart) | smoke-theme |
 | `/deals` → Tracking-Review-Filter | [`lib/widgets/deal_table.dart`](../../lib/widgets/deal_table.dart) (`_FilterBar`) | smoke-tracking-review-chip | Filter-Chip „Prüfen ({count})" filtert auf `tracking_needs_review=true`. Sichtbar nur wenn Count > 0. Kein eigener Top-Level-Screen (Council-Finding #10). Banner in Inbox + Deals via `lib/widgets/tracking_banner_improved_detection.dart`. Badge auf Inbox-Nav-Tab (Index 3). |

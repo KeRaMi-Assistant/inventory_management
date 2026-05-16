@@ -3123,4 +3123,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get urlHelperLinkOpenError => 'Could not open link.';
+
+  @override
+  String inboxAcceptedSnack(Object tracking, int dealId) {
+    return 'Tracking $tracking → Deal #$dealId accepted';
+  }
+
+  @override
+  String inboxAcceptedSnackNoTracking(int dealId) {
+    return 'Deal #$dealId created';
+  }
+
+  @override
+  String get inboxAcceptedShowDeal => 'Show';
 }
