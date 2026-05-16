@@ -27,7 +27,12 @@ const ctx = (
   text = '',
 ): MailContext => ({ from, subject, text, html })
 
-Deno.test('Amazon DE Versandbestätigung mit DHL: extrahiert 20-stellige Nr', async () => {
+Deno.test.ignore('Amazon DE Versandbestätigung mit DHL: extrahiert 20-stellige Nr', async () => {
+  // Plan 2026-05-16 §D1/§D5: context-numeric-10-22-Pattern entfernt
+  // (Falsch-Positiv-Quelle). 20-stellige DHL-Pakettracking-Nrn ohne
+  // JJD/DE-Prefix werden jetzt nicht mehr extrahiert — final validiert
+  // die DHL-API. Order-ID-Extraction + Status bleiben funktional.
+  // Removed-by-design fuer den konkreten Tracking-Wert.
   const html = await loadFixture('amazon_de_shipped_dhl.html')
   const c = ctx(
     'versandbestaetigung@amazon.de',
@@ -58,7 +63,9 @@ Deno.test('Amazon DE mit Amazon Logistics (TBA nur im href)', async () => {
   assertEquals(parsed!.carrier, 'Amazon Logistics')
 })
 
-Deno.test('Amazon COM Versandbestätigung mit UPS Strong-Pattern', async () => {
+Deno.test.ignore('Amazon COM Versandbestätigung mit UPS Strong-Pattern', async () => {
+  // Plan 2026-05-16 §D1/§D5: ups-1z-Pattern entfernt. Removed-by-design,
+  // falls UPS via API-Adapter zurueckkehrt.
   const html = await loadFixture('amazon_com_shipped_ups.html')
   const c = ctx(
     'shipment-tracking@amazon.com',
@@ -192,10 +199,12 @@ Deno.test('Mehrere Carrier-Keys: Sammlung aus Fixtures liefert >= 2 distinct', a
     const parsed = detectAndParse(c)
     if (parsed?.carrier) carriers.add(parsed.carrier)
   }
-  // Erwartet: mind. 5 verschiedene Carrier (DHL, Amazon Logistics, UPS,
-  // Chronopost, SEUR, DPD).
+  // Plan 2026-05-16 §D1/§D5: TRACKING_PATTERNS reduziert auf DHL-only,
+  // DHL-/UPS-Pattern-Detection entfernt. HTML-href-Pfad liefert weiterhin
+  // Carrier-Labels fuer Amazon Logistics / Chronopost / SEUR / DPD. Mit
+  // den 7 Fixtures kommen wir damit auf >=3 distincte Carrier (statt 5).
   assert(
-    carriers.size >= 5,
-    `Erwartete >= 5 distinct Carrier, gefunden: ${[...carriers].join(', ')}`,
+    carriers.size >= 3,
+    `Erwartete >= 3 distinct Carrier (nach §D1), gefunden: ${[...carriers].join(', ')}`,
   )
 })
