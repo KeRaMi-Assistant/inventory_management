@@ -63,6 +63,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionSearch => 'Search';
 
   @override
+  String get actionHelp => 'Help';
+
+  @override
   String get actionClear => 'Clear';
 
   @override

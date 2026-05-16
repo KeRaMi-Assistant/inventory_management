@@ -244,6 +244,13 @@ class _MainScreenState extends State<MainScreen> {
                       icon: const Icon(Icons.search),
                       onPressed: _openSearch,
                     ),
+                    IconButton(
+                      key: const Key('appBar-help-action'),
+                      tooltip: l10n.actionHelp,
+                      icon: const Icon(Icons.help_outline),
+                      onPressed: () =>
+                          setState(() => _selectedIndex = MainTab.help),
+                    ),
                   ],
                 ),
                 drawer: Drawer(

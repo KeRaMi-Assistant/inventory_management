@@ -19,6 +19,7 @@
   "actionSelectAll": "Select all",
   "actionDeselect": "Clear selection",
   "actionSearch": "Search",
+  "actionHelp": "Help",
   "actionClear": "Clear",
   "actionFilter": "Filter",
   "actionExport": "Export",
