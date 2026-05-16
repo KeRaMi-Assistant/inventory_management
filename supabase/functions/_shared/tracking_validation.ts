@@ -252,23 +252,66 @@ export async function enrichWithDhlValidation(
 
       let resultState: ResultState = 'invalid'
       let statusRaw: unknown = null
-      try {
-        const result = await adapter.fetchStatus(norm, opts.apiKey)
-        if (result !== null && result !== undefined) {
-          resultState = 'valid'
-          isValid = true
-          statusRaw = result
-        } else {
-          resultState = 'invalid'
+      // Plan 2026-05-16: probeStatus mit HTTP-Differenzierung. Faellt
+      // auf fetchStatus zurueck, wenn Adapter probeStatus nicht
+      // implementiert (Backward-Compat).
+      if (typeof adapter.probeStatus === 'function') {
+        try {
+          const outcome = await adapter.probeStatus(norm, opts.apiKey)
+          switch (outcome.kind) {
+            case 'hit':
+              resultState = 'valid'
+              isValid = true
+              statusRaw = outcome.parsed
+              break
+            case 'miss':
+              resultState = 'invalid'
+              isValid = false
+              break
+            case 'auth_error':
+              // 401/403 → Key/Permission-Problem. NICHT als invalid
+              // cachen (sonst sind alle Nummern fuer 30d "kaputt").
+              // Stempel als unknown (1h TTL) + last_error fuer UI.
+              resultState = 'unknown'
+              isValid = false
+              lastApiError = 'DHL-API-Key nicht autorisiert (401/403). Bitte im DHL Developer Portal pruefen.'
+              break
+            case 'rate_limited':
+              resultState = 'unknown'
+              isValid = false
+              lastApiError = 'DHL-API Rate-Limit erreicht (429). Warte 1h.'
+              break
+            case 'server_error':
+              resultState = 'unknown'
+              isValid = false
+              lastApiError = 'DHL-API gibt 5xx zurueck.'
+              break
+            case 'network_error':
+              resultState = 'unknown'
+              isValid = false
+              lastApiError = `Netzwerk-Fehler: ${outcome.message.slice(0, 150)}`
+              break
+          }
+        } catch (err) {
+          resultState = 'unknown'
           isValid = false
-          statusRaw = null
+          lastApiError = (err instanceof Error) ? err.message.slice(0, 200) : 'probe failed'
         }
-      } catch (err) {
-        // Network-/Fetch-Exception → unknown mit 1h-TTL.
-        resultState = 'unknown'
-        isValid = false
-        statusRaw = null
-        lastApiError = (err instanceof Error) ? err.message.slice(0, 200) : 'fetch failed'
+      } else {
+        // Legacy-Pfad: fetchStatus ohne HTTP-Differenzierung.
+        try {
+          const result = await adapter.fetchStatus(norm, opts.apiKey)
+          if (result !== null && result !== undefined) {
+            resultState = 'valid'
+            isValid = true
+            statusRaw = result
+          } else {
+            resultState = 'invalid'
+          }
+        } catch (err) {
+          resultState = 'unknown'
+          lastApiError = (err instanceof Error) ? err.message.slice(0, 200) : 'fetch failed'
+        }
       }
 
       // Cache-Upsert. tracking_norm ist Primary-Key.

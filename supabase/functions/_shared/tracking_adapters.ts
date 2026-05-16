@@ -34,10 +34,26 @@ export interface ParsedTracking {
   rawStatusCode?: string
 }
 
+/// HTTP-Klassifikation eines Probe-Calls. Nutzt der Validation-Wrapper,
+/// um zwischen "Tracking-Nr unbekannt" (4xx ausser 401/403/429), "Auth-
+/// Problem" (401/403), "Rate-Limit" (429), "Server-Fehler" (5xx) und
+/// Netzwerk-Fehler zu unterscheiden.
+export type ProbeOutcome =
+  | { kind: 'hit'; parsed: ParsedTracking }
+  | { kind: 'miss' }            // 4xx (404, 400, 422 etc.) → invalid
+  | { kind: 'auth_error' }      // 401/403 → Key/Permission-Problem, unknown
+  | { kind: 'rate_limited' }    // 429 → unknown, kurze TTL
+  | { kind: 'server_error' }    // 5xx → unknown, kurze TTL
+  | { kind: 'network_error'; message: string }
+
 export interface TrackingAdapter {
   id: 'dhl' | 'dpd' | 'ups'
   label: string
   fetchStatus(tracking: string, apiKey: string): Promise<ParsedTracking | null>
+  /// Erweiterter Probe-Call mit HTTP-Klassifikation. Default-Impl wrappt
+  /// `fetchStatus` (rueckwaertskompat), DHL-Adapter ueberschreibt mit
+  /// echter Status-Differenzierung.
+  probeStatus?(tracking: string, apiKey: string): Promise<ProbeOutcome>
   parseResponse(payload: unknown): ParsedTracking | null
 }
 
@@ -74,18 +90,42 @@ export const dhlAdapter: TrackingAdapter = {
   label: 'DHL',
 
   async fetchStatus(tracking, apiKey) {
+    const outcome = await this.probeStatus!(tracking, apiKey)
+    return outcome.kind === 'hit' ? outcome.parsed : null
+  },
+
+  /// Probe mit HTTP-Status-Differenzierung. Macht den Unterschied zwischen
+  /// "DHL kennt die Nummer nicht" (404 → invalid, 30d Cache) und "DHL
+  /// akzeptiert den Key nicht" (401/403 → auth_error, kurze TTL +
+  /// last_error auf workspace_carrier_credentials).
+  async probeStatus(tracking, apiKey): Promise<ProbeOutcome> {
     const url = new URL('https://api-eu.dhl.com/track/shipments')
     url.searchParams.set('trackingNumber', tracking)
-    const res = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'DHL-API-Key': apiKey,
-        'Accept': 'application/json',
-      },
-    })
-    if (!res.ok) return null
-    const json = await res.json().catch(() => null)
-    return this.parseResponse(json)
+    let res: Response
+    try {
+      res = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'DHL-API-Key': apiKey,
+          'Accept': 'application/json',
+        },
+      })
+    } catch (e) {
+      return { kind: 'network_error', message: (e as Error).message ?? 'fetch failed' }
+    }
+    if (res.status === 200) {
+      const json = await res.json().catch(() => null)
+      const parsed = this.parseResponse(json)
+      if (parsed) return { kind: 'hit', parsed }
+      // 200 OK aber Body unparsbar / leer → DHL hat Nummer akzeptiert
+      // aber kein Shipment-Objekt geliefert. Klassifizieren als miss.
+      return { kind: 'miss' }
+    }
+    if (res.status === 401 || res.status === 403) return { kind: 'auth_error' }
+    if (res.status === 429) return { kind: 'rate_limited' }
+    if (res.status >= 500) return { kind: 'server_error' }
+    // 4xx (404, 400, 422, ...): Tracking-Nr ist DHL nicht bekannt.
+    return { kind: 'miss' }
   },
 
   parseResponse(payload) {
