@@ -56,7 +56,7 @@ class _MainScreenState extends State<MainScreen> {
         l10n.navDashboard,
         l10n.navDeals,
         l10n.navTickets,
-        'Inbox',
+        l10n.navInbox,
         l10n.navInventory,
         l10n.navSuppliers,
         l10n.navStatistics,
@@ -171,6 +171,103 @@ class _MainScreenState extends State<MainScreen> {
     setState(() => _selectedIndex = MainTab.deals);
   }
 
+  // ── Bottom-Nav helpers (Phone only, width < 800) ─────────────────────────
+
+  /// The 5 (or 4 if Inbox-hidden) tabs shown in the NavigationBar.
+  List<MainTab> _bottomNavTabs(Map<MainTab, bool> visibility) {
+    const baseOrder = [
+      MainTab.dashboard,
+      MainTab.deals,
+      MainTab.tickets,
+      MainTab.inbox,
+      MainTab.inventory,
+    ];
+    return baseOrder.where((t) => visibility[t] != false).toList();
+  }
+
+  /// Index inside the NavigationBar for the currently selected tab.
+  /// Returns the "Mehr"-slot index when the active tab is not in the bar.
+  int _bottomNavSelectedIndex(Map<MainTab, bool> visibility) {
+    final tabs = _bottomNavTabs(visibility);
+    final i = tabs.indexOf(_selectedIndex);
+    return i >= 0 ? i : tabs.length; // "Mehr"-slot is the last entry
+  }
+
+  void _bottomNavOnTap(
+      int i, Map<MainTab, bool> visibility, BuildContext context) {
+    final tabs = _bottomNavTabs(visibility);
+    if (i < tabs.length) {
+      setState(() => _selectedIndex = tabs[i]);
+    } else {
+      _openMoreSheet(context, visibility);
+    }
+  }
+
+  List<NavigationDestination> _bottomNavDestinations(
+    AppLocalizations l10n,
+    List<String> labels,
+    Map<MainTab, bool> visibility,
+    Map<MainTab, int> navBadgeCounts,
+  ) {
+    final tabs = _bottomNavTabs(visibility);
+    return [
+      for (final tab in tabs)
+        NavigationDestination(
+          key: Key('main-tab-${tab.name}'),
+          icon: Badge(
+            isLabelVisible: (navBadgeCounts[tab] ?? 0) > 0,
+            label: Text(
+              '${navBadgeCounts[tab] ?? 0}',
+              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
+            ),
+            backgroundColor: AppTheme.warning,
+            child: Icon(_navIcons[tab.index].$1),
+          ),
+          selectedIcon: Badge(
+            isLabelVisible: (navBadgeCounts[tab] ?? 0) > 0,
+            label: Text(
+              '${navBadgeCounts[tab] ?? 0}',
+              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
+            ),
+            backgroundColor: AppTheme.warning,
+            child: Icon(_navIcons[tab.index].$2),
+          ),
+          label: labels[tab.index],
+        ),
+      NavigationDestination(
+        key: const Key('main-tab-more'),
+        icon: const Icon(Icons.more_horiz),
+        label: l10n.navMore,
+      ),
+    ];
+  }
+
+  Future<void> _openMoreSheet(
+      BuildContext context, Map<MainTab, bool> visibility) async {
+    final l10n = AppLocalizations.of(context);
+    final labels = _navLabels(l10n);
+    // Tabs already in the bottom-nav — exclude them from the sheet.
+    final bottomTabs = _bottomNavTabs(visibility);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.navBg,
+      isScrollControlled: true,
+      builder: (sheetCtx) => _MoreNavSheet(
+        key: const Key('moreNavSheet'),
+        icons: _navIcons,
+        labels: labels,
+        visibility: visibility,
+        excludeTabs: bottomTabs,
+        onSelect: (tab) {
+          Navigator.pop(sheetCtx);
+          setState(() => _selectedIndex = tab);
+        },
+        badgeCounts: const {},
+        sheetTitle: l10n.navMoreSheetTitle,
+      ),
+    );
+  }
+
   Widget _buildBody() {
     return switch (_selectedIndex) {
       MainTab.dashboard => const DashboardScreen(),
@@ -253,20 +350,18 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                   ],
                 ),
-                drawer: Drawer(
-                  backgroundColor: AppTheme.navBg,
-                  child: SafeArea(
-                    child: _MobileNavList(
-                      selectedIndex: _selectedIndex,
-                      icons: _navIcons,
-                      labels: labels,
-                      visibility: visibility,
-                      onSelect: _select,
-                      badgeCounts: navBadgeCounts,
-                    ),
-                  ),
-                ),
                 floatingActionButton: fab,
+                floatingActionButtonLocation:
+                    FloatingActionButtonLocation.endFloat,
+                bottomNavigationBar: NavigationBar(
+                  key: const Key('mainBottomNav'),
+                  selectedIndex:
+                      _bottomNavSelectedIndex(visibility),
+                  onDestinationSelected: (i) =>
+                      _bottomNavOnTap(i, visibility, context),
+                  destinations: _bottomNavDestinations(
+                      l10n, labels, visibility, navBadgeCounts),
+                ),
                 body: body,
               )
             : Scaffold(
@@ -914,258 +1009,123 @@ class _AccountMenu extends StatelessWidget {
   }
 }
 
-// ─── Mobile Nav List ───────────────────────────────────────────────────────────
+// ─── More-Nav Bottom Sheet ─────────────────────────────────────────────────────
+// Shown when the user taps the "Mehr" slot in the Phone NavigationBar.
+// Renders every tab that is NOT already shown in the bottom-nav
+// (Suppliers, Stats, Activity, Settings, Help by default).
 
-class _MobileNavList extends StatelessWidget {
-  final MainTab selectedIndex;
+class _MoreNavSheet extends StatelessWidget {
   final List<(IconData, IconData)> icons;
   final List<String> labels;
-  /// Pro Tab: true = sichtbar, false = ausblenden. Stabil-keyed via MainTab
-  /// (kein Index-Shift bei Visibility-Lücken).
   final Map<MainTab, bool> visibility;
+  /// Tabs already present in the bottom-nav — excluded from this sheet.
+  final List<MainTab> excludeTabs;
   final ValueChanged<MainTab> onSelect;
-  /// Optional badge counts per tab.
   final Map<MainTab, int> badgeCounts;
+  final String sheetTitle;
 
-  const _MobileNavList({
-    required this.selectedIndex,
+  const _MoreNavSheet({
+    super.key,
     required this.icons,
     required this.labels,
     required this.visibility,
+    required this.excludeTabs,
     required this.onSelect,
+    required this.sheetTitle,
     this.badgeCounts = const {},
   });
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final auth = context.watch<AuthProvider>();
-    final email = auth.userEmail ?? l10n.commonUnknown;
-    final initial = email.isNotEmpty ? email[0].toUpperCase() : '?';
+    // All tabs visible but not pinned in the bottom-nav.
+    final sheetTabs = MainTab.values
+        .where((t) => visibility[t] != false && !excludeTabs.contains(t))
+        .toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-          child: Row(
-            children: [
-              const Icon(Icons.inventory_2_rounded,
-                  color: Colors.white, size: 18),
-              const SizedBox(width: 10),
-              Text(
-                l10n.appTitle,
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Handle + Title ────────────────────────────────────────────
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(60),
+                borderRadius: BorderRadius.circular(2),
               ),
-            ],
+            ),
           ),
-        ),
-        Container(height: 1, color: Colors.white.withAlpha(20)),
-        const SizedBox(height: 8),
-        Expanded(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              for (final tab in MainTab.values)
-                if (visibility[tab] != false)
-                  _NavItem(
-                    key: Key('mobile-nav-${tab.name}'),
-                    icon: icons[tab.index].$1,
-                    activeIcon: icons[tab.index].$2,
-                    label: labels[tab.index],
-                    isSelected: selectedIndex == tab,
-                    extended: true,
-                    onTap: () => onSelect(tab),
-                    badgeCount: badgeCounts[tab] ?? 0,
-                    badgeKey: tab == MainTab.inbox
-                        ? const Key('mobile-nav-inbox-badge')
-                        : null,
-                  ),
-            ],
-          ),
-        ),
-        // ── Account-Footer ────────────────────────────────────────────
-        Container(height: 1, color: Colors.white.withAlpha(20)),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 14,
-                backgroundColor: AppTheme.accent,
-                child: Text(
-                  initial,
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+            child: Text(
+              sheetTitle,
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.accountMenuSignedInAs,
-                      style: const TextStyle(
-                          fontSize: 10, color: Color(0xFF94A3B8)),
-                    ),
-                    Text(
-                      email,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-        _DrawerActionTile(
-          icon: Icons.logout,
-          label: l10n.accountMenuSignOut,
-          onTap: () => _confirmLogout(context),
-        ),
-        _DrawerActionTile(
-          icon: Icons.delete_forever_outlined,
-          label: l10n.accountMenuDeleteAccount,
-          danger: true,
-          onTap: () => _confirmDelete(context),
-        ),
-        const SizedBox(height: 12),
-      ],
-    );
-  }
-
-  Future<void> _confirmLogout(BuildContext context) async {
-    final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.logoutConfirmTitle),
-        content: Text(l10n.logoutConfirmText),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.accountMenuSignOut),
-          ),
+          Container(height: 1, color: Colors.white.withAlpha(20)),
+          // ── Nav items ────────────────────────────────────────────────
+          for (final tab in sheetTabs)
+            _MoreNavSheetItem(
+              key: Key('moreNavSheet-${tab.name}'),
+              icon: icons[tab.index].$1,
+              label: labels[tab.index],
+              badgeCount: badgeCounts[tab] ?? 0,
+              onTap: () => onSelect(tab),
+            ),
+          const SizedBox(height: 8),
         ],
       ),
     );
-    if (confirmed == true && context.mounted) {
-      await context.read<AuthProvider>().signOut();
-    }
-  }
-
-  Future<void> _confirmDelete(BuildContext context) async {
-    final l10n = AppLocalizations.of(context);
-    final confirmCtrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: Text(l10n.deleteAccountTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l10n.deleteAccountText),
-              const SizedBox(height: 16),
-              Text(
-                l10n.deleteAccountConfirmInstruction,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: confirmCtrl,
-                autofocus: true,
-                onChanged: (_) => setS(() {}),
-                decoration: InputDecoration(
-                  hintText: l10n.deleteAccountConfirmKeyword,
-                  border: const OutlineInputBorder(),
-                  isDense: true,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.actionCancel),
-            ),
-            ElevatedButton(
-              onPressed: confirmCtrl.text.trim() ==
-                      l10n.deleteAccountConfirmKeyword
-                  ? () => Navigator.pop(ctx, true)
-                  : null,
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFC0392B)),
-              child: Text(l10n.accountMenuDeleteAccount),
-            ),
-          ],
-        ),
-      ),
-    );
-    confirmCtrl.dispose();
-    if (confirmed == true && context.mounted) {
-      final error = await context.read<AuthProvider>().deleteAccount();
-      if (error != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error),
-            backgroundColor: const Color(0xFFC0392B),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
   }
 }
 
-class _DrawerActionTile extends StatelessWidget {
+class _MoreNavSheetItem extends StatelessWidget {
   final IconData icon;
   final String label;
-  final bool danger;
+  final int badgeCount;
   final VoidCallback onTap;
-  const _DrawerActionTile({
+
+  const _MoreNavSheetItem({
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,
-    this.danger = false,
+    this.badgeCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = danger ? const Color(0xFFEF4444) : Colors.white70;
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: color),
-            const SizedBox(width: 14),
+            Badge(
+              isLabelVisible: badgeCount > 0,
+              label: Text(
+                '$badgeCount',
+                style:
+                    const TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
+              ),
+              backgroundColor: AppTheme.warning,
+              child: Icon(icon, size: 20, color: AppTheme.navIcon),
+            ),
+            const SizedBox(width: 16),
             Text(
               label,
-              style: TextStyle(
-                color: color,
-                fontSize: 13,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
             ),
