@@ -459,7 +459,7 @@
   "helpDealsStatusSold": "Verkauft — Käufer steht fest, Verkaufspreis ist erfasst. Der Deal zählt jetzt in die Statistiken.",
   "helpDealsStatusDelivered": "Geliefert — Endkunde hat den Artikel erhalten. Letzter Status, Deal ist abgeschlossen.",
   "helpDealsTrackingTitle": "Auto-Tracking aus Mails",
-  "helpDealsTrackingDesc": "Sobald eine Versandmail mit Tracking-Nummer eintrifft (Amazon, DHL, DPD, UPS, Hermes, GLS), wird der passende Deal automatisch auf „Unterwegs\" gesetzt. Sobald der Carrier die Zustellung meldet, springt der Deal auf „Angekommen\".",
+  "helpDealsTrackingDesc": "Wenn eine Versandmail mit einer DHL-Tracking-Nummer eintrifft, fragt die App die DHL-API direkt an: nur wenn DHL die Nummer bestätigt, wird der Deal automatisch auf „Unterwegs\" gesetzt. Sobald DHL die Zustellung meldet, springt der Deal auf „Angekommen\". Andere Carrier (DPD, UPS, Hermes, Amazon Logistics, GLS) werden nicht mehr aus Mails erkannt — Tracking-Nummern dort manuell im Deal eintragen. Details siehe Sektion „Versand & Carrier-API-Keys\".",
   "helpDealsDropShipTitle": "Multi-Drop-Ship",
   "helpDealsDropShipDesc": "Wenn ein Deal aus mehreren Shops besteht (Drop-Ship), kannst du beim Anlegen mehrere Bezugsquellen samt Einkaufspreisen hinterlegen. Der Profit wird über alle Quellen summiert. Die Statistik zählt den Deal als einen Verkauf.",
   "helpDealsRetrackTitle": "Sendungsstatus sofort aktualisieren (Retrack)",
@@ -469,9 +469,11 @@
   "helpShippingIntroTitle": "Wozu Carrier-API-Keys?",
   "helpShippingIntroDesc": "Damit die App den Live-Status deiner Sendungen direkt beim Versanddienstleister abfragen kann (statt nur aus Mails zu lesen), hinterlegst du pro Carrier einen API-Key unter Einstellungen → Versand. Pro Workspace ist ein Key je Carrier nötig — alle Mitglieder profitieren davon.",
   "helpShippingDhlTitle": "DHL — aktiv unterstützt",
-  "helpShippingDhlDesc": "DHL kannst du sofort anbinden:\n• Account auf developer.dhl.com anlegen (kostenlos).\n• Dort die API „Shipment Tracking - Unified\" abonnieren — Free-Tier reicht für privaten Gebrauch.\n• Den API-Key kopieren und unter Einstellungen → Versand → DHL → „API-Key hinterlegen\" einfügen.\nAb sofort werden Deals mit DHL-Trackingnummer in regelmäßigen Abständen aktualisiert und der Status (unterwegs, in Zustellung, zugestellt) erscheint direkt im Deal.",
-  "helpShippingComingSoonTitle": "DPD und UPS — bald verfügbar",
-  "helpShippingComingSoonDesc": "DPD und UPS siehst du in der Liste, sind aber aktuell als „Bald verfügbar\" markiert und nicht eingabebereit. Die Anbindung folgt in einem späteren Update — bis dahin werden Sendungen dieser Carrier weiterhin aus Versandmails erkannt, der Live-Status fehlt nur. Es ist nichts kaputt, das ist Absicht.",
+  "helpShippingDhlDesc": "DHL kannst du sofort anbinden:\n• Account auf developer.dhl.com anlegen (kostenlos).\n• Dort die API „Shipment Tracking - Unified\" abonnieren — Free-Tier reicht für privaten Gebrauch.\n• Den API-Key kopieren und unter Einstellungen → Versand → DHL → „API-Key hinterlegen\" einfügen.\n• Direkt danach einmal Einstellungen → „Sendungsnummern neu prüfen\" tippen, damit deine bestehenden Mails von der neuen DHL-API-Pipeline geparst werden.\nAb sofort werden Deals mit DHL-Trackingnummer in regelmäßigen Abständen aktualisiert und der Status (unterwegs, in Zustellung, zugestellt) erscheint direkt im Deal.",
+  "helpShippingApiOnlyTitle": "Warum DHL-API statt Mail-Heuristik?",
+  "helpShippingApiOnlyDesc": "Bis vor kurzem hat die App Tracking-Nummern aus Mails mit Regex-Patterns erkannt. Resultat: pro Mail oft mehrere Kandidaten, von denen nur eine echt war (Bestell-Nr, Kunden-Nr, Rechnung-Nr — alle 12-stellige Zahlen sehen wie Tracking aus). Jetzt fragt die App bei jedem Kandidaten direkt die DHL-API: liefert sie ein Shipment zurück → echte Tracking-Nummer wird übernommen, sonst verworfen. Du siehst maximal eine Pill pro Mail, und sie ist immer real.",
+  "helpShippingComingSoonTitle": "DPD, UPS, Hermes, Amazon Logistics — bald oder nie",
+  "helpShippingComingSoonDesc": "Aktuell läuft die automatische Tracking-Erkennung ausschließlich über die DHL-API. Andere Carrier (DPD, UPS, Hermes, Amazon Logistics, GLS) werden nicht mehr aus Versandmails geraten — das war die Hauptquelle der Falsch-Positive. DPD und UPS bekommen ihre eigene API-Anbindung in einem späteren Update. Hermes und Amazon Logistics bieten keine öffentliche Tracking-API — dort musst du die Tracking-Nummer manuell im Deal eintragen.",
   "helpShippingKeySafetyTitle": "Was passiert mit meinem API-Key?",
   "helpShippingKeySafetyDesc": "Der Klartext-Key verlässt dein Gerät nur einmal, beim Speichern, und wird serverseitig in der Datenbank verschlüsselt abgelegt. In der App siehst du danach nur noch die letzten vier Zeichen, z. B. „••••••••a1b2\". Du kannst den Key jederzeit ersetzen oder löschen — beim Löschen pausieren wir die automatischen Status-Abfragen für diesen Carrier.",
 
@@ -1070,6 +1072,20 @@
   "trackingReparseSuccessCount": "{count, plural, =0{Keine Sendungsnummer aktualisiert} =1{1 Sendungsnummer aktualisiert} other{{count} Sendungsnummern aktualisiert}}",
   "@trackingReparseSuccessCount": {
     "description": "Number of tracking numbers updated during a re-evaluation run",
+    "placeholders": {
+      "count": { "type": "int", "format": "decimalPattern" }
+    }
+  },
+  "inboxResetCta": "Postfach zurücksetzen",
+  "inboxResetSubtitle": "Alle Mails löschen und neu importieren. Beim Re-Import wird jede Mail gegen die DHL-API geprüft. Nicht rückgängig zu machen.",
+  "inboxResetConfirmTitle": "Postfach wirklich zurücksetzen?",
+  "inboxResetConfirmBody": "Alle bisher importierten Mails werden gelöscht, der IMAP-Cursor wird zurückgesetzt und beim nächsten Poll werden alle Mails neu geladen. Deine Deals bleiben erhalten.\n\nZur Bestätigung tippe RESET ein.",
+  "inboxResetConfirmInputLabel": "Tippe RESET zur Bestätigung",
+  "inboxResetRunning": "Postfach wird zurückgesetzt…",
+  "inboxResetFailed": "Reset fehlgeschlagen — bitte später erneut versuchen.",
+  "inboxResetSuccess": "{count, plural, =0{Keine Mails gelöscht — IMAP-Cursor wurde zurückgesetzt.} =1{1 Mail gelöscht. Nächster Poll lädt alles neu.} other{{count} Mails gelöscht. Nächster Poll lädt alles neu.}}",
+  "@inboxResetSuccess": {
+    "description": "SnackBar nach erfolgreichem Inbox-Reset",
     "placeholders": {
       "count": { "type": "int", "format": "decimalPattern" }
     }

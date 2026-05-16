@@ -258,26 +258,12 @@ export type AdapterPattern = {
 }
 
 export const TRACKING_PATTERNS: AdapterPattern[] = [
-  // ── Strong patterns (eindeutig, kein Anchor nötig) ─────────────────
-  {
-    id: 'ups-1z',
-    re: /\b1Z[A-Z0-9]{16}\b/g,
-    requiresAnchor: false,
-    defaultConfidence: 'strong',
-    carrier: 'UPS',
-    source: 'strong-pattern',
-    validator: 'jkeen',
-    normalizable: true,
-  },
-  {
-    id: 'amazon-tba',
-    re: /\bTBA\d{9,14}\b/gi,
-    requiresAnchor: false,
-    defaultConfidence: 'strong',
-    carrier: 'Amazon Logistics',
-    source: 'strong-pattern',
-    validator: 'no-validation',
-  },
+  // ── DHL-only Patterns (Plan 2026-05-16, §D1) ──────────────────────
+  // Stakeholder-Wunsch: Tracking-Detection läuft ausschliesslich gegen
+  // die DHL-API. Alle Non-DHL-Patterns (UPS-1Z, Amazon-TBA, S10-UPU,
+  // context-numeric, context-alphanumeric) wurden entfernt. Final
+  // entscheidet `enrichWithDhlValidation` per API-Probe, ob ein Match
+  // wirklich eine gueltige DHL-Sendung ist.
   {
     id: 'dhl-jjd',
     re: /\bJJD\d{10,18}\b/g,
@@ -299,45 +285,34 @@ export const TRACKING_PATTERNS: AdapterPattern[] = [
     validator: 'jkeen',
   },
   {
-    id: 's10-upu',
-    // Universal Postal Union S10: 2 Buchstaben + 8 Ziffern + 2 Buchstaben.
-    re: /\b[A-Z]{2}\d{8}[A-Z]{2}\b/g,
-    requiresAnchor: false,
-    defaultConfidence: 'strong',
-    carrier: 'S10',
-    source: 'strong-pattern',
-    validator: 'jkeen',
-    normalizable: true,
-  },
-  {
     id: 'dhl-de-prefix',
-    // DE-Prefix + 8–14 Digits ("DE5455279839", 12 Zeichen). Format wird
-    // sowohl von Amazon Logistics als auch von DHL national genutzt —
-    // der konkrete Carrier wird via `inferCarrier(tn, body)` aus
-    // Body-Hinweisen abgeleitet (nicht hardcoded). Bewusst kein Anchor
-    // gefordert: das Format ist spezifisch genug (DE + 10–12 Ziffern),
-    // dass die FP-Risiken (PLZ, IBAN-Fragmente) durch REJECT_PATTERNS
-    // abgedeckt sind. Plan-Bug-Fix #2 + Test-Compat (Amazon DE-Tracking).
+    // DE-Prefix + 8–14 Digits ("DE5455279839", 12 Zeichen). Wird sowohl
+    // von Amazon Logistics als auch DHL national genutzt — Plan D1
+    // entscheidet, dass die DHL-API-Validierung den finalen Carrier-
+    // Filter uebernimmt. Wenn die DHL-API 404 liefert, wird der Kandidat
+    // verworfen.
     re: /\bDE\d{8,14}\b/g,
     requiresAnchor: false,
     defaultConfidence: 'strong',
+    carrier: 'DHL',
     source: 'strong-pattern',
     validator: 'length-only',
   },
-  // ── Context-required (zu generisch ohne Anchor) ───────────────────
+  // ── Anchor-gated permissive (Plan 2026-05-16 Phase A, Iteration 2) ─
+  // 10-22 stellige Numerics in Anchor-Naehe ('Sendungsnummer',
+  // 'Tracking', 'verfolgen', ...) → MEDIUM-Confidence. DHL-API
+  // entscheidet final via `enrichWithDhlValidation`-Wrapper.
+  // False-Positive-Risiko tolerierbar, weil ein 404 von DHL den
+  // Kandidaten wegwirft (Cache markiert `invalid`, 30-Tage-TTL).
+  // Begrenzt API-Cost durch Anchor-Gating + Hard-Limit-5/Mail im
+  // Wrapper. Wieder eingefuehrt nach User-Feedback "Amazon-Mails mit
+  // verstecktem DE-Tracking werden nicht gefunden".
   {
     id: 'context-numeric-10-22',
     re: /\b\d{10,22}\b/g,
     requiresAnchor: true,
-    defaultConfidence: 'strong',
-    source: 'context-anchor',
-    validator: 'jkeen',
-  },
-  {
-    id: 'context-alphanumeric-tracking',
-    re: /\b[A-Z0-9]{8,30}\b/g,
-    requiresAnchor: true,
-    defaultConfidence: 'weak',
+    defaultConfidence: 'medium',
+    carrier: 'DHL',
     source: 'context-anchor',
     validator: 'length-only',
   },
@@ -509,32 +484,11 @@ const findFirst = (s: string, patterns: RegExp[]): string | undefined => {
   return undefined
 }
 
-function inferCarrier(tn: string, body: string): string | undefined {
-  // 1. Format-eindeutige Tracking-Codes — Carrier ergibt sich aus dem
-  //    Code-Format selbst, ohne Body-Kontext.
-  if (/^1Z/.test(tn)) return 'UPS'
-  if (/^TBA/i.test(tn)) return 'Amazon Logistics'
-  if (/^JJD/.test(tn)) return 'DHL'
-  if (/^[A-Z]{2}\d{9}DE$/.test(tn)) return 'DHL'
-
-  // 2. Carrier-Keyword im Body. `DE\d{10,12}` ist NICHT format-eindeutig
-  //    (sowohl Amazon Logistics als auch DHL national nutzen das Schema)
-  //    — ohne Body-Hinweis liefert die Funktion `undefined` und das UI
-  //    zeigt die Tracking-Nr ohne Carrier-Label.
-  //    Reihenfolge: spezifischere Keywords zuerst (Amazon Logistics ist
-  //    ein 2-Wort-Anker, der weniger leicht aus Boilerplate-Text matcht
-  //    als das einzelne Wort "DHL"). Wenn beide vorkommen ("Versand
-  //    durch Amazon Logistics in Kooperation mit DHL"), gewinnt der
-  //    explizite Mehrwort-Anker.
-  if (/\bamazon\s+logistics\b/i.test(body)) return 'Amazon Logistics'
-  if (/\bdhl\b/i.test(body)) return 'DHL'
-  if (/\bhermes\b/i.test(body)) return 'Hermes'
-  if (/\bdpd\b/i.test(body)) return 'DPD'
-  if (/\bgls\b/i.test(body)) return 'GLS'
-  if (/\binpost\b/i.test(body)) return 'InPost'
-  if (/\bups\b/i.test(body)) return 'UPS'
-  return undefined
-}
+// `inferCarrier()` wurde mit Plan 2026-05-16 (§D1) entfernt. Mit nur
+// noch DHL-Patterns in `TRACKING_PATTERNS` ist Body-Carrier-Inference
+// toter Code — `pattern.carrier ?? 'DHL'` liefert deterministisch den
+// Carrier-Label. Endgueltige Validierung erfolgt durch
+// `enrichWithDhlValidation` (DHL-API-Probe).
 
 /// HTML-spezifische Tracking-Extraktion: liest `href`-Attribute aus dem
 /// Roh-HTML und matcht typische Carrier-URL-Schemes. Wichtig für Amazon
@@ -617,7 +571,7 @@ function findTrackingsInHtml(html: string): TrackingCandidate[] {
           const rawValue = m[1]
           const value = rawValue.replace(/\s+/g, '').toUpperCase()
           const rejectedBy = checkRejectPatterns(value) ?? undefined
-          const carrier = p.carrier ?? inferCarrier(value, variant)
+          const carrier = p.carrier ?? 'DHL'
           let confidence: TrackingConfidence = p.confidence
           if (rejectedBy) confidence = 'none'
           const candidate: TrackingCandidate = {
@@ -756,7 +710,7 @@ export function findAllTrackings(
       return
     }
 
-    const carrier = pattern.carrier ?? inferCarrier(value, scan)
+    const carrier = pattern.carrier ?? 'DHL'
 
     const candidate: TrackingCandidate = {
       value,

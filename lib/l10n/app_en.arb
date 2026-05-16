@@ -459,7 +459,7 @@
   "helpDealsStatusSold": "Sold — buyer is set, sales price recorded. The deal now counts toward statistics.",
   "helpDealsStatusDelivered": "Delivered — end customer received the item. Final status, deal is closed.",
   "helpDealsTrackingTitle": "Auto-tracking from mails",
-  "helpDealsTrackingDesc": "When a shipping mail with a tracking number arrives (Amazon, DHL, DPD, UPS, Hermes, GLS), the matching deal is set to \"In transit\" automatically. Once the carrier reports delivery, the deal flips to \"Arrived\".",
+  "helpDealsTrackingDesc": "When a shipping mail with a DHL tracking number arrives, the app queries DHL's API directly — only confirmed tracking numbers flip the deal to \"In transit\" automatically. Once DHL reports delivery, the deal flips to \"Arrived\". Other carriers (DPD, UPS, Hermes, Amazon Logistics, GLS) are no longer auto-detected from mails — enter their tracking numbers manually on the deal. See the \"Shipping & carrier API keys\" section for details.",
   "helpDealsDropShipTitle": "Multi drop-ship",
   "helpDealsDropShipDesc": "If a deal sources from several shops (drop-ship), you can record multiple sources with their purchase prices when creating it. Profit is summed across sources, but the statistic counts the deal as one sale.",
   "helpDealsRetrackTitle": "Refresh shipment status now (Retrack)",
@@ -469,9 +469,11 @@
   "helpShippingIntroTitle": "Why carrier API keys?",
   "helpShippingIntroDesc": "So the app can fetch the live status of your shipments straight from the carrier (rather than just reading mails), you store one API key per carrier under Settings → Shipping. One key per carrier per workspace is enough — every member benefits from it.",
   "helpShippingDhlTitle": "DHL — actively supported",
-  "helpShippingDhlDesc": "DHL works out of the box:\n• Create an account on developer.dhl.com (free).\n• Subscribe to the \"Shipment Tracking - Unified\" API there — the free tier is enough for personal use.\n• Copy the API key and paste it under Settings → Shipping → DHL → \"Save API key\".\nFrom now on, deals with a DHL tracking number are refreshed at regular intervals and the status (in transit, out for delivery, delivered) appears directly on the deal.",
-  "helpShippingComingSoonTitle": "DPD and UPS — coming soon",
-  "helpShippingComingSoonDesc": "DPD and UPS show up in the list but are currently marked \"Coming soon\" and not editable. The integration ships in a later update — until then, shipments from these carriers are still detected from shipping mails, only the live status is missing. Nothing is broken, this is intentional.",
+  "helpShippingDhlDesc": "DHL works out of the box:\n• Create an account on developer.dhl.com (free).\n• Subscribe to the \"Shipment Tracking - Unified\" API there — the free tier is enough for personal use.\n• Copy the API key and paste it under Settings → Shipping → DHL → \"Save API key\".\n• Right after, tap Settings → \"Re-evaluate tracking numbers\" once so your existing mails are re-parsed by the new DHL-API pipeline.\nFrom now on, deals with a DHL tracking number are refreshed at regular intervals and the status (in transit, out for delivery, delivered) appears directly on the deal.",
+  "helpShippingApiOnlyTitle": "Why DHL API instead of mail heuristics?",
+  "helpShippingApiOnlyDesc": "Until recently the app detected tracking numbers from mails via regex patterns. The result: often multiple candidates per mail, only one of which was real (order no., customer no., invoice no. — every 12-digit number looked like a tracking code). Now the app queries DHL's API directly for each candidate: if DHL returns a shipment, the candidate is accepted; otherwise it's discarded. You see at most one pill per mail, and it's always real.",
+  "helpShippingComingSoonTitle": "DPD, UPS, Hermes, Amazon Logistics — later or never",
+  "helpShippingComingSoonDesc": "Automatic tracking detection currently runs exclusively against the DHL API. Other carriers (DPD, UPS, Hermes, Amazon Logistics, GLS) are no longer guessed from shipping mails — that was the main source of false positives. DPD and UPS will get their own API integration in a later update. Hermes and Amazon Logistics don't offer a public tracking API — for those carriers, enter the tracking number on the deal manually.",
   "helpShippingKeySafetyTitle": "What happens to my API key?",
   "helpShippingKeySafetyDesc": "The plaintext key leaves your device exactly once, when you save it, and is then stored encrypted on the server. In the app you only see the last four characters afterwards, e.g. \"••••••••a1b2\". You can replace or delete the key at any time — deleting it pauses the automatic status polls for that carrier.",
 
@@ -1070,6 +1072,20 @@
   "trackingReparseSuccessCount": "{count, plural, =0{No tracking number updated} =1{1 tracking number updated} other{{count} tracking numbers updated}}",
   "@trackingReparseSuccessCount": {
     "description": "Number of tracking numbers updated during a re-evaluation run",
+    "placeholders": {
+      "count": { "type": "int", "format": "decimalPattern" }
+    }
+  },
+  "inboxResetCta": "Reset mailbox",
+  "inboxResetSubtitle": "Delete all mails and re-import them. Each mail is checked against the DHL API during re-import. Not reversible.",
+  "inboxResetConfirmTitle": "Really reset the mailbox?",
+  "inboxResetConfirmBody": "All previously imported mails will be deleted, the IMAP cursor will be reset and the next poll will reload everything. Your deals stay untouched.\n\nType RESET to confirm.",
+  "inboxResetConfirmInputLabel": "Type RESET to confirm",
+  "inboxResetRunning": "Resetting mailbox…",
+  "inboxResetFailed": "Reset failed — please try again later.",
+  "inboxResetSuccess": "{count, plural, =0{No mails deleted — IMAP cursor has been reset.} =1{1 mail deleted. Next poll will reload everything.} other{{count} mails deleted. Next poll will reload everything.}}",
+  "@inboxResetSuccess": {
+    "description": "SnackBar after successful inbox reset",
     "placeholders": {
       "count": { "type": "int", "format": "decimalPattern" }
     }

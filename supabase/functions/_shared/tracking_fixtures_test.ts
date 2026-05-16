@@ -23,7 +23,9 @@ import * as fx from './test_fixtures/tracking_fixtures.ts'
 
 // ── Positiv: 7 Cases ──────────────────────────────────────────────────────
 
-Deno.test('T13 pos: UPS 1Z strong — primary strong, carrier=UPS', () => {
+Deno.test.ignore('T13 pos: UPS 1Z strong — primary strong, carrier=UPS', () => {
+  // Plan 2026-05-16 §D1/§D5: ups-1z-Pattern entfernt. Test bleibt als
+  // removed-by-design-Marker, falls UPS via API-Adapter zurueckkehrt.
   const candidates = findAllTrackings(fx.pos_ups_1z_strong)
   const { primary } = gateTracking(candidates, { minConfidence: 'strong' })
   assert(primary !== null, 'primary should not be null for UPS 1Z strong fixture')
@@ -32,7 +34,9 @@ Deno.test('T13 pos: UPS 1Z strong — primary strong, carrier=UPS', () => {
   assertEquals(primary!.carrier, 'UPS')
 })
 
-Deno.test('T13 pos: UPS 1Z with spaces — primary strong, normalized=true', () => {
+Deno.test.ignore('T13 pos: UPS 1Z with spaces — primary strong, normalized=true', () => {
+  // Plan 2026-05-16 §D1/§D5: ups-1z-Pattern entfernt — Whitespace-
+  // Normalisierung fuer UPS-Format gibt es nicht mehr. Removed-by-design.
   const candidates = findAllTrackings(fx.pos_ups_1z_with_spaces)
   const { primary } = gateTracking(candidates, { minConfidence: 'strong' })
   assert(primary !== null, 'primary should not be null for UPS 1Z with spaces')
@@ -52,7 +56,12 @@ Deno.test('T13 pos: DHL JJD strong — primary strong, carrier=DHL', () => {
   assertEquals(primary!.confidence, 'strong')
 })
 
-Deno.test('T13 pos: DHL 20-digit with anchor — strong (anchor + carrier = DHL)', () => {
+Deno.test.ignore('T13 pos: DHL 20-digit with anchor — strong (anchor + carrier = DHL)', () => {
+  // Plan 2026-05-16 §D1/§D5: context-numeric-10-22-Pattern entfernt
+  // (Falsch-Positiv-Quelle: Bestellnr/Kundennr/Rechnungsnr). 20-stellige
+  // DHL-Paket-Tracking-Nrn (00340434…) werden jetzt erst von der
+  // DHL-API als Sendung bestaetigt — kein Pattern-Match mehr im Parser.
+  // Removed-by-design.
   const candidates = findAllTrackings(fx.pos_dhl_20_digit_with_anchor)
   const { primary } = gateTracking(candidates, { minConfidence: 'strong' })
   assert(
@@ -61,14 +70,15 @@ Deno.test('T13 pos: DHL 20-digit with anchor — strong (anchor + carrier = DHL)
   )
   assertEquals(primary!.value, '00340434161094021501')
   assertEquals(primary!.confidence, 'strong')
-  // anchorMatched muss das Anchor-Wort enthalten
   assert(
     primary!.validation.anchorMatched !== undefined,
     'anchorMatched must be set for anchored DHL-20 fixture',
   )
 })
 
-Deno.test('T13 pos: Amazon TBA strong — primary strong, carrier=Amazon Logistics', () => {
+Deno.test.ignore('T13 pos: Amazon TBA strong — primary strong, carrier=Amazon Logistics', () => {
+  // Plan 2026-05-16 §D1/§D5: amazon-tba-Pattern entfernt (kein API-
+  // Adapter fuer Amazon Logistics). Removed-by-design.
   const candidates = findAllTrackings(fx.pos_amazon_tba_strong)
   const { primary } = gateTracking(candidates, { minConfidence: 'strong' })
   assert(primary !== null, 'primary should not be null for Amazon TBA')
@@ -77,8 +87,9 @@ Deno.test('T13 pos: Amazon TBA strong — primary strong, carrier=Amazon Logisti
   assertEquals(primary!.carrier, 'Amazon Logistics')
 })
 
-Deno.test('T13 pos: S10 UPU strong — primary strong, value=XJ12345678FR, carrier=S10', () => {
-  // s10-upu pattern: [A-Z]{2}\d{8}[A-Z]{2} (exakt 8 Ziffern, requiresAnchor=false)
+Deno.test.ignore('T13 pos: S10 UPU strong — primary strong, value=XJ12345678FR, carrier=S10', () => {
+  // Plan 2026-05-16 §D1/§D5: s10-upu-Pattern entfernt (zu generisch,
+  // Universal Postal Union ist kein Carrier mit DHL-API). Removed-by-design.
   const candidates = findAllTrackings(fx.pos_s10_upu_strong)
   const { primary } = gateTracking(candidates, { minConfidence: 'strong' })
   assert(primary !== null, 'primary should not be null for S10/UPU fixture')
@@ -193,12 +204,15 @@ Deno.test('T13 neg: Amazon orderingShipmentId only → primary=null (Gate min=st
 
 // ── Edge-Cases: 2 ─────────────────────────────────────────────────────────
 
-Deno.test('T13 edge: anchorMatched max 50 chars — PII-Schutz (Council-Finding #7)', () => {
+Deno.test.ignore('T13 edge: anchorMatched max 50 chars — PII-Schutz (Council-Finding #7)', () => {
+  // Plan 2026-05-16 §D1/§D5: Fixture testet UPS 1Z mit Anchor. ups-1z-
+  // Pattern entfernt — der konkrete anchorMatched-PII-Schutz wird jetzt
+  // ueber den DHL-JJD-Pfad sichergestellt (siehe T13 pos: DHL JJD strong).
+  // Removed-by-design — anchorMatched ist immer noch capped, nur diese
+  // konkrete UPS-Fixture greift nicht mehr.
   const candidates = findAllTrackings(fx.edge_anchormatched_max_50chars)
-  // UPS 1Z muss gefunden werden
   const ups = candidates.find((c) => c.value === '1Z999AA10123456784')
   assert(ups !== undefined, 'expected UPS candidate in edge_anchormatched_max_50chars')
-  // Alle anchorMatched Felder in der gesamten Candidate-Liste müssen ≤ 50 chars sein
   for (const c of candidates) {
     if (c.validation.anchorMatched) {
       assert(
@@ -207,13 +221,18 @@ Deno.test('T13 edge: anchorMatched max 50 chars — PII-Schutz (Council-Finding 
       )
     }
   }
-  // Primary muss strong sein (Anchor "Sendungsnummer" ist vorhanden)
   const { primary } = gateTracking(candidates, { minConfidence: 'strong' })
   assert(primary !== null, 'UPS 1Z mit Sendungsnummer-Anchor muss primary strong sein')
   assertEquals(primary!.value, '1Z999AA10123456784')
 })
 
-Deno.test('T13 edge: Body >256 KB — Tracking VOR Cap gefunden, Tracking NACH Cap nicht', () => {
+Deno.test.ignore('T13 edge: Body >256 KB — Tracking VOR Cap gefunden, Tracking NACH Cap nicht', () => {
+  // Plan 2026-05-16 §D1/§D5: Fixture-Builder verwenden ups-1z-Format,
+  // das nach Pattern-Reduction nicht mehr erkannt wird. Body-Cap selbst
+  // ist orthogonal und weiterhin getestet in
+  // `tracking_t3c_test.ts` ("T3c Body-Cap: Tracking VOR 256 KB wird
+  // gefunden") mit JJD-Pattern. Removed-by-design fuer diese konkrete
+  // UPS-Fixture-Variante.
   // Verifikation: MAX_BODY_LEN ist 256 KB
   assertEquals(MAX_BODY_LEN, 256 * 1024)
 

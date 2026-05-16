@@ -20,7 +20,11 @@ import {
 
 // ── 1. Whitespace-Normalisierung — UPS 1Z mit Spaces ──────────────────
 
-Deno.test('T3c: UPS 1Z mit Spaces → strong + normalized=true', () => {
+Deno.test.ignore('T3c: UPS 1Z mit Spaces → strong + normalized=true', () => {
+  // Plan 2026-05-16 §D1/§D5: ups-1z-Pattern wurde entfernt. Whitespace-
+  // Normalisierung gilt jetzt nur noch fuer DHL-Patterns. Test bleibt als
+  // removed-by-design-Marker — wenn UPS via API-Adapter zurueckkommt,
+  // muss das Pattern in TRACKING_PATTERNS reaktiviert werden.
   const body = 'Your shipment: 1Z 999 AA1 0123456784 is on its way.'
   const result = findAllTrackings(body)
   const ups = result.find((c) => c.value === '1Z999AA10123456784')
@@ -133,10 +137,12 @@ Deno.test('T3c Body-Cap: Tracking jenseits 256 KB wird abgeschnitten', () => {
 })
 
 Deno.test('T3c Body-Cap: Tracking VOR 256 KB wird gefunden', () => {
-  const body = '1Z999AA10123456784 ' + 'x'.repeat(MAX_BODY_LEN + 100)
+  // Plan 2026-05-16 §D1/§D5: ups-1z-Pattern entfernt — Body-Cap-
+  // Sicherheitsnetz mit JJD-Pattern (DHL) statt UPS 1Z testen.
+  const body = 'JJD012345678901234 ' + 'x'.repeat(MAX_BODY_LEN + 100)
   const result = findAllTrackings(body)
-  const ups = result.find((c) => c.value === '1Z999AA10123456784')
-  assert(ups, 'Token vor dem Body-Cap muss gefunden werden')
+  const jjd = result.find((c) => c.value === 'JJD012345678901234')
+  assert(jjd, 'Token vor dem Body-Cap muss gefunden werden')
 })
 
 // ── 4. HTML-Pfad — Amazon Logistics URL → strong + carrier ────────────
@@ -182,9 +188,14 @@ Deno.test('T3c Negativ: 302-1234567-1234567 produziert keinen strong-Candidate',
 
 // ── 6. TRACKING_PATTERNS-Tabelle: normalizable-Flag ───────────────────
 
-Deno.test('T3c TRACKING_PATTERNS: ups-1z + dhl-jjd + s10-upu sind normalizable', () => {
+Deno.test('T3c TRACKING_PATTERNS: dhl-jjd ist normalizable (DHL-only)', () => {
+  // Plan 2026-05-16 §D1/§D5: TRACKING_PATTERNS reduziert auf DHL-Patterns.
+  // Vorher: ups-1z + dhl-jjd + s10-upu. Jetzt nur noch dhl-jjd ist als
+  // `normalizable: true` markiert (Whitespace-Toleranz fuer JJD-Format).
+  // Die DHL-DE-Patterns sind kompakter und brauchen keine Whitespace-Pass.
   const norm = TRACKING_PATTERNS.filter((p) => p.normalizable).map((p) => p.id)
-  assert(norm.includes('ups-1z'))
   assert(norm.includes('dhl-jjd'))
-  assert(norm.includes('s10-upu'))
+  // Removed-by-design (sollen NICHT mehr existieren):
+  assert(!norm.includes('ups-1z'), 'ups-1z entfernt (Plan §D1)')
+  assert(!norm.includes('s10-upu'), 's10-upu entfernt (Plan §D1)')
 })

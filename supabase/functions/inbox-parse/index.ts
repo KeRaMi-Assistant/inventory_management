@@ -22,7 +22,8 @@ import {
   isAccountingMail,
   isCarrierOnly,
 } from '../_shared/inbox_adapters.ts'
-import { runParseSweep, stripBody } from '../_shared/inbox_parse_runner.ts'
+import { applyDhlValidation, runParseSweep, stripBody } from '../_shared/inbox_parse_runner.ts'
+import { stampPipelineHeartbeat } from '../_shared/tracking_validation.ts'
 
 // T12: Rate-Limit für User-getriggerte Re-Parse-Calls (5 min Cooldown).
 const REPARSE_COOLDOWN_MS = 5 * 60 * 1000
@@ -129,6 +130,12 @@ Deno.serve(async (req) => {
     // Liest BEIDE Body-Quellen (_raw_html + _raw.text) und versucht
     // Tracking mit der aktuellen Adapter-Registry neu zu klassifizieren.
     reparse_low_confidence?: boolean
+    // Plan 2026-05-16 Phase B: Hard-Reset eines Workspace.
+    // DELETE FROM parsed_messages WHERE workspace_id (cascade pending,
+    // reads, dismissals) + UPDATE mailbox_accounts.last_uid = NULL.
+    // inbox-poll re-import folgt im naechsten Cron-Tick (oder via
+    // separatem invoke). NICHT-reversibel — UI muss confirmen.
+    reset_all?: boolean
     workspace_id?: string
     shop_key?: string
     // Wenn true, werden auch parsed_messages mit bereits gesetztem
@@ -216,6 +223,28 @@ Deno.serve(async (req) => {
       console.warn('[audit-test-mode] unknown override value, ignoring')
     }
     // decision === 'none' → kein Override, normale Logik unten.
+  }
+
+  // Plan 2026-05-16 Phase B: Hard-Reset Endpoint.
+  if (body.reset_all === true) {
+    // Auth muss workspace-scoped sein. Bei User-JWT-Pfad: workspace_id
+    // muss im Body sein UND in scopedWorkspaceIds.
+    if (scopedUserId !== null) {
+      if (!body.workspace_id) {
+        return jsonResp({ error: 'workspace_id required for reset_all' }, 400)
+      }
+      if (!(scopedWorkspaceIds ?? []).includes(body.workspace_id)) {
+        return jsonResp({ error: 'workspace_id not in user scope' }, 403)
+      }
+    } else if (!isCron && !isService) {
+      return jsonResp({ error: 'Unauthorized' }, 401)
+    }
+    const targetWs = body.workspace_id
+    if (!targetWs) {
+      return jsonResp({ error: 'workspace_id required for reset_all' }, 400)
+    }
+    const result = await resetWorkspaceInbox(admin, targetWs)
+    return jsonResp({ ok: true, mode: 'reset_all', ...result })
   }
 
   if (body.reparse_unclassified === true) {
@@ -445,6 +474,11 @@ async function reparseNoTracking(
   }
   let cursor: string | null = null
   const PAGE = 100
+  // Plan 2026-05-16 §D3: Re-Parse muss durch dieselbe DHL-API-Validation
+  // wie der Live-Sweep. Sonst persistieren wir Pattern-Hits, die DHL
+  // nie bestaetigt hat. KeyCache ist Run-scoped → max 1 RPC pro Workspace.
+  const keyCache = new Map<string, string | null>()
+  const heartbeatStamped = new Set<string>()
   for (let i = 0; i < 25; i++) {
     // Council-Finding #1: BEIDE Body-Quellen (_raw_html + _raw.text) müssen
     // berücksichtigt werden — Plain-Text-only-Mails (PRs #48/#51) sonst
@@ -483,6 +517,28 @@ async function reparseNoTracking(
     for (const row of rows) {
       stats.scanned++
       cursor = row.received_at
+      // Plan 2026-05-16 Phase C: einmal pro Workspace einen Heartbeat-
+      // Stempel auf workspace_carrier_credentials.last_polled_at setzen,
+      // damit der User in Settings "Zuletzt geprueft" sieht, auch wenn
+      // keine Mail einen Tracking-Kandidaten enthielt.
+      if (!heartbeatStamped.has(row.workspace_id)) {
+        try {
+          const apiKey = await (admin as unknown as {
+            rpc: (n: string, a: Record<string, unknown>) =>
+              Promise<{ data: string | null; error: unknown }>
+          }).rpc('get_carrier_api_key', {
+            _workspace_id: row.workspace_id,
+            _carrier_id: 'dhl',
+          })
+          if (apiKey.data) {
+            // deno-lint-ignore no-explicit-any
+            await stampPipelineHeartbeat(admin as any, row.workspace_id)
+          }
+        } catch (_e) {
+          // Best-Effort.
+        }
+        heartbeatStamped.add(row.workspace_id)
+      }
       try {
         const payload = row.parsed_payload ?? {}
         const html = (payload._raw_html as string | undefined) ?? ''
@@ -500,7 +556,14 @@ async function reparseNoTracking(
           html,
         }
         const parsed = detectAndParse(ctx)
-        if (!parsed || !parsed.tracking) {
+        if (!parsed) {
+          stats.unchanged++
+          continue
+        }
+        // Plan 2026-05-16 §D3: DHL-API-Validation NACH detectAndParse.
+        // Pattern-Heuristik allein reicht nicht — DHL muss bestaetigen.
+        await applyDhlValidation(admin, parsed, row.workspace_id, keyCache)
+        if (!parsed.tracking) {
           stats.unchanged++
           continue
         }
@@ -807,6 +870,47 @@ async function reparseLowConfidence(
     if (rows.length < PAGE) break
   }
   return stats
+}
+
+/// Plan 2026-05-16 Phase B: Hard-Reset eines Workspace-Postfachs.
+///
+/// 1. DELETE FROM parsed_messages WHERE workspace_id = X
+///    (cascade auf pending_deal_suggestions, inbox_reads, inbox_dismissals
+///    via FK ON DELETE CASCADE — siehe Schema-Diff).
+/// 2. UPDATE mailbox_accounts SET last_uid = NULL WHERE workspace_id = X
+///    → IMAP-Cursor zurueck, naechster Cron-Tick laedt alle Mails neu.
+/// 3. Auch tracking_validation_cache muss NICHT geleert werden (global
+///    geteilt, kein workspace-Risiko).
+///
+/// Auth wird vom Caller geprueft (User-JWT mit Workspace-Match oder
+/// Service-Role). Diese Funktion ist destruktiv + nicht reversibel.
+async function resetWorkspaceInbox(
+  admin: ReturnType<typeof createClient>,
+  workspaceId: string,
+): Promise<{ deleted_messages: number; reset_accounts: number }> {
+  // 1) parsed_messages loeschen — Cascade-FK zieht pending_suggestions
+  //    + inbox_reads + inbox_dismissals automatisch mit raus.
+  const { count: deletedMessages, error: delErr } = await admin
+    .from('parsed_messages')
+    .delete({ count: 'exact' })
+    .eq('workspace_id', workspaceId)
+  if (delErr) {
+    console.error('resetWorkspaceInbox: delete parsed_messages failed', delErr)
+  }
+
+  // 2) mailbox_accounts.last_uid auf NULL → naechster Poll holt alle.
+  const { count: resetAccounts, error: updErr } = await admin
+    .from('mailbox_accounts')
+    .update({ last_uid: null }, { count: 'exact' })
+    .eq('workspace_id', workspaceId)
+  if (updErr) {
+    console.error('resetWorkspaceInbox: reset mailbox_accounts failed', updErr)
+  }
+
+  return {
+    deleted_messages: deletedMessages ?? 0,
+    reset_accounts: resetAccounts ?? 0,
+  }
 }
 
 function jsonResp(body: unknown, status = 200): Response {

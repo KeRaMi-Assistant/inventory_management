@@ -844,6 +844,41 @@ class SupabaseRepository {
     );
   }
 
+  /// Hard-Reset des Inbox-Postfachs eines Workspace.
+  ///
+  /// Loescht ALLE `parsed_messages` (cascade: pending_suggestions, reads,
+  /// dismissals) + setzt `mailbox_accounts.last_uid = NULL` zurueck, damit
+  /// der naechste IMAP-Poll alle Mails neu importiert.
+  ///
+  /// **Nicht reversibel.** UI muss vor Aufruf einen Confirm-Dialog
+  /// einblenden. Server prueft, ob der angemeldete User Workspace-Member
+  /// ist (Cross-Workspace-Aufrufe → 403).
+  Future<InboxResetResult> triggerInboxReset({
+    required String workspaceId,
+  }) async {
+    final response = await _client.functions.invoke(
+      'inbox-parse',
+      body: {
+        'reset_all': true,
+        'workspace_id': workspaceId,
+      },
+    );
+    if (response.status >= 400) {
+      throw StateError(
+        'Inbox-Reset fehlgeschlagen (HTTP ${response.status}). '
+        'Pruefe in Supabase Studio: Edge Function "inbox-parse" deployed?',
+      );
+    }
+    final data = response.data;
+    if (data is Map) {
+      return InboxResetResult(
+        deletedMessages: (data['deleted_messages'] as num?)?.toInt() ?? 0,
+        resetAccounts: (data['reset_accounts'] as num?)?.toInt() ?? 0,
+      );
+    }
+    return const InboxResetResult(deletedMessages: 0, resetAccounts: 0);
+  }
+
   /// Triggert `tracking-poll` Edge-Function für genau einen Deal (Klarna-
   /// Pattern: User-initiierter Refresh statt 4h-Cron-Tick).
   ///
@@ -1284,6 +1319,19 @@ class InboxReparseResult {
     required this.rescued,
     required this.unchanged,
     required this.errors,
+  });
+}
+
+/// Rueckgabe von [SupabaseRepository.triggerInboxReset]. `deletedMessages` =
+/// Anzahl geloeschter `parsed_messages`-Rows (cascade: pending_suggestions,
+/// inbox_reads, inbox_dismissals). `resetAccounts` = Anzahl
+/// `mailbox_accounts`, deren `last_uid` auf NULL gesetzt wurde.
+class InboxResetResult {
+  final int deletedMessages;
+  final int resetAccounts;
+  const InboxResetResult({
+    required this.deletedMessages,
+    required this.resetAccounts,
   });
 }
 

@@ -62,6 +62,21 @@ const BOOTSTRAP_LOOKBACK_DAYS = (() => {
   return n
 })()
 
+// Plan 2026-05-16 (User-Feedback): beim Bootstrap (last_uid=NULL, z.B. nach
+// Hard-Reset) nur die NEUESTEN N Mails einziehen statt alle aus dem
+// Lookback-Fenster. Begruendung: DHL-API-Validation kostet 5.1s pro Call
+// (Free-Tier-Spike-Arrest). 80 Mails × ~1-3 Kandidaten = 80-240 API-Calls
+// = ~7-20 Min linear. Realistisch fertig. Spaeter hochschraubbar via
+// BOOTSTRAP_NEWEST_LIMIT-Secret.
+const DEFAULT_BOOTSTRAP_NEWEST_LIMIT = 80
+const BOOTSTRAP_NEWEST_LIMIT = (() => {
+  const raw = Deno.env.get('BOOTSTRAP_NEWEST_LIMIT')
+  if (!raw) return DEFAULT_BOOTSTRAP_NEWEST_LIMIT
+  const n = Number.parseInt(raw, 10)
+  if (!Number.isFinite(n) || n < 1 || n > 1000) return DEFAULT_BOOTSTRAP_NEWEST_LIMIT
+  return n
+})()
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -250,15 +265,31 @@ async function pollAccount(
           console.warn('SEARCH SINCE failed, falling back to UID lookback', e)
         }
         if (bootstrapUids.length > 0) {
-          const minUid = Math.min(...bootstrapUids)
-          // last_uid = minUid - 1, damit der reguläre Fetch-Loop unten
-          // alle bootstrapUids (UIDs > last_uid) liest.
-          account.last_uid = Math.max(0, minUid - 1)
+          // Plan 2026-05-16: nicht den ganzen Lookback-Range importieren,
+          // sondern nur die NEUESTEN BOOTSTRAP_NEWEST_LIMIT (Default 80).
+          // Begruendung: DHL-API-Spike-Arrest 5.1s/Call macht Voll-Import
+          // unrealistisch lang. last_uid wird so gewaehlt, dass der
+          // regulaere Fetch-Loop genau die Top-N UIDs sieht.
+          // Reduce statt `Math.max(...arr)` → kein Argument-Stack-Limit
+          // bei 100k+-Mail-Inboxen.
+          let maxUid = 0
+          let minUid = Number.MAX_SAFE_INTEGER
+          for (const u of bootstrapUids) {
+            if (u > maxUid) maxUid = u
+            if (u < minUid) minUid = u
+          }
+          // Wenn weniger als Limit verfuegbar: alle nehmen. Sonst die
+          // hoechsten Limit-vielen.
+          const threshold = bootstrapUids.length > BOOTSTRAP_NEWEST_LIMIT
+            ? maxUid - BOOTSTRAP_NEWEST_LIMIT
+            : minUid - 1
+          account.last_uid = Math.max(0, threshold)
         } else {
-          // SINCE-Suche kam leer zurück → UID-Range fallback.
+          // SINCE-Suche kam leer zurück → UID-Range fallback. Auch hier
+          // Limit auf BOOTSTRAP_NEWEST_LIMIT.
           const status = await client.status(account.folder, { uidNext: true })
           const uidNext = status.uidNext ?? 1
-          account.last_uid = Math.max(0, uidNext - 1 - 100)
+          account.last_uid = Math.max(0, uidNext - 1 - BOOTSTRAP_NEWEST_LIMIT)
         }
         await admin
           .from('mailbox_accounts')

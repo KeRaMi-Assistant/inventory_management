@@ -17,6 +17,11 @@ import {
   detectShop,
   type ParsedOrder,
 } from './inbox_adapters.ts'
+import {
+  enrichWithDhlValidation,
+  type ParsedMessageLike,
+  stampPipelineHeartbeat,
+} from './tracking_validation.ts'
 
 export interface PendingMessage {
   id: string
@@ -65,6 +70,42 @@ interface DealRow {
 
 type SbClient = ReturnType<typeof createClient>
 
+/// Run-scoped Cache: DHL-API-Key pro Workspace, einmal pro Run gelesen.
+/// Verhindert pro-Mail Roundtrips zum `get_carrier_api_key`-RPC.
+/// Plan 2026-05-16 §D3.
+type DhlKeyCache = Map<string, string | null>
+
+async function getDhlKeyForWorkspace(
+  admin: SbClient,
+  workspaceId: string,
+  cache: DhlKeyCache,
+): Promise<string | null> {
+  if (cache.has(workspaceId)) return cache.get(workspaceId) ?? null
+  // deno-lint-ignore no-explicit-any
+  const { data, error } = await (admin as any).rpc('get_carrier_api_key', {
+    _workspace_id: workspaceId,
+    _carrier_id: 'dhl',
+  })
+  if (error) {
+    // Kein Klartext-Key in Logs — nur Workspace-ID + Event-Name.
+    console.warn(JSON.stringify({
+      event: 'validation_key_lookup_failed',
+      workspace_id: workspaceId,
+    }))
+    cache.set(workspaceId, null)
+    return null
+  }
+  const key = (data as string | null) ?? null
+  if (!key) {
+    console.warn(JSON.stringify({
+      event: 'validation_skipped_no_key',
+      workspace_id: workspaceId,
+    }))
+  }
+  cache.set(workspaceId, key)
+  return key
+}
+
 /// Holt bis zu [limit] Pending-Rows (workspaceId-gefiltert wenn gesetzt)
 /// und jagt sie durch die Adapter-Registry. Schreibt status, shop_key,
 /// pending_deal_suggestions, ggf. deal-Updates + activity_log.
@@ -96,8 +137,22 @@ export async function runParseSweep(
     suggested: 0,
     unclassified: 0,
   }
+  // Plan 2026-05-16 §D3: API-Key pro Workspace einmal pro Run holen.
+  // Bei `workspaceId`-Option im Single-Workspace-Mode = 1 Lookup.
+  // Im All-Workspaces-Mode (Cron) = 1 Lookup pro distinct workspace.
+  const keyCache: DhlKeyCache = new Map()
+  const heartbeatStamped = new Set<string>()
   for (const row of rows) {
-    const result = await processOne(admin, row)
+    // Plan 2026-05-16 Phase C: einmal pro Workspace einen
+    // Heartbeat-Stempel setzen, sobald wir wissen dass ein DHL-Key
+    // gesetzt ist. Auch wenn keine Mail einen Kandidaten enthielt.
+    const apiKey = await getDhlKeyForWorkspace(admin, row.workspace_id, keyCache)
+    if (apiKey && !heartbeatStamped.has(row.workspace_id)) {
+      // deno-lint-ignore no-explicit-any
+      await stampPipelineHeartbeat(admin as any, row.workspace_id)
+      heartbeatStamped.add(row.workspace_id)
+    }
+    const result = await processOne(admin, row, keyCache)
     if (result === 'matched') stats.matched++
     else if (result === 'suggested') stats.suggested++
     else stats.unclassified++
@@ -108,6 +163,7 @@ export async function runParseSweep(
 export async function processOne(
   admin: SbClient,
   row: PendingMessage,
+  keyCache?: DhlKeyCache,
 ): Promise<'matched' | 'suggested' | 'unclassified'> {
   const text = row.parsed_payload?._raw?.text ?? ''
   const html = row.parsed_payload?._raw?.html ?? ''
@@ -136,6 +192,11 @@ export async function processOne(
       .eq('id', row.id)
     return 'unclassified'
   }
+
+  // Plan 2026-05-16 §D3: DHL-API-Validation als Wrapper NACH parsen.
+  // Mutiert tracking/trackings/trackingConfidence/trackingNeedsReview
+  // entsprechend des DHL-API-Probe-Ergebnisses pro Kandidat.
+  await applyDhlValidation(admin, parsed, row.workspace_id, keyCache)
 
   const dealId = await findMatchingDeal(admin, row.workspace_id, parsed)
 
@@ -187,6 +248,54 @@ export async function processOne(
     })
     .eq('id', row.id)
   return 'suggested'
+}
+
+/// Brueckt zwischen `ParsedOrder` (camelCase) und der snake_case-API
+/// von `enrichWithDhlValidation`. Mutiert `parsed` in-place mit den
+/// DHL-API-bestaetigten Werten. Wenn kein API-Key fuer den Workspace
+/// gesetzt ist, raeumt der Wrapper Trackings/Carrier still ab und
+/// setzt `trackingNeedsReview` fuer shipped/delivered.
+///
+/// Exportiert, damit `inbox-parse`-Re-Parse-Pfade dieselbe Validation
+/// nutzen koennen wie der reguläre Sweep (sonst sehen Re-Parses die
+/// Pattern-Heuristik, aber ueberspringen die DHL-API).
+export async function applyDhlValidation(
+  admin: SbClient,
+  parsed: ParsedOrder,
+  workspaceId: string,
+  keyCache?: DhlKeyCache,
+): Promise<void> {
+  const cache = keyCache ?? new Map<string, string | null>()
+  const apiKey = await getDhlKeyForWorkspace(admin, workspaceId, cache)
+
+  const bridge: ParsedMessageLike = {
+    tracking: parsed.tracking ?? null,
+    trackings: parsed.trackings ?? null,
+    tracking_confidence: parsed.trackingConfidence ?? null,
+    tracking_needs_review: parsed.trackingNeedsReview ?? null,
+    trackingCandidates: parsed.trackingCandidates,
+  }
+
+  // `supabaseAdmin` ist hier der Service-Role-Client (vom Caller
+  // `inbox-poll`/`inbox-parse` erzeugt). Casts noetig, weil unser Local-
+  // Shape (`SupabaseAdminLike`) bewusst minimal ist.
+  await enrichWithDhlValidation(bridge, {
+    status: parsed.status,
+    workspaceId,
+    apiKey,
+    // deno-lint-ignore no-explicit-any
+    supabaseAdmin: admin as any,
+  })
+
+  // Ergebnisse zurueck in camelCase mappen.
+  parsed.tracking = bridge.tracking ?? undefined
+  parsed.trackings = bridge.trackings ?? undefined
+  parsed.trackingConfidence = bridge.tracking_confidence ?? 'none'
+  parsed.trackingNeedsReview = bridge.tracking_needs_review ?? false
+  // Wenn DHL-Validation alle Kandidaten verworfen hat, ist der
+  // Carrier-Label nicht mehr gerechtfertigt.
+  if (!parsed.tracking) parsed.carrier = undefined
+  else parsed.carrier = parsed.carrier ?? 'DHL'
 }
 
 async function findMatchingDeal(

@@ -1256,7 +1256,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpDealsTrackingDesc =>
-      'Sobald eine Versandmail mit Tracking-Nummer eintrifft (Amazon, DHL, DPD, UPS, Hermes, GLS), wird der passende Deal automatisch auf „Unterwegs\" gesetzt. Sobald der Carrier die Zustellung meldet, springt der Deal auf „Angekommen\".';
+      'Wenn eine Versandmail mit einer DHL-Tracking-Nummer eintrifft, fragt die App die DHL-API direkt an: nur wenn DHL die Nummer bestätigt, wird der Deal automatisch auf „Unterwegs\" gesetzt. Sobald DHL die Zustellung meldet, springt der Deal auf „Angekommen\". Andere Carrier (DPD, UPS, Hermes, Amazon Logistics, GLS) werden nicht mehr aus Mails erkannt — Tracking-Nummern dort manuell im Deal eintragen. Details siehe Sektion „Versand & Carrier-API-Keys\".';
 
   @override
   String get helpDealsDropShipTitle => 'Multi-Drop-Ship';
@@ -1288,14 +1288,22 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpShippingDhlDesc =>
-      'DHL kannst du sofort anbinden:\n• Account auf developer.dhl.com anlegen (kostenlos).\n• Dort die API „Shipment Tracking - Unified\" abonnieren — Free-Tier reicht für privaten Gebrauch.\n• Den API-Key kopieren und unter Einstellungen → Versand → DHL → „API-Key hinterlegen\" einfügen.\nAb sofort werden Deals mit DHL-Trackingnummer in regelmäßigen Abständen aktualisiert und der Status (unterwegs, in Zustellung, zugestellt) erscheint direkt im Deal.';
+      'DHL kannst du sofort anbinden:\n• Account auf developer.dhl.com anlegen (kostenlos).\n• Dort die API „Shipment Tracking - Unified\" abonnieren — Free-Tier reicht für privaten Gebrauch.\n• Den API-Key kopieren und unter Einstellungen → Versand → DHL → „API-Key hinterlegen\" einfügen.\n• Direkt danach einmal Einstellungen → „Sendungsnummern neu prüfen\" tippen, damit deine bestehenden Mails von der neuen DHL-API-Pipeline geparst werden.\nAb sofort werden Deals mit DHL-Trackingnummer in regelmäßigen Abständen aktualisiert und der Status (unterwegs, in Zustellung, zugestellt) erscheint direkt im Deal.';
 
   @override
-  String get helpShippingComingSoonTitle => 'DPD und UPS — bald verfügbar';
+  String get helpShippingApiOnlyTitle => 'Warum DHL-API statt Mail-Heuristik?';
+
+  @override
+  String get helpShippingApiOnlyDesc =>
+      'Bis vor kurzem hat die App Tracking-Nummern aus Mails mit Regex-Patterns erkannt. Resultat: pro Mail oft mehrere Kandidaten, von denen nur eine echt war (Bestell-Nr, Kunden-Nr, Rechnung-Nr — alle 12-stellige Zahlen sehen wie Tracking aus). Jetzt fragt die App bei jedem Kandidaten direkt die DHL-API: liefert sie ein Shipment zurück → echte Tracking-Nummer wird übernommen, sonst verworfen. Du siehst maximal eine Pill pro Mail, und sie ist immer real.';
+
+  @override
+  String get helpShippingComingSoonTitle =>
+      'DPD, UPS, Hermes, Amazon Logistics — bald oder nie';
 
   @override
   String get helpShippingComingSoonDesc =>
-      'DPD und UPS siehst du in der Liste, sind aber aktuell als „Bald verfügbar\" markiert und nicht eingabebereit. Die Anbindung folgt in einem späteren Update — bis dahin werden Sendungen dieser Carrier weiterhin aus Versandmails erkannt, der Live-Status fehlt nur. Es ist nichts kaputt, das ist Absicht.';
+      'Aktuell läuft die automatische Tracking-Erkennung ausschließlich über die DHL-API. Andere Carrier (DPD, UPS, Hermes, Amazon Logistics, GLS) werden nicht mehr aus Versandmails geraten — das war die Hauptquelle der Falsch-Positive. DPD und UPS bekommen ihre eigene API-Anbindung in einem späteren Update. Hermes und Amazon Logistics bieten keine öffentliche Tracking-API — dort musst du die Tracking-Nummer manuell im Deal eintragen.';
 
   @override
   String get helpShippingKeySafetyTitle => 'Was passiert mit meinem API-Key?';
@@ -2976,6 +2984,46 @@ class AppLocalizationsDe extends AppLocalizations {
       other: '$countString Sendungsnummern aktualisiert',
       one: '1 Sendungsnummer aktualisiert',
       zero: 'Keine Sendungsnummer aktualisiert',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get inboxResetCta => 'Postfach zurücksetzen';
+
+  @override
+  String get inboxResetSubtitle =>
+      'Alle Mails löschen und neu importieren. Beim Re-Import wird jede Mail gegen die DHL-API geprüft. Nicht rückgängig zu machen.';
+
+  @override
+  String get inboxResetConfirmTitle => 'Postfach wirklich zurücksetzen?';
+
+  @override
+  String get inboxResetConfirmBody =>
+      'Alle bisher importierten Mails werden gelöscht, der IMAP-Cursor wird zurückgesetzt und beim nächsten Poll werden alle Mails neu geladen. Deine Deals bleiben erhalten.\n\nZur Bestätigung tippe RESET ein.';
+
+  @override
+  String get inboxResetConfirmInputLabel => 'Tippe RESET zur Bestätigung';
+
+  @override
+  String get inboxResetRunning => 'Postfach wird zurückgesetzt…';
+
+  @override
+  String get inboxResetFailed =>
+      'Reset fehlgeschlagen — bitte später erneut versuchen.';
+
+  @override
+  String inboxResetSuccess(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString Mails gelöscht. Nächster Poll lädt alles neu.',
+      one: '1 Mail gelöscht. Nächster Poll lädt alles neu.',
+      zero: 'Keine Mails gelöscht — IMAP-Cursor wurde zurückgesetzt.',
     );
     return '$_temp0';
   }

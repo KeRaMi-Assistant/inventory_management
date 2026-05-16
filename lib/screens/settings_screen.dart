@@ -13,6 +13,7 @@ import '../models/pricing_plan.dart';
 import '../models/shop.dart';
 import '../models/workspace.dart';
 import '../models/mailbox_account.dart';
+import '../services/supabase_repository.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/app_preferences_provider.dart';
 import '../providers/auth_provider.dart';
@@ -2345,7 +2346,7 @@ class _MailboxTabState extends State<_MailboxTab> {
                         )
                       : ListView.separated(
                           padding: const EdgeInsets.all(16),
-                          itemCount: provider.accounts.length + 2,
+                          itemCount: provider.accounts.length + 3,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 8),
                           itemBuilder: (context, i) {
@@ -2360,6 +2361,10 @@ class _MailboxTabState extends State<_MailboxTab> {
                             if (i == provider.accounts.length + 1) {
                               // T12: Re-Parse-Sendungsnummern-Button.
                               return const _TrackingReparseTile();
+                            }
+                            if (i == provider.accounts.length + 2) {
+                              // Plan 2026-05-16 Phase B: Hard-Reset.
+                              return const _InboxResetTile();
                             }
                             final account = provider.accounts[i - 1];
                             return _MailboxAccountTile(
@@ -3687,6 +3692,144 @@ class _TrackingReparseTileState extends State<_TrackingReparseTile> {
         ),
         subtitle: Text(
           l10n.trackingReparseConfirmBody,
+          style: TextStyle(
+            fontSize: 12,
+            color: AppTheme.textSecondaryOf(context),
+          ),
+        ),
+        trailing: _running
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.chevron_right),
+        onTap: _running ? null : _onTap,
+      ),
+    );
+  }
+}
+
+// ── Phase B: Inbox Hard-Reset ─────────────────────────────────────────────
+// Loescht ALLE Mails des Workspace + setzt IMAP-Cursor zurueck, damit alle
+// Mails neu importiert + durch die aktuelle DHL-API-Pipeline laufen. Nicht
+// reversibel — Confirm-Dialog mit Text-Bestaetigung "RESET" davor.
+class _InboxResetTile extends StatefulWidget {
+  const _InboxResetTile();
+
+  @override
+  State<_InboxResetTile> createState() => _InboxResetTileState();
+}
+
+class _InboxResetTileState extends State<_InboxResetTile> {
+  bool _running = false;
+
+  Future<void> _onTap() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final inboxProvider = context.read<InboxProvider>();
+    final activeWorkspaceId =
+        context.read<ActiveWorkspaceProvider>().active?.id;
+
+    if (activeWorkspaceId == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.inboxResetFailed)),
+      );
+      return;
+    }
+
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.inboxResetConfirmTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.inboxResetConfirmBody),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: l10n.inboxResetConfirmInputLabel,
+                hintText: 'RESET',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(
+              ctx,
+              controller.text.trim().toUpperCase() == 'RESET',
+            ),
+            child: Text(
+              l10n.inboxResetCta,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _running = true);
+    try {
+      final result = await context
+          .read<SupabaseRepository>()
+          .triggerInboxReset(workspaceId: activeWorkspaceId);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.inboxResetSuccess(result.deletedMessages),
+          ),
+        ),
+      );
+      // Nach Reset Inbox refreshen — UI zeigt sofort leere Liste,
+      // der naechste IMAP-Poll laedt Mails neu.
+      await inboxProvider.refresh();
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.inboxResetFailed)),
+      );
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: AppTheme.dangerBorderOf(context)),
+      ),
+      child: ListTile(
+        key: const Key('inbox-reset-cta'),
+        leading: Icon(
+          Icons.delete_sweep_outlined,
+          color: AppTheme.dangerTextOf(context),
+        ),
+        title: Text(
+          _running ? l10n.inboxResetRunning : l10n.inboxResetCta,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppTheme.dangerTextOf(context),
+          ),
+        ),
+        subtitle: Text(
+          l10n.inboxResetSubtitle,
           style: TextStyle(
             fontSize: 12,
             color: AppTheme.textSecondaryOf(context),
