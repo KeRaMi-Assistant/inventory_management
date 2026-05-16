@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/active_workspace_provider.dart';
@@ -12,47 +13,70 @@ import '../widgets/kpi_card.dart';
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
+  /// True only on the very first load (no cached data yet).
+  /// Re-loads (isLoading=true but data already present) return false so the
+  /// existing content stays visible — no layout jank, no race-condition.
+  static bool shouldShowSkeleton({
+    required bool isLoading,
+    required bool hasData,
+  }) =>
+      isLoading && !hasData;
+
   @override
   Widget build(BuildContext context) {
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final fmt = NumberFormat.currency(locale: localeTag, symbol: '€');
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
-        final isEmpty = provider.deals.isEmpty &&
-            provider.inventoryItems.isEmpty &&
-            provider.buyers.isEmpty;
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (isEmpty) const _EmptyStateCard(),
-              if (isEmpty) const SizedBox(height: 24),
-              _KpiGrid(provider: provider, fmt: fmt),
-              const SizedBox(height: 24),
-              LayoutBuilder(
-                builder: (context, c) {
-                  final wide = c.maxWidth > 960;
-                  if (wide) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        final hasData = provider.deals.isNotEmpty ||
+            provider.inventoryItems.isNotEmpty ||
+            provider.buyers.isNotEmpty;
+        final showSkeleton = shouldShowSkeleton(
+          isLoading: provider.isLoading,
+          hasData: hasData,
+        );
+        // isEmpty for the empty-state card: only show when not loading and no data
+        final isEmpty = !hasData && !provider.isLoading;
+
+        return Skeletonizer(
+          key: const Key('skeletonLoader'),
+          enabled: showSkeleton,
+          containersColor: AppTheme.bgSubtleOf(context),
+          effect: const SolidColorEffect(),
+          enableSwitchAnimation: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (isEmpty) const _EmptyStateCard(),
+                if (isEmpty) const SizedBox(height: 24),
+                _KpiGrid(provider: provider, fmt: fmt),
+                const SizedBox(height: 24),
+                LayoutBuilder(
+                  builder: (context, c) {
+                    final wide = c.maxWidth > 960;
+                    if (wide) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 2, child: _BuyerOverview(fmt: fmt)),
+                          const SizedBox(width: 16),
+                          const Expanded(child: _ActivityFeed()),
+                        ],
+                      );
+                    }
+                    return Column(
                       children: [
-                        Expanded(flex: 2, child: _BuyerOverview(fmt: fmt)),
-                        const SizedBox(width: 16),
-                        const Expanded(child: _ActivityFeed()),
+                        _BuyerOverview(fmt: fmt),
+                        const SizedBox(height: 16),
+                        const _ActivityFeed(),
                       ],
                     );
-                  }
-                  return Column(
-                    children: [
-                      _BuyerOverview(fmt: fmt),
-                      const SizedBox(height: 16),
-                      const _ActivityFeed(),
-                    ],
-                  );
-                },
-              ),
-            ],
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -191,7 +215,7 @@ class _KpiGrid extends StatelessWidget {
       (Icons.trending_up_rounded, l10n.dashboardKpiTotalProfit, fmt.format(provider.totalProfit), AppTheme.success),
       (Icons.account_balance_wallet_outlined, l10n.dashboardKpiOpenAmount, fmt.format(provider.openAmount), AppTheme.warning),
       (Icons.warning_amber_rounded, l10n.dashboardKpiCriticalStock, '${provider.criticalStockCount}', AppTheme.danger),
-      (Icons.receipt_long_outlined, l10n.dashboardKpiMissingInvoice, '${provider.missingInvoiceCount}', const Color(0xFF8B5CF6)),
+      (Icons.receipt_long_outlined, l10n.dashboardKpiMissingInvoice, '${provider.missingInvoiceCount}', AppTheme.purple),
     ];
 
     return LayoutBuilder(

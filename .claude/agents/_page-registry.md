@@ -34,7 +34,7 @@ die der Browser-Tester pro Eintrag durchspielt — Definitionen unten.
 | Route | File | Pflicht-Tests | Notizen |
 |---|---|---|---|
 | `/main` (Shell) | [`lib/screens/main_screen.dart`](../../lib/screens/main_screen.dart) | smoke-theme, mobile-overflow | Side-Nav + AppBar, hält Tab-Index. **Bottom-Nav auf Phone (`< 800px`):** `Key('mainBottomNav')` mit 5 festen Slots (Dashboard, Deals, Tickets, Inbox[conditional], Inventory) + „Mehr"-Slot (`Key('main-tab-more')`). Inbox-Slot entfällt wenn `!billing.hasInbox` (4 Slots + Mehr). Help-Icon AppBar (Phone): `Key('appBar-help-action')` — navigiert direkt zu `/help`. Reihenfolge Slots: `Key('main-tab-dashboard')`, `main-tab-deals`, `main-tab-tickets`, `main-tab-inbox`, `main-tab-inventory`, `main-tab-more`. |
-| `/dashboard` | [`lib/screens/dashboard_screen.dart`](../../lib/screens/dashboard_screen.dart) | smoke-theme, mobile-overflow | KPI-Cards + Recent-Deals. |
+| `/dashboard` | [`lib/screens/dashboard_screen.dart`](../../lib/screens/dashboard_screen.dart) | smoke-theme, mobile-overflow | KPI-Cards + Recent-Deals. Skeleton-Loader via `skeletonizer` beim Initial-Load (`Key('skeletonLoader')`); aktiv nur wenn `isLoading=true && data leer` (Race-Condition-safe). |
 | `/deals` | [`lib/screens/deals_screen.dart`](../../lib/screens/deals_screen.dart) | smoke-theme, mobile-overflow, deal-flow | Tabelle + Detail-Sidebar (Desktop) bzw. Stack (Phone). |
 | `/tickets` | [`lib/screens/tickets_screen.dart`](../../lib/screens/tickets_screen.dart) | smoke-theme, archive-tab | Aktiv-/Archiv-Tabs. |
 | `/inbox` | [`lib/screens/inbox_screen.dart`](../../lib/screens/inbox_screen.dart) | smoke-inbox, smoke-theme | 3 Tabs (Trackings, Bestellungen, Sonstiges). |
