@@ -1153,5 +1153,9 @@
       "dealId": { "type": "int" }
     }
   },
-  "inboxAcceptedShowDeal": "Anzeigen"
+  "inboxAcceptedShowDeal": "Anzeigen",
+
+  "inboxSuggestionDismiss": "Verwerfen",
+  "inboxSuggestionEdit": "Vor Übernahme bearbeiten",
+  "inboxSuggestionAccept": "Annehmen"
 }

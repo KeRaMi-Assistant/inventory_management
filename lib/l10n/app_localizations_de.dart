@@ -3161,4 +3161,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get inboxAcceptedShowDeal => 'Anzeigen';
+
+  @override
+  String get inboxSuggestionDismiss => 'Verwerfen';
+
+  @override
+  String get inboxSuggestionEdit => 'Vor Übernahme bearbeiten';
+
+  @override
+  String get inboxSuggestionAccept => 'Annehmen';
 }

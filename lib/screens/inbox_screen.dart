@@ -888,6 +888,98 @@ class _SuggestionCard extends StatelessWidget {
     }
   }
 
+  /// Opens AddEditDealDialog prefilled with suggestion data.
+  /// On Save: marks suggestion accepted. On Cancel: no-op.
+  Future<void> _editBeforeAccept(BuildContext context) async {
+    final inbox = context.read<InboxProvider>();
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final goToDeals = onGoToDeals;
+    final saved = await showDialog<Deal>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AddEditDealDialog(prefill: _toDraftDeal()),
+    );
+    if (saved == null || saved.id == Deal.unsavedId) return;
+    try {
+      await inbox.markSuggestionAccepted(suggestion.id, createdDealId: saved.id);
+      final tracking = suggestion.tracking;
+      final snackContent = (tracking != null && tracking.isNotEmpty)
+          ? l10n.inboxAcceptedSnack(tracking, saved.id)
+          : l10n.inboxAcceptedSnackNoTracking(saved.id);
+      messenger.showSnackBar(SnackBar(
+        key: const Key('inboxAcceptedSnack'),
+        content: Text(snackContent),
+        duration: const Duration(seconds: 6),
+        behavior: SnackBarBehavior.floating,
+        action: goToDeals != null
+            ? SnackBarAction(
+                key: const Key('inboxAcceptedShowDealAction'),
+                label: l10n.inboxAcceptedShowDeal,
+                onPressed: goToDeals,
+              )
+            : null,
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Konnte Vorschlag nicht abschließen: $e'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
+  Future<void> _showSuggestionSheet(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.bgSurfaceOf(context),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          key: const Key('inboxSuggestionSheet'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.bgSubtleOf(context),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              key: Key('inboxSuggestion-dismiss-${suggestion.id}'),
+              leading: Icon(Icons.close, color: AppTheme.dangerTextOf(context)),
+              title: Text(l10n.inboxSuggestionDismiss),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _reject(context);
+              },
+            ),
+            ListTile(
+              key: Key('inboxSuggestion-edit-${suggestion.id}'),
+              leading: const Icon(Icons.edit_outlined),
+              title: Text(l10n.inboxSuggestionEdit),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _editBeforeAccept(context);
+              },
+            ),
+            ListTile(
+              key: Key('inboxSuggestion-accept-${suggestion.id}'),
+              leading: Icon(Icons.check, color: AppTheme.accentTextOf(context)),
+              title: Text(l10n.inboxSuggestionAccept),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _accept(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _applyTracking(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     final inbox = context.read<InboxProvider>();
@@ -993,17 +1085,19 @@ class _SuggestionCard extends StatelessWidget {
         visDays - referenceNow.difference(suggestion.receivedAt).inDays;
     final unread = inbox.isUnread(suggestion.parsedMessageId);
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppTheme.borderOf(context)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return GestureDetector(
+      onLongPress: () => _showSuggestionSheet(context),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: AppTheme.borderOf(context)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Row(
               children: [
                 _ShopBadge(label: shopName),
@@ -1150,35 +1244,80 @@ class _SuggestionCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 12),
-            Row(
-              children: [
-                TextButton.icon(
-                  icon: const Icon(Icons.close, size: 16),
-                  style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.dangerTextOf(context)),
-                  onPressed: () => _reject(context),
-                  label: const Text('Verwerfen'),
-                ),
-                const Spacer(),
-                if (hasMailLink)
-                  TextButton.icon(
-                    icon: const Icon(Icons.open_in_new, size: 16),
-                    onPressed: () => _openMail(
-                      context,
-                      messageId: suggestion.messageId,
-                      imapHost: imapHost,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final narrow = constraints.maxWidth < 340;
+                final l10n = AppLocalizations.of(context);
+                return Row(
+                  children: [
+                    Tooltip(
+                      message: l10n.inboxSuggestionDismiss,
+                      child: narrow
+                          ? IconButton(
+                              key: Key('inboxSuggestion-dismiss-${suggestion.id}'),
+                              icon: const Icon(Icons.close, size: 20),
+                              color: AppTheme.dangerTextOf(context),
+                              onPressed: () => _reject(context),
+                            )
+                          : TextButton.icon(
+                              key: Key('inboxSuggestion-dismiss-${suggestion.id}'),
+                              icon: const Icon(Icons.close, size: 16),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppTheme.dangerTextOf(context),
+                              ),
+                              onPressed: () => _reject(context),
+                              label: Text(l10n.inboxSuggestionDismiss),
+                            ),
                     ),
-                    label: Text(AppLocalizations.of(context).inboxOpenMailLabel),
-                  ),
-                const SizedBox(width: 4),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.edit_outlined, size: 16),
-                  onPressed: () => _accept(context),
-                  label: const Text('Annehmen & bearbeiten'),
-                ),
-              ],
+                    const Spacer(),
+                    if (hasMailLink)
+                      IconButton(
+                        icon: const Icon(Icons.open_in_new, size: 18),
+                        tooltip: AppLocalizations.of(context).inboxOpenMailLabel,
+                        onPressed: () => _openMail(
+                          context,
+                          messageId: suggestion.messageId,
+                          imapHost: imapHost,
+                        ),
+                      ),
+                    Tooltip(
+                      message: l10n.inboxSuggestionEdit,
+                      child: narrow
+                          ? IconButton(
+                              key: Key('inboxSuggestion-edit-${suggestion.id}'),
+                              icon: const Icon(Icons.edit_outlined, size: 20),
+                              onPressed: () => _editBeforeAccept(context),
+                            )
+                          : TextButton.icon(
+                              key: Key('inboxSuggestion-edit-${suggestion.id}'),
+                              icon: const Icon(Icons.edit_outlined, size: 16),
+                              onPressed: () => _editBeforeAccept(context),
+                              label: Text(l10n.inboxSuggestionEdit),
+                            ),
+                    ),
+                    const SizedBox(width: 4),
+                    Tooltip(
+                      message: l10n.inboxSuggestionAccept,
+                      child: narrow
+                          ? IconButton(
+                              key: Key('inboxSuggestion-accept-${suggestion.id}'),
+                              icon: const Icon(Icons.check, size: 20),
+                              color: AppTheme.accentTextOf(context),
+                              onPressed: () => _accept(context),
+                            )
+                          : ElevatedButton.icon(
+                              key: Key('inboxSuggestion-accept-${suggestion.id}'),
+                              icon: const Icon(Icons.check, size: 16),
+                              onPressed: () => _accept(context),
+                              label: Text(l10n.inboxSuggestionAccept),
+                            ),
+                    ),
+                  ],
+                );
+              },
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

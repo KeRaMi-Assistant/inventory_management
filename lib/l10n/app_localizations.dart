@@ -5761,6 +5761,24 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Anzeigen'**
   String get inboxAcceptedShowDeal;
+
+  /// No description provided for @inboxSuggestionDismiss.
+  ///
+  /// In de, this message translates to:
+  /// **'Verwerfen'**
+  String get inboxSuggestionDismiss;
+
+  /// No description provided for @inboxSuggestionEdit.
+  ///
+  /// In de, this message translates to:
+  /// **'Vor Übernahme bearbeiten'**
+  String get inboxSuggestionEdit;
+
+  /// No description provided for @inboxSuggestionAccept.
+  ///
+  /// In de, this message translates to:
+  /// **'Annehmen'**
+  String get inboxSuggestionAccept;
 }
 
 class _AppLocalizationsDelegate
