@@ -2989,6 +2989,46 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get inboxResetCta => 'Postfach zurücksetzen';
+
+  @override
+  String get inboxResetSubtitle =>
+      'Alle Mails löschen und neu importieren. Beim Re-Import wird jede Mail gegen die DHL-API geprüft. Nicht rückgängig zu machen.';
+
+  @override
+  String get inboxResetConfirmTitle => 'Postfach wirklich zurücksetzen?';
+
+  @override
+  String get inboxResetConfirmBody =>
+      'Alle bisher importierten Mails werden gelöscht, der IMAP-Cursor wird zurückgesetzt und beim nächsten Poll werden alle Mails neu geladen. Deine Deals bleiben erhalten.\n\nZur Bestätigung tippe RESET ein.';
+
+  @override
+  String get inboxResetConfirmInputLabel => 'Tippe RESET zur Bestätigung';
+
+  @override
+  String get inboxResetRunning => 'Postfach wird zurückgesetzt…';
+
+  @override
+  String get inboxResetFailed =>
+      'Reset fehlgeschlagen — bitte später erneut versuchen.';
+
+  @override
+  String inboxResetSuccess(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString Mails gelöscht. Nächster Poll lädt alles neu.',
+      one: '1 Mail gelöscht. Nächster Poll lädt alles neu.',
+      zero: 'Keine Mails gelöscht — IMAP-Cursor wurde zurückgesetzt.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String trackingNeedsReviewFilterChip(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

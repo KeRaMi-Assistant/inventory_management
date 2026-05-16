@@ -298,6 +298,24 @@ export const TRACKING_PATTERNS: AdapterPattern[] = [
     source: 'strong-pattern',
     validator: 'length-only',
   },
+  // ── Anchor-gated permissive (Plan 2026-05-16 Phase A, Iteration 2) ─
+  // 10-22 stellige Numerics in Anchor-Naehe ('Sendungsnummer',
+  // 'Tracking', 'verfolgen', ...) → MEDIUM-Confidence. DHL-API
+  // entscheidet final via `enrichWithDhlValidation`-Wrapper.
+  // False-Positive-Risiko tolerierbar, weil ein 404 von DHL den
+  // Kandidaten wegwirft (Cache markiert `invalid`, 30-Tage-TTL).
+  // Begrenzt API-Cost durch Anchor-Gating + Hard-Limit-5/Mail im
+  // Wrapper. Wieder eingefuehrt nach User-Feedback "Amazon-Mails mit
+  // verstecktem DE-Tracking werden nicht gefunden".
+  {
+    id: 'context-numeric-10-22',
+    re: /\b\d{10,22}\b/g,
+    requiresAnchor: true,
+    defaultConfidence: 'medium',
+    carrier: 'DHL',
+    source: 'context-anchor',
+    validator: 'length-only',
+  },
 ]
 
 // ── Anchor-Worte (DE/EN/FR/IT/ES/PL) ──────────────────────────────────

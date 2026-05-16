@@ -98,6 +98,36 @@ export function normalizeTracking(v: string): string {
   return v.replace(/\s+/g, '').toUpperCase()
 }
 
+/**
+ * Run-scoped Heartbeat: stempelt `workspace_carrier_credentials.last_polled_at`
+ * fuer den DHL-Key des Workspace, wenn ein Key gesetzt ist. Wird vom
+ * Parse-Runner einmal pro Run aufgerufen — damit der User in Settings →
+ * Versand "Zuletzt geprueft: vor X" sieht, auch wenn keine Mail einen
+ * Tracking-Kandidaten hatte (z.B. weil alle Mails noch ordered sind).
+ *
+ * Plan 2026-05-16 Phase C. Best-Effort: bei Fehler still loggen, kein
+ * Pipeline-Stop. Caller muss apiKey != null geprueft haben.
+ */
+export async function stampPipelineHeartbeat(
+  supabaseAdmin: SupabaseAdminLike,
+  workspaceId: string,
+): Promise<void> {
+  try {
+    // deno-lint-ignore no-explicit-any
+    await (supabaseAdmin as any)
+      .from('workspace_carrier_credentials')
+      .update({ last_polled_at: new Date().toISOString() })
+      .eq('workspace_id', workspaceId)
+      .eq('carrier_id', 'dhl')
+  } catch (_e) {
+    // deno-lint-ignore no-console
+    console.warn(JSON.stringify({
+      event: 'heartbeat_stamp_failed',
+      workspace_id: workspaceId,
+    }))
+  }
+}
+
 export function isCacheFresh(row: CacheRow, nowMs: number): boolean {
   const ts = new Date(row.last_checked_at).getTime()
   if (!Number.isFinite(ts)) return false
@@ -140,15 +170,21 @@ export async function enrichWithDhlValidation(
     return parsed
   }
 
-  // 2. Kandidaten filtern: nur strong + (Carrier 'DHL' oder undefined).
-  //    Dedupe via normalize() — gleicher Wert nur einmal pruefen.
+  // 2. Kandidaten filtern: strong + medium akzeptiert (DHL-Pattern oder
+  //    anchor-gated permissive). Carrier 'DHL' oder undefined. Dedupe
+  //    via normalize() — gleicher Wert nur einmal pruefen.
+  //
+  //    Plan 2026-05-16 Phase A: medium-Kandidaten (anchor-gated
+  //    context-numeric) durchlaufen die DHL-API genauso, weil die API
+  //    der finale Gate ist. False-Positives werden als `invalid`
+  //    gecached (30 Tage TTL) — kein UI-Spam.
   const raw = Array.isArray(parsed.trackingCandidates)
     ? parsed.trackingCandidates
     : []
   const dedup = new Map<string, { value: string; carrier?: string; confidence: 'strong' | 'medium' | 'weak' | 'none' }>()
   for (const c of raw) {
     if (!c || typeof c.value !== 'string') continue
-    if (c.confidence !== 'strong') continue
+    if (c.confidence !== 'strong' && c.confidence !== 'medium') continue
     const carrier = c.carrier
     const carrierOk = carrier === undefined || carrier === null || carrier === 'DHL'
     if (!carrierOk) continue

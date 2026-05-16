@@ -1076,6 +1076,20 @@
       "count": { "type": "int", "format": "decimalPattern" }
     }
   },
+  "inboxResetCta": "Postfach zurücksetzen",
+  "inboxResetSubtitle": "Alle Mails löschen und neu importieren. Beim Re-Import wird jede Mail gegen die DHL-API geprüft. Nicht rückgängig zu machen.",
+  "inboxResetConfirmTitle": "Postfach wirklich zurücksetzen?",
+  "inboxResetConfirmBody": "Alle bisher importierten Mails werden gelöscht, der IMAP-Cursor wird zurückgesetzt und beim nächsten Poll werden alle Mails neu geladen. Deine Deals bleiben erhalten.\n\nZur Bestätigung tippe RESET ein.",
+  "inboxResetConfirmInputLabel": "Tippe RESET zur Bestätigung",
+  "inboxResetRunning": "Postfach wird zurückgesetzt…",
+  "inboxResetFailed": "Reset fehlgeschlagen — bitte später erneut versuchen.",
+  "inboxResetSuccess": "{count, plural, =0{Keine Mails gelöscht — IMAP-Cursor wurde zurückgesetzt.} =1{1 Mail gelöscht. Nächster Poll lädt alles neu.} other{{count} Mails gelöscht. Nächster Poll lädt alles neu.}}",
+  "@inboxResetSuccess": {
+    "description": "SnackBar nach erfolgreichem Inbox-Reset",
+    "placeholders": {
+      "count": { "type": "int", "format": "decimalPattern" }
+    }
+  },
   "trackingNeedsReviewFilterChip": "{count, plural, =1{Prüfen (1)} other{Prüfen ({count})}}",
   "@trackingNeedsReviewFilterChip": {
     "description": "Filter chip label showing number of deals needing tracking review",

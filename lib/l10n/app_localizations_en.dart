@@ -2985,6 +2985,45 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get inboxResetCta => 'Reset mailbox';
+
+  @override
+  String get inboxResetSubtitle =>
+      'Delete all mails and re-import them. Each mail is checked against the DHL API during re-import. Not reversible.';
+
+  @override
+  String get inboxResetConfirmTitle => 'Really reset the mailbox?';
+
+  @override
+  String get inboxResetConfirmBody =>
+      'All previously imported mails will be deleted, the IMAP cursor will be reset and the next poll will reload everything. Your deals stay untouched.\n\nType RESET to confirm.';
+
+  @override
+  String get inboxResetConfirmInputLabel => 'Type RESET to confirm';
+
+  @override
+  String get inboxResetRunning => 'Resetting mailbox…';
+
+  @override
+  String get inboxResetFailed => 'Reset failed — please try again later.';
+
+  @override
+  String inboxResetSuccess(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString mails deleted. Next poll will reload everything.',
+      one: '1 mail deleted. Next poll will reload everything.',
+      zero: 'No mails deleted — IMAP cursor has been reset.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String trackingNeedsReviewFilterChip(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

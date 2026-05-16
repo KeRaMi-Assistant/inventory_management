@@ -487,9 +487,25 @@ Deno.test('Plan §D1: Amazon-TBA-Pattern wird NICHT mehr detected', () => {
   assertEquals(candidates.length, 0)
 })
 
-Deno.test('Plan §D1: context-numeric (13-digit) ohne DHL-Format wird NICHT mehr detected', () => {
+Deno.test('Plan Phase A: context-numeric (13-digit) MIT Anchor wird wieder detected (medium)', () => {
+  // Anchor-gated re-introduction: 'Sendungsnummer:' triggert das
+  // permissive Pattern. DHL-API entscheidet final, ob die Nummer real
+  // ist — die Heuristik muss nur den Kandidaten liefern.
   const candidates = findAllTrackings('Sendungsnummer: 1234567890123', {})
-  assertEquals(candidates.length, 0)
+  const ctx = candidates.find((c) => c.value === '1234567890123')
+  assert(ctx !== undefined, 'context-numeric mit Anchor muss matchen')
+  assertEquals(ctx!.confidence, 'medium')
+  assertEquals(ctx!.carrier, 'DHL')
+})
+
+Deno.test('Plan Phase A: context-numeric (13-digit) OHNE Anchor → weak (Wrapper filtert raus)', () => {
+  // requiresAnchor:true + kein Anchor → Confidence wird gestepdown von
+  // medium → weak. Der Validation-Wrapper akzeptiert nur strong+medium,
+  // also wird der Kandidat NICHT an DHL geschickt → kein API-Cost-Risiko.
+  const candidates = findAllTrackings('Random text 1234567890123 here', {})
+  const ctx = candidates.find((c) => c.value === '1234567890123')
+  assert(ctx !== undefined, 'Candidate existiert, aber als weak')
+  assertEquals(ctx!.confidence, 'weak')
 })
 
 Deno.test('Plan §D1: S10-UPU-Pattern (XJ12345678FR) wird NICHT mehr detected', () => {

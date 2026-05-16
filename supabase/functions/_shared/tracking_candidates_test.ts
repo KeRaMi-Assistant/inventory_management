@@ -41,7 +41,9 @@ Deno.test('TRACKING_PATTERNS: nur DHL-Patterns nach Plan 2026-05-16 §D1', () =>
   assert(!ids.includes('ups-1z'))
   assert(!ids.includes('amazon-tba'))
   assert(!ids.includes('s10-upu'))
-  assert(!ids.includes('context-numeric-10-22'))
+  // Plan Phase A (Iteration 2): context-numeric-10-22 wieder eingefuehrt
+  // als anchor-gated medium-Confidence. DHL-API entscheidet final.
+  assert(ids.includes('context-numeric-10-22'))
   assert(!ids.includes('context-alphanumeric-tracking'))
 })
 

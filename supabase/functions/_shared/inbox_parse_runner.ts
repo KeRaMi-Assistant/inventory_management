@@ -20,6 +20,7 @@ import {
 import {
   enrichWithDhlValidation,
   type ParsedMessageLike,
+  stampPipelineHeartbeat,
 } from './tracking_validation.ts'
 
 export interface PendingMessage {
@@ -140,7 +141,17 @@ export async function runParseSweep(
   // Bei `workspaceId`-Option im Single-Workspace-Mode = 1 Lookup.
   // Im All-Workspaces-Mode (Cron) = 1 Lookup pro distinct workspace.
   const keyCache: DhlKeyCache = new Map()
+  const heartbeatStamped = new Set<string>()
   for (const row of rows) {
+    // Plan 2026-05-16 Phase C: einmal pro Workspace einen
+    // Heartbeat-Stempel setzen, sobald wir wissen dass ein DHL-Key
+    // gesetzt ist. Auch wenn keine Mail einen Kandidaten enthielt.
+    const apiKey = await getDhlKeyForWorkspace(admin, row.workspace_id, keyCache)
+    if (apiKey && !heartbeatStamped.has(row.workspace_id)) {
+      // deno-lint-ignore no-explicit-any
+      await stampPipelineHeartbeat(admin as any, row.workspace_id)
+      heartbeatStamped.add(row.workspace_id)
+    }
     const result = await processOne(admin, row, keyCache)
     if (result === 'matched') stats.matched++
     else if (result === 'suggested') stats.suggested++

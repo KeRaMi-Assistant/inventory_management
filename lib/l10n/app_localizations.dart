@@ -5450,6 +5450,54 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{Keine Sendungsnummer aktualisiert} =1{1 Sendungsnummer aktualisiert} other{{count} Sendungsnummern aktualisiert}}'**
   String trackingReparseSuccessCount(int count);
 
+  /// No description provided for @inboxResetCta.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach zurücksetzen'**
+  String get inboxResetCta;
+
+  /// No description provided for @inboxResetSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Mails löschen und neu importieren. Beim Re-Import wird jede Mail gegen die DHL-API geprüft. Nicht rückgängig zu machen.'**
+  String get inboxResetSubtitle;
+
+  /// No description provided for @inboxResetConfirmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach wirklich zurücksetzen?'**
+  String get inboxResetConfirmTitle;
+
+  /// No description provided for @inboxResetConfirmBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle bisher importierten Mails werden gelöscht, der IMAP-Cursor wird zurückgesetzt und beim nächsten Poll werden alle Mails neu geladen. Deine Deals bleiben erhalten.\n\nZur Bestätigung tippe RESET ein.'**
+  String get inboxResetConfirmBody;
+
+  /// No description provided for @inboxResetConfirmInputLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Tippe RESET zur Bestätigung'**
+  String get inboxResetConfirmInputLabel;
+
+  /// No description provided for @inboxResetRunning.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach wird zurückgesetzt…'**
+  String get inboxResetRunning;
+
+  /// No description provided for @inboxResetFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Reset fehlgeschlagen — bitte später erneut versuchen.'**
+  String get inboxResetFailed;
+
+  /// SnackBar nach erfolgreichem Inbox-Reset
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =0{Keine Mails gelöscht — IMAP-Cursor wurde zurückgesetzt.} =1{1 Mail gelöscht. Nächster Poll lädt alles neu.} other{{count} Mails gelöscht. Nächster Poll lädt alles neu.}}'**
+  String inboxResetSuccess(int count);
+
   /// Filter chip label showing number of deals needing tracking review
   ///
   /// In de, this message translates to:
