@@ -8,6 +8,8 @@ class AppPreferencesProvider extends ChangeNotifier {
   static const _kLocale = 'pref_locale';
   static const _kThemeMode = 'pref_theme_mode';
   static const _kColorPalette = 'pref_color_palette';
+  static const _kRecentSearches = 'recent_searches';
+  static const _maxRecentSearches = 5;
 
   static const supportedLocales = <Locale>[
     Locale('de'),
@@ -20,6 +22,7 @@ class AppPreferencesProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   AppColorPalette _colorPalette = AppColorPalette.blue;
   bool _ready = false;
+  List<String> _recentSearches = [];
 
   double get monthlyProfitGoal => _monthlyProfitGoal;
   int get lowStockThreshold => _lowStockThreshold;
@@ -27,6 +30,42 @@ class AppPreferencesProvider extends ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
   AppColorPalette get colorPalette => _colorPalette;
   bool get isReady => _ready;
+
+  /// Returns the in-memory cached list of recent searches (max 5, newest first).
+  List<String> get recentSearches => List.unmodifiable(_recentSearches);
+
+  /// Returns true if [s] looks like PII (e-mail, tracking number, phone).
+  static bool isPII(String s) {
+    if (s.contains('@')) return true;
+    if (RegExp(r'\d{8,}').hasMatch(s)) return true;
+    if (RegExp(r'^[A-Z0-9]{10,}$').hasMatch(s)) return true;
+    return false;
+  }
+
+  /// Adds [query] to recent searches, silently skipping PII.
+  /// Deduplicates (moves to front) and enforces max-5 FIFO.
+  Future<void> addRecentSearch(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+    if (isPII(trimmed)) return;
+    // Deduplicate: remove existing occurrence so it moves to front.
+    _recentSearches.remove(trimmed);
+    _recentSearches.insert(0, trimmed);
+    if (_recentSearches.length > _maxRecentSearches) {
+      _recentSearches = _recentSearches.take(_maxRecentSearches).toList();
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_kRecentSearches, _recentSearches);
+    notifyListeners();
+  }
+
+  /// Clears all recent searches (called on sign-out).
+  Future<void> clearRecentSearches() async {
+    _recentSearches = [];
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kRecentSearches);
+    notifyListeners();
+  }
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -49,6 +88,7 @@ class AppPreferencesProvider extends ChangeNotifier {
       _ => AppColorPalette.blue,
     };
     AppTheme.setActivePalette(_colorPalette);
+    _recentSearches = prefs.getStringList(_kRecentSearches) ?? [];
     _ready = true;
     notifyListeners();
   }

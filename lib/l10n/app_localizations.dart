@@ -4466,6 +4466,24 @@ abstract class AppLocalizations {
   /// **'Schließen'**
   String get globalSearchKeyClose;
 
+  /// No description provided for @searchRecentTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Letzte Suchen'**
+  String get searchRecentTitle;
+
+  /// No description provided for @searchRecentEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Suchen'**
+  String get searchRecentEmpty;
+
+  /// No description provided for @searchRecentClear.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurücksetzen'**
+  String get searchRecentClear;
+
   /// No description provided for @buyerLegendTitle.
   ///
   /// In de, this message translates to:
