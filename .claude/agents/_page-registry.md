@@ -33,7 +33,7 @@ die der Browser-Tester pro Eintrag durchspielt — Definitionen unten.
 
 | Route | File | Pflicht-Tests | Notizen |
 |---|---|---|---|
-| `/main` (Shell) | [`lib/screens/main_screen.dart`](../../lib/screens/main_screen.dart) | smoke-theme, mobile-overflow | Side-Nav + AppBar, hält Tab-Index. Bottom-Nav auf Phone (`< 600px`). |
+| `/main` (Shell) | [`lib/screens/main_screen.dart`](../../lib/screens/main_screen.dart) | smoke-theme, mobile-overflow | Side-Nav + AppBar, hält Tab-Index. Bottom-Nav auf Phone (`< 600px`). Help-Icon AppBar (Phone): `Key('appBar-help-action')` — navigiert direkt zu `/help`. |
 | `/dashboard` | [`lib/screens/dashboard_screen.dart`](../../lib/screens/dashboard_screen.dart) | smoke-theme, mobile-overflow | KPI-Cards + Recent-Deals. |
 | `/deals` | [`lib/screens/deals_screen.dart`](../../lib/screens/deals_screen.dart) | smoke-theme, mobile-overflow, deal-flow | Tabelle + Detail-Sidebar (Desktop) bzw. Stack (Phone). |
 | `/tickets` | [`lib/screens/tickets_screen.dart`](../../lib/screens/tickets_screen.dart) | smoke-theme, archive-tab | Aktiv-/Archiv-Tabs. |

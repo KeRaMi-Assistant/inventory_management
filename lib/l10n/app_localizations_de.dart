@@ -63,6 +63,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get actionSearch => 'Suchen';
 
   @override
+  String get actionHelp => 'Hilfe';
+
+  @override
   String get actionClear => 'Leeren';
 
   @override

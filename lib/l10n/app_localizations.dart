@@ -206,6 +206,12 @@ abstract class AppLocalizations {
   /// **'Suchen'**
   String get actionSearch;
 
+  /// No description provided for @actionHelp.
+  ///
+  /// In de, this message translates to:
+  /// **'Hilfe'**
+  String get actionHelp;
+
   /// No description provided for @actionClear.
   ///
   /// In de, this message translates to:
