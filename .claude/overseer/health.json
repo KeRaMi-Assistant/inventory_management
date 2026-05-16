@@ -1,10 +1,10 @@
 {
-  "ts": "2026-05-16T20:19:43Z",
+  "ts": "2026-05-16T20:32:24Z",
   "panic": false,
   "checks": {
     "disk": {
       "free_pct": 60,
-      "free_gb": 256,
+      "free_gb": 255,
       "ok": true
     },
     "worktrees": {
