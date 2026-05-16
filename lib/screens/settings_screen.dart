@@ -45,42 +45,33 @@ class SettingsScreen extends StatelessWidget {
           if (!embedded)
             AppBar(
               title: Text(l10n.settingsTitle),
-              bottom: TabBar(
-                isScrollable: true,
-                indicatorColor: Colors.white,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white60,
-                tabs: [
-                  Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.settingsTabBuyers),
-                  Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
-                  Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
-                  Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
-                  const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
-                  Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
-                  Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
-                  Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
-                ],
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(48),
+                child: _scrollHintWrap(
+                  fadeColor: AppTheme.accent,
+                  child: TabBar(
+                    isScrollable: true,
+                    indicatorColor: Colors.white,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white60,
+                    tabs: _settingsTabs(l10n),
+                  ),
+                ),
               ),
             )
           else
             Material(
               color: AppTheme.bgSurfaceOf(context),
-              child: TabBar(
-                isScrollable: true,
-                indicatorColor: AppTheme.accentTextOf(context),
-                labelColor: AppTheme.accentTextOf(context),
-                unselectedLabelColor: AppTheme.textMutedOf(context),
-                dividerColor: AppTheme.borderOf(context),
-                tabs: [
-                  Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.settingsTabBuyers),
-                  Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
-                  Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
-                  Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
-                  const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
-                  Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
-                  Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
-                  Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
-                ],
+              child: _scrollHintWrap(
+                fadeColor: AppTheme.bgSurfaceOf(context),
+                child: TabBar(
+                  isScrollable: true,
+                  indicatorColor: AppTheme.accentTextOf(context),
+                  labelColor: AppTheme.accentTextOf(context),
+                  unselectedLabelColor: AppTheme.textMutedOf(context),
+                  dividerColor: AppTheme.borderOf(context),
+                  tabs: _settingsTabs(l10n),
+                ),
               ),
             ),
           const Expanded(
@@ -105,6 +96,60 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.bgAppOf(context),
       body: tabs,
+    );
+  }
+
+  /// Liste der 8 Settings-Tabs — gemeinsam für embedded + non-embedded.
+  List<Widget> _settingsTabs(AppLocalizations l10n) => [
+        Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.settingsTabBuyers),
+        Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
+        Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
+        Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
+        const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
+        Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
+        Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
+        Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
+      ];
+
+  /// Plan §Task #08: Scroll-Affordance via Edge-Fade rechts auf
+  /// `TabBar(isScrollable: true)`. ShaderMask blendet die rechten 24 px
+  /// weich aus, sodass der User sieht "es geht weiter". Kein State-
+  /// Listener — Fade ist immer da; bei nicht-scrollbarer TabBar
+  /// unauffällig genug. Plus: Chevron-Icon rechts als zusätzliche
+  /// Affordance (mobile-first).
+  Widget _scrollHintWrap({required Widget child, required Color fadeColor}) {
+    return Stack(
+      key: const Key('settingsTabsScrollHint'),
+      children: [
+        ShaderMask(
+          shaderCallback: (rect) => LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Colors.white,
+              Colors.white,
+              Colors.white.withAlpha(0),
+            ],
+            stops: const [0.0, 0.92, 1.0],
+          ).createShader(rect),
+          blendMode: BlendMode.dstIn,
+          child: child,
+        ),
+        Positioned(
+          right: 4,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: fadeColor.computeLuminance() > 0.5
+                  ? Colors.black54
+                  : Colors.white70,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
