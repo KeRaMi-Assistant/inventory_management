@@ -41,6 +41,13 @@ class CarrierCredential {
 /// Spiegelt die `CHECK`-Constraint der Migration wider.
 const supportedCarrierIds = <String>{'dhl', 'dpd', 'ups'};
 
+/// Carrier-IDs, die in der UI aktuell konfigurierbar sind. DPD und UPS
+/// bleiben backend-seitig unterstützt (siehe `supportedCarrierIds` und die
+/// CHECK-Constraint in `workspace_carrier_credentials.carrier_id`),
+/// werden im Settings-Screen aber als „Bald verfügbar" gerendert, bis
+/// die produktive Anbindung steht. Reaktivierung = Eintrag hier ergänzen.
+const enabledCarrierIds = <String>{'dhl'};
+
 /// Anzeigelabel pro Carrier-ID. Wird in den Settings-Screens genutzt.
 String labelForCarrierId(String id) => switch (id) {
       'dhl' => 'DHL',

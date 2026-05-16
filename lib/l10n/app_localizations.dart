@@ -932,6 +932,24 @@ abstract class AppLocalizations {
   /// **'Noch nicht gepollt.'**
   String get shippingLastNeverPolled;
 
+  /// No description provided for @shippingCarrierComingSoon.
+  ///
+  /// In de, this message translates to:
+  /// **'Bald verfügbar'**
+  String get shippingCarrierComingSoon;
+
+  /// No description provided for @shippingSetupError.
+  ///
+  /// In de, this message translates to:
+  /// **'Setup unvollständig: Master-Key nicht konfiguriert. Bitte Hilfe öffnen.'**
+  String get shippingSetupError;
+
+  /// No description provided for @shippingSetupHelpAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Hilfe öffnen'**
+  String get shippingSetupHelpAction;
+
   /// No description provided for @buyersEmpty.
   ///
   /// In de, this message translates to:
@@ -2318,6 +2336,72 @@ abstract class AppLocalizations {
   /// **'Wenn ein Deal aus mehreren Shops besteht (Drop-Ship), kannst du beim Anlegen mehrere Bezugsquellen samt Einkaufspreisen hinterlegen. Der Profit wird über alle Quellen summiert. Die Statistik zählt den Deal als einen Verkauf.'**
   String get helpDealsDropShipDesc;
 
+  /// No description provided for @helpDealsRetrackTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Sendungsstatus sofort aktualisieren (Retrack)'**
+  String get helpDealsRetrackTitle;
+
+  /// No description provided for @helpDealsRetrackDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Im Deal-Detail neben der Sendungsnummer gibt es ein Refresh-Icon „Status aktualisieren\". Damit fragst du den Carrier sofort nach dem aktuellen Status, ohne auf den nächsten automatischen Poll zu warten — praktisch z. B. kurz vor einem geplanten Versand.\nEin Retrack pro Deal ist alle 30 Sekunden möglich. Während der Sperre ist der Button ausgegraut und zeigt „Bitte 30s warten\" — das schützt den Carrier vor unnötigen API-Calls und dich vor Rate-Limits.'**
+  String get helpDealsRetrackDesc;
+
+  /// No description provided for @helpShippingSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Versand & Carrier-API-Keys'**
+  String get helpShippingSection;
+
+  /// No description provided for @helpShippingIntroTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wozu Carrier-API-Keys?'**
+  String get helpShippingIntroTitle;
+
+  /// No description provided for @helpShippingIntroDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Damit die App den Live-Status deiner Sendungen direkt beim Versanddienstleister abfragen kann (statt nur aus Mails zu lesen), hinterlegst du pro Carrier einen API-Key unter Einstellungen → Versand. Pro Workspace ist ein Key je Carrier nötig — alle Mitglieder profitieren davon.'**
+  String get helpShippingIntroDesc;
+
+  /// No description provided for @helpShippingDhlTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'DHL — aktiv unterstützt'**
+  String get helpShippingDhlTitle;
+
+  /// No description provided for @helpShippingDhlDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'DHL kannst du sofort anbinden:\n• Account auf developer.dhl.com anlegen (kostenlos).\n• Dort die API „Shipment Tracking - Unified\" abonnieren — Free-Tier reicht für privaten Gebrauch.\n• Den API-Key kopieren und unter Einstellungen → Versand → DHL → „API-Key hinterlegen\" einfügen.\nAb sofort werden Deals mit DHL-Trackingnummer in regelmäßigen Abständen aktualisiert und der Status (unterwegs, in Zustellung, zugestellt) erscheint direkt im Deal.'**
+  String get helpShippingDhlDesc;
+
+  /// No description provided for @helpShippingComingSoonTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'DPD und UPS — bald verfügbar'**
+  String get helpShippingComingSoonTitle;
+
+  /// No description provided for @helpShippingComingSoonDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'DPD und UPS siehst du in der Liste, sind aber aktuell als „Bald verfügbar\" markiert und nicht eingabebereit. Die Anbindung folgt in einem späteren Update — bis dahin werden Sendungen dieser Carrier weiterhin aus Versandmails erkannt, der Live-Status fehlt nur. Es ist nichts kaputt, das ist Absicht.'**
+  String get helpShippingComingSoonDesc;
+
+  /// No description provided for @helpShippingKeySafetyTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Was passiert mit meinem API-Key?'**
+  String get helpShippingKeySafetyTitle;
+
+  /// No description provided for @helpShippingKeySafetyDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Klartext-Key verlässt dein Gerät nur einmal, beim Speichern, und wird serverseitig in der Datenbank verschlüsselt abgelegt. In der App siehst du danach nur noch die letzten vier Zeichen, z. B. „••••••••a1b2\". Du kannst den Key jederzeit ersetzen oder löschen — beim Löschen pausieren wir die automatischen Status-Abfragen für diesen Carrier.'**
+  String get helpShippingKeySafetyDesc;
+
   /// No description provided for @helpInventorySection.
   ///
   /// In de, this message translates to:
@@ -2965,6 +3049,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Sehr lange Deal-/Inbox-Listen? Filter setzen (Datum, Status, Käufer), das reduziert die Render-Last. App komplett beenden und neu starten leert flüchtige Caches im Speicher. Auf älteren Geräten kann es helfen, alte Tickets zu archivieren.'**
   String get helpTroubleSlowDesc;
+
+  /// No description provided for @helpTroubleCarrierSetupTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'„Setup unvollständig: Master-Key nicht konfiguriert\"'**
+  String get helpTroubleCarrierSetupTitle;
+
+  /// No description provided for @helpTroubleCarrierSetupDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Meldung erscheint, wenn du einen Carrier-API-Key speichern willst, aber das Backend keinen Master-Schlüssel hat, mit dem es deinen Key verschlüsselt ablegen kann. Das ist kein Fehler in deinem Account, sondern ein einmaliger Backend-Setup-Schritt:\n• Hosted-Variante (Standard-Nutzer): kurz warten und nochmal versuchen — wir setzen den Master-Key zentral, normalerweise innerhalb weniger Stunden.\n• Self-Hoster / Admin der Supabase-Instanz: die Migration `20260516000000_carrier_master_key_bootstrap.sql` muss eingespielt sein und der `CARRIER_MASTER_KEY`-Secret auf der Supabase-Projektebene gesetzt sein. Details für Admins liegen im Repo unter `supabase/functions/tracking-poll/SETUP.md`.\nBis das gefixt ist, kannst du deine Sendungen weiter manuell pflegen — nur der automatische Live-Status pro Carrier ist solange aus.'**
+  String get helpTroubleCarrierSetupDesc;
 
   /// No description provided for @helpPrivacySection.
   ///
