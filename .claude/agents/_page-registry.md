@@ -33,7 +33,7 @@ die der Browser-Tester pro Eintrag durchspielt — Definitionen unten.
 
 | Route | File | Pflicht-Tests | Notizen |
 |---|---|---|---|
-| `/main` (Shell) | [`lib/screens/main_screen.dart`](../../lib/screens/main_screen.dart) | smoke-theme, mobile-overflow | Side-Nav + AppBar, hält Tab-Index. Bottom-Nav auf Phone (`< 600px`). Help-Icon AppBar (Phone): `Key('appBar-help-action')` — navigiert direkt zu `/help`. |
+| `/main` (Shell) | [`lib/screens/main_screen.dart`](../../lib/screens/main_screen.dart) | smoke-theme, mobile-overflow | Side-Nav + AppBar, hält Tab-Index. **Bottom-Nav auf Phone (`< 800px`):** `Key('mainBottomNav')` mit 5 festen Slots (Dashboard, Deals, Tickets, Inbox[conditional], Inventory) + „Mehr"-Slot (`Key('main-tab-more')`). Inbox-Slot entfällt wenn `!billing.hasInbox` (4 Slots + Mehr). Help-Icon AppBar (Phone): `Key('appBar-help-action')` — navigiert direkt zu `/help`. Reihenfolge Slots: `Key('main-tab-dashboard')`, `main-tab-deals`, `main-tab-tickets`, `main-tab-inbox`, `main-tab-inventory`, `main-tab-more`. |
 | `/dashboard` | [`lib/screens/dashboard_screen.dart`](../../lib/screens/dashboard_screen.dart) | smoke-theme, mobile-overflow | KPI-Cards + Recent-Deals. |
 | `/deals` | [`lib/screens/deals_screen.dart`](../../lib/screens/deals_screen.dart) | smoke-theme, mobile-overflow, deal-flow | Tabelle + Detail-Sidebar (Desktop) bzw. Stack (Phone). |
 | `/tickets` | [`lib/screens/tickets_screen.dart`](../../lib/screens/tickets_screen.dart) | smoke-theme, archive-tab | Aktiv-/Archiv-Tabs. |
@@ -77,6 +77,7 @@ Dialogs müssen auf 390×844 ohne horizontalen Scroll funktionieren.
 | `/settings` → Add-/Edit-Buyer | [`lib/widgets/add_edit_buyer_dialog.dart`](../../lib/widgets/add_edit_buyer_dialog.dart) | smoke-theme, mobile-overflow |
 | `/settings` → Add-/Edit-Mailbox | [`lib/widgets/add_edit_mailbox_dialog.dart`](../../lib/widgets/add_edit_mailbox_dialog.dart) | smoke-theme, mobile-overflow |
 | `/deals` → Deal-Picker (Comments) | [`lib/widgets/deal_picker_dialog.dart`](../../lib/widgets/deal_picker_dialog.dart) | smoke-theme |
+| `/main` → More-Nav Sheet (Phone) | [`lib/screens/main_screen.dart`](../../lib/screens/main_screen.dart) (`_MoreNavSheet`) | smoke-theme, mobile-overflow | Geöffnet via „Mehr"-Slot (`Key('main-tab-more')`) in der Bottom-Nav. Sheet-Key: `Key('moreNavSheet')`. Items: `Key('moreNavSheet-suppliers')`, `moreNavSheet-stats`, `moreNavSheet-activity`, `moreNavSheet-settings`, `moreNavSheet-help`. |
 | `/main` → Global-Search (Cmd+K) | [`lib/widgets/global_search_dialog.dart`](../../lib/widgets/global_search_dialog.dart) | smoke-theme, mobile-overflow |
 | `/main` → Invites-Bell | [`lib/widgets/invites_bell.dart`](../../lib/widgets/invites_bell.dart) | smoke-theme |
 | `/inbox` → Message-Details | [`lib/widgets/inbox_message_details.dart`](../../lib/widgets/inbox_message_details.dart) | smoke-theme, mobile-overflow |

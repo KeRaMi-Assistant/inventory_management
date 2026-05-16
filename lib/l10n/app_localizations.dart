@@ -362,6 +362,12 @@ abstract class AppLocalizations {
   /// **'Tickets'**
   String get navTickets;
 
+  /// No description provided for @navInbox.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach'**
+  String get navInbox;
+
   /// No description provided for @navInventory.
   ///
   /// In de, this message translates to:
@@ -397,6 +403,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Einstellungen'**
   String get navSettings;
+
+  /// No description provided for @navMore.
+  ///
+  /// In de, this message translates to:
+  /// **'Mehr'**
+  String get navMore;
+
+  /// No description provided for @navMoreSheetTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Weitere Bereiche'**
+  String get navMoreSheetTitle;
 
   /// No description provided for @fieldEmail.
   ///

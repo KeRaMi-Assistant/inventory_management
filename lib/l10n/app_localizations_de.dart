@@ -157,6 +157,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get navTickets => 'Tickets';
 
   @override
+  String get navInbox => 'Postfach';
+
+  @override
   String get navInventory => 'Lager';
 
   @override
@@ -173,6 +176,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get navSettings => 'Einstellungen';
+
+  @override
+  String get navMore => 'Mehr';
+
+  @override
+  String get navMoreSheetTitle => 'Weitere Bereiche';
 
   @override
   String get fieldEmail => 'E-Mail';
