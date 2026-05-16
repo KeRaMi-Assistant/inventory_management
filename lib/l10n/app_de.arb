@@ -358,6 +358,21 @@
   "dealStatusInvoiced": "Rechnung gestellt",
   "dealStatusDone": "Done",
 
+  "dealQuickStatusTitle": "Status ändern",
+  "dealQuickStatusUndo": "Rückgängig",
+  "dealQuickStatusChanged": "Status auf {status} geändert",
+  "@dealQuickStatusChanged": {
+    "placeholders": {
+      "status": { "type": "String" }
+    }
+  },
+  "dealQuickStatusError": "Status konnte nicht geändert werden: {error}",
+  "@dealQuickStatusError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
   "dealColId": "ID",
   "dealColEkNet": "EK Netto",
   "dealColEkGross": "EK Brutto",

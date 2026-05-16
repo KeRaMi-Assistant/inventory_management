@@ -949,6 +949,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dealStatusDone => 'Done';
 
   @override
+  String get dealQuickStatusTitle => 'Status ändern';
+
+  @override
+  String get dealQuickStatusUndo => 'Rückgängig';
+
+  @override
+  String dealQuickStatusChanged(String status) {
+    return 'Status auf $status geändert';
+  }
+
+  @override
+  String dealQuickStatusError(String error) {
+    return 'Status konnte nicht geändert werden: $error';
+  }
+
+  @override
   String get dealColId => 'ID';
 
   @override
