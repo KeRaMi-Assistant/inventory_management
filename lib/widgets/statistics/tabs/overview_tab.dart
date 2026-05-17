@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app_theme.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
 import '../charts/donut_chart.dart';
@@ -36,11 +37,14 @@ class OverviewTab extends StatelessWidget {
       children: [
         KpiGrid(
           cards: [
+            // KPI-Accents nutzen AppTheme-Status-Tokens, damit
+            // (a) Light/Dark-Mode lesbar bleibt und (b) ein User-Paletten-
+            // Wechsel den „Umsatz"-Tile-Accent mitzieht.
             KpiCard(
               label: l10n.statsLabelRevenue,
               value: money.format(stats.revenue),
               icon: Icons.payments_outlined,
-              accent: const Color(0xFF2563EB),
+              accent: AppTheme.accent,
               deltaPct: compare
                   ? StatisticsService.deltaPct(stats.revenue, stats.prevRevenue)
                   : null,
@@ -50,7 +54,7 @@ class OverviewTab extends StatelessWidget {
               label: l10n.statsLabelProfit,
               value: money.format(stats.profit),
               icon: Icons.trending_up,
-              accent: const Color(0xFF059669),
+              accent: AppTheme.success,
               deltaPct: compare
                   ? StatisticsService.deltaPct(stats.profit, stats.prevProfit)
                   : null,
@@ -60,7 +64,7 @@ class OverviewTab extends StatelessWidget {
               label: l10n.statsLabelMargin,
               value: '${stats.margin.toStringAsFixed(1)}%',
               icon: Icons.percent_outlined,
-              accent: const Color(0xFF7C3AED),
+              accent: AppTheme.purple,
               deltaPct: compare
                   ? StatisticsService.deltaPct(stats.margin, stats.prevMargin)
                   : null,
@@ -70,7 +74,7 @@ class OverviewTab extends StatelessWidget {
               label: 'ROI',
               value: '${stats.roi.toStringAsFixed(1)}%',
               icon: Icons.show_chart,
-              accent: const Color(0xFFD97706),
+              accent: AppTheme.warning,
               deltaPct: compare
                   ? StatisticsService.deltaPct(stats.roi, stats.prevRoi)
                   : null,
@@ -80,7 +84,7 @@ class OverviewTab extends StatelessWidget {
               label: l10n.statsOpenReceivables,
               value: money.format(stats.openReceivables),
               icon: Icons.hourglass_empty,
-              accent: const Color(0xFFDC2626),
+              accent: AppTheme.danger,
               deltaPct: compare
                   ? StatisticsService.deltaPct(
                       stats.openReceivables, stats.prevOpenReceivables)
@@ -92,7 +96,7 @@ class OverviewTab extends StatelessWidget {
               label: l10n.statsDealCount,
               value: '${stats.dealCount}',
               icon: Icons.inventory_2_outlined,
-              accent: const Color(0xFF0891B2),
+              accent: AppTheme.info,
               deltaPct: compare
                   ? StatisticsService.deltaPct(
                       stats.dealCount.toDouble(),

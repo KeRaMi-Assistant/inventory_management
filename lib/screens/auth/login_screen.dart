@@ -98,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFC0392B) : const Color(0xFF059669),
+            isError ? AppTheme.danger : AppTheme.success,
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
       ),
@@ -357,8 +357,8 @@ class _GoogleSignInButton extends StatelessWidget {
       onPressed: busy ? null : onPressed,
       style: OutlinedButton.styleFrom(
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF0F172A),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        foregroundColor: AppTheme.textPrimary,
+        side: const BorderSide(color: AppTheme.bgSubtle),
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
       icon: const _GoogleLogo(),

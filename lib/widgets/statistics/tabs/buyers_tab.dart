@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app_theme.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
 import '../sortable_table.dart';
@@ -29,7 +30,7 @@ class BuyersTab extends StatelessWidget {
             rows: stats.buyerStats,
             defaultSortIndex: 5,
             defaultAscending: false,
-            rowColor: (b) => b.inactive ? const Color(0xFFFEF2F2) : null,
+            rowColor: (b) => b.inactive ? AppTheme.dangerBgOf(context) : null,
             columns: [
               SortableColumn(
                 label: l10n.statsBuyerLabel,
@@ -42,7 +43,7 @@ class BuyersTab extends StatelessWidget {
                         width: 8,
                         height: 8,
                         decoration: const BoxDecoration(
-                          color: Color(0xFFDC2626),
+                          color: AppTheme.danger,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -76,8 +77,8 @@ class BuyersTab extends StatelessWidget {
                 builder: (b) => Text(money.format(b.openAmount),
                     style: TextStyle(
                       color: b.openAmount > 0
-                          ? const Color(0xFFDC2626)
-                          : const Color(0xFF6B7280),
+                          ? AppTheme.danger
+                          : AppTheme.textMuted,
                       fontWeight: FontWeight.w600,
                     )),
                 valueOf: (b) => b.openAmount,
@@ -89,8 +90,8 @@ class BuyersTab extends StatelessWidget {
                   money.format(b.profit),
                   style: TextStyle(
                     color: b.profit >= 0
-                        ? const Color(0xFF059669)
-                        : const Color(0xFFDC2626),
+                        ? AppTheme.success
+                        : AppTheme.danger,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

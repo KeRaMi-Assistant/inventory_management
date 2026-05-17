@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app_theme.dart';
 import '../../../services/statistics_service.dart';
 
 /// Linien-Chart mit zwei Linien: Umsatz (blau) und Profit (grün).
@@ -19,9 +20,9 @@ class ProfitLineChart extends StatelessWidget {
     if (series.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(
+        child: Center(
           child: Text('Keine Daten im Zeitraum.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+              style: TextStyle(color: AppTheme.textMutedOf(context), fontSize: 13)),
         ),
       );
     }
@@ -55,7 +56,7 @@ class ProfitLineChart extends StatelessWidget {
             drawVerticalLine: false,
             horizontalInterval: ((maxY - minY) / 4).abs().clamp(1, double.infinity),
             getDrawingHorizontalLine: (_) => const FlLine(
-              color: Color(0xFFEEF2F7),
+              color: AppTheme.bgSubtle,
               strokeWidth: 1,
             ),
           ),
@@ -70,7 +71,7 @@ class ProfitLineChart extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 6),
                   child: Text(
                     money.format(v),
-                    style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)),
+                    style: const TextStyle(fontSize: 10, color: AppTheme.textDisabled),
                     textAlign: TextAlign.right,
                   ),
                 ),
@@ -89,7 +90,7 @@ class ProfitLineChart extends StatelessWidget {
                     child: Text(
                       dateFmt.format(series[i].date),
                       style: const TextStyle(
-                          fontSize: 10, color: Color(0xFF9CA3AF)),
+                          fontSize: 10, color: AppTheme.textDisabled),
                     ),
                   );
                 },
@@ -99,7 +100,7 @@ class ProfitLineChart extends StatelessWidget {
           borderData: FlBorderData(show: false),
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (_) => const Color(0xFF111827),
+              getTooltipColor: (_) => AppTheme.textPrimary,
               tooltipRoundedRadius: 8,
               tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               getTooltipItems: (spots) {
@@ -200,8 +201,7 @@ class _LegendDot extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Text(label,
-            style:
-                const TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
+            style: TextStyle(fontSize: 11, color: AppTheme.textMutedOf(context))),
       ],
     );
   }

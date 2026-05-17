@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app_theme.dart';
+
 /// GitHub-Style Kalender-Heatmap. Zeigt 12 Monate Profit-Aktivität.
 /// 4 Stufen: 0, niedrig, mittel, hoch — basierend auf Quantilen.
 class ProfitHeatmap extends StatefulWidget {
@@ -99,7 +101,7 @@ class _ProfitHeatmapState extends State<ProfitHeatmap> {
                               borderRadius: BorderRadius.circular(2),
                               border: isHovered
                                   ? Border.all(
-                                      color: const Color(0xFF111827),
+                                      color: AppTheme.textPrimary,
                                       width: 1)
                                   : null,
                             ),
@@ -126,21 +128,20 @@ class _ProfitHeatmapState extends State<ProfitHeatmap> {
           children: [
             if (hovered != null) ...[
               Icon(Icons.calendar_today_outlined,
-                  size: 12, color: Colors.grey.shade600),
+                  size: 12, color: AppTheme.textMutedOf(context)),
               const SizedBox(width: 6),
               Text(
                 '${dateFmt.format(hovered)} — Profit ${money.format(hoveredVal ?? 0)}',
-                style:
-                    const TextStyle(fontSize: 11, color: Color(0xFF374151)),
+                style: TextStyle(fontSize: 11, color: AppTheme.textSecondaryOf(context)),
               ),
             ] else
-              const Text(
+              Text(
                 'Tippe auf einen Tag für Details',
-                style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                style: TextStyle(fontSize: 11, color: AppTheme.textDisabledOf(context)),
               ),
             const Spacer(),
-            const Text('Weniger',
-                style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+            Text('Weniger',
+                style: TextStyle(fontSize: 11, color: AppTheme.textDisabledOf(context))),
             const SizedBox(width: 4),
             for (final c in _colors)
               Padding(
@@ -155,8 +156,8 @@ class _ProfitHeatmapState extends State<ProfitHeatmap> {
                 ),
               ),
             const SizedBox(width: 4),
-            const Text('Mehr',
-                style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+            Text('Mehr',
+                style: TextStyle(fontSize: 11, color: AppTheme.textDisabledOf(context))),
           ],
         ),
       ],

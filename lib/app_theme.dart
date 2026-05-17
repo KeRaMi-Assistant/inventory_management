@@ -155,8 +155,21 @@ class AppTheme {
   static Color accentBorderOf(BuildContext context) =>
       _dark(context) ? accentBorderDark : accentBorderLight;
 
-  // -- Semantic accent variant (purple — used for "Missing Invoice" KPI) --
+  // -- Semantic accent variant (purple — used for "Missing Invoice" KPI
+  //    and the "Rechnung gestellt"-Status-Pill auf Deal-Cards/-Tables) --
   static const Color purple = Color(0xFF8B5CF6);
+  static const Color purpleBg = Color(0xFFF5F3FF);       // Violet 50
+  static const Color purpleBgDark = Color(0xFF2E1065);   // Violet 950
+  static const Color purpleBorder = Color(0xFFDDD6FE);   // Violet 200
+  static const Color purpleBorderDark = Color(0xFF5B21B6); // Violet 700
+  static const Color purpleTextDark = Color(0xFFA78BFA);   // Violet 400
+
+  static Color purpleBgOf(BuildContext context) =>
+      _dark(context) ? purpleBgDark : purpleBg;
+  static Color purpleBorderOf(BuildContext context) =>
+      _dark(context) ? purpleBorderDark : purpleBorder;
+  static Color purpleTextOf(BuildContext context) =>
+      _dark(context) ? purpleTextDark : purple;
 
   // -- Semantic status colors --
   static const Color success = Color(0xFF059669);

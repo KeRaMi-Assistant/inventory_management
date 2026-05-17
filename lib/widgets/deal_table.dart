@@ -953,13 +953,9 @@ class _DealRowState extends State<_DealRow> {
           text: AppTheme.successTextOf(context),
         ),
       'Rechnung gestellt' => (
-          bg: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF2E1065)
-              : const Color(0xFFF5F3FF),
-          border: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF5B21B6)
-              : const Color(0xFFDDD6FE),
-          text: AppTheme.purple,
+          bg: AppTheme.purpleBgOf(context),
+          border: AppTheme.purpleBorderOf(context),
+          text: AppTheme.purpleTextOf(context),
         ),
       'Done' => (
           bg: AppTheme.successBgOf(context),
@@ -1047,7 +1043,7 @@ class _DealRowState extends State<_DealRow> {
               Navigator.pop(context);
             },
             style:
-                ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             child: Text(l10n.actionDelete,
                 style: const TextStyle(color: Colors.white)),
           ),

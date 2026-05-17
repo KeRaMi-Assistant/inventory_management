@@ -218,7 +218,7 @@ class _BuyersTab extends StatelessWidget {
                             IconButton(
                               icon: const Icon(Icons.delete_outline,
                                   size: 20),
-                              color: Colors.red[400],
+                              color: AppTheme.danger,
                               onPressed: () => _confirmDeleteBuyer(
                                   context, provider, buyer.id, buyer.name),
                             ),
@@ -251,7 +251,7 @@ class _BuyersTab extends StatelessWidget {
               Navigator.pop(context);
             },
             style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             child: Text(l10n.actionDelete,
                 style: const TextStyle(color: Colors.white)),
           ),
@@ -406,7 +406,7 @@ class _ShopsTab extends StatelessWidget {
               Navigator.pop(context);
             },
             style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             child: Text(l10n.actionDelete,
                 style: const TextStyle(color: Colors.white)),
           ),
@@ -1063,7 +1063,7 @@ class _LogoutCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(Icons.logout, color: Color(0xFFD97706)),
+            const Icon(Icons.logout, color: AppTheme.warning),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1071,16 +1071,16 @@ class _LogoutCard extends StatelessWidget {
                 children: [
                   Text(
                     l10n.accountMenuSignOut,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFFB45309),
+                      color: AppTheme.warningTextOf(context),
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     '${l10n.accountMenuSignedInAs} $email',
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B)),
+                    style: TextStyle(
+                        fontSize: 12, color: AppTheme.textMutedOf(context)),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -1090,8 +1090,8 @@ class _LogoutCard extends StatelessWidget {
             OutlinedButton(
               onPressed: () => _confirmLogout(context),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFD97706),
-                side: const BorderSide(color: Color(0xFFD97706)),
+                foregroundColor: AppTheme.warning,
+                side: const BorderSide(color: AppTheme.warning),
               ),
               child: Text(l10n.accountMenuSignOut),
             ),
@@ -1112,10 +1112,10 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF6B7280),
+          color: AppTheme.textMutedOf(context),
           letterSpacing: 0.7,
         ),
       ),
@@ -1294,7 +1294,7 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
                   ? () => Navigator.pop(ctx, true)
                   : null,
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFC0392B)),
+                  backgroundColor: AppTheme.danger),
               child: Text(l10n.accountMenuDeleteAccount),
             ),
           ],
@@ -1315,7 +1315,7 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),
-          backgroundColor: const Color(0xFFC0392B),
+          backgroundColor: AppTheme.danger,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -1330,7 +1330,7 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(Icons.delete_forever_outlined, color: Color(0xFFC0392B)),
+            const Icon(Icons.delete_forever_outlined, color: AppTheme.danger),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1340,14 +1340,14 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
                     l10n.accountMenuDeleteAccount,
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFFC0392B),
+                      color: AppTheme.danger,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     l10n.deleteAccountSubtitle,
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B)),
+                    style: TextStyle(
+                        fontSize: 12, color: AppTheme.textMutedOf(context)),
                   ),
                 ],
               ),
@@ -1362,8 +1362,8 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
                 : OutlinedButton(
                     onPressed: _confirmDelete,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFC0392B),
-                      side: const BorderSide(color: Color(0xFFC0392B)),
+                      foregroundColor: AppTheme.danger,
+                      side: const BorderSide(color: AppTheme.danger),
                     ),
                     child: Text(l10n.actionDelete),
                   ),
@@ -1394,7 +1394,7 @@ class _SettingsCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFF2563EB)),
+            Icon(icon, color: AppTheme.accentTextOf(context)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1402,7 +1402,7 @@ class _SettingsCard extends StatelessWidget {
                 children: [
                   Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
                   const SizedBox(height: 3),
-                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                  Text(subtitle, style: TextStyle(fontSize: 12, color: AppTheme.textMutedOf(context))),
                 ],
               ),
             ),
@@ -1458,7 +1458,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
         SnackBar(
           content: Text(AppLocalizations.of(context).pushSaveFailed('$e')),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFDC2626),
+          backgroundColor: AppTheme.danger,
         ),
       );
     } finally {
@@ -1598,13 +1598,13 @@ class _NotificationsTabState extends State<_NotificationsTab> {
             children: [
               ListTile(
                 leading: const Icon(Icons.schedule,
-                    size: 20, color: Color(0xFF64748B)),
+                    size: 20, color: AppTheme.textMuted),
                 title: Text(l10n.pushDailyCheckTitle),
                 subtitle: Text(l10n.pushDailyCheckSubtitle),
               ),
               ListTile(
                 leading: const Icon(Icons.fingerprint,
-                    size: 20, color: Color(0xFF64748B)),
+                    size: 20, color: AppTheme.textMuted),
                 title: Text(l10n.pushDedupTitle),
                 subtitle: Text(l10n.pushDedupSubtitle),
               ),
@@ -2152,8 +2152,8 @@ class _PlanSectionState extends State<_PlanSection> {
                         const SizedBox(height: 3),
                         Text(
                           priceLabel,
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF64748B)),
+                          style: TextStyle(
+                              fontSize: 12, color: AppTheme.textMutedOf(context)),
                         ),
                       ],
                     ),
@@ -2166,7 +2166,7 @@ class _PlanSectionState extends State<_PlanSection> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                  const Icon(Icons.chevron_right, color: AppTheme.textDisabled),
                 ],
               ),
             ),
@@ -2185,8 +2185,8 @@ class _PlanSectionState extends State<_PlanSection> {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const Icon(Icons.receipt_long_outlined,
-                      color: Color(0xFF2563EB)),
+                  Icon(Icons.receipt_long_outlined,
+                      color: AppTheme.accent),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -2200,8 +2200,8 @@ class _PlanSectionState extends State<_PlanSection> {
                           style: TextStyle(
                             fontSize: 12,
                             color: addressMissing
-                                ? Colors.red.shade600
-                                : const Color(0xFF64748B),
+                                ? AppTheme.dangerTextOf(context)
+                                : AppTheme.textMutedOf(context),
                           ),
                         ),
                       ],
@@ -2209,8 +2209,8 @@ class _PlanSectionState extends State<_PlanSection> {
                   ),
                   if (addressMissing)
                     const Icon(Icons.warning_amber_rounded,
-                        color: Colors.orange),
-                  const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                        color: AppTheme.warning),
+                  const Icon(Icons.chevron_right, color: AppTheme.textDisabled),
                 ],
               ),
             ),
@@ -2290,7 +2290,7 @@ class _MailboxTabState extends State<_MailboxTab> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
               child: Text(l10n.actionDelete,
                   style: const TextStyle(color: Colors.white)),
             ),
@@ -2331,7 +2331,7 @@ class _MailboxTabState extends State<_MailboxTab> {
                             context: context,
                             builder: (_) => const AddEditMailboxDialog(),
                           ),
-                  backgroundColor: atLimit ? Colors.grey : null,
+                  backgroundColor: atLimit ? AppTheme.textMuted : null,
                   icon: Icon(atLimit ? Icons.lock_outline : Icons.add),
                   label: Text(atLimit
                       ? 'Limit erreicht ($mailboxLimit)'
@@ -2689,11 +2689,11 @@ class _MailboxFreePlanGate extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
+                          color: AppTheme.warningBgOf(context),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.lock_outline,
-                            color: Color(0xFFB45309)),
+                        child: Icon(Icons.lock_outline,
+                            color: AppTheme.warningTextOf(context)),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -2714,9 +2714,9 @@ class _MailboxFreePlanGate extends StatelessWidget {
                     'Mails ist ab dem Starter-Plan verfügbar — höhere '
                     'Pläne erlauben mehr Postfächer und längeren Inbox-'
                     'Verlauf.',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF334155),
+                      color: AppTheme.textSecondaryOf(context),
                       height: 1.5,
                     ),
                   ),
@@ -2775,19 +2775,19 @@ class _PlanComparisonRow extends StatelessWidget {
             width: 80,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
-                color: Color(0xFF2563EB),
+                color: AppTheme.accentTextOf(context),
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF334155),
+                color: AppTheme.textSecondaryOf(context),
               ),
             ),
           ),
@@ -2941,7 +2941,7 @@ class _ShippingTabState extends State<_ShippingTab> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             child: Text(
               l10n.shippingDeleteKey,
               style: const TextStyle(color: Colors.white),
@@ -3768,7 +3768,7 @@ class _InboxResetTileState extends State<_InboxResetTile> {
             child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             onPressed: () => Navigator.pop(
               ctx,
               controller.text.trim().toUpperCase() == 'RESET',

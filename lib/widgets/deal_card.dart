@@ -345,7 +345,6 @@ class DealCard extends StatelessWidget {
   }
 
   ({Color bg, Color border, Color text}) _statusStyle(String s, BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return switch (s) {
       'Bestellt' => (
           bg: AppTheme.accentLightOf(context),
@@ -363,9 +362,9 @@ class DealCard extends StatelessWidget {
           text: AppTheme.successTextOf(context),
         ),
       'Rechnung gestellt' => (
-          bg: dark ? const Color(0xFF2E1065) : const Color(0xFFF5F3FF),
-          border: dark ? const Color(0xFF5B21B6) : const Color(0xFFDDD6FE),
-          text: AppTheme.purple,
+          bg: AppTheme.purpleBgOf(context),
+          border: AppTheme.purpleBorderOf(context),
+          text: AppTheme.purpleTextOf(context),
         ),
       'Done' => (
           bg: AppTheme.successBgOf(context),

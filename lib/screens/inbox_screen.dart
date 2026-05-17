@@ -1859,7 +1859,6 @@ class _ShipStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final (bg, fg) = switch (status) {
       SuggestionShipStatus.ordered => (
           AppTheme.infoBgOf(context),
@@ -1878,8 +1877,8 @@ class _ShipStatusBadge extends StatelessWidget {
           AppTheme.dangerTextOf(context)
         ),
       SuggestionShipStatus.refunded => (
-          dark ? const Color(0xFF2E1065) : const Color(0xFFEDE9FE),
-          AppTheme.purple,
+          AppTheme.purpleBgOf(context),
+          AppTheme.purpleTextOf(context),
         ),
     };
     return Container(
