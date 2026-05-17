@@ -364,7 +364,7 @@ class _InboxFilterBar extends StatelessWidget {
               leading: const Icon(Icons.all_inbox),
               title: const Text('Alle Shops'),
               trailing: provider.shopFilter == null
-                  ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                  ? Icon(Icons.check, color: AppTheme.accentTextOf(context))
                   : null,
               onTap: () => Navigator.pop(context, _kAllShops),
             ),
@@ -374,7 +374,7 @@ class _InboxFilterBar extends StatelessWidget {
                 leading: const Icon(Icons.store_outlined),
                 title: Text(provider.shopLabelFor(key)),
                 trailing: provider.shopFilter == key
-                    ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                    ? Icon(Icons.check, color: AppTheme.accentTextOf(context))
                     : null,
                 onTap: () => Navigator.pop(context, key),
               ),
@@ -402,7 +402,7 @@ class _InboxFilterBar extends StatelessWidget {
               leading: const Icon(Icons.all_inbox),
               title: const Text('Alle Status'),
               trailing: provider.statusFilter == null
-                  ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                  ? Icon(Icons.check, color: AppTheme.accentTextOf(context))
                   : null,
               onTap: () => Navigator.pop(context, _kAllStatusesSentinel),
             ),
@@ -412,7 +412,7 @@ class _InboxFilterBar extends StatelessWidget {
                 leading: Icon(_statusIcon(s)),
                 title: Text(s.label()),
                 trailing: provider.statusFilter == s
-                    ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                    ? Icon(Icons.check, color: AppTheme.accentTextOf(context))
                     : null,
                 onTap: () => Navigator.pop(context, s),
               ),
@@ -730,7 +730,7 @@ Future<void> _confirmDismissMessage(
             child: Text(l10n.actionCancel),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Verwerfen', style: TextStyle(color: Colors.white)),
           ),
@@ -1153,12 +1153,12 @@ class _SuggestionCard extends StatelessWidget {
                           dense: true,
                         ),
                       ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'reject',
                       child: ListTile(
                         leading: Icon(Icons.delete_outline,
-                            color: Color(0xFFB91C1C)),
-                        title: Text('Verwerfen'),
+                            color: AppTheme.danger),
+                        title: const Text('Verwerfen'),
                         dense: true,
                       ),
                     ),
@@ -1732,12 +1732,12 @@ class _UnclassifiedRow extends StatelessWidget {
                   dense: true,
                 ),
               ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'dismiss',
               child: ListTile(
                 leading:
-                    Icon(Icons.delete_outline, color: Color(0xFFB91C1C)),
-                title: Text('Verwerfen'),
+                    Icon(Icons.delete_outline, color: AppTheme.danger),
+                title: const Text('Verwerfen'),
                 dense: true,
               ),
             ),
@@ -1877,9 +1877,10 @@ class _ShipStatusBadge extends StatelessWidget {
           AppTheme.dangerBgOf(context),
           AppTheme.dangerTextOf(context)
         ),
-      SuggestionShipStatus.refunded => dark
-          ? (const Color(0xFF2E1065), const Color(0xFFC4B5FD))
-          : (const Color(0xFFEDE9FE), const Color(0xFF6D28D9)),
+      SuggestionShipStatus.refunded => (
+          dark ? const Color(0xFF2E1065) : const Color(0xFFEDE9FE),
+          AppTheme.purple,
+        ),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

@@ -511,7 +511,7 @@ class _BulkActionBar extends StatelessWidget {
             icon: const Icon(Icons.delete_outline, size: 16),
             label: Text(l10n.actionDelete),
             style:
-                TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+                TextButton.styleFrom(foregroundColor: AppTheme.danger),
           ),
           IconButton(
             tooltip: l10n.actionDeselect,
@@ -635,7 +635,7 @@ class _DealRowState extends State<_DealRow> {
     final base = buyer?.rowFillColor;
     final dark = Theme.of(context).brightness == Brightness.dark;
     if (_hovered) {
-      return dark ? AppTheme.accentLightDark : const Color(0xFFEFF3FC);
+      return dark ? AppTheme.accentLightDark : AppTheme.accentLightOf(context);
     }
     if (needsAttention) {
       return AppTheme.warningBgOf(context);
@@ -650,9 +650,9 @@ class _DealRowState extends State<_DealRow> {
     if (dark) {
       return widget.isEven
           ? AppTheme.bgSurfaceDark
-          : const Color(0xFF273449);
+          : AppTheme.bgSubtleDark;
     }
-    return widget.isEven ? Colors.white : const Color(0xFFFAFBFD);
+    return widget.isEven ? AppTheme.bgSurface : AppTheme.bgApp;
   }
 
   @override
@@ -684,9 +684,7 @@ class _DealRowState extends State<_DealRow> {
         height: 46,
         decoration: BoxDecoration(
           color: selected
-              ? (Theme.of(context).brightness == Brightness.dark
-                  ? AppTheme.accentLightDark
-                  : const Color(0xFFDDEBFF))
+              ? AppTheme.accentLightOf(context)
               : _rowColor,
           border: Border(
               bottom: BorderSide(color: AppTheme.borderOf(context))),
@@ -825,7 +823,7 @@ class _DealRowState extends State<_DealRow> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: buyer?.buyerCellColor ?? const Color(0xFF64748B),
+        color: buyer?.buyerCellColor ?? AppTheme.textMuted,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -938,26 +936,41 @@ class _DealRowState extends State<_DealRow> {
       );
 
   ({Color bg, Color border, Color text}) _statusStyle(String s) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return switch (s) {
-      'Bestellt' => dark
-          ? (bg: const Color(0xFF1E3A5F), border: const Color(0xFF1E40AF), text: const Color(0xFF93C5FD))
-          : (bg: const Color(0xFFEFF6FF), border: const Color(0xFFBFDBFE), text: const Color(0xFF1D4ED8)),
-      'Unterwegs' => dark
-          ? (bg: const Color(0xFF422006), border: const Color(0xFF78350F), text: const Color(0xFFFBBF24))
-          : (bg: const Color(0xFFFFFBEB), border: const Color(0xFFFDE68A), text: const Color(0xFFB45309)),
-      'Angekommen' => dark
-          ? (bg: const Color(0xFF042F2E), border: const Color(0xFF115E59), text: const Color(0xFF5EEAD4))
-          : (bg: const Color(0xFFF0FDFA), border: const Color(0xFF99F6E4), text: const Color(0xFF0F766E)),
-      'Rechnung gestellt' => dark
-          ? (bg: const Color(0xFF2E1065), border: const Color(0xFF5B21B6), text: const Color(0xFFC4B5FD))
-          : (bg: const Color(0xFFF5F3FF), border: const Color(0xFFDDD6FE), text: const Color(0xFF6D28D9)),
-      'Done' => dark
-          ? (bg: const Color(0xFF064E3B), border: const Color(0xFF065F46), text: const Color(0xFF6EE7B7))
-          : (bg: const Color(0xFFF0FDF4), border: const Color(0xFFBBF7D0), text: const Color(0xFF15803D)),
-      _ => dark
-          ? (bg: AppTheme.bgSubtleDark, border: AppTheme.borderDark, text: AppTheme.textMutedDark)
-          : (bg: const Color(0xFFF8FAFC), border: const Color(0xFFE2E8F0), text: const Color(0xFF64748B)),
+      'Bestellt' => (
+          bg: AppTheme.accentLightOf(context),
+          border: AppTheme.accentBorderOf(context),
+          text: AppTheme.accentTextOf(context),
+        ),
+      'Unterwegs' => (
+          bg: AppTheme.warningBgOf(context),
+          border: AppTheme.warningBorderOf(context),
+          text: AppTheme.warningTextOf(context),
+        ),
+      'Angekommen' => (
+          bg: AppTheme.successBgOf(context),
+          border: AppTheme.successBorderOf(context),
+          text: AppTheme.successTextOf(context),
+        ),
+      'Rechnung gestellt' => (
+          bg: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF2E1065)
+              : const Color(0xFFF5F3FF),
+          border: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF5B21B6)
+              : const Color(0xFFDDD6FE),
+          text: AppTheme.purple,
+        ),
+      'Done' => (
+          bg: AppTheme.successBgOf(context),
+          border: AppTheme.successBorderOf(context),
+          text: AppTheme.successTextOf(context),
+        ),
+      _ => (
+          bg: AppTheme.bgSubtleOf(context),
+          border: AppTheme.borderOf(context),
+          text: AppTheme.textMutedOf(context),
+        ),
     };
   }
 

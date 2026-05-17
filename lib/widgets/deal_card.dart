@@ -350,19 +350,23 @@ class DealCard extends StatelessWidget {
       'Bestellt' => (
           bg: AppTheme.accentLightOf(context),
           border: AppTheme.accentBorderOf(context),
-          text: dark ? const Color(0xFF93C5FD) : AppTheme.accentDark
+          text: AppTheme.accentTextOf(context),
         ),
       'Unterwegs' => (
           bg: AppTheme.warningBgOf(context),
           border: AppTheme.warningBorderOf(context),
           text: AppTheme.warningTextOf(context)
         ),
-      'Angekommen' => dark
-          ? (bg: const Color(0xFF042F2E), border: const Color(0xFF115E59), text: const Color(0xFF5EEAD4))
-          : (bg: const Color(0xFFF0FDFA), border: const Color(0xFF99F6E4), text: const Color(0xFF0F766E)),
-      'Rechnung gestellt' => dark
-          ? (bg: const Color(0xFF2E1065), border: const Color(0xFF5B21B6), text: const Color(0xFFC4B5FD))
-          : (bg: const Color(0xFFF5F3FF), border: const Color(0xFFDDD6FE), text: const Color(0xFF6D28D9)),
+      'Angekommen' => (
+          bg: AppTheme.successBgOf(context),
+          border: AppTheme.successBorderOf(context),
+          text: AppTheme.successTextOf(context),
+        ),
+      'Rechnung gestellt' => (
+          bg: dark ? const Color(0xFF2E1065) : const Color(0xFFF5F3FF),
+          border: dark ? const Color(0xFF5B21B6) : const Color(0xFFDDD6FE),
+          text: AppTheme.purple,
+        ),
       'Done' => (
           bg: AppTheme.successBgOf(context),
           border: AppTheme.successBorderOf(context),

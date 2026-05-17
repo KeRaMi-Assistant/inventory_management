@@ -819,7 +819,7 @@ class _AccountMenu extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: plan == BillingPlan.free
                       ? AppTheme.accent.withAlpha(30)
-                      : Colors.green.withAlpha(40),
+                      : AppTheme.success.withAlpha(40),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -829,7 +829,7 @@ class _AccountMenu extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: plan == BillingPlan.free
                         ? AppTheme.accent
-                        : Colors.green.shade800,
+                        : AppTheme.success,
                   ),
                 ),
               ),
@@ -893,10 +893,10 @@ class _AccountMenu extends StatelessWidget {
           child: Row(
             children: [
               const Icon(Icons.delete_forever_outlined,
-                  size: 16, color: Color(0xFFC0392B)),
+                  size: 16, color: AppTheme.danger),
               const SizedBox(width: 10),
               Text(l10n.accountMenuDeleteAccount,
-                  style: const TextStyle(color: Color(0xFFC0392B))),
+                  style: const TextStyle(color: AppTheme.danger)),
             ],
           ),
         ),
@@ -987,7 +987,7 @@ class _AccountMenu extends StatelessWidget {
                         ? () => Navigator.pop(ctx, true)
                         : null,
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFC0392B)),
+                        backgroundColor: AppTheme.danger),
                     child: Text(l10n.accountMenuDeleteAccount),
                   ),
                 ],
@@ -1001,7 +1001,7 @@ class _AccountMenu extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(error),
-                  backgroundColor: const Color(0xFFC0392B),
+                  backgroundColor: AppTheme.danger,
                   behavior: SnackBarBehavior.floating,
                 ),
               );
