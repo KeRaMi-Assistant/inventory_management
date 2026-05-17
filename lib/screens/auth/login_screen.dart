@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../app_theme.dart';
 import '../../l10n/app_localizations.dart';
-import '../../providers/active_workspace_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
 import '../../widgets/brand_logo.dart';
@@ -11,8 +10,6 @@ import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
 enum _Provider { google, apple }
-
-enum _LoginMode { personal, team }
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,33 +22,20 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  final _teamIdCtrl = TextEditingController();
   bool _busy = false;
   bool _obscure = true;
-  _LoginMode _mode = _LoginMode.personal;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
-    _teamIdCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _busy) return;
     setState(() => _busy = true);
-    final l10n = AppLocalizations.of(context);
     final auth = context.read<AuthProvider>();
-    final workspaces = context.read<ActiveWorkspaceProvider>();
-
-    String? teamId;
-    if (_mode == _LoginMode.team) {
-      teamId = _teamIdCtrl.text.trim();
-      // Pin the requested workspace before auth so the post-login hydrator
-      // jumps straight into the right team context.
-      await workspaces.presetActiveId(teamId);
-    }
 
     final error = await auth.signIn(
       email: _emailCtrl.text,
@@ -65,20 +49,10 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    if (teamId != null) {
-      final ok = await auth.isMemberOfWorkspace(teamId);
-      if (!mounted) return;
-      if (!ok) {
-        await auth.signOut();
-        if (!mounted) return;
-        setState(() => _busy = false);
-        _showSnack(l10n.loginTeamNotMember, isError: true);
-        return;
-      }
-    }
-
     setState(() => _busy = false);
     // On success: AuthGate listens to authState and swaps to MainScreen.
+    // Workspace-Auswahl passiert in der App, sobald Owner-Einladungen
+    // existieren — kein Team-ID-Eingabefeld mehr nötig.
   }
 
   Future<void> _socialSignIn(_Provider provider) async {
@@ -163,49 +137,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // ── Mode toggle ────────────────────────────────────
-                      SegmentedButton<_LoginMode>(
-                        segments: [
-                          ButtonSegment(
-                            value: _LoginMode.personal,
-                            label: Text(l10n.loginModePersonal),
-                            icon: const Icon(Icons.person_outline, size: 16),
-                          ),
-                          ButtonSegment(
-                            value: _LoginMode.team,
-                            label: Text(l10n.loginModeTeam),
-                            icon: const Icon(Icons.group_outlined, size: 16),
-                          ),
-                        ],
-                        selected: {_mode},
-                        onSelectionChanged: (s) =>
-                            setState(() => _mode = s.first),
-                        showSelectedIcon: false,
-                      ),
-                      const SizedBox(height: 16),
-                      if (_mode == _LoginMode.team) ...[
-                        TextFormField(
-                          controller: _teamIdCtrl,
-                          decoration: InputDecoration(
-                            labelText: l10n.loginTeamIdLabel,
-                            helperText: l10n.loginTeamIdHelp,
-                            prefixIcon:
-                                const Icon(Icons.group_outlined, size: 18),
-                          ),
-                          validator: (v) {
-                            final t = (v ?? '').trim();
-                            if (t.isEmpty) return l10n.loginTeamIdRequired;
-                            // Workspace IDs sind UUIDs (36 Zeichen mit Bindestrichen).
-                            final uuidPattern = RegExp(
-                                r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
-                            if (!uuidPattern.hasMatch(t)) {
-                              return l10n.loginTeamIdInvalid;
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                      ],
                       TextFormField(
                         controller: _emailCtrl,
                         keyboardType: TextInputType.emailAddress,

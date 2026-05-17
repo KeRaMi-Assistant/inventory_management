@@ -84,13 +84,6 @@
   "passwordRequired": "Passwort erforderlich",
 
   "loginSubtitle": "Mit deinem Konto anmelden",
-  "loginModePersonal": "Persönlich",
-  "loginModeTeam": "Team",
-  "loginTeamIdLabel": "Team-ID",
-  "loginTeamIdHelp": "Die Workspace-ID, die der Team-Owner geteilt hat.",
-  "loginTeamIdRequired": "Team-ID erforderlich",
-  "loginTeamIdInvalid": "Ungültige Team-ID (UUID erwartet)",
-  "loginTeamNotMember": "Du bist kein Mitglied dieses Teams.",
   "loginForgotPassword": "Passwort vergessen?",
   "loginSubmit": "Anmelden",
   "loginInProgress": "Anmelden …",

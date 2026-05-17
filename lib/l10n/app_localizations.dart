@@ -488,48 +488,6 @@ abstract class AppLocalizations {
   /// **'Mit deinem Konto anmelden'**
   String get loginSubtitle;
 
-  /// No description provided for @loginModePersonal.
-  ///
-  /// In de, this message translates to:
-  /// **'Persönlich'**
-  String get loginModePersonal;
-
-  /// No description provided for @loginModeTeam.
-  ///
-  /// In de, this message translates to:
-  /// **'Team'**
-  String get loginModeTeam;
-
-  /// No description provided for @loginTeamIdLabel.
-  ///
-  /// In de, this message translates to:
-  /// **'Team-ID'**
-  String get loginTeamIdLabel;
-
-  /// No description provided for @loginTeamIdHelp.
-  ///
-  /// In de, this message translates to:
-  /// **'Die Workspace-ID, die der Team-Owner geteilt hat.'**
-  String get loginTeamIdHelp;
-
-  /// No description provided for @loginTeamIdRequired.
-  ///
-  /// In de, this message translates to:
-  /// **'Team-ID erforderlich'**
-  String get loginTeamIdRequired;
-
-  /// No description provided for @loginTeamIdInvalid.
-  ///
-  /// In de, this message translates to:
-  /// **'Ungültige Team-ID (UUID erwartet)'**
-  String get loginTeamIdInvalid;
-
-  /// No description provided for @loginTeamNotMember.
-  ///
-  /// In de, this message translates to:
-  /// **'Du bist kein Mitglied dieses Teams.'**
-  String get loginTeamNotMember;
-
   /// No description provided for @loginForgotPassword.
   ///
   /// In de, this message translates to:

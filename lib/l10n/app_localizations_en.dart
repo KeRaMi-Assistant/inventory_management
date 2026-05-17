@@ -220,27 +220,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginSubtitle => 'Sign in with your account';
 
   @override
-  String get loginModePersonal => 'Personal';
-
-  @override
-  String get loginModeTeam => 'Team';
-
-  @override
-  String get loginTeamIdLabel => 'Team ID';
-
-  @override
-  String get loginTeamIdHelp => 'The workspace ID shared by your team owner.';
-
-  @override
-  String get loginTeamIdRequired => 'Team ID required';
-
-  @override
-  String get loginTeamIdInvalid => 'Invalid team ID (UUID expected)';
-
-  @override
-  String get loginTeamNotMember => 'You are not a member of this team.';
-
-  @override
   String get loginForgotPassword => 'Forgot password?';
 
   @override
