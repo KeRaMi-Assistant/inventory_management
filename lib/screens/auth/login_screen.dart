@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/active_workspace_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -108,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppTheme.bgAppOf(context),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -118,8 +119,9 @@ class _LoginScreenState extends State<LoginScreen> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                side: BorderSide(color: AppTheme.borderOf(context)),
               ),
+              color: AppTheme.bgSurfaceOf(context),
               child: Padding(
                 padding: const EdgeInsets.all(28),
                 child: Form(
@@ -129,22 +131,25 @@ class _LoginScreenState extends State<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Brand-Lockup: Mark + Wordmark, zentriert.
-                      const Center(
+                      // `onDark` orientiert sich am Theme, damit der Wordmark-
+                      // Slate auch im Dark-Mode lesbar bleibt.
+                      Center(
                         child: BrandLockup(
                           markSize: 52,
                           fontSize: 24,
                           withBackground: true,
-                          onDark: false,
+                          onDark: Theme.of(context).brightness ==
+                              Brightness.dark,
                         ),
                       ),
                       const SizedBox(height: 14),
                       Text(
                         l10n.loginBrandHeadline,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
+                          color: AppTheme.textPrimaryOf(context),
                           letterSpacing: -0.2,
                         ),
                       ),
@@ -152,8 +157,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         l10n.loginSubtitle,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 13, color: Color(0xFF64748B)),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textMutedOf(context),
+                        ),
                       ),
                       const SizedBox(height: 20),
                       // ── Mode toggle ────────────────────────────────────
@@ -270,19 +277,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          const Expanded(
-                              child: Divider(color: Color(0xFFE2E8F0))),
+                          Expanded(
+                              child: Divider(color: AppTheme.borderOf(context))),
                           Padding(
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
                               l10n.loginContinueWith,
-                              style: const TextStyle(
-                                  fontSize: 12, color: Color(0xFF64748B)),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textMutedOf(context),
+                              ),
                             ),
                           ),
-                          const Expanded(
-                              child: Divider(color: Color(0xFFE2E8F0))),
+                          Expanded(
+                              child: Divider(color: AppTheme.borderOf(context))),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -304,7 +313,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(l10n.loginNoAccount,
-                              style: const TextStyle(color: Color(0xFF64748B))),
+                              style: TextStyle(
+                                color: AppTheme.textMutedOf(context),
+                              )),
                           TextButton(
                             onPressed: _busy
                                 ? null

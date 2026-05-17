@@ -184,10 +184,10 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF8E1),
+                          color: AppTheme.warningBgOf(context),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFFFFE082),
+                            color: AppTheme.warningBorderOf(context),
                           ),
                         ),
                         child: const Row(

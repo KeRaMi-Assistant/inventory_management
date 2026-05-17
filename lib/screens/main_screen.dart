@@ -39,17 +39,21 @@ class _MainScreenState extends State<MainScreen> {
   MainTab _selectedIndex = MainTab.dashboard;
   String? _selectedTicket;
 
+  // Reihenfolge MUSS 1:1 zu MainTab.values passen — Index-Lookup über
+  // _navIcons[tab.index] / _navLabels[tab.index] greift sonst die falsche
+  // Zelle. Bug-Fix (2026-05-17): vorher waren Help & Settings vertauscht,
+  // dadurch landete der „Hilfe"-Sidebar-Tap im SettingsScreen.
   static const _navIcons = [
-    (Icons.dashboard_outlined, Icons.dashboard_rounded),
-    (Icons.list_alt_outlined, Icons.list_alt_rounded),
-    (Icons.confirmation_number_outlined, Icons.confirmation_number_rounded),
-    (Icons.mail_outline, Icons.mail_rounded),
-    (Icons.inventory_2_outlined, Icons.inventory_2_rounded),
-    (Icons.local_shipping_outlined, Icons.local_shipping),
-    (Icons.bar_chart_outlined, Icons.bar_chart_rounded),
-    (Icons.history_outlined, Icons.history_rounded),
-    (Icons.help_outline_rounded, Icons.help_rounded),
-    (Icons.settings_outlined, Icons.settings_rounded),
+    (Icons.dashboard_outlined, Icons.dashboard_rounded),       // dashboard
+    (Icons.list_alt_outlined, Icons.list_alt_rounded),         // deals
+    (Icons.confirmation_number_outlined, Icons.confirmation_number_rounded), // tickets
+    (Icons.mail_outline, Icons.mail_rounded),                  // inbox
+    (Icons.inventory_2_outlined, Icons.inventory_2_rounded),   // inventory
+    (Icons.local_shipping_outlined, Icons.local_shipping),     // suppliers
+    (Icons.bar_chart_outlined, Icons.bar_chart_rounded),       // stats
+    (Icons.history_outlined, Icons.history_rounded),           // activity
+    (Icons.settings_outlined, Icons.settings_rounded),         // settings
+    (Icons.help_outline_rounded, Icons.help_rounded),          // help
   ];
 
   List<String> _navLabels(AppLocalizations l10n) => [
@@ -61,8 +65,8 @@ class _MainScreenState extends State<MainScreen> {
         l10n.navSuppliers,
         l10n.navStatistics,
         l10n.navActivity,
-        l10n.navHelp,
         l10n.navSettings,
+        l10n.navHelp,
       ];
 
   Future<void> _export(BuildContext context, InventoryProvider provider) async {

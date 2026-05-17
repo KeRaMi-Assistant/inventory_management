@@ -234,7 +234,10 @@ class AppTheme {
       _buildDark(_palettes[palette]!);
 
   static ThemeData _buildLight(_PaletteConfig p) {
-    final baseText = GoogleFonts.interTextTheme();
+    // Inter-Schnitt auf Material3-Light-Defaults → dunkler Text.
+    final baseText = GoogleFonts.interTextTheme(
+      ThemeData(brightness: Brightness.light).textTheme,
+    );
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -244,6 +247,18 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: bgApp,
       textTheme: baseText.copyWith(
+        // Headlines + Titles bekommen explizit den primären Textton, damit
+        // Screens die nur `theme.textTheme.headlineSmall` etc. verwenden,
+        // automatisch theme-aware bleiben.
+        displayLarge: baseText.displayLarge?.copyWith(color: textPrimary),
+        displayMedium: baseText.displayMedium?.copyWith(color: textPrimary),
+        displaySmall: baseText.displaySmall?.copyWith(color: textPrimary),
+        headlineLarge: baseText.headlineLarge?.copyWith(color: textPrimary),
+        headlineMedium: baseText.headlineMedium?.copyWith(color: textPrimary),
+        headlineSmall: baseText.headlineSmall?.copyWith(color: textPrimary),
+        titleLarge: baseText.titleLarge?.copyWith(color: textPrimary),
+        titleMedium: baseText.titleMedium?.copyWith(color: textPrimary),
+        titleSmall: baseText.titleSmall?.copyWith(color: textPrimary),
         bodyLarge: baseText.bodyLarge?.copyWith(color: textSecondary, fontSize: 14),
         bodyMedium: baseText.bodyMedium?.copyWith(color: textSecondary, fontSize: 13),
         bodySmall: baseText.bodySmall?.copyWith(color: textMuted, fontSize: 12),
@@ -367,7 +382,15 @@ class AppTheme {
   }
 
   static ThemeData _buildDark(_PaletteConfig p) {
-    final baseText = GoogleFonts.interTextTheme();
+    // ROOT-FIX (2026-05-17): vorher `GoogleFonts.interTextTheme()` ohne
+    // Argument → liefert Material3-LIGHT-Defaults (dunkler Text). Im Dark-
+    // Mode kollabieren dadurch alle Headlines/Titles auf dunkles Grau auf
+    // dunklem Background — sichtbarstes Beispiel: Pricing-Screen-Headline
+    // war fast schwarz auf bgAppDark. Korrekt: Light- oder Dark-Material-
+    // Textstyles JE NACH brightness als Inter-Basis übergeben.
+    final baseText = GoogleFonts.interTextTheme(
+      ThemeData(brightness: Brightness.dark).textTheme,
+    );
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -377,6 +400,15 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: bgAppDark,
       textTheme: baseText.copyWith(
+        displayLarge: baseText.displayLarge?.copyWith(color: textPrimaryDark),
+        displayMedium: baseText.displayMedium?.copyWith(color: textPrimaryDark),
+        displaySmall: baseText.displaySmall?.copyWith(color: textPrimaryDark),
+        headlineLarge: baseText.headlineLarge?.copyWith(color: textPrimaryDark),
+        headlineMedium: baseText.headlineMedium?.copyWith(color: textPrimaryDark),
+        headlineSmall: baseText.headlineSmall?.copyWith(color: textPrimaryDark),
+        titleLarge: baseText.titleLarge?.copyWith(color: textPrimaryDark),
+        titleMedium: baseText.titleMedium?.copyWith(color: textPrimaryDark),
+        titleSmall: baseText.titleSmall?.copyWith(color: textPrimaryDark),
         bodyLarge: baseText.bodyLarge?.copyWith(color: textSecondaryDark, fontSize: 14),
         bodyMedium: baseText.bodyMedium?.copyWith(color: textSecondaryDark, fontSize: 13),
         bodySmall: baseText.bodySmall?.copyWith(color: textMutedDark, fontSize: 12),

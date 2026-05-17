@@ -208,7 +208,7 @@ class _BuyersTab extends StatelessWidget {
                             IconButton(
                               icon:
                                   const Icon(Icons.edit_outlined, size: 20),
-                              color: const Color(0xFF64748B),
+                              color: AppTheme.textMutedOf(context),
                               onPressed: () => showDialog(
                                 context: context,
                                 builder: (_) =>
@@ -341,12 +341,13 @@ class _ShopsTab extends StatelessWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.store_outlined,
-                                size: 52, color: Color(0xFFCBD5E1)),
+                            Icon(Icons.store_outlined,
+                                size: 52,
+                                color: AppTheme.textDisabledOf(context)),
                             const SizedBox(height: 12),
                             Text(l10n.shopsEmpty,
-                                style:
-                                    const TextStyle(color: Color(0xFF94A3B8))),
+                                style: TextStyle(
+                                    color: AppTheme.textMutedOf(context))),
                           ],
                         ),
                       )
@@ -801,7 +802,7 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
             final info = Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.refresh, color: Color(0xFF2563EB)),
+                Icon(Icons.refresh, color: AppTheme.accentTextOf(context)),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -814,8 +815,9 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
                       const SizedBox(height: 6),
                       Text(
                         l10n.settingsDemoReloadDescription,
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF64748B)),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textMutedOf(context)),
                       ),
                     ],
                   ),
@@ -959,8 +961,8 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
                 final info = Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.delete_sweep_outlined,
-                        color: Color(0xFFD97706)),
+                    Icon(Icons.delete_sweep_outlined,
+                        color: AppTheme.warningTextOf(context)),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -974,8 +976,9 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
                           const SizedBox(height: 6),
                           Text(
                             l10n.settingsDemoWipeDescription,
-                            style: const TextStyle(
-                                fontSize: 12, color: Color(0xFF64748B)),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textMutedOf(context)),
                           ),
                         ],
                       ),
@@ -1040,7 +1043,7 @@ class _LogoutCard extends StatelessWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD97706)),
+                backgroundColor: AppTheme.warning),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.accountMenuSignOut),
           ),
