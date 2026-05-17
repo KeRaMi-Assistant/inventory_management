@@ -1,10 +1,10 @@
 {
-  "ts": "2026-05-17T17:10:06Z",
+  "ts": "2026-05-17T18:10:25Z",
   "gh": {
-    "status": "expired"
+    "status": "ok"
   },
   "anthropic": {
-    "status": "unreachable"
+    "status": "ok"
   },
   "supabase": {
     "status": "ok"
