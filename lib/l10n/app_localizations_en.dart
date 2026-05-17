@@ -15,6 +15,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTagline => 'From parcel to payout — on autopilot.';
 
   @override
+  String get pricingTitle => 'Plans & Pricing';
+
+  @override
+  String get pricingHeadline => 'Pick the plan that fits you';
+
+  @override
+  String get pricingIntro =>
+      'Free stays free forever. Personal tiers for solo resellers, Enterprise for teams with inbox, multi-workspace and invites.';
+
+  @override
+  String get pricingCategoryPersonal => 'Personal';
+
+  @override
+  String get pricingCategoryPersonalHint =>
+      'Solo resellers · gross prices incl. 19% VAT';
+
+  @override
+  String get pricingCategoryEnterprise => 'Enterprise';
+
+  @override
+  String get pricingCategoryEnterpriseHint =>
+      'Teams · inbox · multi-workspace · net prices excl. VAT';
+
+  @override
+  String get pricingVatIncluded => 'VAT incl.';
+
+  @override
+  String get pricingVatExcluded => 'VAT excl.';
+
+  @override
+  String get pricingLegalFootnote =>
+      'Personal tiers include the statutory value-added tax. Enterprise tiers are listed net — VAT is added on the invoice (reverse-charge inside the EU with a valid VAT ID). Upgrading to a paid plan requires a complete billing address.';
+
+  @override
   String get appBrandSubtitle => 'Inventory · Shipments · Sales';
 
   @override

@@ -8,11 +8,15 @@ import '../models/pricing_plan.dart';
 import '../providers/billing_provider.dart';
 import 'billing_profile_screen.dart';
 
-/// Pricing-/Plan-Übersicht. Aktuell rein "Dummy" — keine Anbindung an
+/// Pricing-/Plan-Übersicht. Aktuell rein „Dummy" — keine Anbindung an
 /// Stripe/Paddle, sondern nur clientseitiger Plan-Switch via [BillingProvider].
 /// Bei Upgrade auf einen kostenpflichtigen Plan wird zuerst die
 /// Rechnungsadresse abgefragt, damit ab dem ersten Cent zahlende Kunden
 /// vollständige Stammdaten hinterlegt haben.
+///
+/// Layout: zwei Sektionen — „Privat" (B2C, brutto-Preise inkl. MwSt)
+/// und „Enterprise" (B2B, netto-Preise zzgl. MwSt). Jeder Tier zeigt
+/// den passenden VAT-Hinweis im Preis-Block.
 class PricingScreen extends StatefulWidget {
   const PricingScreen({super.key});
 
@@ -36,11 +40,15 @@ class _PricingScreenState extends State<PricingScreen> {
   @override
   Widget build(BuildContext context) {
     final billing = context.watch<BillingProvider>();
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+
+    final personalTiers = PricingPlan.forCategory(PricingCategory.personal);
+    final enterpriseTiers = PricingPlan.forCategory(PricingCategory.enterprise);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pläne & Preise'),
+        title: Text(l10n.pricingTitle),
       ),
       body: billing.isLoading && billing.profile == null
           ? const Center(child: CircularProgressIndicator())
@@ -50,14 +58,13 @@ class _PricingScreenState extends State<PricingScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 children: [
                   Text(
-                    'Wähle den Plan, der zu dir passt',
+                    l10n.pricingHeadline,
                     style: theme.textTheme.headlineSmall
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Free bleibt dauerhaft kostenlos. Upgrades schalten Quotas, '
-                    'Team-Plätze und Analyse-Features frei.',
+                    l10n.pricingIntro,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: AppTheme.textMutedOf(context),
                     ),
@@ -67,8 +74,16 @@ class _PricingScreenState extends State<PricingScreen> {
                     cycle: _cycle,
                     onChanged: (c) => setState(() => _cycle = c),
                   ),
-                  const SizedBox(height: 20),
-                  for (final plan in PricingPlan.all) ...[
+                  const SizedBox(height: 28),
+
+                  // ── Privat-Kategorie ────────────────────────────────
+                  _CategoryHeader(
+                    label: l10n.pricingCategoryPersonal,
+                    subtitle: l10n.pricingCategoryPersonalHint,
+                    icon: Icons.person_outline_rounded,
+                  ),
+                  const SizedBox(height: 12),
+                  for (final plan in personalTiers) ...[
                     _PlanCard(
                       plan: plan,
                       cycle: _cycle,
@@ -78,6 +93,27 @@ class _PricingScreenState extends State<PricingScreen> {
                     ),
                     const SizedBox(height: 16),
                   ],
+
+                  const SizedBox(height: 16),
+
+                  // ── Enterprise-Kategorie ────────────────────────────
+                  _CategoryHeader(
+                    label: l10n.pricingCategoryEnterprise,
+                    subtitle: l10n.pricingCategoryEnterpriseHint,
+                    icon: Icons.business_rounded,
+                  ),
+                  const SizedBox(height: 12),
+                  for (final plan in enterpriseTiers) ...[
+                    _PlanCard(
+                      plan: plan,
+                      cycle: _cycle,
+                      isCurrent: plan.plan == billing.currentPlan,
+                      busy: _activating,
+                      onSelect: () => _onSelect(plan),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   const SizedBox(height: 8),
                   const _LegalFootnote(),
                 ],
@@ -147,12 +183,12 @@ class _PricingScreenState extends State<PricingScreen> {
               onPressed: () => Navigator.pop(ctx, false),
               child: Text(l10n.actionCancel),
             ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(isDowngradeToFree ? 'Wechseln' : 'Plan aktivieren'),
-          ),
-        ],
-      );
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(isDowngradeToFree ? 'Wechseln' : 'Plan aktivieren'),
+            ),
+          ],
+        );
       },
     );
     if (ok != true || !mounted) return;
@@ -175,7 +211,56 @@ class _PricingScreenState extends State<PricingScreen> {
       if (mounted) setState(() => _activating = false);
     }
   }
+}
 
+class _CategoryHeader extends StatelessWidget {
+  final String label;
+  final String subtitle;
+  final IconData icon;
+  const _CategoryHeader({
+    required this.label,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppTheme.accentLightOf(context),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: AppTheme.accentTextOf(context)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textMutedOf(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _BillingCycleToggle extends StatelessWidget {
@@ -282,6 +367,7 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final accent = theme.colorScheme.primary;
     final price = cycle == BillingCycle.yearly
         ? plan.yearlyPriceEur
@@ -291,6 +377,23 @@ class _PlanCard extends StatelessWidget {
         : cycle == BillingCycle.yearly
             ? '${_fmtEur(price)} / Jahr'
             : '${_fmtEur(price)} / Monat';
+
+    // VAT-Hinweis je nach Kategorie. Free hat keinen Hinweis.
+    final vatHint = plan.isFree
+        ? null
+        : plan.vatIncluded
+            ? l10n.pricingVatIncluded   // „inkl. MwSt"
+            : l10n.pricingVatExcluded;  // „zzgl. MwSt"
+
+    // Brutto-Anzeige als Hilfsinformation für Enterprise-Tiers,
+    // damit der User direkt sieht, was effektiv auf der Rechnung steht.
+    final showGrossHint = !plan.isFree && !plan.vatIncluded;
+    final grossPrice = cycle == BillingCycle.yearly
+        ? plan.yearlyPriceGross
+        : plan.monthlyPriceGross;
+    final grossLabel = showGrossHint
+        ? '≈ ${_fmtEur(grossPrice)} brutto'
+        : null;
 
     return Container(
       decoration: BoxDecoration(
@@ -350,11 +453,39 @@ class _PlanCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            Text(
-              priceLabel,
-              style: theme.textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w700),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  priceLabel,
+                  style: theme.textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                if (vatHint != null) ...[
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      vatHint,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textMutedOf(context),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
+            if (grossLabel != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  grossLabel,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textMutedOf(context),
+                  ),
+                ),
+              ),
             if (cycle == BillingCycle.yearly && !plan.isFree)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
@@ -452,11 +583,9 @@ class _LegalFootnote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Text(
-      'Alle Preise verstehen sich zzgl. der gesetzlichen Mehrwertsteuer. '
-      'Der Wechsel auf einen kostenpflichtigen Plan erfordert eine '
-      'vollständige Rechnungsadresse. Diese kann unter „Rechnungsdaten" '
-      'jederzeit aktualisiert werden.',
+      l10n.pricingLegalFootnote,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: AppTheme.textMutedOf(context),
           ),

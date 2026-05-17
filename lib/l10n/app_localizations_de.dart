@@ -15,6 +15,40 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appTagline => 'Vom Wareneingang bis zum verkauften Stück.';
 
   @override
+  String get pricingTitle => 'Pläne & Preise';
+
+  @override
+  String get pricingHeadline => 'Wähle den Plan, der zu dir passt';
+
+  @override
+  String get pricingIntro =>
+      'Free bleibt dauerhaft kostenlos. Privat-Tarife für Solo-Reseller, Enterprise für Teams mit Postfach, Multi-Workspace und Einladungen.';
+
+  @override
+  String get pricingCategoryPersonal => 'Privat';
+
+  @override
+  String get pricingCategoryPersonalHint =>
+      'Solo-Reseller · Brutto-Preise inkl. 19% MwSt';
+
+  @override
+  String get pricingCategoryEnterprise => 'Enterprise';
+
+  @override
+  String get pricingCategoryEnterpriseHint =>
+      'Teams · Postfach · Multi-Workspace · Netto-Preise zzgl. MwSt';
+
+  @override
+  String get pricingVatIncluded => 'inkl. MwSt';
+
+  @override
+  String get pricingVatExcluded => 'zzgl. MwSt';
+
+  @override
+  String get pricingLegalFootnote =>
+      'Privat-Tarife verstehen sich inkl. der gesetzlichen Mehrwertsteuer. Enterprise-Tarife werden netto ausgezeichnet — Mehrwertsteuer kommt auf der Rechnung dazu (bei gültiger USt-IdNr. innerhalb der EU als Reverse-Charge). Der Wechsel auf einen kostenpflichtigen Plan erfordert eine vollständige Rechnungsadresse.';
+
+  @override
   String get appBrandSubtitle => 'Inventar · Sendungen · Verkäufe';
 
   @override

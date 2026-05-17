@@ -110,6 +110,66 @@ abstract class AppLocalizations {
   /// **'Vom Wareneingang bis zum verkauften Stück.'**
   String get appTagline;
 
+  /// AppBar-Titel auf dem Pricing-Screen.
+  ///
+  /// In de, this message translates to:
+  /// **'Pläne & Preise'**
+  String get pricingTitle;
+
+  /// Headline oben auf dem Pricing-Screen.
+  ///
+  /// In de, this message translates to:
+  /// **'Wähle den Plan, der zu dir passt'**
+  String get pricingHeadline;
+
+  /// Intro-Text unter der Pricing-Headline.
+  ///
+  /// In de, this message translates to:
+  /// **'Free bleibt dauerhaft kostenlos. Privat-Tarife für Solo-Reseller, Enterprise für Teams mit Postfach, Multi-Workspace und Einladungen.'**
+  String get pricingIntro;
+
+  /// Section-Header für Privat-Tarife (B2C, brutto).
+  ///
+  /// In de, this message translates to:
+  /// **'Privat'**
+  String get pricingCategoryPersonal;
+
+  /// Subtitle der Privat-Sektion.
+  ///
+  /// In de, this message translates to:
+  /// **'Solo-Reseller · Brutto-Preise inkl. 19% MwSt'**
+  String get pricingCategoryPersonalHint;
+
+  /// Section-Header für Enterprise-Tarife (B2B, netto).
+  ///
+  /// In de, this message translates to:
+  /// **'Enterprise'**
+  String get pricingCategoryEnterprise;
+
+  /// Subtitle der Enterprise-Sektion.
+  ///
+  /// In de, this message translates to:
+  /// **'Teams · Postfach · Multi-Workspace · Netto-Preise zzgl. MwSt'**
+  String get pricingCategoryEnterpriseHint;
+
+  /// Inline-Hinweis hinter Preis bei B2C-Tarifen.
+  ///
+  /// In de, this message translates to:
+  /// **'inkl. MwSt'**
+  String get pricingVatIncluded;
+
+  /// Inline-Hinweis hinter Preis bei B2B-Tarifen.
+  ///
+  /// In de, this message translates to:
+  /// **'zzgl. MwSt'**
+  String get pricingVatExcluded;
+
+  /// Legal-Footnote unter den Pricing-Cards.
+  ///
+  /// In de, this message translates to:
+  /// **'Privat-Tarife verstehen sich inkl. der gesetzlichen Mehrwertsteuer. Enterprise-Tarife werden netto ausgezeichnet — Mehrwertsteuer kommt auf der Rechnung dazu (bei gültiger USt-IdNr. innerhalb der EU als Reverse-Charge). Der Wechsel auf einen kostenpflichtigen Plan erfordert eine vollständige Rechnungsadresse.'**
+  String get pricingLegalFootnote;
+
   /// Kurz-Subtitle unter dem Wordmark — drei Säulen der App.
   ///
   /// In de, this message translates to:
