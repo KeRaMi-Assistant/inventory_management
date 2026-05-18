@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
@@ -69,7 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.registerTitle)),
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppTheme.bgAppOf(context),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -77,9 +78,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             constraints: const BoxConstraints(maxWidth: 420),
             child: Card(
               elevation: 0,
+              color: AppTheme.bgSurfaceOf(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                side: BorderSide(color: AppTheme.borderOf(context)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(28),
@@ -92,8 +94,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Text(
                         l10n.registerSubtitle,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 14, color: Color(0xFF64748B)),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textMutedOf(context),
+                        ),
                       ),
                       const SizedBox(height: 18),
                       TextFormField(

@@ -101,8 +101,92 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In de, this message translates to:
-  /// **'Lagerverwaltung'**
+  /// **'CanLogistics'**
   String get appTitle;
+
+  /// Brand-Tagline der App. Erscheint auf Splash, Login-Header, Onboarding-Welcome und in About.
+  ///
+  /// In de, this message translates to:
+  /// **'Vom Wareneingang bis zum verkauften Stück.'**
+  String get appTagline;
+
+  /// AppBar-Titel auf dem Pricing-Screen.
+  ///
+  /// In de, this message translates to:
+  /// **'Pläne & Preise'**
+  String get pricingTitle;
+
+  /// Headline oben auf dem Pricing-Screen.
+  ///
+  /// In de, this message translates to:
+  /// **'Wähle den Plan, der zu dir passt'**
+  String get pricingHeadline;
+
+  /// Intro-Text unter der Pricing-Headline.
+  ///
+  /// In de, this message translates to:
+  /// **'Free bleibt dauerhaft kostenlos. Privat-Tarife für Solo-Reseller, Enterprise für Teams mit Postfach, Multi-Workspace und Einladungen.'**
+  String get pricingIntro;
+
+  /// Section-Header für Privat-Tarife (B2C, brutto).
+  ///
+  /// In de, this message translates to:
+  /// **'Privat'**
+  String get pricingCategoryPersonal;
+
+  /// Subtitle der Privat-Sektion.
+  ///
+  /// In de, this message translates to:
+  /// **'Solo-Reseller · Brutto-Preise inkl. 19% MwSt'**
+  String get pricingCategoryPersonalHint;
+
+  /// Section-Header für Enterprise-Tarife (B2B, netto).
+  ///
+  /// In de, this message translates to:
+  /// **'Enterprise'**
+  String get pricingCategoryEnterprise;
+
+  /// Subtitle der Enterprise-Sektion.
+  ///
+  /// In de, this message translates to:
+  /// **'Teams · Postfach · Multi-Workspace · Netto-Preise zzgl. MwSt'**
+  String get pricingCategoryEnterpriseHint;
+
+  /// Inline-Hinweis hinter Preis bei B2C-Tarifen.
+  ///
+  /// In de, this message translates to:
+  /// **'inkl. MwSt'**
+  String get pricingVatIncluded;
+
+  /// Inline-Hinweis hinter Preis bei B2B-Tarifen.
+  ///
+  /// In de, this message translates to:
+  /// **'zzgl. MwSt'**
+  String get pricingVatExcluded;
+
+  /// Legal-Footnote unter den Pricing-Cards.
+  ///
+  /// In de, this message translates to:
+  /// **'Privat-Tarife verstehen sich inkl. der gesetzlichen Mehrwertsteuer. Enterprise-Tarife werden netto ausgezeichnet — Mehrwertsteuer kommt auf der Rechnung dazu (bei gültiger USt-IdNr. innerhalb der EU als Reverse-Charge). Der Wechsel auf einen kostenpflichtigen Plan erfordert eine vollständige Rechnungsadresse.'**
+  String get pricingLegalFootnote;
+
+  /// Kurz-Subtitle unter dem Wordmark — drei Säulen der App.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventar · Sendungen · Verkäufe'**
+  String get appBrandSubtitle;
+
+  /// Marken-Headline über dem Login-Formular.
+  ///
+  /// In de, this message translates to:
+  /// **'Willkommen zurück.'**
+  String get loginBrandHeadline;
+
+  /// Marken-Headline auf dem Onboarding-Welcome-Step.
+  ///
+  /// In de, this message translates to:
+  /// **'Schön, dass du da bist.'**
+  String get onboardingBrandHeadline;
 
   /// No description provided for @actionSave.
   ///
@@ -463,48 +547,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Mit deinem Konto anmelden'**
   String get loginSubtitle;
-
-  /// No description provided for @loginModePersonal.
-  ///
-  /// In de, this message translates to:
-  /// **'Persönlich'**
-  String get loginModePersonal;
-
-  /// No description provided for @loginModeTeam.
-  ///
-  /// In de, this message translates to:
-  /// **'Team'**
-  String get loginModeTeam;
-
-  /// No description provided for @loginTeamIdLabel.
-  ///
-  /// In de, this message translates to:
-  /// **'Team-ID'**
-  String get loginTeamIdLabel;
-
-  /// No description provided for @loginTeamIdHelp.
-  ///
-  /// In de, this message translates to:
-  /// **'Die Workspace-ID, die der Team-Owner geteilt hat.'**
-  String get loginTeamIdHelp;
-
-  /// No description provided for @loginTeamIdRequired.
-  ///
-  /// In de, this message translates to:
-  /// **'Team-ID erforderlich'**
-  String get loginTeamIdRequired;
-
-  /// No description provided for @loginTeamIdInvalid.
-  ///
-  /// In de, this message translates to:
-  /// **'Ungültige Team-ID (UUID erwartet)'**
-  String get loginTeamIdInvalid;
-
-  /// No description provided for @loginTeamNotMember.
-  ///
-  /// In de, this message translates to:
-  /// **'Du bist kein Mitglied dieses Teams.'**
-  String get loginTeamNotMember;
 
   /// No description provided for @loginForgotPassword.
   ///
@@ -5093,7 +5135,7 @@ abstract class AppLocalizations {
   /// No description provided for @publicProfileFooter.
   ///
   /// In de, this message translates to:
-  /// **'Erstellt mit InventoryOS'**
+  /// **'Erstellt mit CanLogistics'**
   String get publicProfileFooter;
 
   /// No description provided for @settingsDemoSection.
@@ -5177,7 +5219,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingStepWelcomeSubtitle.
   ///
   /// In de, this message translates to:
-  /// **'InventoryOS hilft dir, Bestellungen, Lager und Käufer im Blick zu behalten. Wir richten dich in 6 kurzen Schritten ein.'**
+  /// **'CanLogistics hält Wareneingang, Lager und Verkäufe in Sync. Wir richten dich in 6 kurzen Schritten ein.'**
   String get onboardingStepWelcomeSubtitle;
 
   /// No description provided for @onboardingStepWorkspaceTitle.

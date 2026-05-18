@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/supplier.dart';
 import '../providers/inventory_provider.dart';
@@ -28,7 +29,7 @@ class SuppliersScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFC0392B)),
+                backgroundColor: AppTheme.danger),
             child: Text(l10n.actionDelete),
           ),
         ],
@@ -127,20 +128,20 @@ class SuppliersScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side:
-                            const BorderSide(color: Color(0xFFE2E8F0)),
+                            BorderSide(color: AppTheme.borderOf(context)),
                       ),
                       child: ListTile(
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         leading: CircleAvatar(
                           backgroundColor: s.active
-                              ? const Color(0xFFE0F2FE)
-                              : const Color(0xFFF1F5F9),
+                              ? AppTheme.infoBgOf(context)
+                              : AppTheme.bgSubtleOf(context),
                           child: Icon(
                             Icons.local_shipping_outlined,
                             color: s.active
-                                ? const Color(0xFF0369A1)
-                                : const Color(0xFF94A3B8),
+                                ? AppTheme.infoTextOf(context)
+                                : AppTheme.textDisabledOf(context),
                           ),
                         ),
                         title: Text(
@@ -155,16 +156,16 @@ class SuppliersScreen extends StatelessWidget {
                                   style: const TextStyle(fontSize: 12)),
                             if (s.email != null)
                               Text(s.email!,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 12,
-                                      color: Color(0xFF64748B))),
+                                      color: AppTheme.textMutedOf(context))),
                             if (!s.active)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(l10n.suppliersInactive,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 11,
-                                        color: Color(0xFFC0392B),
+                                        color: AppTheme.dangerTextOf(context),
                                         fontWeight: FontWeight.w600)),
                               ),
                           ],
@@ -182,10 +183,10 @@ class SuppliersScreen extends StatelessWidget {
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                   Icons.delete_outline,
                                   size: 20,
-                                  color: Color(0xFFC0392B)),
+                                  color: AppTheme.dangerTextOf(context)),
                               tooltip: l10n.actionDelete,
                               onPressed: () =>
                                   _confirmDelete(context, provider, s),
@@ -209,8 +210,8 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.local_shipping_outlined,
-              size: 48, color: Color(0xFF94A3B8)),
+          Icon(Icons.local_shipping_outlined,
+              size: 48, color: AppTheme.textDisabledOf(context)),
           const SizedBox(height: 12),
           Text(
             l10n.suppliersEmpty,
@@ -219,7 +220,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             l10n.suppliersEmptyHint,
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+            style: TextStyle(color: AppTheme.textMutedOf(context), fontSize: 12),
           ),
         ],
       ),

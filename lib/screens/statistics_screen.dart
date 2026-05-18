@@ -56,29 +56,29 @@ class _StatisticsScreenState extends State<StatisticsScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.picture_as_pdf_outlined,
-                  color: Color(0xFFDC2626)),
+              leading: Icon(Icons.picture_as_pdf_outlined,
+                  color: AppTheme.dangerTextOf(context)),
               title: Text(l10n.statsExportPdfTitle),
               subtitle: Text(l10n.statsExportPdfDesc),
               onTap: () => Navigator.pop(context, 'pdf'),
             ),
             ListTile(
-              leading: const Icon(Icons.table_chart_outlined,
-                  color: Color(0xFF059669)),
+              leading: Icon(Icons.table_chart_outlined,
+                  color: AppTheme.successTextOf(context)),
               title: Text(l10n.statsExportXlsxTitle),
               subtitle: Text(l10n.statsExportXlsxDesc),
               onTap: () => Navigator.pop(context, 'xlsx'),
             ),
             ListTile(
-              leading: const Icon(Icons.description_outlined,
-                  color: Color(0xFF2563EB)),
+              leading: Icon(Icons.description_outlined,
+                  color: AppTheme.accentTextOf(context)),
               title: Text(l10n.statsExportCsvTitle),
               subtitle: Text(l10n.statsExportCsvDesc),
               onTap: () => Navigator.pop(context, 'csv'),
             ),
             ListTile(
               leading:
-                  const Icon(Icons.print_outlined, color: Color(0xFF6B7280)),
+                  Icon(Icons.print_outlined, color: AppTheme.textMutedOf(context)),
               title: Text(l10n.statsExportPrintTitle),
               onTap: () => Navigator.pop(context, 'print'),
             ),

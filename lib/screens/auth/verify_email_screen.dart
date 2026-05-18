@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 
@@ -25,7 +26,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       SnackBar(
         content: Text(error ?? AppLocalizations.of(context).verifyResend),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: error != null ? const Color(0xFFC0392B) : null,
+        backgroundColor: error != null ? AppTheme.danger : null,
         margin: const EdgeInsets.all(16),
       ),
     );
@@ -36,7 +37,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.verifyTitle)),
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppTheme.bgAppOf(context),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -44,9 +45,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             constraints: const BoxConstraints(maxWidth: 420),
             child: Card(
               elevation: 0,
+              color: AppTheme.bgSurfaceOf(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                side: BorderSide(color: AppTheme.borderOf(context)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(28),
@@ -54,23 +56,26 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(Icons.mark_email_unread_outlined,
-                        size: 56, color: Color(0xFF2563EB)),
+                    Icon(Icons.mark_email_unread_outlined,
+                        size: 56, color: AppTheme.accentTextOf(context)),
                     const SizedBox(height: 16),
                     Text(
                       l10n.verifySubtitle,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 14, color: Color(0xFF64748B)),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textMutedOf(context),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       widget.email,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A)),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimaryOf(context),
+                      ),
                     ),
                     const SizedBox(height: 20),
                     OutlinedButton.icon(

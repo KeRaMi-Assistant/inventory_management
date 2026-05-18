@@ -13,6 +13,7 @@ import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/csv_service.dart';
 import '../widgets/add_edit_deal_dialog.dart';
+import '../widgets/brand_logo.dart';
 import '../widgets/global_search_dialog.dart';
 import '../widgets/invites_bell.dart';
 import 'activity_screen.dart';
@@ -39,17 +40,21 @@ class _MainScreenState extends State<MainScreen> {
   MainTab _selectedIndex = MainTab.dashboard;
   String? _selectedTicket;
 
+  // Reihenfolge MUSS 1:1 zu MainTab.values passen — Index-Lookup über
+  // _navIcons[tab.index] / _navLabels[tab.index] greift sonst die falsche
+  // Zelle. Bug-Fix (2026-05-17): vorher waren Help & Settings vertauscht,
+  // dadurch landete der „Hilfe"-Sidebar-Tap im SettingsScreen.
   static const _navIcons = [
-    (Icons.dashboard_outlined, Icons.dashboard_rounded),
-    (Icons.list_alt_outlined, Icons.list_alt_rounded),
-    (Icons.confirmation_number_outlined, Icons.confirmation_number_rounded),
-    (Icons.mail_outline, Icons.mail_rounded),
-    (Icons.inventory_2_outlined, Icons.inventory_2_rounded),
-    (Icons.local_shipping_outlined, Icons.local_shipping),
-    (Icons.bar_chart_outlined, Icons.bar_chart_rounded),
-    (Icons.history_outlined, Icons.history_rounded),
-    (Icons.help_outline_rounded, Icons.help_rounded),
-    (Icons.settings_outlined, Icons.settings_rounded),
+    (Icons.dashboard_outlined, Icons.dashboard_rounded),       // dashboard
+    (Icons.list_alt_outlined, Icons.list_alt_rounded),         // deals
+    (Icons.confirmation_number_outlined, Icons.confirmation_number_rounded), // tickets
+    (Icons.mail_outline, Icons.mail_rounded),                  // inbox
+    (Icons.inventory_2_outlined, Icons.inventory_2_rounded),   // inventory
+    (Icons.local_shipping_outlined, Icons.local_shipping),     // suppliers
+    (Icons.bar_chart_outlined, Icons.bar_chart_rounded),       // stats
+    (Icons.history_outlined, Icons.history_rounded),           // activity
+    (Icons.settings_outlined, Icons.settings_rounded),         // settings
+    (Icons.help_outline_rounded, Icons.help_rounded),          // help
   ];
 
   List<String> _navLabels(AppLocalizations l10n) => [
@@ -61,8 +66,8 @@ class _MainScreenState extends State<MainScreen> {
         l10n.navSuppliers,
         l10n.navStatistics,
         l10n.navActivity,
-        l10n.navHelp,
         l10n.navSettings,
+        l10n.navHelp,
       ];
 
   Future<void> _export(BuildContext context, InventoryProvider provider) async {
@@ -435,7 +440,6 @@ class _Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final width = extended ? 220.0 : 64.0;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -444,25 +448,25 @@ class _Sidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Branding Header
+          // Branding Header: BrandMark + optional Wordmark.
+          // Sidebar-Hintergrund ist navBg (fix dunkel), darum onDark=true.
           SizedBox(
             height: 56,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(horizontal: extended ? 14 : 10),
               child: Row(
+                mainAxisAlignment: extended
+                    ? MainAxisAlignment.start
+                    : MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.inventory_2_rounded,
-                      color: Colors.white, size: 18),
+                  const BrandMark(size: 28, withBackground: true),
                   if (extended) ...[
                     const SizedBox(width: 10),
-                    Text(
-                      l10n.appTitle,
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.1,
-                      ),
+                    const BrandWordmark(
+                      fontSize: 16,
+                      onDark: true,
+                      canColor: Colors.white,
+                      logisticsColor: Color(0xCCFFFFFF),
                     ),
                   ],
                 ],
@@ -815,7 +819,7 @@ class _AccountMenu extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: plan == BillingPlan.free
                       ? AppTheme.accent.withAlpha(30)
-                      : Colors.green.withAlpha(40),
+                      : AppTheme.success.withAlpha(40),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -825,7 +829,7 @@ class _AccountMenu extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: plan == BillingPlan.free
                         ? AppTheme.accent
-                        : Colors.green.shade800,
+                        : AppTheme.success,
                   ),
                 ),
               ),
@@ -889,10 +893,10 @@ class _AccountMenu extends StatelessWidget {
           child: Row(
             children: [
               const Icon(Icons.delete_forever_outlined,
-                  size: 16, color: Color(0xFFC0392B)),
+                  size: 16, color: AppTheme.danger),
               const SizedBox(width: 10),
               Text(l10n.accountMenuDeleteAccount,
-                  style: const TextStyle(color: Color(0xFFC0392B))),
+                  style: const TextStyle(color: AppTheme.danger)),
             ],
           ),
         ),
@@ -983,7 +987,7 @@ class _AccountMenu extends StatelessWidget {
                         ? () => Navigator.pop(ctx, true)
                         : null,
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFC0392B)),
+                        backgroundColor: AppTheme.danger),
                     child: Text(l10n.accountMenuDeleteAccount),
                   ),
                 ],
@@ -997,7 +1001,7 @@ class _AccountMenu extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(error),
-                  backgroundColor: const Color(0xFFC0392B),
+                  backgroundColor: AppTheme.danger,
                   behavior: SnackBarBehavior.floating,
                 ),
               );

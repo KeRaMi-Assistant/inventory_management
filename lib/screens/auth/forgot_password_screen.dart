@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
@@ -36,7 +37,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         SnackBar(
           content: Text(error),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFC0392B),
+          backgroundColor: AppTheme.danger,
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -50,7 +51,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.forgotTitle)),
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppTheme.bgAppOf(context),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -58,9 +59,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             constraints: const BoxConstraints(maxWidth: 420),
             child: Card(
               elevation: 0,
+              color: AppTheme.bgSurfaceOf(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                side: BorderSide(color: AppTheme.borderOf(context)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(28),
@@ -82,7 +84,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             Text(
               l10n.forgotSubtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.textMutedOf(context),
+              ),
             ),
             const SizedBox(height: 18),
             TextFormField(
@@ -120,13 +125,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.mark_email_read_outlined,
-              size: 56, color: Color(0xFF059669)),
+          Icon(Icons.mark_email_read_outlined,
+              size: 56, color: AppTheme.successTextOf(context)),
           const SizedBox(height: 16),
           Text(
             l10n.forgotSent,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.textMutedOf(context),
+            ),
           ),
           const SizedBox(height: 18),
           ElevatedButton(

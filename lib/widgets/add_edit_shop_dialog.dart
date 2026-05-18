@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/shop.dart';
 import '../providers/inventory_provider.dart';
@@ -236,16 +237,16 @@ class _AmazonSuffixCountryChip extends StatelessWidget {
             padding:
                 const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF7ED),
+              color: AppTheme.warningBgOf(context),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: const Color(0xFFFED7AA)),
+              border: Border.all(color: AppTheme.warningBorderOf(context)),
             ),
             child: Text(
               '.$country',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFFD97706),
+                color: AppTheme.warningTextOf(context),
                 letterSpacing: 0.4,
               ),
             ),
@@ -253,8 +254,8 @@ class _AmazonSuffixCountryChip extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(name,
-                style: const TextStyle(
-                    fontSize: 13, color: Color(0xFF334155))),
+                style: TextStyle(
+                    fontSize: 13, color: AppTheme.textSecondaryOf(context))),
           ),
         ],
       ),

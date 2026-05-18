@@ -787,13 +787,13 @@ class _TicketCard extends StatelessWidget {
                 _badge(
                     ticket.buyer ??
                         AppLocalizations.of(context).ticketsNoBuyer,
-                    const Color(0xFF64748B)),
+                    AppTheme.textMuted),
                 _badge(
                     '${ticket.totalQuantity} · ${ticket.dealCount}',
-                    const Color(0xFF2563EB)),
+                    AppTheme.accent),
                 _badge(localizeDealStatus(context, ticket.worstStatus),
                     status),
-                _badge(ticket.arrivalSummary, const Color(0xFF0D9488)),
+                _badge(ticket.arrivalSummary, AppTheme.success),
               ],
             ),
             const SizedBox(height: 10),
@@ -808,7 +808,7 @@ class _TicketCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
-                      color: ticket.totalProfit >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                      color: ticket.totalProfit >= 0 ? AppTheme.success : AppTheme.danger,
                     ),
                   ),
                 ),
@@ -886,7 +886,7 @@ class _TicketDetail extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(ticket.buyer ?? l10n.ticketsNoBuyerAssigned,
-                  style: const TextStyle(color: Color(0xFF64748B))),
+                  style: TextStyle(color: AppTheme.textMutedOf(context))),
               const SizedBox(height: 16),
               Card(
                 child: SingleChildScrollView(
@@ -967,7 +967,7 @@ class _TicketDetail extends StatelessWidget {
                       if (ticket.items.isEmpty)
                         Text(l10n.dealCommentEmpty,
                             style:
-                                const TextStyle(color: Color(0xFF94A3B8)))
+                                TextStyle(color: AppTheme.textDisabledOf(context)))
                       else
                         ...ticket.items.map((item) => ListTile(
                               contentPadding: EdgeInsets.zero,
@@ -1005,11 +1005,11 @@ class _TicketDetail extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppTheme.accentLight,
+                  color: AppTheme.accentLightOf(context),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.edit_outlined,
-                    color: AppTheme.accent, size: 20),
+                    color: AppTheme.accentTextOf(context), size: 20),
               ),
               const SizedBox(width: 12),
               Text(AppLocalizations.of(context).ticketsEditTitle),
@@ -1213,10 +1213,10 @@ class _TrackingCell extends StatelessWidget {
 }
 
 Color _statusColor(String status) => switch (status) {
-      'Bestellt' => const Color(0xFF3B82F6),
-      'Unterwegs' => const Color(0xFFF59E0B),
-      'Angekommen' => const Color(0xFF0D9488),
-      'Rechnung gestellt' => const Color(0xFF8B5CF6),
-      'Done' => const Color(0xFF10B981),
-      _ => const Color(0xFF64748B),
+      'Bestellt' => AppTheme.info,
+      'Unterwegs' => AppTheme.warning,
+      'Angekommen' => AppTheme.success,
+      'Rechnung gestellt' => AppTheme.purple,
+      'Done' => AppTheme.success,
+      _ => AppTheme.textMuted,
     };

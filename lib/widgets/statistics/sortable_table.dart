@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../app_theme.dart';
 
 /// Spaltendefinition für [SortableTable]. [valueOf] liefert den Sortier-Wert.
 class SortableColumn<T> {
@@ -53,10 +54,10 @@ class _SortableTableState<T> extends State<SortableTable<T>> {
   @override
   Widget build(BuildContext context) {
     if (widget.rows.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
         child: Text('Keine Daten vorhanden.',
-            style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+            style: TextStyle(color: AppTheme.textMutedOf(context), fontSize: 13)),
       );
     }
 
@@ -83,20 +84,20 @@ class _SortableTableState<T> extends State<SortableTable<T>> {
             headingRowHeight: 38,
             dataRowMinHeight: 36,
             dataRowMaxHeight: 48,
-            headingTextStyle: const TextStyle(
+            headingTextStyle: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF6B7280),
+              color: AppTheme.textMutedOf(context),
               letterSpacing: 0.5,
             ),
-            dataTextStyle: const TextStyle(
+            dataTextStyle: TextStyle(
               fontSize: 13,
-              color: Color(0xFF374151),
+              color: AppTheme.textSecondaryOf(context),
             ),
             sortColumnIndex: _sortIdx,
             sortAscending: _asc,
             headingRowColor:
-                WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+                WidgetStateProperty.all(AppTheme.bgSubtleOf(context)),
             columns: [
               for (var i = 0; i < widget.columns.length; i++)
                 DataColumn(

@@ -9,7 +9,53 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Inventory Manager';
+  String get appTitle => 'CanLogistics';
+
+  @override
+  String get appTagline => 'From parcel to payout — on autopilot.';
+
+  @override
+  String get pricingTitle => 'Plans & Pricing';
+
+  @override
+  String get pricingHeadline => 'Pick the plan that fits you';
+
+  @override
+  String get pricingIntro =>
+      'Free stays free forever. Personal tiers for solo resellers, Enterprise for teams with inbox, multi-workspace and invites.';
+
+  @override
+  String get pricingCategoryPersonal => 'Personal';
+
+  @override
+  String get pricingCategoryPersonalHint =>
+      'Solo resellers · gross prices incl. 19% VAT';
+
+  @override
+  String get pricingCategoryEnterprise => 'Enterprise';
+
+  @override
+  String get pricingCategoryEnterpriseHint =>
+      'Teams · inbox · multi-workspace · net prices excl. VAT';
+
+  @override
+  String get pricingVatIncluded => 'VAT incl.';
+
+  @override
+  String get pricingVatExcluded => 'VAT excl.';
+
+  @override
+  String get pricingLegalFootnote =>
+      'Personal tiers include the statutory value-added tax. Enterprise tiers are listed net — VAT is added on the invoice (reverse-charge inside the EU with a valid VAT ID). Upgrading to a paid plan requires a complete billing address.';
+
+  @override
+  String get appBrandSubtitle => 'Inventory · Shipments · Sales';
+
+  @override
+  String get loginBrandHeadline => 'Welcome back.';
+
+  @override
+  String get onboardingBrandHeadline => 'Glad you\'re here.';
 
   @override
   String get actionSave => 'Save';
@@ -206,27 +252,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get loginSubtitle => 'Sign in with your account';
-
-  @override
-  String get loginModePersonal => 'Personal';
-
-  @override
-  String get loginModeTeam => 'Team';
-
-  @override
-  String get loginTeamIdLabel => 'Team ID';
-
-  @override
-  String get loginTeamIdHelp => 'The workspace ID shared by your team owner.';
-
-  @override
-  String get loginTeamIdRequired => 'Team ID required';
-
-  @override
-  String get loginTeamIdInvalid => 'Invalid team ID (UUID expected)';
-
-  @override
-  String get loginTeamNotMember => 'You are not a member of this team.';
 
   @override
   String get loginForgotPassword => 'Forgot password?';
@@ -2761,7 +2786,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get publicProfileFooter => 'Built with InventoryOS';
+  String get publicProfileFooter => 'Built with CanLogistics';
 
   @override
   String get settingsDemoSection => 'Demo / data';
@@ -2808,7 +2833,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingStepWelcomeSubtitle =>
-      'InventoryOS helps you keep track of orders, inventory, and buyers. Six quick steps and you\'re set up.';
+      'CanLogistics keeps incoming parcels, inventory and sales in sync. Six quick steps and you\'re set up.';
 
   @override
   String get onboardingStepWorkspaceTitle => 'Your workspace';

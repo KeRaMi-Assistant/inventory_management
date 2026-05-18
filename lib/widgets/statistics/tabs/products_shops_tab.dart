@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app_theme.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
 import '../product_drilldown_sheet.dart';
@@ -52,8 +53,8 @@ class ProductsShopsTab extends StatelessWidget {
                   money.format(p.profit),
                   style: TextStyle(
                     color: p.profit >= 0
-                        ? const Color(0xFF059669)
-                        : const Color(0xFFDC2626),
+                        ? AppTheme.success
+                        : AppTheme.danger,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -115,8 +116,8 @@ class ProductsShopsTab extends StatelessWidget {
                   money.format(s.profit),
                   style: TextStyle(
                     color: s.profit >= 0
-                        ? const Color(0xFF059669)
-                        : const Color(0xFFDC2626),
+                        ? AppTheme.success
+                        : AppTheme.danger,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

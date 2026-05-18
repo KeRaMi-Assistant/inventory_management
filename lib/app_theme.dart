@@ -155,8 +155,21 @@ class AppTheme {
   static Color accentBorderOf(BuildContext context) =>
       _dark(context) ? accentBorderDark : accentBorderLight;
 
-  // -- Semantic accent variant (purple — used for "Missing Invoice" KPI) --
+  // -- Semantic accent variant (purple — used for "Missing Invoice" KPI
+  //    and the "Rechnung gestellt"-Status-Pill auf Deal-Cards/-Tables) --
   static const Color purple = Color(0xFF8B5CF6);
+  static const Color purpleBg = Color(0xFFF5F3FF);       // Violet 50
+  static const Color purpleBgDark = Color(0xFF2E1065);   // Violet 950
+  static const Color purpleBorder = Color(0xFFDDD6FE);   // Violet 200
+  static const Color purpleBorderDark = Color(0xFF5B21B6); // Violet 700
+  static const Color purpleTextDark = Color(0xFFA78BFA);   // Violet 400
+
+  static Color purpleBgOf(BuildContext context) =>
+      _dark(context) ? purpleBgDark : purpleBg;
+  static Color purpleBorderOf(BuildContext context) =>
+      _dark(context) ? purpleBorderDark : purpleBorder;
+  static Color purpleTextOf(BuildContext context) =>
+      _dark(context) ? purpleTextDark : purple;
 
   // -- Semantic status colors --
   static const Color success = Color(0xFF059669);
@@ -234,7 +247,10 @@ class AppTheme {
       _buildDark(_palettes[palette]!);
 
   static ThemeData _buildLight(_PaletteConfig p) {
-    final baseText = GoogleFonts.interTextTheme();
+    // Inter-Schnitt auf Material3-Light-Defaults → dunkler Text.
+    final baseText = GoogleFonts.interTextTheme(
+      ThemeData(brightness: Brightness.light).textTheme,
+    );
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -244,6 +260,18 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: bgApp,
       textTheme: baseText.copyWith(
+        // Headlines + Titles bekommen explizit den primären Textton, damit
+        // Screens die nur `theme.textTheme.headlineSmall` etc. verwenden,
+        // automatisch theme-aware bleiben.
+        displayLarge: baseText.displayLarge?.copyWith(color: textPrimary),
+        displayMedium: baseText.displayMedium?.copyWith(color: textPrimary),
+        displaySmall: baseText.displaySmall?.copyWith(color: textPrimary),
+        headlineLarge: baseText.headlineLarge?.copyWith(color: textPrimary),
+        headlineMedium: baseText.headlineMedium?.copyWith(color: textPrimary),
+        headlineSmall: baseText.headlineSmall?.copyWith(color: textPrimary),
+        titleLarge: baseText.titleLarge?.copyWith(color: textPrimary),
+        titleMedium: baseText.titleMedium?.copyWith(color: textPrimary),
+        titleSmall: baseText.titleSmall?.copyWith(color: textPrimary),
         bodyLarge: baseText.bodyLarge?.copyWith(color: textSecondary, fontSize: 14),
         bodyMedium: baseText.bodyMedium?.copyWith(color: textSecondary, fontSize: 13),
         bodySmall: baseText.bodySmall?.copyWith(color: textMuted, fontSize: 12),
@@ -367,7 +395,15 @@ class AppTheme {
   }
 
   static ThemeData _buildDark(_PaletteConfig p) {
-    final baseText = GoogleFonts.interTextTheme();
+    // ROOT-FIX (2026-05-17): vorher `GoogleFonts.interTextTheme()` ohne
+    // Argument → liefert Material3-LIGHT-Defaults (dunkler Text). Im Dark-
+    // Mode kollabieren dadurch alle Headlines/Titles auf dunkles Grau auf
+    // dunklem Background — sichtbarstes Beispiel: Pricing-Screen-Headline
+    // war fast schwarz auf bgAppDark. Korrekt: Light- oder Dark-Material-
+    // Textstyles JE NACH brightness als Inter-Basis übergeben.
+    final baseText = GoogleFonts.interTextTheme(
+      ThemeData(brightness: Brightness.dark).textTheme,
+    );
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -377,6 +413,15 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: bgAppDark,
       textTheme: baseText.copyWith(
+        displayLarge: baseText.displayLarge?.copyWith(color: textPrimaryDark),
+        displayMedium: baseText.displayMedium?.copyWith(color: textPrimaryDark),
+        displaySmall: baseText.displaySmall?.copyWith(color: textPrimaryDark),
+        headlineLarge: baseText.headlineLarge?.copyWith(color: textPrimaryDark),
+        headlineMedium: baseText.headlineMedium?.copyWith(color: textPrimaryDark),
+        headlineSmall: baseText.headlineSmall?.copyWith(color: textPrimaryDark),
+        titleLarge: baseText.titleLarge?.copyWith(color: textPrimaryDark),
+        titleMedium: baseText.titleMedium?.copyWith(color: textPrimaryDark),
+        titleSmall: baseText.titleSmall?.copyWith(color: textPrimaryDark),
         bodyLarge: baseText.bodyLarge?.copyWith(color: textSecondaryDark, fontSize: 14),
         bodyMedium: baseText.bodyMedium?.copyWith(color: textSecondaryDark, fontSize: 13),
         bodySmall: baseText.bodySmall?.copyWith(color: textMutedDark, fontSize: 12),

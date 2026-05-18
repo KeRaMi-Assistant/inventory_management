@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/buyer.dart';
 import '../providers/inventory_provider.dart';
@@ -309,7 +310,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                         const SizedBox(width: 4),
                         IconButton(
                           icon: const Icon(Icons.remove_circle_outline,
-                              color: Colors.red, size: 20),
+                              color: AppTheme.danger, size: 20),
                           onPressed: () => _removeServerId(i),
                           visualDensity: VisualDensity.compact,
                           tooltip: l10n.buyerRemoveTooltip,

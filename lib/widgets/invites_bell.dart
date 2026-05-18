@@ -80,7 +80,7 @@ class _InvitesDialog extends StatelessWidget {
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final dateFmt = DateFormat.yMd(localeTag);
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.bgSurfaceOf(context),
       shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(

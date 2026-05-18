@@ -40,42 +40,34 @@ class InventorySuppliersTab extends StatelessWidget {
                   label: l10n.statsStockValueEk,
                   value: money.format(h.stockValueEk),
                   icon: Icons.inventory_2_outlined,
-                  color: const Color(0xFF2563EB),
+                  color: AppTheme.accent,
                 ),
                 _HealthCard(
                   label: l10n.statsLowStock,
                   value: '${h.lowStock}',
                   icon: Icons.warning_amber_outlined,
-                  color: h.lowStock > 0
-                      ? const Color(0xFFD97706)
-                      : const Color(0xFF6B7280),
+                  color: h.lowStock > 0 ? AppTheme.warning : AppTheme.textMuted,
                   hint: '< ${stats.lowStockThreshold}',
                 ),
                 _HealthCard(
                   label: l10n.statsExpiringSoon,
                   value: '${h.expiringSoon}',
                   icon: Icons.schedule_outlined,
-                  color: h.expiringSoon > 0
-                      ? const Color(0xFFD97706)
-                      : const Color(0xFF6B7280),
+                  color: h.expiringSoon > 0 ? AppTheme.warning : AppTheme.textMuted,
                   hint: l10n.statsExpiringSoonHint,
                 ),
                 _HealthCard(
                   label: l10n.statsExpired,
                   value: '${h.expired}',
                   icon: Icons.error_outline,
-                  color: h.expired > 0
-                      ? const Color(0xFFDC2626)
-                      : const Color(0xFF6B7280),
+                  color: h.expired > 0 ? AppTheme.danger : AppTheme.textMuted,
                   pulsing: h.expired > 0,
                 ),
                 _HealthCard(
                   label: l10n.statsDeadStock,
                   value: '${h.deadStock}',
                   icon: Icons.do_not_disturb_alt,
-                  color: h.deadStock > 0
-                      ? const Color(0xFFDC2626)
-                      : const Color(0xFF6B7280),
+                  color: h.deadStock > 0 ? AppTheme.danger : AppTheme.textMuted,
                   hint: l10n.statsDeadStockHint,
                 ),
               ];
@@ -111,9 +103,7 @@ class InventorySuppliersTab extends StatelessWidget {
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: s.active
-                            ? const Color(0xFF059669)
-                            : const Color(0xFFCBD5E1),
+                        color: s.active ? AppTheme.success : AppTheme.textMuted,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -149,9 +139,7 @@ class InventorySuppliersTab extends StatelessWidget {
                 builder: (s) => Text(
                   money.format(s.profit),
                   style: TextStyle(
-                    color: s.profit >= 0
-                        ? const Color(0xFF059669)
-                        : const Color(0xFFDC2626),
+                    color: s.profit >= 0 ? AppTheme.success : AppTheme.danger,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
