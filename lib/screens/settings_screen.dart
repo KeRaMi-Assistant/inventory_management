@@ -1781,8 +1781,8 @@ class _TeamTabState extends State<_TeamTab> {
       switch (role) {
         WorkspaceRole.owner => l10n.teamRoleOwner,
         WorkspaceRole.admin => l10n.teamRoleAdmin,
-        WorkspaceRole.member => l10n.teamRoleMember,
-        WorkspaceRole.viewer => l10n.teamRoleViewer,
+        WorkspaceRole.editor => l10n.teamRoleMember,
+        WorkspaceRole.observer => l10n.teamRoleViewer,
       };
 
   Future<void> _invite() async {
@@ -1790,7 +1790,7 @@ class _TeamTabState extends State<_TeamTab> {
     if (ws == null) return;
     final l10n = AppLocalizations.of(context);
     final emailCtrl = TextEditingController();
-    WorkspaceRole role = WorkspaceRole.member;
+    WorkspaceRole role = WorkspaceRole.editor;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -1819,14 +1819,14 @@ class _TeamTabState extends State<_TeamTab> {
                       value: WorkspaceRole.admin,
                       child: Text(l10n.teamRoleAdmin)),
                   DropdownMenuItem(
-                      value: WorkspaceRole.member,
+                      value: WorkspaceRole.editor,
                       child: Text(l10n.teamRoleMember)),
                   DropdownMenuItem(
-                      value: WorkspaceRole.viewer,
+                      value: WorkspaceRole.observer,
                       child: Text(l10n.teamRoleViewer)),
                 ],
                 onChanged: (v) =>
-                    setS(() => role = v ?? WorkspaceRole.member),
+                    setS(() => role = v ?? WorkspaceRole.editor),
               ),
             ],
           ),

@@ -167,8 +167,8 @@ class _InviteRowState extends State<_InviteRow> {
   String _roleLabel(AppLocalizations l10n, WorkspaceRole r) => switch (r) {
         WorkspaceRole.owner => l10n.teamRoleOwner,
         WorkspaceRole.admin => l10n.teamRoleAdmin,
-        WorkspaceRole.member => l10n.teamRoleMember,
-        WorkspaceRole.viewer => l10n.teamRoleViewer,
+        WorkspaceRole.editor => l10n.teamRoleMember,
+        WorkspaceRole.observer => l10n.teamRoleViewer,
       };
 
   Future<void> _accept() async {

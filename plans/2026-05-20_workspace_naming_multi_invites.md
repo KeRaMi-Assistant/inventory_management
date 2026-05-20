@@ -1162,7 +1162,7 @@ Neue Szenarien:
   - depends_on: [T3]
   - Gate: `supabase db reset` läuft grün.
 
-- [ ] **T5 — `WorkspaceRole`-Enum-Rename + `isPersonal`-Field** (Blocker 7)
+- [x] **T5 — `WorkspaceRole`-Enum-Rename + `isPersonal`-Field** (Blocker 7)
   - Subagent: `flutter-coder`
   - Files: `lib/models/workspace.dart`, `lib/widgets/invites_bell.dart`, `lib/screens/settings_screen.dart` (alle `WorkspaceRole.member|viewer`-Sites)
   - depends_on: [T0]  *(T0 reicht — Enum-Rename ist DB-unabhängig, aber wir wollen die Pre-T0-DB nicht mit alten Plan-Werten zurücklassen.)*
