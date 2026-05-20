@@ -28,7 +28,7 @@ Pricing-, Positioning- und Sales-Bezogene rund um CanLogistics.
 |---|---|---|---|---|
 | **Privat** (brutto inkl. 19 % MwSt) | Free | 0 € | 0 € | – |
 | | Solo | 4,99 €/Mo | 0,92 € | 82 % |
-| | **Solo Pro** | **14,99 €/Mo** | 2,02 € | 87 % |
+| | **Solo Pro** | **14,99 €/Mo** | 1,51 € | **90 %** |
 | **Enterprise** (netto excl. MwSt) | Team | 19,99 €/Mo | 2,53 € | 87 % |
 | | Business | 49,99 €/Mo | 5,95 € | 88 % |
 | | Enterprise | 99,99 €/Mo | 12,45 € | 88 % |
@@ -36,6 +36,12 @@ Pricing-, Positioning- und Sales-Bezogene rund um CanLogistics.
 UI-Layout: **Tabs** (links Privat, rechts Enterprise) statt
 übereinandergestapelter Sektionen. Yearly-Toggle zeigt den
 effektiven Monatspreis prominent, Jahres-Total klein ausgegraut.
+
+**Feature-Disziplin (2026-05-20):** Pricing-Highlights listen nur
+Features die heute im Code existieren oder explizit als „(geplant)"
+markiert sind. Keine spekulativen Versprechen wie AI-Kategorisierung,
+Premium-Carrier-Adapter, Custom-Branding, SSO, White-Label — alle
+entfernt oder als „(geplant)" gekennzeichnet.
 
 → Komplette Quotas + Feature-Matrix siehe [PRICING.md](PRICING.md).
 

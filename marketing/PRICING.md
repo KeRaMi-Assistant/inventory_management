@@ -10,11 +10,20 @@
 > **Enterprise**). Privat = B2C, brutto inkl. 19 % VAT. Enterprise = B2B,
 > netto excl. VAT. Je Kategorie 3 Tiers.
 >
+> **Feature-Disziplin (User-Anweisung 2026-05-20):**
+> Pricing-Highlights listen **nur Features, die heute im Code existieren**
+> oder explizit als „(geplant)" gekennzeichnet sind. Keine spekulativen
+> Versprechen wie AI-Kategorisierung, Premium-Carrier-Adapter (DHL Express
+> sind nur Sub-Codes im normalen DHL-Adapter, UPS World existiert gar
+> nicht), Custom-Branding, Steuerberater-Sharing, Marketplace-Sync, SSO,
+> White-Label, API/Webhooks — alle entfernt oder als „(geplant)" markiert.
+>
 > **Change-Log 2026-05-20:**
-> - Solo (€4,99) Features hochgezogen: 5 000 Produkte, 5 Bilder, 10 GB.
-> - „Solo Plus" → **Solo Pro** umbenannt, Preis €9,99 → **€14,99** brutto
->   mit deutlich mehr Features (25 000 Produkte, 15 Bilder, 50 GB, DATEV,
->   AI-Kategorisierung, Cashflow-Forecast).
+> - Solo (€4,99): 5 000 Produkte, 5 Bilder, 10 GB, volle Statistik.
+> - „Solo Plus" → **Solo Pro** umbenannt, Preis €9,99 → **€14,99** brutto.
+>   Tier-Differenzierung: 5× mehr Produkte, 3× mehr Bilder, 5× mehr
+>   Storage, Public-Profile, Activity-Log, Priority-Support — keine
+>   erfundenen AI-/Premium-Carrier-Features mehr.
 > - Yearly-Anzeige im UI dreht sich um: prominenter effektiver Monats-
 >   preis, Jahres-Total klein ausgegraut darunter.
 
@@ -46,7 +55,7 @@ Worst-Case-Kosten aus [COSTS.md §5](COSTS.md#5-worst-case-variable-kosten-pro-u
 |---|---|---|---|---|
 | **Free** | 0 € | 0 € | 0 € | – (subventioniert) |
 | **Solo** | **4,99 €/Mo** | 4,19 € | 0,92 € | **82 %** (~5× Kosten) |
-| **Solo Pro** | **14,99 €/Mo** | 12,60 € | 2,02 € | **87 %** (~7× Kosten) |
+| **Solo Pro** | **14,99 €/Mo** | 12,60 € | 1,51 € | **90 %** (~10× Kosten) |
 
 > **Anmerkung 1 — bewusste Preis-Spreizung:** 0 € → 4,99 € → 14,99 €
 > ist ein klarer 3×-Sprung von Solo zu Solo Pro. Vorher waren alle drei
@@ -142,18 +151,19 @@ automatisierter Mail-Import — den gibt es erst ab Enterprise.
 | Postfach (IMAP) | ❌ |
 | Workspaces | 1 |
 | Team-Mitglieder | 1 |
-| Statistik | Volle Tiefe + Cashflow-Forecast |
-| Export | + DATEV + Steuerberater-Sharing |
-| Activity-Log & Audit-Trail | ✅ |
-| Custom-Branding | ✅ für PDFs + Public-Profile |
-| Premium-Carrier-Adapter | ✅ (DHL Express, UPS World) |
-| **AI-gestützte Produkt-Kategorisierung** | ✅ |
+| Statistik | Volle Tiefe (Drilldowns, Heatmaps, Trends, Cashflow) |
+| Monatliches Profit-Ziel mit Forecast-Ring | ✅ |
+| Export | CSV + PDF + Excel |
+| DATEV-Export | (geplant) |
+| Eigenes Verkaufsprofil (Public-Profile) | ✅ |
+| Activity-Log | ✅ |
 | Support | Priority-E-Mail (24 h) |
 
 **Zweck:** Power-Solo-User mit Vollzeit-Reseller-Volumen. Substantielle
-Differenzierung zu Solo: 5× Produkt-Limit, 3× Bilder, 5× Storage,
-DATEV + Cashflow-Forecast + AI-Features. Marketing-Anker: „für alle die
-Reseller ernsthaft als Beruf machen, aber keinen Mitarbeiter brauchen."
+Differenzierung zu Solo: **5× Produkt-Limit, 3× Bilder, 5× Storage**,
+plus Public-Profile + Activity-Log + Priority-Support. Marketing-Anker:
+„für alle die Reseller ernsthaft als Beruf machen, aber keinen
+Mitarbeiter brauchen."
 
 ### 3.4 Enterprise-Team — €19,99/Mo netto
 
@@ -219,6 +229,9 @@ Reseller-Firmen, Wholesale, Multi-Marken-Setups.
 
 ## 4 · Tier-Vergleich (Komplettes Grid)
 
+Nur **echte Features** — Sachen die als „(geplant)" gelistet sind, sind
+ehrlich als noch nicht implementiert ausgewiesen.
+
 | Feature | Free | Solo | **Solo Pro** | Team | Business | Enterprise |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
 | Produkte | 50 | 5 000 | 25 000 | 25 000 | 100 000 | 300 000 |
@@ -227,23 +240,26 @@ Reseller-Firmen, Wholesale, Multi-Marken-Setups.
 | Storage | 50 MB | 10 GB | 50 GB | 50 GB | 100 GB | 250 GB |
 | Workspaces | 1 | 1 | 1 | **3** | **5** | **10** |
 | Team-Mitglieder | 1 | 1 | 1 | **5** | **15** | **50** |
-| **Postfach IMAP** | ❌ | ❌ | ❌ | ✅ 1 | ✅ 5 | ✅ 15 |
+| **Postfach IMAP** | ❌ | ❌ | ❌ | ✅ 1 / 30 d | ✅ 5 / 60 d | ✅ 15 / 90 d |
 | **Mail-Auto-Tracking** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| **Workspace-Einladung** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| API-Zugriff | ❌ | ❌ | ❌ | Read | Read+Write | + Bulk |
-| Webhooks | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| AI-Kategorisierung | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Cashflow-Forecast | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Premium-Carrier (UPS/DHL Express) | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Custom-Branding | ❌ | ❌ | ✅ PDFs | ❌ | ✅ Full | ✅ + White-Label |
-| SSO (SAML/OIDC) | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Activity-Log | basic | basic | full + Audit | full | full | full + Audit |
-| DATEV-Export | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Support | Community | 48 h | 24 h Priority | 24 h | 12 h SLA | 1 h SLA + AM |
+| **Workspace-Einladungen** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Statistik (Drilldowns, Heatmaps, Cashflow) | übersicht | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Profit-Ziel + Forecast-Ring | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Barcode-Scanner | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Eigene Carrier-API-Keys | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| CSV + PDF + Excel-Export | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Push-Notifications | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Public-Profile (Verkaufsprofil) | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Activity-Log | ❌ | ❌ | ✅ | ✅ Team | ✅ Team | ✅ Team |
+| DATEV-Export | ❌ | ❌ | (geplant) | (geplant) | (geplant) | (geplant) |
+| API + Webhooks | ❌ | ❌ | ❌ | ❌ | (geplant) | (geplant) |
+| SSO + White-Label | ❌ | ❌ | ❌ | ❌ | ❌ | (geplant) |
+| Support | Community | 48 h | 24 h Priority | 24 h | 12 h SLA | dedizierter Kontakt |
+| Uptime-SLA-Versprechen | – | – | – | – | – | 99,9 % |
 | **Preis brutto** | **0 €** | **4,99 €** | **14,99 €** | **23,79 €** | **59,49 €** | **118,99 €** |
 | **Preis netto** | 0 € | 4,19 € | 12,60 € | **19,99 €** | **49,99 €** | **99,99 €** |
-| **Worst-Case-Kosten** | 0 € | 0,92 € | 2,02 € | 2,53 € | 5,95 € | 11,65 € |
-| **Marge Worst-Case** | – | 82 % | 87 % | 87 % | 88 % | 88 % |
+| **Worst-Case-Kosten** | 0 € | 0,92 € | 1,51 € | 2,53 € | 5,95 € | 11,65 € |
+| **Marge Worst-Case** | – | 82 % | 90 % | 87 % | 88 % | 88 % |
 
 ## 5 · Detaillierte Worst-Case-Berechnung pro Tier
 
@@ -278,16 +294,16 @@ Posten | Berechnung | Kosten/Mo
 DB-Rows | 25 000 Produkte × 2 KB + 5 000 Deals × 2 KB × 12 | 170 MB → anteilig 0,02 €
 File-Storage | 50 GB | bei mehreren User-Vollnutzungen Pool-Druck, ~0,40 €
 Egress | 50 GB × ⅓ + UI 8 GB | im Pool, anteilig ~0,10 €
-Edge-Functions | ~1 200 Tracking-Polls + 3 000 Frontend-Calls + ggf. AI-API-Calls (~500 × 0,001 €) | 0 € + AI ~0,50 €
+Edge-Functions | ~1 200 Tracking-Polls + 3 000 Frontend-Calls | 0 € (im Pool)
 Realtime | 10 000 Messages | 0 €
-Backend-Subtotal | | **~1,55 €**
+Backend-Subtotal | | **~1,05 €**
 Stripe-Fee (€14,99 × 1,4 % + 0,25 €) | | **0,46 €**
-**Total effektiv** | | **~2,02 €**
+**Total effektiv** | | **~1,51 €** (90 % Marge, ~10× Kosten)
 
-> AI-Kosten: Solo Pro Worst-Case nimmt ~500 AI-Kategorisierungen/Monat
-> an (1× pro neuem Produkt + 1× pro Re-Klassifizierung). Bei
-> GPT-4o-mini ≈ 0,001 € pro Call. Falls AI-Feature später optional/
-> opt-in wird, fällt der Posten weg.
+> Keine AI-Kosten — AI-Kategorisierung wurde aus dem Tier entfernt
+> (war erfunden und nicht implementiert). Solo Pro differenziert sich
+> jetzt durch echte Quotas: 5× Produkte, 3× Bilder, 5× Storage,
+> Public-Profile, Activity-Log, Priority-Support.
 
 ### 5.4 Team (€19,99 netto · Worst-Case mit 5 Team-Mitgliedern)
 
@@ -343,7 +359,7 @@ Bei 20 % der Limits liegen die echten Median-Kosten:
 |---|---|---|---|
 | Free | 0 € | 0 € | – |
 | Solo | 0,92 € | 0,18 € | 96 % |
-| Solo Pro | 2,02 € | 0,40 € | 97 % |
+| Solo Pro | 1,51 € | 0,30 € | 98 % |
 | Team | 2,53 € | 0,51 € | 97 % |
 | Business | 5,95 € | 1,19 € | 98 % |
 | Enterprise | 12,45 € | 2,49 € | 98 % |
@@ -390,8 +406,8 @@ Pro Tier 2 Stripe-Produkte (Monthly + Yearly), in Stripe-Dashboard:
 > „Du bist Reseller? Probier Free aus. Wenn dir die App zusagt, mach
 > Solo für €4,99/Monat — 5 000 Produkte, volle Statistik, alles drin
 > was du als Nebenerwerb brauchst. **Solo Pro für €14,99/Monat** wenn
-> du Reseller hauptberuflich machst — 25 000 Produkte, DATEV, AI-
-> Kategorisierung, Cashflow-Forecast."
+> du Reseller hauptberuflich machst — 25 000 Produkte, 50 GB Storage,
+> Public-Verkaufsprofil, Activity-Log und Priority-Support."
 
 **Enterprise-Funnel:**
 > „Du verkaufst über mehrere Marken oder im Team? Dann brauchst du

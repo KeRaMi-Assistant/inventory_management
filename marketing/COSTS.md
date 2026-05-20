@@ -117,16 +117,22 @@ Pro abgewickelte Subscription-Charge:
 hat ~6 % Stripe-Cut, Enterprise nur ~1,7 %. Marge-Kalkulation in
 [PRICING.md](PRICING.md) zieht das ab.
 
-### 3.4 Zukünftige Kosten (geplant, teils ab Solo Pro aktiv)
+### 3.4 Zukünftige Kosten (geplant, noch nicht angefallen)
 
-| Posten | Anbieter | Geschätzter Preis | Wann ungefähr |
+Alle Posten unten sind **bewusst nicht im aktuellen Pricing versprochen**.
+Sie tauchen entweder als „(geplant)" in der Feature-Matrix auf
+([PRICING.md §4](PRICING.md)) oder sind komplett nicht erwähnt, bis sie
+implementiert sind.
+
+| Posten | Anbieter | Geschätzter Preis | Status |
 |---|---|---|---|
-| AI/LLM für Mail-Parsing-Optimierung | OpenAI / Anthropic API | ~0,01 €/Mail bei GPT-4o-mini | sobald >1000 Mails/Tag (Enterprise) |
-| AI-gestützte Produkt-Kategorisierung | OpenAI / Anthropic API | ~0,001 €/Call (GPT-4o-mini) | **bereits ab Solo Pro aktiv** — Worst-Case ~0,50 €/User/Mo |
-| Image-AI für Produktfoto-Analyse | OpenAI Vision | ~0,002 €/Bild | Q3 2026 (optional) |
-| Webhook-/API-Quota (Enterprise-Feature) | Eigene Edge Functions | im Edge-Function-Pool | mit Enterprise-Launch |
-| White-Label-Custom-Domains (Enterprise) | Vercel / Cloudflare for SaaS | ~$20/Mo flat | Q4 2026 (optional) |
-| **Annahme bis Jahr 2:** | | **~0,50 € pro Solo-Pro-User**, sonst 0 € | AI-Kategorisierung als Solo-Pro-Differenzierung jetzt aktiv |
+| AI/LLM für Mail-Parsing-Optimierung | OpenAI / Anthropic API | ~0,01 €/Mail bei GPT-4o-mini | nicht implementiert, ggf. Q3 2026 |
+| Image-AI für Produktfoto-Analyse | OpenAI Vision | ~0,002 €/Bild | nicht implementiert, ggf. Q4 2026 |
+| Webhook-/API-Quota | Eigene Edge Functions | im Edge-Function-Pool | als „(geplant)" in Business + Enterprise gelistet |
+| SSO (SAML/OIDC) | externe Provider (Auth0/Clerk) | ~$25/Mo + $0.10/User | als „(geplant)" in Enterprise gelistet |
+| White-Label-Custom-Domains | Vercel / Cloudflare for SaaS | ~$20/Mo flat | als „(geplant)" in Enterprise gelistet |
+| DATEV-Export | Eigenentwicklung | 0 € (Server-Compute) | als „(geplant)" ab Solo Pro gelistet |
+| **Annahme bis Jahr 2:** | | **0 € zusätzlich** | Aktuelles Pricing setzt KEINE der obigen Features voraus |
 
 ## 4 · Fixkosten-Tabelle (alphabetisch)
 
@@ -154,7 +160,7 @@ Aus [PRICING.md §5](PRICING.md) zusammengefasst — Worst-Case bedeutet
 |---|---|---|---|
 | Free | 0 € | 0 € | **0 €** |
 | Privat-Solo (€4,99) | 0,60 € | 0,32 € | **0,92 €** |
-| Privat-Solo-Pro (€14,99) | 1,55 € | 0,46 € | **2,02 €** |
+| Privat-Solo-Pro (€14,99) | 1,05 € | 0,46 € | **1,51 €** |
 | Enterprise-Team (€19,99 netto) | 2,00 € | 0,53 € | **2,53 €** |
 | Enterprise-Business (€49,99 netto) | 5,00 € | 0,95 € | **5,95 €** |
 | Enterprise-Enterprise (€99,99 netto) | 10,80 € | 1,65 € | **12,45 €** |

@@ -69,8 +69,26 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Marken-Logo (vektorisierter CustomPainter).
-                    const BrandMark(size: 96, onDark: true),
+                    // Marken-Logo: identische Komposition wie überall sonst
+                    // (App-Icon, Login-Card-Header, Sidebar) — also MIT
+                    // Indigo-Background-Square. Sitzt auf dem gradient-bg
+                    // mit Drop-Shadow für sauberen Pop-Effekt.
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(60),
+                            blurRadius: 28,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: const BrandMark(
+                        size: 112,
+                        withBackground: true,
+                      ),
+                    ),
                     const SizedBox(height: 22),
                     // Wordmark in Weiß / hell.
                     const BrandWordmark(
