@@ -24,7 +24,11 @@ import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../services/push_service.dart';
 import '../services/workspace_service.dart';
+import '../utils/role_labels.dart';
 import '../widgets/add_edit_buyer_dialog.dart';
+import '../widgets/invite_member_dialog.dart';
+import '../widgets/member_remove_confirm_dialog.dart';
+import '../widgets/workspace_switcher.dart';
 import '../widgets/add_edit_mailbox_dialog.dart';
 import '../widgets/add_edit_shop_dialog.dart';
 import 'billing_profile_screen.dart';
@@ -1750,6 +1754,31 @@ class _TeamTabState extends State<_TeamTab> {
     );
     ctrl.dispose();
     if (newName == null || !mounted) return;
+    // Defensive Heuristik: falls die DB-Spalte is_personal noch nicht
+    // gepflegt ist (Migration noch nicht in dieser Umgebung deployed),
+    // den Confirm-Dialog auch zeigen, wenn der Workspace „Personal"
+    // heißt und der aktuelle User Owner ist.
+    final treatAsPersonal = ws.isPersonal ||
+        (ws.name.trim().toLowerCase() == 'personal' &&
+            context.read<ActiveWorkspaceProvider>().role == WorkspaceRole.owner);
+    if (treatAsPersonal) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.teamRenamePersonalWarnTitle),
+          content: Text(l10n.teamRenamePersonalWarn),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.commonCancel)),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.commonConfirm)),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final activeWs = context.read<ActiveWorkspaceProvider>();
     final uid = context.read<AuthProvider>().currentUser?.id;
@@ -1777,84 +1806,18 @@ class _TeamTabState extends State<_TeamTab> {
     return _members.where((m) => m.userId == uid).firstOrNull?.role;
   }
 
-  String _roleLabel(AppLocalizations l10n, WorkspaceRole role) =>
-      switch (role) {
-        WorkspaceRole.owner => l10n.teamRoleOwner,
-        WorkspaceRole.admin => l10n.teamRoleAdmin,
-        WorkspaceRole.editor => l10n.teamRoleMember,
-        WorkspaceRole.observer => l10n.teamRoleViewer,
-      };
-
-  Future<void> _invite() async {
+  Future<void> _openInviteDialog() async {
     final ws = _workspace;
     if (ws == null) return;
-    final l10n = AppLocalizations.of(context);
-    final emailCtrl = TextEditingController();
-    WorkspaceRole role = WorkspaceRole.editor;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: Text(l10n.teamInviteTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: emailCtrl,
-                autofocus: true,
-                decoration: InputDecoration(
-                  labelText: l10n.teamInviteEmailLabel,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<WorkspaceRole>(
-                initialValue: role,
-                decoration: InputDecoration(
-                  labelText: l10n.teamInviteRoleLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(
-                      value: WorkspaceRole.admin,
-                      child: Text(l10n.teamRoleAdmin)),
-                  DropdownMenuItem(
-                      value: WorkspaceRole.editor,
-                      child: Text(l10n.teamRoleMember)),
-                  DropdownMenuItem(
-                      value: WorkspaceRole.observer,
-                      child: Text(l10n.teamRoleViewer)),
-                ],
-                onChanged: (v) =>
-                    setS(() => role = v ?? WorkspaceRole.editor),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(l10n.actionCancel)),
-            ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(l10n.teamInvite)),
-          ],
-        ),
-      ),
+    final svc = context.read<WorkspaceService>();
+    final invite = await InviteMemberDialog.show(
+      context,
+      workspaceId: ws.id,
+      workspaceService: svc,
     );
-    final email = emailCtrl.text.trim();
-    emailCtrl.dispose();
-    if (ok != true || email.isEmpty || !mounted) return;
-    try {
-      await context.read<WorkspaceService>().createInvite(
-            workspaceId: ws.id,
-            email: email,
-            role: role,
-          );
-      if (mounted) await _load();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.teamInviteFailed('$e'))));
+    if (invite != null && mounted) {
+      await InviteSuccessSheet.show(context, invite.token);
+      await _load();
     }
   }
 
@@ -1889,6 +1852,12 @@ class _TeamTabState extends State<_TeamTab> {
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          WorkspaceSwitcher(
+            onSwitch: (_) => _load(),
+          ),
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 8),
           _SettingsCard(
             icon: Icons.workspaces_outlined,
             title: ws.displayLabel(myUid),
@@ -1918,7 +1887,7 @@ class _TeamTabState extends State<_TeamTab> {
                 if (canManage) ...[
                   const SizedBox(width: 4),
                   ElevatedButton.icon(
-                    onPressed: _invite,
+                    onPressed: _openInviteDialog,
                     icon: const Icon(Icons.person_add_alt_1, size: 16),
                     label: Text(l10n.teamInvite),
                   ),
@@ -1944,7 +1913,7 @@ class _TeamTabState extends State<_TeamTab> {
                         fontWeight: FontWeight.w600,
                         color: AppTheme.textPrimaryOf(context))),
                 subtitle: Text(
-                  l10n.teamMemberSince(_roleLabel(l10n, m.role),
+                  l10n.teamMemberSince(roleLabel(context, m.role),
                       dateFmt.format(m.joinedAt.toLocal())),
                   style: TextStyle(
                       fontSize: 12,
@@ -1957,12 +1926,17 @@ class _TeamTabState extends State<_TeamTab> {
                             color: AppTheme.dangerTextOf(context),
                             size: 18),
                         onPressed: () async {
-                          await context
-                              .read<WorkspaceService>()
-                              .removeMember(
-                                workspaceId: ws.id,
-                                userId: m.userId,
-                              );
+                          final email = m.email ?? m.userId;
+                          final svc = context.read<WorkspaceService>();
+                          final confirmed = await MemberRemoveConfirmDialog.show(
+                            context,
+                            email,
+                          );
+                          if (!confirmed || !mounted) return;
+                          await svc.removeMember(
+                            workspaceId: ws.id,
+                            userId: m.userId,
+                          );
                           if (mounted) await _load();
                         },
                       )
@@ -1989,7 +1963,7 @@ class _TeamTabState extends State<_TeamTab> {
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textPrimaryOf(context))),
                   subtitle: Text(
-                    l10n.teamInviteExpires(_roleLabel(l10n, inv.role),
+                    l10n.teamInviteExpires(roleLabel(context, inv.role),
                         dateFmt.format(inv.expiresAt.toLocal())),
                     style: TextStyle(
                         fontSize: 12,

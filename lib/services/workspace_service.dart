@@ -3,6 +3,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/public_profile.dart';
 import '../models/workspace.dart';
 
+/// Wird geworfen, wenn die Workspace-Erstellung am Plan-Limit scheitert.
+/// UI sollte daraufhin den LimitReachedDialog öffnen, der zum Pricing-
+/// Screen leitet.
+class WorkspaceLimitException implements Exception {
+  const WorkspaceLimitException({this.hint});
+  final String? hint; // z.B. 'plan=free limit=1 count=1'
+  @override
+  String toString() => 'WorkspaceLimitException(${hint ?? "limit reached"})';
+}
+
 /// Dünner Wrapper um die `workspaces`/`workspace_members`/`workspace_invites`-
 /// Tabellen. Trennt den Team-Modell-Pfad bewusst vom monolithischen
 /// `SupabaseRepository` — das hier wird unabhängig vom Single-User-Daten-
@@ -140,6 +150,48 @@ class WorkspaceService {
         .cast<Map<String, dynamic>>()
         .map(WorkspaceInvite.fromSupabase)
         .toList();
+  }
+
+  /// Erstellt einen neuen Workspace via SECURITY-DEFINER-RPC `create_workspace`.
+  /// Server prüft Plan-Limit + Race via Advisory-Lock.
+  ///
+  /// Wirft:
+  /// - [WorkspaceLimitException] wenn der User sein Plan-Limit erreicht hat.
+  /// - [ArgumentError] bei leerem oder zu langem Namen (Server-validiert).
+  /// - [PostgrestException] bei Auth- oder Netzfehlern.
+  Future<Workspace> createWorkspace(String name) async {
+    try {
+      final response = await _client.rpc(
+        'create_workspace',
+        params: {'_name': name},
+      );
+
+      // PostgREST-Verhalten bei `RETURNS public.workspaces`:
+      // - mit `single object` returnt es ein Map.
+      // - mit `multiple objects` (RECORD-Pfad) returnt es ein List.
+      // - bei `RETURNS public.<table>` ist es typischerweise ein Map.
+      if (response is Map) {
+        return Workspace.fromSupabase(response.cast<String, dynamic>());
+      }
+      if (response is List && response.isNotEmpty) {
+        return Workspace.fromSupabase(
+          (response.first as Map).cast<String, dynamic>(),
+        );
+      }
+      throw StateError(
+        'create_workspace returned unexpected shape: '
+        '${response.runtimeType}',
+      );
+    } on PostgrestException catch (e) {
+      final msg = e.message;
+      if (msg.contains('workspace_limit_reached')) {
+        throw WorkspaceLimitException(hint: e.hint);
+      }
+      if (msg.contains('invalid_name')) {
+        throw ArgumentError.value(name, 'name', 'invalid_name');
+      }
+      rethrow;
+    }
   }
 
   /// Nimmt die Einladung an. Liefert die `workspace_id` zurück, in die der

@@ -48,8 +48,8 @@ class _MainScreenState extends State<MainScreen> {
     (Icons.local_shipping_outlined, Icons.local_shipping),
     (Icons.bar_chart_outlined, Icons.bar_chart_rounded),
     (Icons.history_outlined, Icons.history_rounded),
-    (Icons.help_outline_rounded, Icons.help_rounded),
     (Icons.settings_outlined, Icons.settings_rounded),
+    (Icons.help_outline_rounded, Icons.help_rounded),
   ];
 
   List<String> _navLabels(AppLocalizations l10n) => [
@@ -61,8 +61,8 @@ class _MainScreenState extends State<MainScreen> {
         l10n.navSuppliers,
         l10n.navStatistics,
         l10n.navActivity,
-        l10n.navHelp,
         l10n.navSettings,
+        l10n.navHelp,
       ];
 
   Future<void> _export(BuildContext context, InventoryProvider provider) async {

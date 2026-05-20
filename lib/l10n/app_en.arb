@@ -213,6 +213,10 @@
   "teamRenameSuccess": "Workspace renamed.",
   "teamRenameFailed": "Rename failed: {error}",
   "@teamRenameFailed": { "placeholders": { "error": {} } },
+  "teamRenamePersonalWarnTitle": "Personal Workspace",
+  "@teamRenamePersonalWarnTitle": { "description": "Title of the confirmation dialog when renaming a personal workspace." },
+  "teamRenamePersonalWarn": "This is your personal default workspace. Rename anyway?",
+  "@teamRenamePersonalWarn": { "description": "Warning text in the confirmation dialog when renaming a personal workspace." },
   "teamMembers": "Members",
   "teamInvites": "Pending invites",
   "teamInvite": "Invite",
@@ -226,12 +230,129 @@
   "teamInviteExpires": "Role: {role} · expires {date}",
   "@teamInviteExpires": { "placeholders": { "role": {}, "date": {} } },
   "teamMemberRemove": "Remove",
+  "teamMemberFallbackLabel": "this member",
+  "@teamMemberFallbackLabel": { "description": "Fallback label when a member's email is not available (e.g. in the remove confirmation dialog)." },
   "teamInviteRevoke": "Revoke invite",
   "teamSwitchWorkspace": "Switch workspace",
   "teamRoleOwner": "Owner",
   "teamRoleAdmin": "Admin",
   "teamRoleMember": "Member",
   "teamRoleViewer": "Read-only",
+  "teamRoleEditor": "Editor",
+  "@teamRoleEditor": { "description": "Workspace role editor (DB: member) — read + write." },
+  "teamRoleObserver": "Observer",
+  "@teamRoleObserver": { "description": "Workspace role observer (DB: viewer) — read-only." },
+
+  "teamRoleEditorHint": "Can read and edit data.",
+  "@teamRoleEditorHint": { "description": "Subtitle for editor role in invite dialog." },
+  "teamRoleObserverHint": "Read-only access.",
+  "@teamRoleObserverHint": { "description": "Subtitle for observer role in invite dialog." },
+  "teamRoleOwnerHint": "Full control incl. workspace management.",
+  "@teamRoleOwnerHint": { "description": "Subtitle for owner role." },
+  "teamRoleAdminHint": "Can invite and manage carrier keys.",
+  "@teamRoleAdminHint": { "description": "Subtitle for admin role." },
+
+  "teamWorkspacesTitle": "Workspaces",
+  "@teamWorkspacesTitle": { "description": "Section title for workspace list in settings." },
+  "teamWorkspacesActiveLabel": "Active",
+  "@teamWorkspacesActiveLabel": { "description": "Chip label for the active workspace." },
+  "teamWorkspacesActiveBadgeTooltip": "Currently active workspace",
+  "@teamWorkspacesActiveBadgeTooltip": { "description": "Tooltip for the active chip." },
+  "teamWorkspacesCreate": "New workspace",
+  "@teamWorkspacesCreate": { "description": "Label for new-workspace list tile." },
+  "teamWorkspacesCreateTitle": "Create new workspace",
+  "@teamWorkspacesCreateTitle": { "description": "Title of the CreateWorkspaceDialog bottom sheet." },
+  "teamWorkspacesCreateLabel": "Name",
+  "@teamWorkspacesCreateLabel": { "description": "Label for the name text field in CreateWorkspaceDialog." },
+  "teamWorkspacesCreateHint": "e.g. Acme Ltd.",
+  "@teamWorkspacesCreateHint": { "description": "Placeholder hint in the name text field." },
+  "teamWorkspacesCreateSubmit": "Create",
+  "@teamWorkspacesCreateSubmit": { "description": "Submit button label in CreateWorkspaceDialog." },
+  "teamWorkspacesCreateSuccess": "Workspace '{name}' created.",
+  "@teamWorkspacesCreateSuccess": {
+    "description": "SnackBar after successful workspace creation.",
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "teamWorkspacesCreateFailed": "Create failed: {error}",
+  "@teamWorkspacesCreateFailed": {
+    "description": "SnackBar on workspace creation error.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "teamWorkspacesCreateValidationLength": "Name must be 1–80 characters.",
+  "@teamWorkspacesCreateValidationLength": { "description": "Validation error in workspace name field." },
+  "teamWorkspacesPlanUsage": "Plan {plan}: {used}/{limit} workspaces",
+  "@teamWorkspacesPlanUsage": {
+    "description": "Plan usage display with limit.",
+    "placeholders": {
+      "plan": { "type": "String" },
+      "used": { "type": "int" },
+      "limit": { "type": "int" }
+    }
+  },
+  "teamWorkspacesPlanUsageUnlimited": "Plan {plan}: {used} workspaces (unlimited)",
+  "@teamWorkspacesPlanUsageUnlimited": {
+    "description": "Plan usage display without limit.",
+    "placeholders": {
+      "plan": { "type": "String" },
+      "used": { "type": "int" }
+    }
+  },
+  "teamWorkspacesLimitReachedTitle": "Limit reached",
+  "@teamWorkspacesLimitReachedTitle": { "description": "Title of the LimitReachedDialog." },
+  "teamWorkspacesLimitReachedBody": "Your plan {plan} allows {limit} workspaces. Upgrade to create more.",
+  "@teamWorkspacesLimitReachedBody": {
+    "description": "Body of the LimitReachedDialog.",
+    "placeholders": {
+      "plan": { "type": "String" },
+      "limit": { "type": "int" }
+    }
+  },
+  "teamWorkspacesLimitReachedCta": "Upgrade plan",
+  "@teamWorkspacesLimitReachedCta": { "description": "CTA button in LimitReachedDialog." },
+  "teamWorkspacesSwitchTo": "Switch",
+  "@teamWorkspacesSwitchTo": { "description": "Button label for switching workspace." },
+  "teamWorkspacesEmpty": "You don't have any workspace yet.",
+  "@teamWorkspacesEmpty": { "description": "Empty state in WorkspaceSwitcher." },
+
+  "teamInviteRoleEditor": "Editor",
+  "@teamInviteRoleEditor": { "description": "Role option editor in invite dialog." },
+  "teamInviteRoleObserver": "Observer",
+  "@teamInviteRoleObserver": { "description": "Role option observer in invite dialog." },
+  "teamInviteRoleAdminGated": "Admin (Team plan and up)",
+  "@teamInviteRoleAdminGated": { "description": "Role option admin (plan-gated) in invite dialog." },
+  "teamInviteAdminLockedTooltip": "Admin role requires Team plan or higher.",
+  "@teamInviteAdminLockedTooltip": { "description": "Tooltip for disabled admin option." },
+  "teamInviteEmailInvalid": "Invalid email address.",
+  "@teamInviteEmailInvalid": { "description": "Validation error for email in invite dialog." },
+  "teamInviteCreatedTitle": "Invite created",
+  "@teamInviteCreatedTitle": { "description": "Title of InviteSuccessSheet." },
+  "teamInviteShareBody": "Share this code with your teammate:",
+  "@teamInviteShareBody": { "description": "Body of InviteSuccessSheet." },
+  "teamInviteCopyLink": "Copy code",
+  "@teamInviteCopyLink": { "description": "Button label for copying invite token." },
+  "teamInviteCopyLinkSnack": "Code copied.",
+  "@teamInviteCopyLinkSnack": { "description": "SnackBar after successful copy." },
+  "teamInviteCopyFailed": "Copy failed.",
+  "@teamInviteCopyFailed": { "description": "SnackBar on copy failure." },
+  "teamInviteShareEmailHint": "E-mail dispatch ships with the next version.",
+  "@teamInviteShareEmailHint": { "description": "Hint below token in InviteSuccessSheet." },
+
+  "teamMemberRemoveConfirmTitle": "Remove member?",
+  "@teamMemberRemoveConfirmTitle": { "description": "Title of MemberRemoveConfirmDialog." },
+  "teamMemberRemoveConfirmBody": "Remove {email} from this workspace?",
+  "@teamMemberRemoveConfirmBody": {
+    "description": "Body of MemberRemoveConfirmDialog.",
+    "placeholders": { "email": { "type": "String" } }
+  },
+  "teamMemberRoleChangeLoading": "Saving role …",
+  "@teamMemberRoleChangeLoading": { "description": "Loading hint while saving a role change." },
+
+  "commonCancel": "Cancel",
+  "@commonCancel": { "description": "Universal cancel label." },
+  "commonConfirm": "Confirm",
+  "@commonConfirm": { "description": "Universal confirm label." },
+  "commonClose": "Close",
+  "@commonClose": { "description": "Universal close label." },
 
   "settingsTaxRateTitle": "VAT rate",
   "settingsTaxRateSubtitle": "Default: 19%. New deals compute gross cost using factor 1.19.",
@@ -530,6 +651,31 @@
   "helpWorkspaceRoleMember": "Member — read/write access but cannot change team or carrier settings.",
   "helpWorkspacePricingTitle": "Pricing tier limits",
   "helpWorkspacePricingDesc": "Free, Pro and Business mainly differ in number of members, number of mailboxes and whether carrier polling is active. Current limits are on the pricing screen.",
+
+  "helpWorkspacesHowManyTitle": "How many workspaces can I create?",
+  "@helpWorkspacesHowManyTitle": {
+    "description": "Help-FAQ Title — Workspace limit per plan."
+  },
+  "helpWorkspacesHowManyBody": "Depends on your plan: Free / Solo = 1, Solo Pro = 2, Team = 5, Business = 20, Enterprise = unlimited. The limit is enforced server-side. Need more? Upgrade your plan.",
+  "@helpWorkspacesHowManyBody": {
+    "description": "Help-FAQ Body — Limit details per plan."
+  },
+  "helpInviteHowTitle": "How do I invite someone?",
+  "@helpInviteHowTitle": {
+    "description": "Help-FAQ Title — Invite flow explanation."
+  },
+  "helpInviteHowBody": "Settings → Team → 'Invite'. Pick an email + role (editor or observer). You'll get a code to share with the recipient via messenger/email. They sign up with the same email and accept the invite from the bell icon top-right. Automatic e-mail dispatch ships with a later version.",
+  "@helpInviteHowBody": {
+    "description": "Help-FAQ Body — Step-by-step invite instructions."
+  },
+  "helpRolesEditorObserverTitle": "What roles are available?",
+  "@helpRolesEditorObserverTitle": {
+    "description": "Help-FAQ Title — Roles overview."
+  },
+  "helpRolesEditorObserverBody": "Four roles: Owner (full control, can rename/delete workspace), Admin (can invite + manage members), Editor (read + edit data), Observer (read-only). Admin role requires Team plan or higher.",
+  "@helpRolesEditorObserverBody": {
+    "description": "Help-FAQ Body — All four roles with their permissions."
+  },
 
   "helpPushSection": "Push notifications",
   "helpPushIosTitle": "Enable on iOS",

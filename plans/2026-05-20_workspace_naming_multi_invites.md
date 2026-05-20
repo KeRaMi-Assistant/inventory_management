@@ -1168,25 +1168,25 @@ Neue Szenarien:
   - depends_on: [T0]  *(T0 reicht — Enum-Rename ist DB-unabhängig, aber wir wollen die Pre-T0-DB nicht mit alten Plan-Werten zurücklassen.)*
   - Gate: `dart analyze lib/` ohne Errors; bestehende Tests grün.
 
-- [ ] **T6 — `BillingPlan.workspaceLimit` + Unit-Tests** (D2)
+- [x] **T6 — `BillingPlan.workspaceLimit` + Unit-Tests** (D2)
   - Subagent: `flutter-coder`
-  - Files: `lib/models/billing_profile.dart`, `test/workspace_limits_test.dart`
+  - Files: `lib/models/billing_profile.dart`, `test/billing_plan_workspace_limit_test.dart`
   - depends_on: [T5]
-  - Gate: `flutter test test/workspace_limits_test.dart` grün.
+  - Gate: `flutter test test/billing_plan_workspace_limit_test.dart` grün.
 
-- [ ] **T7 — `WorkspaceService.createWorkspace` + `WorkspaceLimitException`**
+- [x] **T7 — `WorkspaceService.createWorkspace` + `WorkspaceLimitException`**
   - Subagent: `flutter-coder`
-  - Files: `lib/services/workspace_service.dart`, `test/workspace_service_test.dart`
+  - Files: `lib/services/workspace_service.dart`, `test/workspace_create_test.dart`
   - depends_on: [T3, T6]
-  - Gate: `flutter test test/workspace_service_test.dart` grün.
+  - Gate: `flutter test test/workspace_create_test.dart` grün.
 
-- [ ] **T8 — `ActiveWorkspaceProvider.createAndSwitchTo`** (Blocker 11)
+- [x] **T8 — `ActiveWorkspaceProvider.createAndSwitchTo`** (Blocker 11)
   - Subagent: `flutter-coder`
   - Files: `lib/providers/active_workspace_provider.dart`
   - depends_on: [T7]
   - Gate: `dart analyze lib/providers/` ohne Errors.
 
-- [ ] **T9 — `lib/utils/role_labels.dart` Extract** (V1)
+- [x] **T9 — `lib/utils/role_labels.dart` Extract** (V1)
   - Subagent: `flutter-coder`
   - Files: `lib/utils/role_labels.dart`
   - depends_on: [T5]

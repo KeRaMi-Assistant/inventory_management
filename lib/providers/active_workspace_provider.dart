@@ -80,6 +80,25 @@ class ActiveWorkspaceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Erstellt einen neuen Workspace via [WorkspaceService.createWorkspace],
+  /// hängt ihn an die in-memory-Liste an und switched aktiv hin.
+  ///
+  /// Bewusst KEIN `loadForCurrentUser`-Roundtrip — der RPC liefert die Row
+  /// bereits zurück, wir können sie direkt anhängen. Spart einen Round-Trip
+  /// und vermeidet eine Race zwischen Insert und Snapshot-Reload.
+  ///
+  /// Wirft [WorkspaceLimitException] / [ArgumentError] aus dem Service durch.
+  Future<Workspace> createAndSwitchTo({
+    required String name,
+    required String currentUserId,
+  }) async {
+    final ws = await _service.createWorkspace(name);
+    _workspaces = [..._workspaces, ws];
+    // setActive persistiert in SharedPrefs + ruft notifyListeners.
+    await setActive(ws, currentUserId);
+    return ws;
+  }
+
   void clear() {
     _workspaces = [];
     _active = null;

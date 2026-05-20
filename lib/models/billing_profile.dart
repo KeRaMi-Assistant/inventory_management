@@ -1,43 +1,72 @@
-/// Plan-Tier des Users. `free` ist Default; alles ab `starter` ist
+/// Plan-Tier des Users. `free` ist Default; alles ab `solo` ist
 /// kostenpflichtig und erfordert eine vollständige Rechnungsadresse.
-/// `ultimate` ersetzt das frühere `enterprise` als höchster regulärer Tier.
+/// 6-Tier-Schema: free | solo | soloPro | team | business | enterprise.
+/// MUSS synchron mit dem DB-CHECK-Constraint in
+/// `billing_profiles.plan` gehalten werden (T0-Migration).
 enum BillingPlan {
   free,
-  starter,
-  pro,
+  solo,
+  soloPro,
+  team,
   business,
-  ultimate;
+  enterprise;
 
-  /// Tolerant gegenüber Legacy-Werten in der DB: `enterprise` aus alten
-  /// Profile-Zeilen wird auf `ultimate` gemappt.
+  /// Tolerant gegenüber Legacy-Werten in der DB.
+  /// Alte Namen (`starter`, `pro`, `ultimate`) werden auf den
+  /// semantisch äquivalenten neuen Tier gemappt.
   static BillingPlan fromString(String s) => switch (s.toLowerCase()) {
-        'starter' => starter,
-        'pro' => pro,
-        'business' => business,
-        'ultimate' => ultimate,
-        'enterprise' => ultimate,
-        _ => free,
+        'solo'       => solo,
+        'solo_pro'   => soloPro,
+        'solopro'    => soloPro,
+        'team'       => team,
+        'business'   => business,
+        'enterprise' => enterprise,
+        // Legacy-Aliase (Safety-Net nach T0-Migration)
+        'starter'    => solo,
+        'pro'        => soloPro,
+        'ultimate'   => enterprise,
+        _            => free,
       };
 
-  String get apiName => name;
+  /// Wire-Format gegenüber Supabase. `soloPro` wird als `solo_pro`
+  /// übertragen (DB-CHECK erwartet `solo_pro`, nicht `soloPro`).
+  String get apiName => switch (this) {
+        BillingPlan.soloPro => 'solo_pro',
+        _ => name,
+      };
 
   bool get isPaid => this != BillingPlan.free;
 
   String get label => switch (this) {
-        BillingPlan.free => 'Free',
-        BillingPlan.starter => 'Starter',
-        BillingPlan.pro => 'Pro',
-        BillingPlan.business => 'Business',
-        BillingPlan.ultimate => 'Ultimate',
+        BillingPlan.free       => 'Free',
+        BillingPlan.solo       => 'Solo',
+        BillingPlan.soloPro    => 'Solo Pro',
+        BillingPlan.team       => 'Team',
+        BillingPlan.business   => 'Business',
+        BillingPlan.enterprise => 'Enterprise',
       };
 
   /// Aufsteigende Sortierung, z.B. für "ist mein Plan ≥ X?"-Checks.
   int get rank => switch (this) {
-        BillingPlan.free => 0,
-        BillingPlan.starter => 1,
-        BillingPlan.pro => 2,
-        BillingPlan.business => 3,
-        BillingPlan.ultimate => 4,
+        BillingPlan.free       => 0,
+        BillingPlan.solo       => 1,
+        BillingPlan.soloPro    => 2,
+        BillingPlan.team       => 3,
+        BillingPlan.business   => 4,
+        BillingPlan.enterprise => 5,
+      };
+
+  /// Anzahl Workspaces, die ein User mit diesem Plan besitzen darf.
+  /// `-1` = unbegrenzt. MUSS synchron mit Postgres-Function
+  /// `public.workspace_limit_for_plan` aus
+  /// `supabase/migrations/20260520000200_workspace_create_rpc.sql` sein.
+  int get workspaceLimit => switch (this) {
+        BillingPlan.free       => 1,
+        BillingPlan.solo       => 1,
+        BillingPlan.soloPro    => 2,
+        BillingPlan.team       => 5,
+        BillingPlan.business   => 20,
+        BillingPlan.enterprise => -1,
       };
 }
 

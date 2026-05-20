@@ -22,6 +22,9 @@ class BillingProvider extends ChangeNotifier {
   /// Aktueller Plan — Default Free, wenn noch kein Profil geladen wurde.
   BillingPlan get currentPlan => _profile?.plan ?? BillingPlan.free;
 
+  /// Convenience-Getter für UI-Logik. `-1` = unbegrenzt.
+  int get workspaceLimit => currentPlan.workspaceLimit;
+
   Future<void> load() async {
     _loading = true;
     _error = null;
