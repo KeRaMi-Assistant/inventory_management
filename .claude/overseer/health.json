@@ -1,10 +1,10 @@
 {
-  "ts": "2026-05-18T11:11:00Z",
+  "ts": "2026-05-20T15:25:28Z",
   "panic": false,
   "checks": {
     "disk": {
-      "free_pct": 59,
-      "free_gb": 250,
+      "free_pct": 58,
+      "free_gb": 246,
       "ok": true
     },
     "worktrees": {
@@ -22,7 +22,7 @@
     },
     "cost": {
       "today_usd": 0.0,
-      "week_usd": 6.88,
+      "week_usd": 0.0,
       "ok": true
     }
   },

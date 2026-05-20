@@ -137,3 +137,15 @@
 {"ts":"2026-05-14T23:06:23Z","severity":"info","topic":"claude-kerami-3kf2j","title":"\u2705 Heartbeat-Fix live","body":"Doppelter Heartbeat-Daemon gestoppt. Neuer Singleton-Lock + Activity-Detection. PUSH nur noch wenn was passiert (Worker laufen, Inbox > 0, recent failures, PANIC, stakeholder pending). Aktuell: IDL...","actions":null}
 {"ts":"2026-05-16T00:06:29Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
 {"ts":"2026-05-17T00:35:13Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
+{"ts":"2026-05-18T21:33:39Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
+{"ts":"2026-05-19T02:40:31Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
+{"ts":"2026-05-19T03:42:23Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
+{"ts":"2026-05-19T04:48:10Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
+{"ts":"2026-05-19T20:30:04Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
+{"ts":"2026-05-19T21:49:06Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
+{"ts":"2026-05-19T22:32:10Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
+{"ts":"2026-05-19T23:33:31Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
+{"ts":"2026-05-20T00:43:55Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
+{"ts":"2026-05-20T02:03:56Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
+{"ts":"2026-05-20T04:03:31Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
+{"ts":"2026-05-20T05:09:02Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","actions":null}
