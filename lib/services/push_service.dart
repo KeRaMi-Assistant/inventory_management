@@ -27,7 +27,7 @@ class PushService {
 
   static const _androidChannel = AndroidNotificationChannel(
     'inventoryos_default',
-    'InventoryOS Benachrichtigungen',
+    'CanLogistics Benachrichtigungen',
     description: 'MHD-Warnungen, Lieferungen und Zahlungserinnerungen',
     importance: Importance.high,
   );

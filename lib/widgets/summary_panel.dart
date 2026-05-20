@@ -34,11 +34,11 @@ class SummaryPanel extends StatelessWidget {
         };
 
         final statusColors = {
-          'Bestellt': const Color(0xFF3B82F6),
-          'Unterwegs': const Color(0xFFF59E0B),
-          'Angekommen': const Color(0xFF0D9488),
-          'Rechnung gestellt': const Color(0xFF8B5CF6),
-          'Done': const Color(0xFF10B981),
+          'Bestellt': AppTheme.accent,
+          'Unterwegs': AppTheme.warning,
+          'Angekommen': AppTheme.success,
+          'Rechnung gestellt': AppTheme.purple,
+          'Done': AppTheme.success,
         };
 
         final statusStats = {
@@ -48,7 +48,7 @@ class SummaryPanel extends StatelessWidget {
               profit: deals
                   .where((d) => d.status == s)
                   .fold(0.0, (sum, d) => sum + (d.totalProfit ?? 0)),
-              color: statusColors[s] ?? Colors.grey,
+              color: statusColors[s] ?? AppTheme.textMuted,
             ),
         };
 

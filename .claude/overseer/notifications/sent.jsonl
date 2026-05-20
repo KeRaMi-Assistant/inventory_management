@@ -49,3 +49,12 @@
 {"ts":"2026-05-14T12:29:56Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","priority":3,"actions":null}
 {"ts":"2026-05-14T12:30:00Z","severity":"info","topic":"oauth-watch","title":"GitHub Token Expired","body":"gh auth status shows token is expired/revoked. Run: gh auth login","priority":3,"actions":null}
 {"ts":"2026-05-14T17:32:14Z","severity":"info","topic":"claude-kerami-3kf2j","title":"\ud83d\udca4 Pipeline idle","body":"1 Tasks warten in Inbox, kein aktiver Task. 0 done, 0 failed (heute).","priority":3,"actions":null}
+{"ts":"2026-05-17T17:24:46Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","priority":3,"actions":null}
+{"ts":"2026-05-17T17:24:54Z","severity":"info","topic":"oauth-watch","title":"GitHub Token Expired","body":"gh auth status shows token is expired/revoked. Run: gh auth login","priority":3,"actions":null}
+{"ts":"2026-05-18T17:29:10Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","priority":3,"actions":null}
+{"ts":"2026-05-18T17:29:14Z","severity":"info","topic":"oauth-watch","title":"GitHub Token Expired","body":"gh auth status shows token is expired/revoked. Run: gh auth login","priority":3,"actions":null}
+{"ts":"2026-05-19T07:23:01Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","priority":3,"actions":null}
+{"ts":"2026-05-19T12:14:22Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","priority":3,"actions":null}
+{"ts":"2026-05-19T16:19:26Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","priority":3,"actions":null}
+{"ts":"2026-05-20T06:22:51Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","priority":3,"actions":null}
+{"ts":"2026-05-20T11:26:31Z","severity":"info","topic":"oauth-watch","title":"Anthropic Token Unreachable","body":"claude probe timed out or returned empty (exit 124).","priority":3,"actions":null}

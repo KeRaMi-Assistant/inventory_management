@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/deal_comment.dart';
 import '../providers/auth_provider.dart';
@@ -93,7 +94,7 @@ class _DealCommentsSectionState extends State<DealCommentsSection> {
               child: Text(l10n.actionCancel)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626)),
+                backgroundColor: AppTheme.danger),
             onPressed: () => Navigator.pop(context, true),
             child: Text(l10n.actionDelete),
           ),
@@ -160,7 +161,7 @@ class _DealCommentsSectionState extends State<DealCommentsSection> {
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
               l10n.dealCommentLoadFailed(_error!),
-              style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626)),
+              style: TextStyle(fontSize: 12, color: AppTheme.dangerTextOf(context)),
             ),
           ),
         if (list == null)
@@ -177,7 +178,7 @@ class _DealCommentsSectionState extends State<DealCommentsSection> {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               l10n.dealCommentEmpty,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+              style: TextStyle(fontSize: 12, color: AppTheme.textDisabledOf(context)),
             ),
           )
         else
@@ -192,9 +193,9 @@ class _DealCommentsSectionState extends State<DealCommentsSection> {
                 return Container(
                   padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: AppTheme.bgSubtleOf(context),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: AppTheme.borderOf(context)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,22 +205,22 @@ class _DealCommentsSectionState extends State<DealCommentsSection> {
                           Expanded(
                             child: Text(
                               c.author,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF334155)),
+                                  color: AppTheme.textSecondaryOf(context)),
                             ),
                           ),
                           Text(
                             dateFmt.format(c.createdAt.toLocal()),
-                            style: const TextStyle(
-                                fontSize: 11, color: Color(0xFF94A3B8)),
+                            style: TextStyle(
+                                fontSize: 11, color: AppTheme.textDisabledOf(context)),
                           ),
                           IconButton(
                             tooltip: l10n.actionDelete,
                             visualDensity: VisualDensity.compact,
-                            icon: const Icon(Icons.delete_outline,
-                                size: 16, color: Color(0xFF94A3B8)),
+                            icon: Icon(Icons.delete_outline,
+                                size: 16, color: AppTheme.textDisabledOf(context)),
                             onPressed: () => _delete(c),
                           ),
                         ],
@@ -227,8 +228,8 @@ class _DealCommentsSectionState extends State<DealCommentsSection> {
                       const SizedBox(height: 2),
                       Text(
                         c.body,
-                        style: const TextStyle(
-                            fontSize: 13, color: Color(0xFF0F172A)),
+                        style: TextStyle(
+                            fontSize: 13, color: AppTheme.textPrimaryOf(context)),
                       ),
                     ],
                   ),

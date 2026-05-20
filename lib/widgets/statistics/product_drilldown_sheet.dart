@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/statistics_service.dart';
 import 'stat_panel.dart';
@@ -21,10 +22,10 @@ class ProductDrilldownSheet extends StatelessWidget {
         initialChildSize: 0.85,
         maxChildSize: 0.95,
         minChildSize: 0.5,
-        builder: (_, scroll) => ClipRRect(
+        builder: (ctx, scroll) => ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           child: Container(
-            color: const Color(0xFFF8FAFC),
+            color: AppTheme.bgSubtleOf(ctx),
             child: ProductDrilldownSheet(data: data),
           ),
         ),
@@ -52,13 +53,13 @@ class ProductDrilldownSheet extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(bottom: BorderSide(color: Color(0xFFE0E6EF))),
+          decoration: BoxDecoration(
+            color: AppTheme.bgSurfaceOf(context),
+            border: Border(bottom: BorderSide(color: AppTheme.borderOf(context))),
           ),
           child: Row(
             children: [
-              const Icon(Icons.insights_outlined, color: Color(0xFF2563EB)),
+              Icon(Icons.insights_outlined, color: AppTheme.accentTextOf(context)),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -66,18 +67,18 @@ class ProductDrilldownSheet extends StatelessWidget {
                   children: [
                     Text(
                       data.product,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF111827),
+                        color: AppTheme.textPrimaryOf(context),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       '${data.deals.length} · $totalUnits',
-                      style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF6B7280)),
+                      style: TextStyle(
+                          fontSize: 12, color: AppTheme.textMutedOf(context)),
                     ),
                   ],
                 ),
@@ -99,7 +100,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                     child: _MiniStat(
                       label: l10n.statsLabelRevenue,
                       value: money.format(totalRevenue),
-                      color: const Color(0xFF2563EB),
+                      color: AppTheme.accent,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -107,7 +108,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                     child: _MiniStat(
                       label: l10n.statsLabelProfit,
                       value: money.format(totalProfit),
-                      color: const Color(0xFF059669),
+                      color: AppTheme.success,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -115,7 +116,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                     child: _MiniStat(
                       label: l10n.statsLabelMargin,
                       value: '${marginPct.toStringAsFixed(1)}%',
-                      color: const Color(0xFF7C3AED),
+                      color: AppTheme.purple,
                     ),
                   ),
                 ],
@@ -129,7 +130,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                   child: data.monthSeries.isEmpty
                       ? Center(
                           child: Text(l10n.dealCommentEmpty,
-                              style: const TextStyle(color: Color(0xFF9CA3AF))),
+                              style: TextStyle(color: AppTheme.textDisabledOf(context))),
                         )
                       : LineChart(
                           LineChartData(
@@ -137,7 +138,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                               show: true,
                               drawVerticalLine: false,
                               getDrawingHorizontalLine: (_) => const FlLine(
-                                color: Color(0xFFEEF2F7),
+                                color: AppTheme.bgSubtle,
                                 strokeWidth: 1,
                               ),
                             ),
@@ -156,7 +157,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                                         .format(v),
                                     style: const TextStyle(
                                         fontSize: 10,
-                                        color: Color(0xFF9CA3AF)),
+                                        color: AppTheme.textDisabled),
                                   ),
                                 ),
                               ),
@@ -175,7 +176,7 @@ class ProductDrilldownSheet extends StatelessWidget {
                                       monthFmt.format(data.monthSeries[i].date),
                                       style: const TextStyle(
                                           fontSize: 10,
-                                          color: Color(0xFF9CA3AF)),
+                                          color: AppTheme.textDisabled),
                                     );
                                   },
                                 ),
@@ -217,8 +218,8 @@ class ProductDrilldownSheet extends StatelessWidget {
                         children: data.topBuyers.isEmpty
                             ? [
                                 Text(l10n.dealCommentEmpty,
-                                    style: const TextStyle(
-                                        color: Color(0xFF9CA3AF), fontSize: 12))
+                                    style: TextStyle(
+                                        color: AppTheme.textDisabledOf(context), fontSize: 12))
                               ]
                             : data.topBuyers
                                 .map((e) => Padding(
@@ -249,8 +250,8 @@ class ProductDrilldownSheet extends StatelessWidget {
                         children: data.topShops.isEmpty
                             ? [
                                 Text(l10n.dealCommentEmpty,
-                                    style: const TextStyle(
-                                        color: Color(0xFF9CA3AF), fontSize: 12))
+                                    style: TextStyle(
+                                        color: AppTheme.textDisabledOf(context), fontSize: 12))
                               ]
                             : data.topShops
                                 .map((e) => Padding(
@@ -292,8 +293,8 @@ class ProductDrilldownSheet extends StatelessWidget {
                               height: 8,
                               decoration: BoxDecoration(
                                 color: deal.status == 'Done'
-                                    ? const Color(0xFF059669)
-                                    : const Color(0xFFD97706),
+                                    ? AppTheme.success
+                                    : AppTheme.warning,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -304,16 +305,16 @@ class ProductDrilldownSheet extends StatelessWidget {
                                 children: [
                                   Text(
                                     '#${deal.id} · ${deal.shop} → ${deal.buyer ?? '–'}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
-                                        color: Color(0xFF111827)),
+                                        color: AppTheme.textPrimaryOf(context)),
                                   ),
                                   Text(
                                     '${dateFmt.format(deal.orderDate)} · ${deal.quantity}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 11,
-                                        color: Color(0xFF6B7280)),
+                                        color: AppTheme.textMutedOf(context)),
                                   ),
                                 ],
                               ),
@@ -324,8 +325,8 @@ class ProductDrilldownSheet extends StatelessWidget {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
                                 color: (deal.totalProfit ?? 0) >= 0
-                                    ? const Color(0xFF059669)
-                                    : const Color(0xFFDC2626),
+                                    ? AppTheme.success
+                                    : AppTheme.danger,
                               ),
                             ),
                           ],
@@ -357,15 +358,15 @@ class _MiniStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE0E6EF)),
+        border: Border.all(color: AppTheme.borderOf(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
+              style: TextStyle(fontSize: 11, color: AppTheme.textMutedOf(context))),
           const SizedBox(height: 2),
           Text(value,
               style: TextStyle(

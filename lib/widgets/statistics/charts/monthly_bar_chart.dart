@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app_theme.dart';
 import '../../../services/statistics_service.dart';
 
 /// Bar-Chart für Profit pro Bucket (Tag/Woche/Monat). Optional zwei Bars
@@ -22,9 +23,9 @@ class MonthlyBarChart extends StatelessWidget {
     if (series.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(
+        child: Center(
           child: Text('Keine Daten im Zeitraum.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+              style: TextStyle(color: AppTheme.textMutedOf(context), fontSize: 13)),
         ),
       );
     }
@@ -96,7 +97,7 @@ class MonthlyBarChart extends StatelessWidget {
             horizontalInterval:
                 ((maxY - minY) / 4).abs().clamp(1, double.infinity),
             getDrawingHorizontalLine: (_) => const FlLine(
-              color: Color(0xFFEEF2F7),
+              color: AppTheme.bgSubtle,
               strokeWidth: 1,
             ),
           ),
@@ -114,7 +115,7 @@ class MonthlyBarChart extends StatelessWidget {
                   child: Text(
                     money.format(v),
                     style: const TextStyle(
-                        fontSize: 10, color: Color(0xFF9CA3AF)),
+                        fontSize: 10, color: AppTheme.textDisabled),
                     textAlign: TextAlign.right,
                   ),
                 ),
@@ -134,7 +135,7 @@ class MonthlyBarChart extends StatelessWidget {
                     child: Text(
                       dateFmt.format(series[i].date),
                       style: const TextStyle(
-                          fontSize: 10, color: Color(0xFF9CA3AF)),
+                          fontSize: 10, color: AppTheme.textDisabled),
                     ),
                   );
                 },
@@ -144,7 +145,7 @@ class MonthlyBarChart extends StatelessWidget {
           borderData: FlBorderData(show: false),
           barTouchData: BarTouchData(
             touchTooltipData: BarTouchTooltipData(
-              getTooltipColor: (_) => const Color(0xFF111827),
+              getTooltipColor: (_) => AppTheme.textPrimary,
               tooltipRoundedRadius: 8,
               getTooltipItem: (group, gIdx, rod, rIdx) {
                 if (group.x < 0 || group.x >= series.length) return null;
@@ -189,9 +190,9 @@ class MarginLineChart extends StatelessWidget {
     if (series.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(
+        child: Center(
           child: Text('Keine Daten.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+              style: TextStyle(color: AppTheme.textMutedOf(context), fontSize: 13)),
         ),
       );
     }
@@ -219,7 +220,7 @@ class MarginLineChart extends StatelessWidget {
             horizontalInterval:
                 ((maxY - minY) / 4).abs().clamp(1, double.infinity),
             getDrawingHorizontalLine: (_) => const FlLine(
-              color: Color(0xFFEEF2F7),
+              color: AppTheme.bgSubtle,
               strokeWidth: 1,
             ),
           ),
@@ -236,7 +237,7 @@ class MarginLineChart extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 6),
                   child: Text('${v.toStringAsFixed(0)}%',
                       style: const TextStyle(
-                          fontSize: 10, color: Color(0xFF9CA3AF)),
+                          fontSize: 10, color: AppTheme.textDisabled),
                       textAlign: TextAlign.right),
                 ),
               ),
@@ -254,7 +255,7 @@ class MarginLineChart extends StatelessWidget {
                     child: Text(
                       dateFmt.format(series[i].date),
                       style: const TextStyle(
-                          fontSize: 10, color: Color(0xFF9CA3AF)),
+                          fontSize: 10, color: AppTheme.textDisabled),
                     ),
                   );
                 },
@@ -264,7 +265,7 @@ class MarginLineChart extends StatelessWidget {
           borderData: FlBorderData(show: false),
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (_) => const Color(0xFF111827),
+              getTooltipColor: (_) => AppTheme.textPrimary,
               tooltipRoundedRadius: 8,
               getTooltipItems: (spots) => spots.map((s) {
                 final i = s.x.toInt();

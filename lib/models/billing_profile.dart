@@ -1,43 +1,75 @@
-/// Plan-Tier des Users. `free` ist Default; alles ab `starter` ist
+/// Plan-Tier des Users. `free` ist Default; alles ab `solo` ist
 /// kostenpflichtig und erfordert eine vollständige Rechnungsadresse.
-/// `ultimate` ersetzt das frühere `enterprise` als höchster regulärer Tier.
+///
+/// Pricing-Restruktur 2026-05-17 → 2026-05-20: 6-Tier-Schema in zwei
+/// sichtbaren Kategorien.
+/// - Privat (B2C, brutto): free / solo / soloPro
+/// - Enterprise (B2B, netto): team / business / enterprise
+///
+/// Legacy-DB-Werte werden in `fromString` auf das neue Schema gemappt.
 enum BillingPlan {
   free,
-  starter,
-  pro,
-  business,
-  ultimate;
 
-  /// Tolerant gegenüber Legacy-Werten in der DB: `enterprise` aus alten
-  /// Profile-Zeilen wird auf `ultimate` gemappt.
+  // ── Privat-Kategorie (B2C, brutto-Preise) ──────────────────────────
+  solo,
+  soloPro,
+
+  // ── Enterprise-Kategorie (B2B, netto-Preise) ───────────────────────
+  team,
+  business,
+  enterprise;
+
+  /// Tolerant gegenüber Legacy-Werten in der DB.
+  ///
+  /// Mapping-Tabelle:
+  /// - `starter` (uralt €6.99)    → `solo`     (neu €4.99)
+  /// - `pro` (uralt €14.99)       → `soloPro`  (neu €14.99)
+  /// - `solo_plus`/`soloplus`     → `soloPro`  (Zwischen-Rename 2026-05-17→20)
+  /// - `business` (uralt €34.99)  → `business` (neu €49.99 netto)
+  /// - `ultimate` (uralt €59.99)  → `enterprise` (neu €99.99 netto)
+  /// - Unbekannt → `free` (Sicherheits-Fallback).
   static BillingPlan fromString(String s) => switch (s.toLowerCase()) {
-        'starter' => starter,
-        'pro' => pro,
+        'solo' => solo,
+        'solo_pro' || 'solopro' => soloPro,
+        'team' => team,
         'business' => business,
-        'ultimate' => ultimate,
-        'enterprise' => ultimate,
+        'enterprise' => enterprise,
+        // Legacy aliases (pre-restructure DB values)
+        'starter' => solo,
+        'pro' => soloPro,
+        'solo_plus' || 'soloplus' => soloPro,
+        'ultimate' => enterprise,
         _ => free,
       };
 
-  String get apiName => name;
+  /// DB-/Stripe-Bezeichner. Snake-case wo nötig (`soloPro` → `solo_pro`),
+  /// sonst Dart-name.
+  String get apiName => switch (this) {
+        BillingPlan.soloPro => 'solo_pro',
+        _ => name,
+      };
 
   bool get isPaid => this != BillingPlan.free;
 
   String get label => switch (this) {
         BillingPlan.free => 'Free',
-        BillingPlan.starter => 'Starter',
-        BillingPlan.pro => 'Pro',
+        BillingPlan.solo => 'Solo',
+        BillingPlan.soloPro => 'Solo Pro',
+        BillingPlan.team => 'Team',
         BillingPlan.business => 'Business',
-        BillingPlan.ultimate => 'Ultimate',
+        BillingPlan.enterprise => 'Enterprise',
       };
 
-  /// Aufsteigende Sortierung, z.B. für "ist mein Plan ≥ X?"-Checks.
+  /// Aufsteigende Sortierung, z. B. für „ist mein Plan ≥ X?"-Checks.
+  /// Sortiert über beide Kategorien hinweg (Privat-Tiers vor Enterprise-
+  /// Tiers, weil Enterprise grundsätzlich mehr Features hat).
   int get rank => switch (this) {
         BillingPlan.free => 0,
-        BillingPlan.starter => 1,
-        BillingPlan.pro => 2,
-        BillingPlan.business => 3,
-        BillingPlan.ultimate => 4,
+        BillingPlan.solo => 1,
+        BillingPlan.soloPro => 2,
+        BillingPlan.team => 3,
+        BillingPlan.business => 4,
+        BillingPlan.enterprise => 5,
       };
 }
 
@@ -56,7 +88,7 @@ enum BillingCycle {
 
 /// Rechnungs- & Plan-Profil eines Users (1:1 zur `auth.users`-Zeile).
 /// Felder sind bewusst alle nullable, weil Free-User keine Adresse
-/// pflegen müssen. Ab `BillingPlan.starter` validiert [requiredFieldsMissing]
+/// pflegen müssen. Ab `BillingPlan.solo` validiert [requiredFieldsMissing]
 /// die Pflichtangaben.
 class BillingProfile {
   final String userId;

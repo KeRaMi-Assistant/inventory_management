@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- CanLogistics brand colors. Used by launch_background.xml so the
+         native splash matches the in-app brand the moment the user taps
+         the launcher icon. -->
+    <color name="brand_indigo">#312E81</color>
+    <color name="brand_indigo_light">#4338CA</color>
+	<color name="ic_launcher_background">#312E81</color>
+</resources>

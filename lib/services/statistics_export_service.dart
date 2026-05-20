@@ -67,7 +67,7 @@ class StatisticsExportService {
 
           pw.SizedBox(height: 24),
           pw.Text(
-            'Generiert ${_date.format(DateTime.now())} · InventoryOS',
+            'Generiert ${_date.format(DateTime.now())} · CanLogistics',
             style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
           ),
         ],

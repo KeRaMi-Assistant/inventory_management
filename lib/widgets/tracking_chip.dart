@@ -371,16 +371,16 @@ class _CountrySuffix extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
+        color: AppTheme.warningBgOf(context),
         borderRadius: BorderRadius.circular(3),
-        border: Border.all(color: const Color(0xFFFED7AA)),
+        border: Border.all(color: AppTheme.warningBorderOf(context)),
       ),
       child: Text(
         country,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 9,
           fontWeight: FontWeight.w800,
-          color: Color(0xFFD97706),
+          color: AppTheme.warningTextOf(context),
           letterSpacing: 0.4,
         ),
       ),

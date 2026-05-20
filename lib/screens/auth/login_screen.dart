@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../app_theme.dart';
 import '../../l10n/app_localizations.dart';
-import '../../providers/active_workspace_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
+import '../../widgets/brand_logo.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
 enum _Provider { google, apple }
-
-enum _LoginMode { personal, team }
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,33 +22,20 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  final _teamIdCtrl = TextEditingController();
   bool _busy = false;
   bool _obscure = true;
-  _LoginMode _mode = _LoginMode.personal;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
-    _teamIdCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _busy) return;
     setState(() => _busy = true);
-    final l10n = AppLocalizations.of(context);
     final auth = context.read<AuthProvider>();
-    final workspaces = context.read<ActiveWorkspaceProvider>();
-
-    String? teamId;
-    if (_mode == _LoginMode.team) {
-      teamId = _teamIdCtrl.text.trim();
-      // Pin the requested workspace before auth so the post-login hydrator
-      // jumps straight into the right team context.
-      await workspaces.presetActiveId(teamId);
-    }
 
     final error = await auth.signIn(
       email: _emailCtrl.text,
@@ -63,20 +49,10 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    if (teamId != null) {
-      final ok = await auth.isMemberOfWorkspace(teamId);
-      if (!mounted) return;
-      if (!ok) {
-        await auth.signOut();
-        if (!mounted) return;
-        setState(() => _busy = false);
-        _showSnack(l10n.loginTeamNotMember, isError: true);
-        return;
-      }
-    }
-
     setState(() => _busy = false);
     // On success: AuthGate listens to authState and swaps to MainScreen.
+    // Workspace-Auswahl passiert in der App, sobald Owner-Einladungen
+    // existieren — kein Team-ID-Eingabefeld mehr nötig.
   }
 
   Future<void> _socialSignIn(_Provider provider) async {
@@ -96,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(msg),
         backgroundColor:
-            isError ? const Color(0xFFC0392B) : const Color(0xFF059669),
+            isError ? AppTheme.danger : AppTheme.success,
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
       ),
@@ -107,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppTheme.bgAppOf(context),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -117,8 +93,9 @@ class _LoginScreenState extends State<LoginScreen> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                side: BorderSide(color: AppTheme.borderOf(context)),
               ),
+              color: AppTheme.bgSurfaceOf(context),
               child: Padding(
                 padding: const EdgeInsets.all(28),
                 child: Form(
@@ -127,84 +104,39 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.inventory_2_rounded,
-                              color: Color(0xFF2563EB),
-                              size: 28,
-                            ),
-                          ),
-                        ],
+                      // Brand-Lockup: Mark + Wordmark, zentriert.
+                      // `onDark` orientiert sich am Theme, damit der Wordmark-
+                      // Slate auch im Dark-Mode lesbar bleibt.
+                      Center(
+                        child: BrandLockup(
+                          markSize: 52,
+                          fontSize: 24,
+                          withBackground: true,
+                          onDark: Theme.of(context).brightness ==
+                              Brightness.dark,
+                        ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       Text(
-                        l10n.appTitle,
+                        l10n.loginBrandHeadline,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimaryOf(context),
+                          letterSpacing: -0.2,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         l10n.loginSubtitle,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 13, color: Color(0xFF64748B)),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textMutedOf(context),
+                        ),
                       ),
                       const SizedBox(height: 20),
-                      // ── Mode toggle ────────────────────────────────────
-                      SegmentedButton<_LoginMode>(
-                        segments: [
-                          ButtonSegment(
-                            value: _LoginMode.personal,
-                            label: Text(l10n.loginModePersonal),
-                            icon: const Icon(Icons.person_outline, size: 16),
-                          ),
-                          ButtonSegment(
-                            value: _LoginMode.team,
-                            label: Text(l10n.loginModeTeam),
-                            icon: const Icon(Icons.group_outlined, size: 16),
-                          ),
-                        ],
-                        selected: {_mode},
-                        onSelectionChanged: (s) =>
-                            setState(() => _mode = s.first),
-                        showSelectedIcon: false,
-                      ),
-                      const SizedBox(height: 16),
-                      if (_mode == _LoginMode.team) ...[
-                        TextFormField(
-                          controller: _teamIdCtrl,
-                          decoration: InputDecoration(
-                            labelText: l10n.loginTeamIdLabel,
-                            helperText: l10n.loginTeamIdHelp,
-                            prefixIcon:
-                                const Icon(Icons.group_outlined, size: 18),
-                          ),
-                          validator: (v) {
-                            final t = (v ?? '').trim();
-                            if (t.isEmpty) return l10n.loginTeamIdRequired;
-                            // Workspace IDs sind UUIDs (36 Zeichen mit Bindestrichen).
-                            final uuidPattern = RegExp(
-                                r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
-                            if (!uuidPattern.hasMatch(t)) {
-                              return l10n.loginTeamIdInvalid;
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                      ],
                       TextFormField(
                         controller: _emailCtrl,
                         keyboardType: TextInputType.emailAddress,
@@ -276,19 +208,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          const Expanded(
-                              child: Divider(color: Color(0xFFE2E8F0))),
+                          Expanded(
+                              child: Divider(color: AppTheme.borderOf(context))),
                           Padding(
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
                               l10n.loginContinueWith,
-                              style: const TextStyle(
-                                  fontSize: 12, color: Color(0xFF64748B)),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textMutedOf(context),
+                              ),
                             ),
                           ),
-                          const Expanded(
-                              child: Divider(color: Color(0xFFE2E8F0))),
+                          Expanded(
+                              child: Divider(color: AppTheme.borderOf(context))),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -310,7 +244,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(l10n.loginNoAccount,
-                              style: const TextStyle(color: Color(0xFF64748B))),
+                              style: TextStyle(
+                                color: AppTheme.textMutedOf(context),
+                              )),
                           TextButton(
                             onPressed: _busy
                                 ? null
@@ -352,8 +288,8 @@ class _GoogleSignInButton extends StatelessWidget {
       onPressed: busy ? null : onPressed,
       style: OutlinedButton.styleFrom(
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF0F172A),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        foregroundColor: AppTheme.textPrimary,
+        side: const BorderSide(color: AppTheme.bgSubtle),
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
       icon: const _GoogleLogo(),
