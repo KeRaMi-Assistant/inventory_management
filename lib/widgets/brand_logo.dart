@@ -35,13 +35,24 @@ class BrandMark extends StatelessWidget {
   /// die App-Icon-Variante. `false` zeichnet nur die nackte Marke.
   final bool withBackground;
 
-  /// Optionaler Override für die Marken-Farbe. Wenn `null`, wird
-  /// Indigo (Light) bzw. Weiß (Dark) basierend auf [onDark] gewählt.
+  /// Optionaler Override für die Marken-Farbe. Wenn `null`, wird die
+  /// passende Farbe automatisch gewählt — siehe `_autoMarkColor()`.
   final Color? color;
+
+  /// Sobald [withBackground] `true` ist, sitzt das C zwangsläufig auf
+  /// dem Brand-Indigo-Gradient. In dem Fall MUSS die Mark weiß sein,
+  /// sonst ist sie unlesbar (Indigo-auf-Indigo). Erst wenn das Mark
+  /// ohne Background gezeichnet wird, entscheidet [onDark]: weiß auf
+  /// dunklem Theme-Hintergrund, Indigo auf hellem Theme-Hintergrund.
+  Color _autoMarkColor() {
+    if (color != null) return color!;
+    if (withBackground) return Brand.onPrimary;
+    return onDark ? Brand.onPrimary : Brand.primary;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final markColor = color ?? (onDark ? Brand.onPrimary : Brand.primary);
+    final markColor = _autoMarkColor();
     return SizedBox(
       width: size,
       height: size,
