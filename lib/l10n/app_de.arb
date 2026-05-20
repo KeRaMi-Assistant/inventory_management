@@ -22,6 +22,13 @@
   "@pricingVatExcluded": {"description": "Inline-Hinweis hinter Preis bei B2B-Tarifen."},
   "pricingLegalFootnote": "Privat-Tarife verstehen sich inkl. der gesetzlichen Mehrwertsteuer. Enterprise-Tarife werden netto ausgezeichnet — Mehrwertsteuer kommt auf der Rechnung dazu (bei gültiger USt-IdNr. innerhalb der EU als Reverse-Charge). Der Wechsel auf einen kostenpflichtigen Plan erfordert eine vollständige Rechnungsadresse.",
   "@pricingLegalFootnote": {"description": "Legal-Footnote unter den Pricing-Cards."},
+  "pricingYearlyBilled": "{total} jährlich abgerechnet",
+  "@pricingYearlyBilled": {
+    "description": "Kleiner Subtitle unter dem Monatspreis bei aktivierter Jahres-Abrechnung — zeigt das Jahres-Total.",
+    "placeholders": {
+      "total": {"type": "String", "example": "49,90 €"}
+    }
+  },
   "@appTagline": {"description": "Brand-Tagline der App. Erscheint auf Splash, Login-Header, Onboarding-Welcome und in About."},
   "appBrandSubtitle": "Inventar · Sendungen · Verkäufe",
   "@appBrandSubtitle": {"description": "Kurz-Subtitle unter dem Wordmark — drei Säulen der App."},

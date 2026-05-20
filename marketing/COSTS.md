@@ -117,15 +117,16 @@ Pro abgewickelte Subscription-Charge:
 hat ~6 % Stripe-Cut, Enterprise nur ~1,7 %. Marge-Kalkulation in
 [PRICING.md](PRICING.md) zieht das ab.
 
-### 3.4 Zukünftige Kosten (geplant aber noch nicht angefallen)
+### 3.4 Zukünftige Kosten (geplant, teils ab Solo Pro aktiv)
 
 | Posten | Anbieter | Geschätzter Preis | Wann ungefähr |
 |---|---|---|---|
-| AI/LLM für Mail-Parsing-Optimierung | OpenAI / Anthropic API | ~0,01 €/Mail bei GPT-4o-mini | sobald >1000 Mails/Tag |
+| AI/LLM für Mail-Parsing-Optimierung | OpenAI / Anthropic API | ~0,01 €/Mail bei GPT-4o-mini | sobald >1000 Mails/Tag (Enterprise) |
+| AI-gestützte Produkt-Kategorisierung | OpenAI / Anthropic API | ~0,001 €/Call (GPT-4o-mini) | **bereits ab Solo Pro aktiv** — Worst-Case ~0,50 €/User/Mo |
 | Image-AI für Produktfoto-Analyse | OpenAI Vision | ~0,002 €/Bild | Q3 2026 (optional) |
 | Webhook-/API-Quota (Enterprise-Feature) | Eigene Edge Functions | im Edge-Function-Pool | mit Enterprise-Launch |
 | White-Label-Custom-Domains (Enterprise) | Vercel / Cloudflare for SaaS | ~$20/Mo flat | Q4 2026 (optional) |
-| **Annahme bis Jahr 2:** | | **0 € zusätzlich** | Aktuell alle Features ohne LLM-Aufwand möglich |
+| **Annahme bis Jahr 2:** | | **~0,50 € pro Solo-Pro-User**, sonst 0 € | AI-Kategorisierung als Solo-Pro-Differenzierung jetzt aktiv |
 
 ## 4 · Fixkosten-Tabelle (alphabetisch)
 
@@ -152,11 +153,11 @@ Aus [PRICING.md §5](PRICING.md) zusammengefasst — Worst-Case bedeutet
 | Tier | Variable Backend-Kosten/Mo | + Stripe-Fee | **Effektive Kosten/Mo** |
 |---|---|---|---|
 | Free | 0 € | 0 € | **0 €** |
-| Privat-Solo (€4,99) | 0,50 € | 0,32 € | **0,82 €** |
-| Privat-Pro (€9,99) | 1,00 € | 0,39 € | **1,39 €** |
+| Privat-Solo (€4,99) | 0,60 € | 0,32 € | **0,92 €** |
+| Privat-Solo-Pro (€14,99) | 1,55 € | 0,46 € | **2,02 €** |
 | Enterprise-Team (€19,99 netto) | 2,00 € | 0,53 € | **2,53 €** |
 | Enterprise-Business (€49,99 netto) | 5,00 € | 0,95 € | **5,95 €** |
-| Enterprise-Ultimate (€99,99 netto) | 10,00 € | 1,65 € | **11,65 €** |
+| Enterprise-Enterprise (€99,99 netto) | 10,80 € | 1,65 € | **12,45 €** |
 
 ## 6 · Steuerliche Behandlung in DE
 

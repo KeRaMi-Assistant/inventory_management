@@ -22,6 +22,13 @@
   "@pricingVatExcluded": {"description": "Inline hint next to B2B prices."},
   "pricingLegalFootnote": "Personal tiers include the statutory value-added tax. Enterprise tiers are listed net — VAT is added on the invoice (reverse-charge inside the EU with a valid VAT ID). Upgrading to a paid plan requires a complete billing address.",
   "@pricingLegalFootnote": {"description": "Legal footnote below the pricing cards."},
+  "pricingYearlyBilled": "{total} billed annually",
+  "@pricingYearlyBilled": {
+    "description": "Small subtitle below the monthly equivalent price when yearly billing is active — shows the actual annual total.",
+    "placeholders": {
+      "total": {"type": "String", "example": "49.90 €"}
+    }
+  },
   "@appTagline": {"description": "Brand tagline. Shown on splash, login header, onboarding welcome and in About."},
   "appBrandSubtitle": "Inventory · Shipments · Sales",
   "@appBrandSubtitle": {"description": "Short subtitle under the wordmark — three pillars of the app."},

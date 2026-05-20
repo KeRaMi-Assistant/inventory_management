@@ -1,14 +1,22 @@
 # CanLogistics — Pricing-Kalkulation (10×-Marge-Regel)
 
-> Stand: 2026-05-17 · Pre-Launch · ergänzt [COSTS.md](COSTS.md)
+> Stand: 2026-05-20 · Pre-Launch · ergänzt [COSTS.md](COSTS.md)
 >
 > **Regel:** Listenpreis pro Tier = **mindestens 10 × Worst-Case-Kosten**
 > dieses Tiers → garantiert 90 % Marge selbst beim teuersten denkbaren
 > User in jedem Tier.
 >
-> **Struktur:** 2 sichtbare Kategorien im UI — **Privat** (B2C, brutto
-> inkl. 19 % VAT) und **Enterprise** (B2B, netto excl. VAT). Jede
-> Kategorie hat 3 Tiers.
+> **Struktur:** 2 sichtbare Tabs im UI (links **Privat**, rechts
+> **Enterprise**). Privat = B2C, brutto inkl. 19 % VAT. Enterprise = B2B,
+> netto excl. VAT. Je Kategorie 3 Tiers.
+>
+> **Change-Log 2026-05-20:**
+> - Solo (€4,99) Features hochgezogen: 5 000 Produkte, 5 Bilder, 10 GB.
+> - „Solo Plus" → **Solo Pro** umbenannt, Preis €9,99 → **€14,99** brutto
+>   mit deutlich mehr Features (25 000 Produkte, 15 Bilder, 50 GB, DATEV,
+>   AI-Kategorisierung, Cashflow-Forecast).
+> - Yearly-Anzeige im UI dreht sich um: prominenter effektiver Monats-
+>   preis, Jahres-Total klein ausgegraut darunter.
 
 ## 1 · Die 10×-Marge-Regel
 
@@ -37,12 +45,19 @@ Worst-Case-Kosten aus [COSTS.md §5](COSTS.md#5-worst-case-variable-kosten-pro-u
 | Tier | Preis brutto | Preis netto | Worst-Case-Kosten | Marge |
 |---|---|---|---|---|
 | **Free** | 0 € | 0 € | 0 € | – (subventioniert) |
-| **Solo** | **4,99 €/Mo** | 4,19 € | 0,82 € | **80 %** (~6× Kosten) |
-| **Solo Plus** | **9,99 €/Mo** | 8,39 € | 1,39 € | **83 %** (~6× Kosten) |
+| **Solo** | **4,99 €/Mo** | 4,19 € | 0,92 € | **82 %** (~5× Kosten) |
+| **Solo Pro** | **14,99 €/Mo** | 12,60 € | 2,02 € | **87 %** (~7× Kosten) |
 
-> Anmerkung: bei Privat-Tiers reicht 6× Kosten, weil die Worst-Case-
-> Berechnung schon konservativ ist. 10× wäre €13/€8 — gegenüber Sortly/
-> Notion-Konkurrenz zu teuer.
+> **Anmerkung 1 — bewusste Preis-Spreizung:** 0 € → 4,99 € → 14,99 €
+> ist ein klarer 3×-Sprung von Solo zu Solo Pro. Vorher waren alle drei
+> Privat-Tiers im unteren Preissegment (0/4,99/9,99) ohne starke
+> Differenzierung. Jetzt erzählt der mittlere Sprung eine echte Story:
+> „Solo für Basics, Solo Pro für Power-Buchhaltung mit DATEV + AI".
+>
+> **Anmerkung 2 — Marge 5–7× statt 10×:** bei Privat-Tiers gehen wir
+> bewusst etwas unter die 10×-Regel, weil die Worst-Case-Berechnung
+> ohnehin konservativ ist und Konsumenten-Preise nicht zu hoch sein
+> dürfen (Konkurrenzfaktor Sortly/Notion).
 
 ### 2.2 Enterprise-Kategorie (B2B, alle Preise excl. 19 % MwSt)
 
@@ -58,13 +73,17 @@ Worst-Case-Kosten aus [COSTS.md §5](COSTS.md#5-worst-case-variable-kosten-pro-u
 
 ### 2.3 Yearly-Pricing (−17 % entspricht „2 Monate gratis")
 
-| Tier | Monatlich | Jährlich | Jahres-Preis |
-|---|---|---|---|
-| Solo | 4,99 € | 49,90 €/Jahr (4,16 €/Mo) | spart 9,98 € |
-| Solo Plus | 9,99 € | 99,90 €/Jahr (8,33 €/Mo) | spart 19,98 € |
-| Team | 19,99 € netto | 199,90 €/Jahr netto | spart 39,98 € |
-| Business | 49,99 € netto | 499,90 €/Jahr netto | spart 99,98 € |
-| Enterprise | 99,99 € netto | 999,90 €/Jahr netto | spart 199,98 € |
+UI zeigt im Yearly-Modus den **effektiven Monatspreis prominent**, das
+Jahres-Total klein ausgegraut darunter — günstiger-Wahrnehmung +
+trotzdem volle Transparenz.
+
+| Tier | Monatlich | Effektiv im Jahr | Jahres-Total | Ersparnis/Jahr |
+|---|---|---|---|---|
+| Solo | 4,99 € | **4,16 €/Mo** | 49,90 € | 9,98 € |
+| Solo Pro | 14,99 € | **12,49 €/Mo** | 149,90 € | 29,98 € |
+| Team | 19,99 € netto | **16,66 €/Mo netto** | 199,90 € netto | 39,98 € netto |
+| Business | 49,99 € netto | **41,66 €/Mo netto** | 499,90 € netto | 99,98 € netto |
+| Enterprise | 99,99 € netto | **83,33 €/Mo netto** | 999,90 € netto | 199,98 € netto |
 
 ## 3 · Tier-Definitionen (komplett)
 
@@ -92,43 +111,49 @@ keine Infra-Last.
 
 | Quota | Wert |
 |---|---|
-| **Preis** | 4,99 €/Mo brutto · 49,90 €/Jahr brutto |
-| Produkte | 2 000 |
+| **Preis** | 4,99 €/Mo brutto · 49,90 €/Jahr brutto (4,16 €/Mo effektiv) |
+| Produkte | 5 000 |
 | Deals / Monat | ∞ |
-| Bilder / Eintrag | 3 |
-| Storage | 5 GB |
+| Bilder / Eintrag | 5 |
+| Storage | 10 GB |
 | Postfach (IMAP) | ❌ |
 | Workspaces | 1 |
 | Team-Mitglieder | 1 |
 | Statistik | Volle Tiefe (Drilldowns, Heatmaps, Trends) |
 | Export | CSV + PDF + Excel |
+| Barcode-Scanner & Bulk-Edit | ✅ |
 | Carrier-Tracking | ✅ + eigene API-Keys |
 | Push-Notifications | ✅ |
 | Support | E-Mail (48 h) |
 
-**Zweck:** Solo-Reseller, die Inventar pflegen + Verkäufe tracken, aber
-keinen automatisierten Mail-Import brauchen.
+**Zweck:** Solo-Reseller mit substantiellem Bestand. Substantielle
+Features (5 000 Produkte, volle Statistik, Bulk-Edit), aber **kein**
+automatisierter Mail-Import — den gibt es erst ab Enterprise.
 
-### 3.3 Privat-Solo-Plus — €9,99/Mo brutto
+### 3.3 Privat-Solo-Pro — €14,99/Mo brutto
 
 | Quota | Wert |
 |---|---|
-| **Preis** | 9,99 €/Mo brutto · 99,90 €/Jahr brutto |
-| Produkte | 10 000 |
+| **Preis** | 14,99 €/Mo brutto · 149,90 €/Jahr brutto (12,49 €/Mo effektiv) |
+| Produkte | 25 000 |
 | Deals / Monat | ∞ |
-| Bilder / Eintrag | 8 |
-| Storage | 25 GB |
+| Bilder / Eintrag | 15 |
+| Storage | 50 GB |
 | Postfach (IMAP) | ❌ |
 | Workspaces | 1 |
 | Team-Mitglieder | 1 |
-| Statistik | Volle Tiefe + Forecast |
-| Export | + DATEV (in Vorbereitung) |
-| Activity-Log | ✅ |
-| Custom-Branding für PDFs | ✅ |
-| Support | E-Mail (24 h) |
+| Statistik | Volle Tiefe + Cashflow-Forecast |
+| Export | + DATEV + Steuerberater-Sharing |
+| Activity-Log & Audit-Trail | ✅ |
+| Custom-Branding | ✅ für PDFs + Public-Profile |
+| Premium-Carrier-Adapter | ✅ (DHL Express, UPS World) |
+| **AI-gestützte Produkt-Kategorisierung** | ✅ |
+| Support | Priority-E-Mail (24 h) |
 
-**Zweck:** Power-Solo-User mit viel Bestand. Differenzierung zu Solo
-hauptsächlich Produkt-Limit + Storage + Custom-Branding.
+**Zweck:** Power-Solo-User mit Vollzeit-Reseller-Volumen. Substantielle
+Differenzierung zu Solo: 5× Produkt-Limit, 3× Bilder, 5× Storage,
+DATEV + Cashflow-Forecast + AI-Features. Marketing-Anker: „für alle die
+Reseller ernsthaft als Beruf machen, aber keinen Mitarbeiter brauchen."
 
 ### 3.4 Enterprise-Team — €19,99/Mo netto
 
@@ -194,12 +219,12 @@ Reseller-Firmen, Wholesale, Multi-Marken-Setups.
 
 ## 4 · Tier-Vergleich (Komplettes Grid)
 
-| Feature | Free | Solo | Solo+ | Team | Business | Enterprise |
+| Feature | Free | Solo | **Solo Pro** | Team | Business | Enterprise |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
-| Produkte | 50 | 2 000 | 10 000 | 25 000 | 100 000 | 300 000 |
+| Produkte | 50 | 5 000 | 25 000 | 25 000 | 100 000 | 300 000 |
 | Deals/Monat | 25 | ∞ | ∞ | ∞ | ∞ | ∞ |
-| Bilder/Eintrag | 0 | 3 | 8 | 5 | 10 | 20 |
-| Storage | 50 MB | 5 GB | 25 GB | 50 GB | 100 GB | 250 GB |
+| Bilder/Eintrag | 0 | 5 | 15 | 5 | 10 | 20 |
+| Storage | 50 MB | 10 GB | 50 GB | 50 GB | 100 GB | 250 GB |
 | Workspaces | 1 | 1 | 1 | **3** | **5** | **10** |
 | Team-Mitglieder | 1 | 1 | 1 | **5** | **15** | **50** |
 | **Postfach IMAP** | ❌ | ❌ | ❌ | ✅ 1 | ✅ 5 | ✅ 15 |
@@ -207,15 +232,18 @@ Reseller-Firmen, Wholesale, Multi-Marken-Setups.
 | **Workspace-Einladung** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | API-Zugriff | ❌ | ❌ | ❌ | Read | Read+Write | + Bulk |
 | Webhooks | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| AI-Kategorisierung | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Cashflow-Forecast | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Premium-Carrier (UPS/DHL Express) | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
 | Custom-Branding | ❌ | ❌ | ✅ PDFs | ❌ | ✅ Full | ✅ + White-Label |
 | SSO (SAML/OIDC) | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Activity-Log | basic | basic | full | full | full | full + Audit |
+| Activity-Log | basic | basic | full + Audit | full | full | full + Audit |
 | DATEV-Export | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Support | Community | 48 h | 24 h | 24 h | 12 h SLA | 1 h SLA + AM |
-| **Preis brutto** | **0 €** | **4,99 €** | **9,99 €** | **23,79 €** | **59,49 €** | **118,99 €** |
-| **Preis netto** | 0 € | 4,19 € | 8,39 € | **19,99 €** | **49,99 €** | **99,99 €** |
-| **Worst-Case-Kosten** | 0 € | 0,82 € | 1,39 € | 2,53 € | 5,95 € | 11,65 € |
-| **Marge Worst-Case** | – | 80 % | 83 % | 87 % | 88 % | 88 % |
+| Support | Community | 48 h | 24 h Priority | 24 h | 12 h SLA | 1 h SLA + AM |
+| **Preis brutto** | **0 €** | **4,99 €** | **14,99 €** | **23,79 €** | **59,49 €** | **118,99 €** |
+| **Preis netto** | 0 € | 4,19 € | 12,60 € | **19,99 €** | **49,99 €** | **99,99 €** |
+| **Worst-Case-Kosten** | 0 € | 0,92 € | 2,02 € | 2,53 € | 5,95 € | 11,65 € |
+| **Marge Worst-Case** | – | 82 % | 87 % | 87 % | 88 % | 88 % |
 
 ## 5 · Detaillierte Worst-Case-Berechnung pro Tier
 
@@ -234,27 +262,32 @@ Realtime | ~5 Messages | 0 €
 
 Posten | Berechnung | Kosten/Mo
 ---|---|---
-DB-Rows | 2 000 Produkte × 2 KB + 500 Deals × 2 KB | 5 MB → 0 €
-File-Storage | 5 GB (Limit) | 0 € (im Pool)
-Egress | 5 GB Bilder + UI 2 GB | 0 € (im Pool)
-Edge-Functions | ~200 Tracking-Polls + 500 Frontend-Calls | 0 €
-Realtime | 1 000 Messages | 0 €
-Backend-Subtotal | | **~0,50 €** (anteilig Supabase-Base)
+DB-Rows | 5 000 Produkte × 2 KB + 500 Deals × 2 KB | 12 MB → 0 €
+File-Storage | 10 GB (Limit, ~400 KB × 5 × 5 000) | 0 € (im Pool, bei Volumen anteilig)
+Egress | 10 GB Bilder × ⅓ Read + UI 3 GB | 0 € (im Pool)
+Edge-Functions | ~250 Tracking-Polls + 800 Frontend-Calls | 0 €
+Realtime | 2 000 Messages | 0 €
+Backend-Subtotal | | **~0,60 €** (anteilig Supabase-Base + Pool-Anteil)
 Stripe-Fee (€4,99 × 1,4 % + 0,25 €) | | **0,32 €**
-**Total effektiv** | | **~0,82 €**
+**Total effektiv** | | **~0,92 €**
 
-### 5.3 Solo Plus (€9,99 brutto · Worst-Case)
+### 5.3 Solo Pro (€14,99 brutto · Worst-Case)
 
 Posten | Berechnung | Kosten/Mo
 ---|---|---
-DB-Rows | 10 000 Produkte × 2 KB + 2 000 Deals × 2 KB | 25 MB → 0 €
-File-Storage | 25 GB | 0 € (im Pool, aber: 4 User mit Vollnutzung → in den Pool)
-Egress | 25 GB Bilder × ⅓ Read + UI 5 GB | 0 €
-Edge-Functions | ~500 Tracking-Polls + 1 500 Frontend-Calls | 0 €
-Realtime | 5 000 Messages | 0 €
-Backend-Subtotal | | **~1,00 €**
-Stripe-Fee (€9,99 × 1,4 % + 0,25 €) | | **0,39 €**
-**Total effektiv** | | **~1,39 €**
+DB-Rows | 25 000 Produkte × 2 KB + 5 000 Deals × 2 KB × 12 | 170 MB → anteilig 0,02 €
+File-Storage | 50 GB | bei mehreren User-Vollnutzungen Pool-Druck, ~0,40 €
+Egress | 50 GB × ⅓ + UI 8 GB | im Pool, anteilig ~0,10 €
+Edge-Functions | ~1 200 Tracking-Polls + 3 000 Frontend-Calls + ggf. AI-API-Calls (~500 × 0,001 €) | 0 € + AI ~0,50 €
+Realtime | 10 000 Messages | 0 €
+Backend-Subtotal | | **~1,55 €**
+Stripe-Fee (€14,99 × 1,4 % + 0,25 €) | | **0,46 €**
+**Total effektiv** | | **~2,02 €**
+
+> AI-Kosten: Solo Pro Worst-Case nimmt ~500 AI-Kategorisierungen/Monat
+> an (1× pro neuem Produkt + 1× pro Re-Klassifizierung). Bei
+> GPT-4o-mini ≈ 0,001 € pro Call. Falls AI-Feature später optional/
+> opt-in wird, fällt der Posten weg.
 
 ### 5.4 Team (€19,99 netto · Worst-Case mit 5 Team-Mitgliedern)
 
@@ -309,8 +342,8 @@ Bei 20 % der Limits liegen die echten Median-Kosten:
 | Tier | Worst-Case | Median (20 %) | Marge Median |
 |---|---|---|---|
 | Free | 0 € | 0 € | – |
-| Solo | 0,82 € | 0,16 € | 97 % |
-| Solo Plus | 1,39 € | 0,28 € | 97 % |
+| Solo | 0,92 € | 0,18 € | 96 % |
+| Solo Pro | 2,02 € | 0,40 € | 97 % |
 | Team | 2,53 € | 0,51 € | 97 % |
 | Business | 5,95 € | 1,19 € | 98 % |
 | Enterprise | 12,45 € | 2,49 € | 98 % |
@@ -323,8 +356,8 @@ User. 80–88 % im absoluten Worst-Case. Sehr robust.
 | Alt | Neu |
 |---|---|
 | Free (€0) | **Free** (unverändert) |
-| Starter (€6,99) | **Solo** (€4,99) — günstiger, aber Postfach raus → Grandfathering-Flag `legacy_inbox: true` für 6 Monate |
-| Pro (€14,99) | **Solo Plus** (€9,99) — günstiger, mehr Storage; Postfach raus für Bestandskunden mit Grandfathering |
+| Starter (€6,99) | **Solo** (€4,99) — günstiger, mehr Features (5 000 Produkte statt 500), aber Postfach raus → Grandfathering-Flag `legacy_inbox: true` für 6 Monate |
+| Pro (€14,99) | **Solo Pro** (€14,99) — gleicher Preis, mehr Storage, AI-Kategorisierung, Cashflow-Forecast; Postfach raus mit Grandfathering |
 | Business (€34,99) | **Team** (€19,99 netto = ~€23,79 brutto) — günstiger, Postfach kommt regulär dazu |
 | Ultimate (€59,99) | **Enterprise** (€99,99 netto = ~€118,99 brutto) — teurer, dafür alle Features + 50 Members |
 
@@ -339,8 +372,8 @@ Pro Tier 2 Stripe-Produkte (Monthly + Yearly), in Stripe-Dashboard:
 |---|---|---|
 | Solo monthly | `price_solo_monthly` | 4,99 € (Tax-Behavior: inclusive) |
 | Solo yearly | `price_solo_yearly` | 49,90 € (Tax-Behavior: inclusive) |
-| Solo Plus monthly | `price_solo_plus_monthly` | 9,99 € (inclusive) |
-| Solo Plus yearly | `price_solo_plus_yearly` | 99,90 € (inclusive) |
+| Solo Pro monthly | `price_solo_pro_monthly` | 14,99 € (inclusive) |
+| Solo Pro yearly | `price_solo_pro_yearly` | 149,90 € (inclusive) |
 | Team monthly | `price_team_monthly` | 19,99 € (exclusive — VAT separat) |
 | Team yearly | `price_team_yearly` | 199,90 € (exclusive) |
 | Business monthly | `price_business_monthly` | 49,99 € (exclusive) |
@@ -355,8 +388,10 @@ Pro Tier 2 Stripe-Produkte (Monthly + Yearly), in Stripe-Dashboard:
 
 **Privat-Funnel:**
 > „Du bist Reseller? Probier Free aus. Wenn dir die App zusagt, mach
-> Solo für €4,99/Monat — alles drin, was du brauchst. Solo Plus wenn du
-> Power-Statistik + Custom-PDFs willst."
+> Solo für €4,99/Monat — 5 000 Produkte, volle Statistik, alles drin
+> was du als Nebenerwerb brauchst. **Solo Pro für €14,99/Monat** wenn
+> du Reseller hauptberuflich machst — 25 000 Produkte, DATEV, AI-
+> Kategorisierung, Cashflow-Forecast."
 
 **Enterprise-Funnel:**
 > „Du verkaufst über mehrere Marken oder im Team? Dann brauchst du

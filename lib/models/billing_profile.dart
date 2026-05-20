@@ -1,16 +1,18 @@
 /// Plan-Tier des Users. `free` ist Default; alles ab `solo` ist
 /// kostenpflichtig und erfordert eine vollständige Rechnungsadresse.
 ///
-/// Pricing-Restruktur 2026-05-17: aus dem 5-Tier-Schema (free/starter/
-/// pro/business/ultimate) wurde ein 6-Tier-Schema in 2 Kategorien
-/// (Privat: free/solo/soloPlus; Enterprise: team/business/enterprise).
+/// Pricing-Restruktur 2026-05-17 → 2026-05-20: 6-Tier-Schema in zwei
+/// sichtbaren Kategorien.
+/// - Privat (B2C, brutto): free / solo / soloPro
+/// - Enterprise (B2B, netto): team / business / enterprise
+///
 /// Legacy-DB-Werte werden in `fromString` auf das neue Schema gemappt.
 enum BillingPlan {
   free,
 
   // ── Privat-Kategorie (B2C, brutto-Preise) ──────────────────────────
   solo,
-  soloPlus,
+  soloPro,
 
   // ── Enterprise-Kategorie (B2B, netto-Preise) ───────────────────────
   team,
@@ -20,30 +22,30 @@ enum BillingPlan {
   /// Tolerant gegenüber Legacy-Werten in der DB.
   ///
   /// Mapping-Tabelle:
-  /// - `starter` (alt €6.99)  → `solo` (neu €4.99)
-  /// - `pro` (alt €14.99)     → `soloPlus` (neu €9.99)
-  /// - `business` (alt €34.99) → `business` (neu €49.99 netto) — Name bleibt,
-  ///   semantisch näher am neuen Mid-Enterprise; in der Praxis bekommen
-  ///   Bestandskunden mehr Features als sie gebucht hatten (kein Schaden).
-  /// - `ultimate` (alt €59.99) → `enterprise` (neu €99.99 netto)
+  /// - `starter` (uralt €6.99)    → `solo`     (neu €4.99)
+  /// - `pro` (uralt €14.99)       → `soloPro`  (neu €14.99)
+  /// - `solo_plus`/`soloplus`     → `soloPro`  (Zwischen-Rename 2026-05-17→20)
+  /// - `business` (uralt €34.99)  → `business` (neu €49.99 netto)
+  /// - `ultimate` (uralt €59.99)  → `enterprise` (neu €99.99 netto)
   /// - Unbekannt → `free` (Sicherheits-Fallback).
   static BillingPlan fromString(String s) => switch (s.toLowerCase()) {
         'solo' => solo,
-        'solo_plus' || 'soloplus' => soloPlus,
+        'solo_pro' || 'solopro' => soloPro,
         'team' => team,
         'business' => business,
         'enterprise' => enterprise,
         // Legacy aliases (pre-restructure DB values)
         'starter' => solo,
-        'pro' => soloPlus,
+        'pro' => soloPro,
+        'solo_plus' || 'soloplus' => soloPro,
         'ultimate' => enterprise,
         _ => free,
       };
 
-  /// DB-/Stripe-Bezeichner. Snake-case wo nötig (`soloPlus` → `solo_plus`),
+  /// DB-/Stripe-Bezeichner. Snake-case wo nötig (`soloPro` → `solo_pro`),
   /// sonst Dart-name.
   String get apiName => switch (this) {
-        BillingPlan.soloPlus => 'solo_plus',
+        BillingPlan.soloPro => 'solo_pro',
         _ => name,
       };
 
@@ -52,7 +54,7 @@ enum BillingPlan {
   String get label => switch (this) {
         BillingPlan.free => 'Free',
         BillingPlan.solo => 'Solo',
-        BillingPlan.soloPlus => 'Solo Plus',
+        BillingPlan.soloPro => 'Solo Pro',
         BillingPlan.team => 'Team',
         BillingPlan.business => 'Business',
         BillingPlan.enterprise => 'Enterprise',
@@ -64,7 +66,7 @@ enum BillingPlan {
   int get rank => switch (this) {
         BillingPlan.free => 0,
         BillingPlan.solo => 1,
-        BillingPlan.soloPlus => 2,
+        BillingPlan.soloPro => 2,
         BillingPlan.team => 3,
         BillingPlan.business => 4,
         BillingPlan.enterprise => 5,

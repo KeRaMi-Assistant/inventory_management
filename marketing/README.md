@@ -22,16 +22,20 @@ Pricing-, Positioning- und Sales-Bezogene rund um CanLogistics.
 
 → Vollständige Liste mit Anbietern + Quellen siehe [COSTS.md](COSTS.md).
 
-### Pricing (Stand 2026-05-17, vor Implementation)
+### Pricing (Stand 2026-05-20)
 
 | Kategorie | Tier | Preis | Worst-Case-Kosten | Marge |
 |---|---|---|---|---|
 | **Privat** (brutto inkl. 19 % MwSt) | Free | 0 € | 0 € | – |
-| | Solo | 4,99 €/Mo | 0,82 € | 80 % |
-| | Solo Plus | 9,99 €/Mo | 1,39 € | 83 % |
+| | Solo | 4,99 €/Mo | 0,92 € | 82 % |
+| | **Solo Pro** | **14,99 €/Mo** | 2,02 € | 87 % |
 | **Enterprise** (netto excl. MwSt) | Team | 19,99 €/Mo | 2,53 € | 87 % |
 | | Business | 49,99 €/Mo | 5,95 € | 88 % |
 | | Enterprise | 99,99 €/Mo | 12,45 € | 88 % |
+
+UI-Layout: **Tabs** (links Privat, rechts Enterprise) statt
+übereinandergestapelter Sektionen. Yearly-Toggle zeigt den
+effektiven Monatspreis prominent, Jahres-Total klein ausgegraut.
 
 → Komplette Quotas + Feature-Matrix siehe [PRICING.md](PRICING.md).
 

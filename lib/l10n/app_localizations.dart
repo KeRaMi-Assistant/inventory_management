@@ -170,6 +170,12 @@ abstract class AppLocalizations {
   /// **'Privat-Tarife verstehen sich inkl. der gesetzlichen Mehrwertsteuer. Enterprise-Tarife werden netto ausgezeichnet — Mehrwertsteuer kommt auf der Rechnung dazu (bei gültiger USt-IdNr. innerhalb der EU als Reverse-Charge). Der Wechsel auf einen kostenpflichtigen Plan erfordert eine vollständige Rechnungsadresse.'**
   String get pricingLegalFootnote;
 
+  /// Kleiner Subtitle unter dem Monatspreis bei aktivierter Jahres-Abrechnung — zeigt das Jahres-Total.
+  ///
+  /// In de, this message translates to:
+  /// **'{total} jährlich abgerechnet'**
+  String pricingYearlyBilled(String total);
+
   /// Kurz-Subtitle unter dem Wordmark — drei Säulen der App.
   ///
   /// In de, this message translates to:

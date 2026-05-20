@@ -49,6 +49,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Personal tiers include the statutory value-added tax. Enterprise tiers are listed net — VAT is added on the invoice (reverse-charge inside the EU with a valid VAT ID). Upgrading to a paid plan requires a complete billing address.';
 
   @override
+  String pricingYearlyBilled(String total) {
+    return '$total billed annually';
+  }
+
+  @override
   String get appBrandSubtitle => 'Inventory · Shipments · Sales';
 
   @override

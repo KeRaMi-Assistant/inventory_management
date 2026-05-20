@@ -49,6 +49,11 @@ class AppLocalizationsDe extends AppLocalizations {
       'Privat-Tarife verstehen sich inkl. der gesetzlichen Mehrwertsteuer. Enterprise-Tarife werden netto ausgezeichnet — Mehrwertsteuer kommt auf der Rechnung dazu (bei gültiger USt-IdNr. innerhalb der EU als Reverse-Charge). Der Wechsel auf einen kostenpflichtigen Plan erfordert eine vollständige Rechnungsadresse.';
 
   @override
+  String pricingYearlyBilled(String total) {
+    return '$total jährlich abgerechnet';
+  }
+
+  @override
   String get appBrandSubtitle => 'Inventar · Sendungen · Verkäufe';
 
   @override
