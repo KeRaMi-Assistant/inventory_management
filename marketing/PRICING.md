@@ -18,6 +18,19 @@
 > nicht), Custom-Branding, Steuerberater-Sharing, Marketplace-Sync, SSO,
 > White-Label, API/Webhooks — alle entfernt oder als „(geplant)" markiert.
 >
+> **Korrektur 2026-05-20 (zweite Iteration):**
+> - „Otto" aus Mail-Adapter-Beispielen raus — kein Otto-Adapter in
+>   `inbox_adapters.ts`. Echte Liste: amazon, mediamarkt, saturn,
+>   pccomponentes, xkom, lego, tink, anker, euronics, kaufland, dell,
+>   ebay, galaxus, alza, xxxlutz (15 Adapter). Pricing-Highlight
+>   sagt jetzt „15+ Shops" mit ehrlichen Beispielen.
+> - „Forecast-Ring" → „Forecast-Anzeige": kein Ring-Widget, sondern
+>   ein KPI-Wert in `finance_tab` (statsCurrent/Target/Forecast als
+>   `_GoalRow`).
+> - „Erweiterte Rechte-Verwaltung" raus als Premium-Diff: Workspace-
+>   Rollen (Owner/Admin/Member) gibt's schon ab Team-Tier, sind kein
+>   Business+-Differenzierungsmerkmal.
+>
 > **Change-Log 2026-05-20:**
 > - Solo (€4,99): 5 000 Produkte, 5 Bilder, 10 GB, volle Statistik.
 > - „Solo Plus" → **Solo Pro** umbenannt, Preis €9,99 → **€14,99** brutto.
@@ -152,7 +165,7 @@ automatisierter Mail-Import — den gibt es erst ab Enterprise.
 | Workspaces | 1 |
 | Team-Mitglieder | 1 |
 | Statistik | Volle Tiefe (Drilldowns, Heatmaps, Trends, Cashflow) |
-| Monatliches Profit-Ziel mit Forecast-Ring | ✅ |
+| Monatliches Profit-Ziel mit Forecast-Anzeige | ✅ |
 | Export | CSV + PDF + Excel |
 | DATEV-Export | (geplant) |
 | Eigenes Verkaufsprofil (Public-Profile) | ✅ |
@@ -243,8 +256,9 @@ ehrlich als noch nicht implementiert ausgewiesen.
 | **Postfach IMAP** | ❌ | ❌ | ❌ | ✅ 1 / 30 d | ✅ 5 / 60 d | ✅ 15 / 90 d |
 | **Mail-Auto-Tracking** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | **Workspace-Einladungen** | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Workspace-Rollen (Owner/Admin/Member) | – | – | – | ✅ | ✅ | ✅ |
 | Statistik (Drilldowns, Heatmaps, Cashflow) | übersicht | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Profit-Ziel + Forecast-Ring | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Profit-Ziel + Forecast-Anzeige | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
 | Barcode-Scanner | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Eigene Carrier-API-Keys | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | CSV + PDF + Excel-Export | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
