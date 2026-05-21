@@ -557,6 +557,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get teamRenamePersonalWarnTitle => 'Personal Workspace';
+
+  @override
+  String get teamRenamePersonalWarn =>
+      'This is your personal default workspace. Rename anyway?';
+
+  @override
   String get teamMembers => 'Members';
 
   @override
@@ -593,6 +600,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get teamMemberRemove => 'Remove';
 
   @override
+  String get teamMemberFallbackLabel => 'this member';
+
+  @override
   String get teamInviteRevoke => 'Revoke invite';
 
   @override
@@ -609,6 +619,144 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get teamRoleViewer => 'Read-only';
+
+  @override
+  String get teamRoleEditor => 'Editor';
+
+  @override
+  String get teamRoleObserver => 'Observer';
+
+  @override
+  String get teamRoleEditorHint => 'Can read and edit data.';
+
+  @override
+  String get teamRoleObserverHint => 'Read-only access.';
+
+  @override
+  String get teamRoleOwnerHint => 'Full control incl. workspace management.';
+
+  @override
+  String get teamRoleAdminHint => 'Can invite and manage carrier keys.';
+
+  @override
+  String get teamWorkspacesTitle => 'Workspaces';
+
+  @override
+  String get teamWorkspacesActiveLabel => 'Active';
+
+  @override
+  String get teamWorkspacesActiveBadgeTooltip => 'Currently active workspace';
+
+  @override
+  String get teamWorkspacesCreate => 'New workspace';
+
+  @override
+  String get teamWorkspacesCreateTitle => 'Create new workspace';
+
+  @override
+  String get teamWorkspacesCreateLabel => 'Name';
+
+  @override
+  String get teamWorkspacesCreateHint => 'e.g. Acme Ltd.';
+
+  @override
+  String get teamWorkspacesCreateSubmit => 'Create';
+
+  @override
+  String teamWorkspacesCreateSuccess(String name) {
+    return 'Workspace \'$name\' created.';
+  }
+
+  @override
+  String teamWorkspacesCreateFailed(String error) {
+    return 'Create failed: $error';
+  }
+
+  @override
+  String get teamWorkspacesCreateValidationLength =>
+      'Name must be 1–80 characters.';
+
+  @override
+  String teamWorkspacesPlanUsage(String plan, int used, int limit) {
+    return 'Plan $plan: $used/$limit workspaces';
+  }
+
+  @override
+  String teamWorkspacesPlanUsageUnlimited(String plan, int used) {
+    return 'Plan $plan: $used workspaces (unlimited)';
+  }
+
+  @override
+  String get teamWorkspacesLimitReachedTitle => 'Limit reached';
+
+  @override
+  String teamWorkspacesLimitReachedBody(String plan, int limit) {
+    return 'Your plan $plan allows $limit workspaces. Upgrade to create more.';
+  }
+
+  @override
+  String get teamWorkspacesLimitReachedCta => 'Upgrade plan';
+
+  @override
+  String get teamWorkspacesSwitchTo => 'Switch';
+
+  @override
+  String get teamWorkspacesEmpty => 'You don\'t have any workspace yet.';
+
+  @override
+  String get teamInviteRoleEditor => 'Editor';
+
+  @override
+  String get teamInviteRoleObserver => 'Observer';
+
+  @override
+  String get teamInviteRoleAdminGated => 'Admin (Team plan and up)';
+
+  @override
+  String get teamInviteAdminLockedTooltip =>
+      'Admin role requires Team plan or higher.';
+
+  @override
+  String get teamInviteEmailInvalid => 'Invalid email address.';
+
+  @override
+  String get teamInviteCreatedTitle => 'Invite created';
+
+  @override
+  String get teamInviteShareBody => 'Share this code with your teammate:';
+
+  @override
+  String get teamInviteCopyLink => 'Copy code';
+
+  @override
+  String get teamInviteCopyLinkSnack => 'Code copied.';
+
+  @override
+  String get teamInviteCopyFailed => 'Copy failed.';
+
+  @override
+  String get teamInviteShareEmailHint =>
+      'E-mail dispatch ships with the next version.';
+
+  @override
+  String get teamMemberRemoveConfirmTitle => 'Remove member?';
+
+  @override
+  String teamMemberRemoveConfirmBody(String email) {
+    return 'Remove $email from this workspace?';
+  }
+
+  @override
+  String get teamMemberRoleChangeLoading => 'Saving role …';
+
+  @override
+  String get commonCancel => 'Cancel';
+
+  @override
+  String get commonConfirm => 'Confirm';
+
+  @override
+  String get commonClose => 'Close';
 
   @override
   String get settingsTaxRateTitle => 'VAT rate';
@@ -1478,6 +1626,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get helpWorkspacePricingDesc =>
       'Free, Pro and Business mainly differ in number of members, number of mailboxes and whether carrier polling is active. Current limits are on the pricing screen.';
+
+  @override
+  String get helpWorkspacesHowManyTitle => 'How many workspaces can I create?';
+
+  @override
+  String get helpWorkspacesHowManyBody =>
+      'Depends on your plan: Free / Solo = 1, Solo Pro = 2, Team = 5, Business = 20, Enterprise = unlimited. The limit is enforced server-side. Need more? Upgrade your plan.';
+
+  @override
+  String get helpInviteHowTitle => 'How do I invite someone?';
+
+  @override
+  String get helpInviteHowBody =>
+      'Settings → Team → \'Invite\'. Pick an email + role (editor or observer). You\'ll get a code to share with the recipient via messenger/email. They sign up with the same email and accept the invite from the bell icon top-right. Automatic e-mail dispatch ships with a later version.';
+
+  @override
+  String get helpRolesEditorObserverTitle => 'What roles are available?';
+
+  @override
+  String get helpRolesEditorObserverBody =>
+      'Four roles: Owner (full control, can rename/delete workspace), Admin (can invite + manage members), Editor (read + edit data), Observer (read-only). Admin role requires Team plan or higher.';
 
   @override
   String get helpPushSection => 'Push notifications';

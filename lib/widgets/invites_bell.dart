@@ -8,6 +8,7 @@ import '../models/workspace.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/invites_provider.dart';
+import '../utils/role_labels.dart';
 
 /// Glocken-Icon im App-Header. Zeigt einen roten Badge mit der Anzahl
 /// offener Workspace-Einladungen für den aktuellen User. Tap öffnet einen
@@ -164,13 +165,6 @@ class _InviteRow extends StatefulWidget {
 class _InviteRowState extends State<_InviteRow> {
   bool _busy = false;
 
-  String _roleLabel(AppLocalizations l10n, WorkspaceRole r) => switch (r) {
-        WorkspaceRole.owner => l10n.teamRoleOwner,
-        WorkspaceRole.admin => l10n.teamRoleAdmin,
-        WorkspaceRole.member => l10n.teamRoleMember,
-        WorkspaceRole.viewer => l10n.teamRoleViewer,
-      };
-
   Future<void> _accept() async {
     setState(() => _busy = true);
     final l10n = AppLocalizations.of(context);
@@ -262,7 +256,7 @@ class _InviteRowState extends State<_InviteRow> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      l10n.invitesRoleLabel(_roleLabel(l10n, inv.role)),
+                      l10n.invitesRoleLabel(roleLabel(context, inv.role)),
                       style: TextStyle(
                           fontSize: 11, color: AppTheme.textMutedOf(context)),
                     ),

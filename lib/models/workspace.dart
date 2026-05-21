@@ -8,6 +8,7 @@ class Workspace {
   final String? handle;
   final bool publicProfileEnabled;
   final DateTime? onboardedAt;
+  final bool isPersonal;
 
   const Workspace({
     required this.id,
@@ -17,6 +18,7 @@ class Workspace {
     this.handle,
     this.publicProfileEnabled = false,
     this.onboardedAt,
+    this.isPersonal = false,
   });
 
   factory Workspace.fromSupabase(Map<String, dynamic> row) => Workspace(
@@ -30,6 +32,7 @@ class Workspace {
         onboardedAt: row['onboarded_at'] != null
             ? DateTime.parse(row['onboarded_at'] as String)
             : null,
+        isPersonal: (row['is_personal'] as bool?) ?? false,
       );
 
   /// Label, das im UI angezeigt werden soll. Wenn der aktuelle User Owner
@@ -50,27 +53,38 @@ class Workspace {
 enum WorkspaceRole {
   owner,
   admin,
-  member,
-  viewer;
+  editor, // war: member
+  observer; // war: viewer
 
-  static WorkspaceRole fromString(String s) => switch (s.toLowerCase()) {
-        'owner' => owner,
-        'admin' => admin,
-        'viewer' => viewer,
-        _ => member,
+  /// DB-/Stripe-/RPC-Bezeichner. DB-Schema behält 'member'/'viewer'.
+  String get apiName => switch (this) {
+        WorkspaceRole.owner => 'owner',
+        WorkspaceRole.admin => 'admin',
+        WorkspaceRole.editor => 'member',
+        WorkspaceRole.observer => 'viewer',
       };
 
-  String get apiName => name;
+  /// Tolerant gegenüber DB-Werten + Legacy-Strings.
+  static WorkspaceRole fromApi(String s) => switch (s.toLowerCase()) {
+        'owner' => owner,
+        'admin' => admin,
+        'member' || 'editor' => editor,
+        'viewer' || 'observer' => observer,
+        _ => observer, // Safe Fallback (least privilege)
+      };
+
+  /// Legacy-Alias — intern bitte fromApi nutzen.
+  static WorkspaceRole fromString(String s) => fromApi(s);
 
   String get label => switch (this) {
         owner => 'Owner',
         admin => 'Admin',
-        member => 'Mitglied',
-        viewer => 'Read-only',
+        editor => 'Mitglied',
+        observer => 'Read-only',
       };
 
   bool get canManageMembers => this == owner || this == admin;
-  bool get canEdit => this != viewer;
+  bool get canEdit => this != observer;
 }
 
 class WorkspaceMember {
@@ -92,7 +106,7 @@ class WorkspaceMember {
       WorkspaceMember(
         workspaceId: row['workspace_id'] as String,
         userId: row['user_id'] as String,
-        role: WorkspaceRole.fromString(row['role'] as String),
+        role: WorkspaceRole.fromApi(row['role'] as String),
         joinedAt: DateTime.parse(row['joined_at'] as String),
         email: row['email'] as String?,
       );
@@ -127,7 +141,7 @@ class WorkspaceInvite {
         id: row['id'] as String,
         workspaceId: row['workspace_id'] as String,
         email: row['email'] as String,
-        role: WorkspaceRole.fromString(row['role'] as String),
+        role: WorkspaceRole.fromApi(row['role'] as String),
         token: row['token'] as String,
         expiresAt: DateTime.parse(row['expires_at'] as String),
         acceptedAt: row['accepted_at'] != null

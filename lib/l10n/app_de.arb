@@ -213,6 +213,10 @@
   "teamRenameSuccess": "Workspace umbenannt.",
   "teamRenameFailed": "Umbenennen fehlgeschlagen: {error}",
   "@teamRenameFailed": { "placeholders": { "error": {} } },
+  "teamRenamePersonalWarnTitle": "Persönlicher Workspace",
+  "@teamRenamePersonalWarnTitle": { "description": "Titel des Bestätigungsdialogs beim Umbenennen eines Personal-Workspace." },
+  "teamRenamePersonalWarn": "Dies ist dein persönlicher Standard-Workspace. Wirklich umbenennen?",
+  "@teamRenamePersonalWarn": { "description": "Warntext im Bestätigungsdialog beim Umbenennen eines Personal-Workspace." },
   "teamMembers": "Mitglieder",
   "teamInvites": "Offene Einladungen",
   "teamInvite": "Einladen",
@@ -226,12 +230,129 @@
   "teamInviteExpires": "Rolle: {role} · läuft ab {date}",
   "@teamInviteExpires": { "placeholders": { "role": {}, "date": {} } },
   "teamMemberRemove": "Entfernen",
+  "teamMemberFallbackLabel": "diesem Mitglied",
+  "@teamMemberFallbackLabel": { "description": "Fallback-Bezeichnung wenn Email eines Mitglieds nicht bekannt ist (z.B. im Entfernen-Dialog)." },
   "teamInviteRevoke": "Einladung zurückziehen",
   "teamSwitchWorkspace": "Workspace wechseln",
-  "teamRoleOwner": "Owner",
+  "teamRoleOwner": "Eigentümer:in",
   "teamRoleAdmin": "Admin",
   "teamRoleMember": "Mitglied",
   "teamRoleViewer": "Read-only",
+  "teamRoleEditor": "Editor",
+  "@teamRoleEditor": { "description": "Workspace-Rolle Editor (DB: member) — kann lesen + bearbeiten." },
+  "teamRoleObserver": "Beobachter",
+  "@teamRoleObserver": { "description": "Workspace-Rolle Beobachter (DB: viewer) — nur Lesezugriff." },
+
+  "teamRoleEditorHint": "Kann lesen und bearbeiten.",
+  "@teamRoleEditorHint": { "description": "Untertitel für Editor-Rolle in Invite-Dialog." },
+  "teamRoleObserverHint": "Nur Leserechte.",
+  "@teamRoleObserverHint": { "description": "Untertitel für Beobachter-Rolle in Invite-Dialog." },
+  "teamRoleOwnerHint": "Volle Kontrolle inkl. Workspace-Verwaltung.",
+  "@teamRoleOwnerHint": { "description": "Untertitel für Owner-Rolle." },
+  "teamRoleAdminHint": "Kann einladen und Carrier-Keys verwalten.",
+  "@teamRoleAdminHint": { "description": "Untertitel für Admin-Rolle." },
+
+  "teamWorkspacesTitle": "Workspaces",
+  "@teamWorkspacesTitle": { "description": "Abschnittstitel für Workspace-Liste in Settings." },
+  "teamWorkspacesActiveLabel": "Aktiv",
+  "@teamWorkspacesActiveLabel": { "description": "Chip-Label für den aktiven Workspace." },
+  "teamWorkspacesActiveBadgeTooltip": "Aktueller Workspace",
+  "@teamWorkspacesActiveBadgeTooltip": { "description": "Tooltip des Aktiv-Chips." },
+  "teamWorkspacesCreate": "Neuer Workspace",
+  "@teamWorkspacesCreate": { "description": "Label für Neuer-Workspace-Listenzeile." },
+  "teamWorkspacesCreateTitle": "Neuen Workspace anlegen",
+  "@teamWorkspacesCreateTitle": { "description": "Titel des CreateWorkspaceDialog Bottom-Sheets." },
+  "teamWorkspacesCreateLabel": "Name",
+  "@teamWorkspacesCreateLabel": { "description": "Label des Namens-Textfelds im CreateWorkspaceDialog." },
+  "teamWorkspacesCreateHint": "z. B. Acme GmbH",
+  "@teamWorkspacesCreateHint": { "description": "Placeholder-Hint im Namens-Textfeld." },
+  "teamWorkspacesCreateSubmit": "Anlegen",
+  "@teamWorkspacesCreateSubmit": { "description": "Submit-Button-Label im CreateWorkspaceDialog." },
+  "teamWorkspacesCreateSuccess": "Workspace ‘{name}’ angelegt.",
+  "@teamWorkspacesCreateSuccess": {
+    "description": "SnackBar nach erfolgreicher Workspace-Erstellung.",
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "teamWorkspacesCreateFailed": "Anlegen fehlgeschlagen: {error}",
+  "@teamWorkspacesCreateFailed": {
+    "description": "SnackBar bei Fehler beim Workspace-Anlegen.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "teamWorkspacesCreateValidationLength": "Name muss 1–80 Zeichen sein.",
+  "@teamWorkspacesCreateValidationLength": { "description": "Validierungsfehler im Workspace-Namensfeld." },
+  "teamWorkspacesPlanUsage": "Plan {plan}: {used}/{limit} Workspaces",
+  "@teamWorkspacesPlanUsage": {
+    "description": "Plan-Usage-Anzeige mit Limit.",
+    "placeholders": {
+      "plan": { "type": "String" },
+      "used": { "type": "int" },
+      "limit": { "type": "int" }
+    }
+  },
+  "teamWorkspacesPlanUsageUnlimited": "Plan {plan}: {used} Workspaces (unbegrenzt)",
+  "@teamWorkspacesPlanUsageUnlimited": {
+    "description": "Plan-Usage-Anzeige ohne Limit.",
+    "placeholders": {
+      "plan": { "type": "String" },
+      "used": { "type": "int" }
+    }
+  },
+  "teamWorkspacesLimitReachedTitle": "Limit erreicht",
+  "@teamWorkspacesLimitReachedTitle": { "description": "Titel des LimitReachedDialog." },
+  "teamWorkspacesLimitReachedBody": "Dein Plan {plan} erlaubt {limit} Workspaces. Upgrade, um weitere anzulegen.",
+  "@teamWorkspacesLimitReachedBody": {
+    "description": "Body des LimitReachedDialog.",
+    "placeholders": {
+      "plan": { "type": "String" },
+      "limit": { "type": "int" }
+    }
+  },
+  "teamWorkspacesLimitReachedCta": "Plan upgraden",
+  "@teamWorkspacesLimitReachedCta": { "description": "CTA-Button im LimitReachedDialog." },
+  "teamWorkspacesSwitchTo": "Wechseln",
+  "@teamWorkspacesSwitchTo": { "description": "Button-Label zum Workspace-Wechseln." },
+  "teamWorkspacesEmpty": "Du hast noch keinen Workspace.",
+  "@teamWorkspacesEmpty": { "description": "Empty-State im WorkspaceSwitcher." },
+
+  "teamInviteRoleEditor": "Editor",
+  "@teamInviteRoleEditor": { "description": "Rollen-Option Editor im Invite-Dialog." },
+  "teamInviteRoleObserver": "Beobachter",
+  "@teamInviteRoleObserver": { "description": "Rollen-Option Beobachter im Invite-Dialog." },
+  "teamInviteRoleAdminGated": "Admin (ab Plan Team)",
+  "@teamInviteRoleAdminGated": { "description": "Rollen-Option Admin (plan-gated) im Invite-Dialog." },
+  "teamInviteAdminLockedTooltip": "Admin-Rolle ist ab Plan Team verfügbar.",
+  "@teamInviteAdminLockedTooltip": { "description": "Tooltip für deaktivierte Admin-Option." },
+  "teamInviteEmailInvalid": "Ungültige E-Mail-Adresse.",
+  "@teamInviteEmailInvalid": { "description": "Validierungsfehler für E-Mail im Invite-Dialog." },
+  "teamInviteCreatedTitle": "Einladung erstellt",
+  "@teamInviteCreatedTitle": { "description": "Titel des InviteSuccessSheet." },
+  "teamInviteShareBody": "Sende diesen Code an dein Teammitglied:",
+  "@teamInviteShareBody": { "description": "Body des InviteSuccessSheet." },
+  "teamInviteCopyLink": "Code kopieren",
+  "@teamInviteCopyLink": { "description": "Button-Label zum Kopieren des Invite-Tokens." },
+  "teamInviteCopyLinkSnack": "Code kopiert.",
+  "@teamInviteCopyLinkSnack": { "description": "SnackBar nach erfolgreichem Kopieren." },
+  "teamInviteCopyFailed": "Kopieren fehlgeschlagen.",
+  "@teamInviteCopyFailed": { "description": "SnackBar bei Fehler beim Kopieren." },
+  "teamInviteShareEmailHint": "E-Mail-Versand kommt mit der nächsten Version.",
+  "@teamInviteShareEmailHint": { "description": "Hinweis unter Token im InviteSuccessSheet." },
+
+  "teamMemberRemoveConfirmTitle": "Mitglied entfernen?",
+  "@teamMemberRemoveConfirmTitle": { "description": "Titel des MemberRemoveConfirmDialog." },
+  "teamMemberRemoveConfirmBody": "{email} aus diesem Workspace entfernen?",
+  "@teamMemberRemoveConfirmBody": {
+    "description": "Body des MemberRemoveConfirmDialog.",
+    "placeholders": { "email": { "type": "String" } }
+  },
+  "teamMemberRoleChangeLoading": "Rolle wird gespeichert …",
+  "@teamMemberRoleChangeLoading": { "description": "Loading-Hinweis beim Speichern einer Rollenänderung." },
+
+  "commonCancel": "Abbrechen",
+  "@commonCancel": { "description": "Universelles Abbrechen-Label." },
+  "commonConfirm": "Bestätigen",
+  "@commonConfirm": { "description": "Universelles Bestätigen-Label." },
+  "commonClose": "Schließen",
+  "@commonClose": { "description": "Universelles Schließen-Label." },
 
   "settingsTaxRateTitle": "MwSt-Satz",
   "settingsTaxRateSubtitle": "Standard: 19%. Neue Deals berechnen EK Brutto aktuell mit 1,19.",
@@ -530,6 +651,31 @@
   "helpWorkspaceRoleMember": "Member — kann Daten lesen/schreiben, aber keine Team- oder Carrier-Einstellungen ändern.",
   "helpWorkspacePricingTitle": "Pricing-Tier-Limits",
   "helpWorkspacePricingDesc": "Free, Pro und Business unterscheiden sich vor allem in der Anzahl Mitglieder, der Anzahl Postfächer und ob Carrier-Polling aktiv ist. Aktuelle Limits findest du auf dem Pricing-Screen.",
+
+  "helpWorkspacesHowManyTitle": "Wie viele Workspaces darf ich anlegen?",
+  "@helpWorkspacesHowManyTitle": {
+    "description": "Help-FAQ Title — Workspace-Limit pro Plan."
+  },
+  "helpWorkspacesHowManyBody": "Das hängt von deinem Plan ab: Free / Solo = 1, Solo Pro = 2, Team = 5, Business = 20, Enterprise = unbegrenzt. Beim Anlegen wird das Limit serverseitig geprüft. Wenn du mehr brauchst: Plan upgraden.",
+  "@helpWorkspacesHowManyBody": {
+    "description": "Help-FAQ Body — Limit-Details pro Plan."
+  },
+  "helpInviteHowTitle": "Wie lade ich jemanden ein?",
+  "@helpInviteHowTitle": {
+    "description": "Help-FAQ Title — Einladungs-Flow erklären."
+  },
+  "helpInviteHowBody": "Settings → Team → „Einladen\". E-Mail + Rolle (Editor oder Beobachter) wählen. Du bekommst einen Code, den du dem Empfänger per Messenger/Mail teilst. Empfänger meldet sich mit derselben E-Mail an und sieht die Einladung im Postfach-Glöckchen oben rechts. E-Mail-Versand wird in einer späteren Version automatisch.",
+  "@helpInviteHowBody": {
+    "description": "Help-FAQ Body — Schritt-für-Schritt Einladungs-Anleitung."
+  },
+  "helpRolesEditorObserverTitle": "Welche Rollen gibt es?",
+  "@helpRolesEditorObserverTitle": {
+    "description": "Help-FAQ Title — Rollen-Übersicht."
+  },
+  "helpRolesEditorObserverBody": "Vier Rollen: Eigentümer:in (volle Kontrolle, kann Workspace umbenennen/löschen), Admin (kann einladen, Mitglieder verwalten), Editor (kann Daten lesen und bearbeiten), Beobachter (nur Lesezugriff). Die Admin-Rolle ist ab Plan Team verfügbar.",
+  "@helpRolesEditorObserverBody": {
+    "description": "Help-FAQ Body — Alle vier Rollen mit Berechtigungen."
+  },
 
   "helpPushSection": "Push-Notifications",
   "helpPushIosTitle": "iOS aktivieren",

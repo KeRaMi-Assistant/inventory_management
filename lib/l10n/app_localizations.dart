@@ -1094,6 +1094,18 @@ abstract class AppLocalizations {
   /// **'Umbenennen fehlgeschlagen: {error}'**
   String teamRenameFailed(Object error);
 
+  /// Titel des Bestätigungsdialogs beim Umbenennen eines Personal-Workspace.
+  ///
+  /// In de, this message translates to:
+  /// **'Persönlicher Workspace'**
+  String get teamRenamePersonalWarnTitle;
+
+  /// Warntext im Bestätigungsdialog beim Umbenennen eines Personal-Workspace.
+  ///
+  /// In de, this message translates to:
+  /// **'Dies ist dein persönlicher Standard-Workspace. Wirklich umbenennen?'**
+  String get teamRenamePersonalWarn;
+
   /// No description provided for @teamMembers.
   ///
   /// In de, this message translates to:
@@ -1154,6 +1166,12 @@ abstract class AppLocalizations {
   /// **'Entfernen'**
   String get teamMemberRemove;
 
+  /// Fallback-Bezeichnung wenn Email eines Mitglieds nicht bekannt ist (z.B. im Entfernen-Dialog).
+  ///
+  /// In de, this message translates to:
+  /// **'diesem Mitglied'**
+  String get teamMemberFallbackLabel;
+
   /// No description provided for @teamInviteRevoke.
   ///
   /// In de, this message translates to:
@@ -1169,7 +1187,7 @@ abstract class AppLocalizations {
   /// No description provided for @teamRoleOwner.
   ///
   /// In de, this message translates to:
-  /// **'Owner'**
+  /// **'Eigentümer:in'**
   String get teamRoleOwner;
 
   /// No description provided for @teamRoleAdmin.
@@ -1189,6 +1207,252 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Read-only'**
   String get teamRoleViewer;
+
+  /// Workspace-Rolle Editor (DB: member) — kann lesen + bearbeiten.
+  ///
+  /// In de, this message translates to:
+  /// **'Editor'**
+  String get teamRoleEditor;
+
+  /// Workspace-Rolle Beobachter (DB: viewer) — nur Lesezugriff.
+  ///
+  /// In de, this message translates to:
+  /// **'Beobachter'**
+  String get teamRoleObserver;
+
+  /// Untertitel für Editor-Rolle in Invite-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Kann lesen und bearbeiten.'**
+  String get teamRoleEditorHint;
+
+  /// Untertitel für Beobachter-Rolle in Invite-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur Leserechte.'**
+  String get teamRoleObserverHint;
+
+  /// Untertitel für Owner-Rolle.
+  ///
+  /// In de, this message translates to:
+  /// **'Volle Kontrolle inkl. Workspace-Verwaltung.'**
+  String get teamRoleOwnerHint;
+
+  /// Untertitel für Admin-Rolle.
+  ///
+  /// In de, this message translates to:
+  /// **'Kann einladen und Carrier-Keys verwalten.'**
+  String get teamRoleAdminHint;
+
+  /// Abschnittstitel für Workspace-Liste in Settings.
+  ///
+  /// In de, this message translates to:
+  /// **'Workspaces'**
+  String get teamWorkspacesTitle;
+
+  /// Chip-Label für den aktiven Workspace.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiv'**
+  String get teamWorkspacesActiveLabel;
+
+  /// Tooltip des Aktiv-Chips.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktueller Workspace'**
+  String get teamWorkspacesActiveBadgeTooltip;
+
+  /// Label für Neuer-Workspace-Listenzeile.
+  ///
+  /// In de, this message translates to:
+  /// **'Neuer Workspace'**
+  String get teamWorkspacesCreate;
+
+  /// Titel des CreateWorkspaceDialog Bottom-Sheets.
+  ///
+  /// In de, this message translates to:
+  /// **'Neuen Workspace anlegen'**
+  String get teamWorkspacesCreateTitle;
+
+  /// Label des Namens-Textfelds im CreateWorkspaceDialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Name'**
+  String get teamWorkspacesCreateLabel;
+
+  /// Placeholder-Hint im Namens-Textfeld.
+  ///
+  /// In de, this message translates to:
+  /// **'z. B. Acme GmbH'**
+  String get teamWorkspacesCreateHint;
+
+  /// Submit-Button-Label im CreateWorkspaceDialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Anlegen'**
+  String get teamWorkspacesCreateSubmit;
+
+  /// SnackBar nach erfolgreicher Workspace-Erstellung.
+  ///
+  /// In de, this message translates to:
+  /// **'Workspace ‘{name}’ angelegt.'**
+  String teamWorkspacesCreateSuccess(String name);
+
+  /// SnackBar bei Fehler beim Workspace-Anlegen.
+  ///
+  /// In de, this message translates to:
+  /// **'Anlegen fehlgeschlagen: {error}'**
+  String teamWorkspacesCreateFailed(String error);
+
+  /// Validierungsfehler im Workspace-Namensfeld.
+  ///
+  /// In de, this message translates to:
+  /// **'Name muss 1–80 Zeichen sein.'**
+  String get teamWorkspacesCreateValidationLength;
+
+  /// Plan-Usage-Anzeige mit Limit.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan {plan}: {used}/{limit} Workspaces'**
+  String teamWorkspacesPlanUsage(String plan, int used, int limit);
+
+  /// Plan-Usage-Anzeige ohne Limit.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan {plan}: {used} Workspaces (unbegrenzt)'**
+  String teamWorkspacesPlanUsageUnlimited(String plan, int used);
+
+  /// Titel des LimitReachedDialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Limit erreicht'**
+  String get teamWorkspacesLimitReachedTitle;
+
+  /// Body des LimitReachedDialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Dein Plan {plan} erlaubt {limit} Workspaces. Upgrade, um weitere anzulegen.'**
+  String teamWorkspacesLimitReachedBody(String plan, int limit);
+
+  /// CTA-Button im LimitReachedDialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan upgraden'**
+  String get teamWorkspacesLimitReachedCta;
+
+  /// Button-Label zum Workspace-Wechseln.
+  ///
+  /// In de, this message translates to:
+  /// **'Wechseln'**
+  String get teamWorkspacesSwitchTo;
+
+  /// Empty-State im WorkspaceSwitcher.
+  ///
+  /// In de, this message translates to:
+  /// **'Du hast noch keinen Workspace.'**
+  String get teamWorkspacesEmpty;
+
+  /// Rollen-Option Editor im Invite-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Editor'**
+  String get teamInviteRoleEditor;
+
+  /// Rollen-Option Beobachter im Invite-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Beobachter'**
+  String get teamInviteRoleObserver;
+
+  /// Rollen-Option Admin (plan-gated) im Invite-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Admin (ab Plan Team)'**
+  String get teamInviteRoleAdminGated;
+
+  /// Tooltip für deaktivierte Admin-Option.
+  ///
+  /// In de, this message translates to:
+  /// **'Admin-Rolle ist ab Plan Team verfügbar.'**
+  String get teamInviteAdminLockedTooltip;
+
+  /// Validierungsfehler für E-Mail im Invite-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungültige E-Mail-Adresse.'**
+  String get teamInviteEmailInvalid;
+
+  /// Titel des InviteSuccessSheet.
+  ///
+  /// In de, this message translates to:
+  /// **'Einladung erstellt'**
+  String get teamInviteCreatedTitle;
+
+  /// Body des InviteSuccessSheet.
+  ///
+  /// In de, this message translates to:
+  /// **'Sende diesen Code an dein Teammitglied:'**
+  String get teamInviteShareBody;
+
+  /// Button-Label zum Kopieren des Invite-Tokens.
+  ///
+  /// In de, this message translates to:
+  /// **'Code kopieren'**
+  String get teamInviteCopyLink;
+
+  /// SnackBar nach erfolgreichem Kopieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Code kopiert.'**
+  String get teamInviteCopyLinkSnack;
+
+  /// SnackBar bei Fehler beim Kopieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Kopieren fehlgeschlagen.'**
+  String get teamInviteCopyFailed;
+
+  /// Hinweis unter Token im InviteSuccessSheet.
+  ///
+  /// In de, this message translates to:
+  /// **'E-Mail-Versand kommt mit der nächsten Version.'**
+  String get teamInviteShareEmailHint;
+
+  /// Titel des MemberRemoveConfirmDialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Mitglied entfernen?'**
+  String get teamMemberRemoveConfirmTitle;
+
+  /// Body des MemberRemoveConfirmDialog.
+  ///
+  /// In de, this message translates to:
+  /// **'{email} aus diesem Workspace entfernen?'**
+  String teamMemberRemoveConfirmBody(String email);
+
+  /// Loading-Hinweis beim Speichern einer Rollenänderung.
+  ///
+  /// In de, this message translates to:
+  /// **'Rolle wird gespeichert …'**
+  String get teamMemberRoleChangeLoading;
+
+  /// Universelles Abbrechen-Label.
+  ///
+  /// In de, this message translates to:
+  /// **'Abbrechen'**
+  String get commonCancel;
+
+  /// Universelles Bestätigen-Label.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestätigen'**
+  String get commonConfirm;
+
+  /// Universelles Schließen-Label.
+  ///
+  /// In de, this message translates to:
+  /// **'Schließen'**
+  String get commonClose;
 
   /// No description provided for @settingsTaxRateTitle.
   ///
@@ -2707,6 +2971,42 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Free, Pro und Business unterscheiden sich vor allem in der Anzahl Mitglieder, der Anzahl Postfächer und ob Carrier-Polling aktiv ist. Aktuelle Limits findest du auf dem Pricing-Screen.'**
   String get helpWorkspacePricingDesc;
+
+  /// Help-FAQ Title — Workspace-Limit pro Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie viele Workspaces darf ich anlegen?'**
+  String get helpWorkspacesHowManyTitle;
+
+  /// Help-FAQ Body — Limit-Details pro Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'Das hängt von deinem Plan ab: Free / Solo = 1, Solo Pro = 2, Team = 5, Business = 20, Enterprise = unbegrenzt. Beim Anlegen wird das Limit serverseitig geprüft. Wenn du mehr brauchst: Plan upgraden.'**
+  String get helpWorkspacesHowManyBody;
+
+  /// Help-FAQ Title — Einladungs-Flow erklären.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie lade ich jemanden ein?'**
+  String get helpInviteHowTitle;
+
+  /// Help-FAQ Body — Schritt-für-Schritt Einladungs-Anleitung.
+  ///
+  /// In de, this message translates to:
+  /// **'Settings → Team → „Einladen\". E-Mail + Rolle (Editor oder Beobachter) wählen. Du bekommst einen Code, den du dem Empfänger per Messenger/Mail teilst. Empfänger meldet sich mit derselben E-Mail an und sieht die Einladung im Postfach-Glöckchen oben rechts. E-Mail-Versand wird in einer späteren Version automatisch.'**
+  String get helpInviteHowBody;
+
+  /// Help-FAQ Title — Rollen-Übersicht.
+  ///
+  /// In de, this message translates to:
+  /// **'Welche Rollen gibt es?'**
+  String get helpRolesEditorObserverTitle;
+
+  /// Help-FAQ Body — Alle vier Rollen mit Berechtigungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Vier Rollen: Eigentümer:in (volle Kontrolle, kann Workspace umbenennen/löschen), Admin (kann einladen, Mitglieder verwalten), Editor (kann Daten lesen und bearbeiten), Beobachter (nur Lesezugriff). Die Admin-Rolle ist ab Plan Team verfügbar.'**
+  String get helpRolesEditorObserverBody;
 
   /// No description provided for @helpPushSection.
   ///

@@ -336,6 +336,18 @@ class _HelpScreenState extends State<HelpScreen> {
             l10n.helpWorkspacePricingTitle,
             l10n.helpWorkspacePricingDesc,
           ),
+          _HelpItem.text(
+            l10n.helpWorkspacesHowManyTitle,
+            l10n.helpWorkspacesHowManyBody,
+          ),
+          _HelpItem.text(
+            l10n.helpInviteHowTitle,
+            l10n.helpInviteHowBody,
+          ),
+          _HelpItem.text(
+            l10n.helpRolesEditorObserverTitle,
+            l10n.helpRolesEditorObserverBody,
+          ),
         ],
       ),
       _HelpSection(

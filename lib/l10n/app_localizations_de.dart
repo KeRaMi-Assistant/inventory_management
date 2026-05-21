@@ -559,6 +559,13 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get teamRenamePersonalWarnTitle => 'Persönlicher Workspace';
+
+  @override
+  String get teamRenamePersonalWarn =>
+      'Dies ist dein persönlicher Standard-Workspace. Wirklich umbenennen?';
+
+  @override
   String get teamMembers => 'Mitglieder';
 
   @override
@@ -595,13 +602,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get teamMemberRemove => 'Entfernen';
 
   @override
+  String get teamMemberFallbackLabel => 'diesem Mitglied';
+
+  @override
   String get teamInviteRevoke => 'Einladung zurückziehen';
 
   @override
   String get teamSwitchWorkspace => 'Workspace wechseln';
 
   @override
-  String get teamRoleOwner => 'Owner';
+  String get teamRoleOwner => 'Eigentümer:in';
 
   @override
   String get teamRoleAdmin => 'Admin';
@@ -611,6 +621,144 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get teamRoleViewer => 'Read-only';
+
+  @override
+  String get teamRoleEditor => 'Editor';
+
+  @override
+  String get teamRoleObserver => 'Beobachter';
+
+  @override
+  String get teamRoleEditorHint => 'Kann lesen und bearbeiten.';
+
+  @override
+  String get teamRoleObserverHint => 'Nur Leserechte.';
+
+  @override
+  String get teamRoleOwnerHint => 'Volle Kontrolle inkl. Workspace-Verwaltung.';
+
+  @override
+  String get teamRoleAdminHint => 'Kann einladen und Carrier-Keys verwalten.';
+
+  @override
+  String get teamWorkspacesTitle => 'Workspaces';
+
+  @override
+  String get teamWorkspacesActiveLabel => 'Aktiv';
+
+  @override
+  String get teamWorkspacesActiveBadgeTooltip => 'Aktueller Workspace';
+
+  @override
+  String get teamWorkspacesCreate => 'Neuer Workspace';
+
+  @override
+  String get teamWorkspacesCreateTitle => 'Neuen Workspace anlegen';
+
+  @override
+  String get teamWorkspacesCreateLabel => 'Name';
+
+  @override
+  String get teamWorkspacesCreateHint => 'z. B. Acme GmbH';
+
+  @override
+  String get teamWorkspacesCreateSubmit => 'Anlegen';
+
+  @override
+  String teamWorkspacesCreateSuccess(String name) {
+    return 'Workspace ‘$name’ angelegt.';
+  }
+
+  @override
+  String teamWorkspacesCreateFailed(String error) {
+    return 'Anlegen fehlgeschlagen: $error';
+  }
+
+  @override
+  String get teamWorkspacesCreateValidationLength =>
+      'Name muss 1–80 Zeichen sein.';
+
+  @override
+  String teamWorkspacesPlanUsage(String plan, int used, int limit) {
+    return 'Plan $plan: $used/$limit Workspaces';
+  }
+
+  @override
+  String teamWorkspacesPlanUsageUnlimited(String plan, int used) {
+    return 'Plan $plan: $used Workspaces (unbegrenzt)';
+  }
+
+  @override
+  String get teamWorkspacesLimitReachedTitle => 'Limit erreicht';
+
+  @override
+  String teamWorkspacesLimitReachedBody(String plan, int limit) {
+    return 'Dein Plan $plan erlaubt $limit Workspaces. Upgrade, um weitere anzulegen.';
+  }
+
+  @override
+  String get teamWorkspacesLimitReachedCta => 'Plan upgraden';
+
+  @override
+  String get teamWorkspacesSwitchTo => 'Wechseln';
+
+  @override
+  String get teamWorkspacesEmpty => 'Du hast noch keinen Workspace.';
+
+  @override
+  String get teamInviteRoleEditor => 'Editor';
+
+  @override
+  String get teamInviteRoleObserver => 'Beobachter';
+
+  @override
+  String get teamInviteRoleAdminGated => 'Admin (ab Plan Team)';
+
+  @override
+  String get teamInviteAdminLockedTooltip =>
+      'Admin-Rolle ist ab Plan Team verfügbar.';
+
+  @override
+  String get teamInviteEmailInvalid => 'Ungültige E-Mail-Adresse.';
+
+  @override
+  String get teamInviteCreatedTitle => 'Einladung erstellt';
+
+  @override
+  String get teamInviteShareBody => 'Sende diesen Code an dein Teammitglied:';
+
+  @override
+  String get teamInviteCopyLink => 'Code kopieren';
+
+  @override
+  String get teamInviteCopyLinkSnack => 'Code kopiert.';
+
+  @override
+  String get teamInviteCopyFailed => 'Kopieren fehlgeschlagen.';
+
+  @override
+  String get teamInviteShareEmailHint =>
+      'E-Mail-Versand kommt mit der nächsten Version.';
+
+  @override
+  String get teamMemberRemoveConfirmTitle => 'Mitglied entfernen?';
+
+  @override
+  String teamMemberRemoveConfirmBody(String email) {
+    return '$email aus diesem Workspace entfernen?';
+  }
+
+  @override
+  String get teamMemberRoleChangeLoading => 'Rolle wird gespeichert …';
+
+  @override
+  String get commonCancel => 'Abbrechen';
+
+  @override
+  String get commonConfirm => 'Bestätigen';
+
+  @override
+  String get commonClose => 'Schließen';
 
   @override
   String get settingsTaxRateTitle => 'MwSt-Satz';
@@ -1479,6 +1627,28 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get helpWorkspacePricingDesc =>
       'Free, Pro und Business unterscheiden sich vor allem in der Anzahl Mitglieder, der Anzahl Postfächer und ob Carrier-Polling aktiv ist. Aktuelle Limits findest du auf dem Pricing-Screen.';
+
+  @override
+  String get helpWorkspacesHowManyTitle =>
+      'Wie viele Workspaces darf ich anlegen?';
+
+  @override
+  String get helpWorkspacesHowManyBody =>
+      'Das hängt von deinem Plan ab: Free / Solo = 1, Solo Pro = 2, Team = 5, Business = 20, Enterprise = unbegrenzt. Beim Anlegen wird das Limit serverseitig geprüft. Wenn du mehr brauchst: Plan upgraden.';
+
+  @override
+  String get helpInviteHowTitle => 'Wie lade ich jemanden ein?';
+
+  @override
+  String get helpInviteHowBody =>
+      'Settings → Team → „Einladen\". E-Mail + Rolle (Editor oder Beobachter) wählen. Du bekommst einen Code, den du dem Empfänger per Messenger/Mail teilst. Empfänger meldet sich mit derselben E-Mail an und sieht die Einladung im Postfach-Glöckchen oben rechts. E-Mail-Versand wird in einer späteren Version automatisch.';
+
+  @override
+  String get helpRolesEditorObserverTitle => 'Welche Rollen gibt es?';
+
+  @override
+  String get helpRolesEditorObserverBody =>
+      'Vier Rollen: Eigentümer:in (volle Kontrolle, kann Workspace umbenennen/löschen), Admin (kann einladen, Mitglieder verwalten), Editor (kann Daten lesen und bearbeiten), Beobachter (nur Lesezugriff). Die Admin-Rolle ist ab Plan Team verfügbar.';
 
   @override
   String get helpPushSection => 'Push-Notifications';
