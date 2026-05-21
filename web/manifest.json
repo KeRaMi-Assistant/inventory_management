@@ -1,11 +1,11 @@
 {
-    "name": "inventory_management",
-    "short_name": "inventory_management",
+    "name": "CanLogistics",
+    "short_name": "CanLogistics",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#312E81",
+    "theme_color": "#4338CA",
+    "description": "CanLogistics — Inventar, Sendungsverfolgung und Verkäufe in einer App. Vom Wareneingang bis zum verkauften Stück.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
