@@ -1727,6 +1727,31 @@ class _TeamTabState extends State<_TeamTab> {
     final ws = _workspace;
     if (ws == null) return;
     final l10n = AppLocalizations.of(context);
+    // Confirm BEVOR dem Rename-Dialog — vermeidet showDialog-after-showDialog
+    // Sequencing-Issues in Flutter Web. Heuristik: Schema-Flag is_personal
+    // (nach Migration) ODER Name == "Personal" (Fallback solange Migration
+    // noch nicht in der Ziel-DB-Umgebung deployed ist). Owner-Check braucht's
+    // nicht: RLS erlaubt Rename ausschließlich dem Owner.
+    final isPersonal = ws.isPersonal ||
+        ws.name.trim().toLowerCase() == 'personal';
+    if (isPersonal) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.teamRenamePersonalWarnTitle),
+          content: Text(l10n.teamRenamePersonalWarn),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.commonCancel)),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.commonConfirm)),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
     final ctrl = TextEditingController(text: ws.name);
     final newName = await showDialog<String>(
       context: context,
@@ -1754,31 +1779,6 @@ class _TeamTabState extends State<_TeamTab> {
     );
     ctrl.dispose();
     if (newName == null || !mounted) return;
-    // Defensive Heuristik: falls die DB-Spalte is_personal noch nicht
-    // gepflegt ist (Migration noch nicht in dieser Umgebung deployed),
-    // den Confirm-Dialog auch zeigen, wenn der Workspace „Personal"
-    // heißt und der aktuelle User Owner ist.
-    final treatAsPersonal = ws.isPersonal ||
-        (ws.name.trim().toLowerCase() == 'personal' &&
-            context.read<ActiveWorkspaceProvider>().role == WorkspaceRole.owner);
-    if (treatAsPersonal) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(l10n.teamRenamePersonalWarnTitle),
-          content: Text(l10n.teamRenamePersonalWarn),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(l10n.commonCancel)),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(l10n.commonConfirm)),
-          ],
-        ),
-      );
-      if (confirmed != true || !mounted) return;
-    }
     final messenger = ScaffoldMessenger.of(context);
     final activeWs = context.read<ActiveWorkspaceProvider>();
     final uid = context.read<AuthProvider>().currentUser?.id;
