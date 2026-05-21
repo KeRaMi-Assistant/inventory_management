@@ -1314,5 +1314,45 @@
 
   "inboxSuggestionDismiss": "Dismiss",
   "inboxSuggestionEdit": "Edit before accepting",
-  "inboxSuggestionAccept": "Accept"
+  "inboxSuggestionAccept": "Accept",
+
+  "productDetailTitle": "Product details",
+  "productDetailEmpty": "No data",
+  "productDetailEmptyHint": "No movements for this item yet.",
+  "productDetailLoadError": "Could not load product details.",
+  "movementTypeGoodsIn": "Goods in",
+  "movementTypeGoodsOut": "Goods out",
+  "movementTypeCorrection": "Correction",
+  "movementTypeStocktake": "Stocktake",
+  "movementTypeTransfer": "Transfer",
+  "movementTypeSale": "Sale",
+  "movementHistoryTitle": "Movement history",
+  "productDetailSectionStammdaten": "Master data",
+  "productDetailSectionStock": "Stock",
+  "productDetailSectionSupplier": "Supplier",
+  "productDetailSectionBatches": "Batches",
+  "productDetailLabelSku": "Article number (SKU)",
+  "productDetailLabelEan": "EAN",
+  "productDetailLabelLocation": "Location",
+  "productDetailLabelStatus": "Status",
+  "productDetailLabelSupplier": "Supplier",
+  "productDetailLabelQuantity": "Stock",
+  "productDetailLabelMinStock": "Minimum stock",
+  "productDetailLabelCostPrice": "Cost price",
+  "productDetailLabelArrivalDate": "Arrival date",
+  "productDetailLabelNote": "Note",
+  "productDetailLabelCritical": "Critical",
+  "productDetailLabelOk": "OK",
+  "productDetailViewBatches": "View batches",
+  "productDetailNoSupplier": "No supplier",
+  "productDetailNoLocation": "No location",
+  "productDetailViewerHint": "You have read-only access — booking actions unavailable.",
+  "productDetailRetry": "Reload",
+  "productDetailMovementQuantity": "{sign}{qty}",
+  "@productDetailMovementQuantity": {
+    "placeholders": {
+      "sign": {},
+      "qty": { "type": "int" }
+    }
+  }
 }

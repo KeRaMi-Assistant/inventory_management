@@ -1314,5 +1314,45 @@
 
   "inboxSuggestionDismiss": "Verwerfen",
   "inboxSuggestionEdit": "Vor Übernahme bearbeiten",
-  "inboxSuggestionAccept": "Annehmen"
+  "inboxSuggestionAccept": "Annehmen",
+
+  "productDetailTitle": "Artikeldetails",
+  "productDetailEmpty": "Keine Daten",
+  "productDetailEmptyHint": "Für diesen Artikel gibt es noch keine Bewegungen.",
+  "productDetailLoadError": "Artikeldetails konnten nicht geladen werden.",
+  "movementTypeGoodsIn": "Wareneingang",
+  "movementTypeGoodsOut": "Warenausgang",
+  "movementTypeCorrection": "Korrektur",
+  "movementTypeStocktake": "Inventur",
+  "movementTypeTransfer": "Umlagerung",
+  "movementTypeSale": "Verkauf",
+  "movementHistoryTitle": "Bewegungshistorie",
+  "productDetailSectionStammdaten": "Stammdaten",
+  "productDetailSectionStock": "Bestand",
+  "productDetailSectionSupplier": "Lieferant",
+  "productDetailSectionBatches": "Chargen",
+  "productDetailLabelSku": "Artikelnummer (SKU)",
+  "productDetailLabelEan": "EAN",
+  "productDetailLabelLocation": "Lagerort",
+  "productDetailLabelStatus": "Status",
+  "productDetailLabelSupplier": "Lieferant",
+  "productDetailLabelQuantity": "Bestand",
+  "productDetailLabelMinStock": "Mindestbestand",
+  "productDetailLabelCostPrice": "Einstandspreis",
+  "productDetailLabelArrivalDate": "Ankunftsdatum",
+  "productDetailLabelNote": "Notiz",
+  "productDetailLabelCritical": "Kritisch",
+  "productDetailLabelOk": "OK",
+  "productDetailViewBatches": "Chargen anzeigen",
+  "productDetailNoSupplier": "Kein Lieferant",
+  "productDetailNoLocation": "Kein Lagerort",
+  "productDetailViewerHint": "Du hast nur Lesezugriff — Buchungsaktionen nicht verfügbar.",
+  "productDetailRetry": "Erneut laden",
+  "productDetailMovementQuantity": "{sign}{qty}",
+  "@productDetailMovementQuantity": {
+    "placeholders": {
+      "sign": {},
+      "qty": { "type": "int" }
+    }
+  }
 }

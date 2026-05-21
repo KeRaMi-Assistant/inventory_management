@@ -3362,4 +3362,106 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inboxSuggestionAccept => 'Accept';
+
+  @override
+  String get productDetailTitle => 'Product details';
+
+  @override
+  String get productDetailEmpty => 'No data';
+
+  @override
+  String get productDetailEmptyHint => 'No movements for this item yet.';
+
+  @override
+  String get productDetailLoadError => 'Could not load product details.';
+
+  @override
+  String get movementTypeGoodsIn => 'Goods in';
+
+  @override
+  String get movementTypeGoodsOut => 'Goods out';
+
+  @override
+  String get movementTypeCorrection => 'Correction';
+
+  @override
+  String get movementTypeStocktake => 'Stocktake';
+
+  @override
+  String get movementTypeTransfer => 'Transfer';
+
+  @override
+  String get movementTypeSale => 'Sale';
+
+  @override
+  String get movementHistoryTitle => 'Movement history';
+
+  @override
+  String get productDetailSectionStammdaten => 'Master data';
+
+  @override
+  String get productDetailSectionStock => 'Stock';
+
+  @override
+  String get productDetailSectionSupplier => 'Supplier';
+
+  @override
+  String get productDetailSectionBatches => 'Batches';
+
+  @override
+  String get productDetailLabelSku => 'Article number (SKU)';
+
+  @override
+  String get productDetailLabelEan => 'EAN';
+
+  @override
+  String get productDetailLabelLocation => 'Location';
+
+  @override
+  String get productDetailLabelStatus => 'Status';
+
+  @override
+  String get productDetailLabelSupplier => 'Supplier';
+
+  @override
+  String get productDetailLabelQuantity => 'Stock';
+
+  @override
+  String get productDetailLabelMinStock => 'Minimum stock';
+
+  @override
+  String get productDetailLabelCostPrice => 'Cost price';
+
+  @override
+  String get productDetailLabelArrivalDate => 'Arrival date';
+
+  @override
+  String get productDetailLabelNote => 'Note';
+
+  @override
+  String get productDetailLabelCritical => 'Critical';
+
+  @override
+  String get productDetailLabelOk => 'OK';
+
+  @override
+  String get productDetailViewBatches => 'View batches';
+
+  @override
+  String get productDetailNoSupplier => 'No supplier';
+
+  @override
+  String get productDetailNoLocation => 'No location';
+
+  @override
+  String get productDetailViewerHint =>
+      'You have read-only access — booking actions unavailable.';
+
+  @override
+  String get productDetailRetry => 'Reload';
+
+  @override
+  String productDetailMovementQuantity(Object sign, int qty) {
+    return '$sign$qty';
+  }
 }

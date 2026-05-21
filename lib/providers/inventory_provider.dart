@@ -694,6 +694,8 @@ class InventoryProvider extends ChangeNotifier {
         date: DateTime.now(),
         quantityChange: saved.quantity,
         reason: 'Einbuchung',
+        movementType: InventoryMovementType.goodsIn,
+        unitCost: saved.costPrice,
         dealId: saved.dealId,
         ticketNumber: saved.ticketNumber,
       );
@@ -718,12 +720,17 @@ class InventoryProvider extends ChangeNotifier {
 
     final delta = saved.quantity - old.quantity;
     if (delta != 0) {
+      final isIncoming = delta > 0;
       final movement = InventoryMovement(
         id: _uuid.v4(),
         itemId: saved.id,
         date: DateTime.now(),
         quantityChange: delta,
-        reason: delta > 0 ? 'Einbuchung' : 'Ausbuchung',
+        reason: isIncoming ? 'Einbuchung' : 'Ausbuchung',
+        movementType: isIncoming
+            ? InventoryMovementType.goodsIn
+            : InventoryMovementType.goodsOut,
+        unitCost: isIncoming ? saved.costPrice : null,
         dealId: saved.dealId,
         ticketNumber: saved.ticketNumber,
       );
@@ -749,6 +756,7 @@ class InventoryProvider extends ChangeNotifier {
     String id,
     int delta,
     String reason, {
+    InventoryMovementType movementType = InventoryMovementType.correction,
     int? dealId,
     String? ticketNumber,
   }) async {
@@ -769,6 +777,10 @@ class InventoryProvider extends ChangeNotifier {
       date: DateTime.now(),
       quantityChange: delta,
       reason: reason,
+      movementType: movementType,
+      unitCost: movementType == InventoryMovementType.goodsIn
+          ? current.costPrice
+          : null,
       dealId: dealId,
       ticketNumber: ticketNumber,
     );
@@ -810,6 +822,8 @@ class InventoryProvider extends ChangeNotifier {
       date: DateTime.now(),
       quantityChange: savedItem.quantity,
       reason: 'Einbuchung via Deal',
+      movementType: InventoryMovementType.goodsIn,
+      unitCost: deal.ekBrutto,
       dealId: deal.id,
       ticketNumber: deal.ticketNumber,
     );

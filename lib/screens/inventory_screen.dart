@@ -12,6 +12,7 @@ import '../utils/validators.dart';
 import '../widgets/attachment_gallery.dart';
 import '../widgets/barcode_scanner_sheet.dart';
 import '../widgets/inventory_batches_sheet.dart';
+import 'product_detail_screen.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -512,7 +513,14 @@ class _InventoryScreenState extends State<InventoryScreen>
                 ? const Color(0xFFD97706)
                 : const Color(0xFF059669);
         return Card(
-          child: Padding(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ProductDetailScreen(item: item),
+              ),
+            ),
+            child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -606,6 +614,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                 ),
               ],
             ),
+          ),
           ),
         );
       },
@@ -774,7 +783,16 @@ class _InventoryScreenState extends State<InventoryScreen>
     );
     if (ok == true) {
       final qty = int.tryParse(ctrl.text) ?? 0;
-      if (qty > 0) await provider.adjustStock(item.id, incoming ? qty : -qty, reason.text);
+      if (qty > 0) {
+        await provider.adjustStock(
+          item.id,
+          incoming ? qty : -qty,
+          reason.text,
+          movementType: incoming
+              ? InventoryMovementType.goodsIn
+              : InventoryMovementType.sale,
+        );
+      }
     }
   }
 }

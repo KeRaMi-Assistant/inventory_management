@@ -943,33 +943,37 @@ anbietet.
 
 ### Epic A-lite — getypte Buchungsarten (P0)
 
-- [ ] **AL1** — Migration: `inventory_movements.movement_type`
+- [x] **AL1** — Migration: `inventory_movements.movement_type`
   (NOT NULL DEFAULT `'correction'` + CHECK-Enum) + `unit_cost` (nullable)
   hinzufügen; Service-Role-Backfill `movement_type` per Heuristik aus
   `reason`; Down-Migration (`DROP COLUMN`, Datenverlust-Hinweis im
   Kommentar). `inventory_movements` behält 2-Policy-RLS (append-only).
   `supabase db reset` grün. `agent:db-migrator` · `model:Opus`
-- [ ] **AL2** — `seed-demo-workspace` + `demo_data_service.dart`: bei jedem
+- [x] **AL2** — `seed-demo-workspace` + `demo_data_service.dart`: bei jedem
   `inventory_movements`-Insert `movement_type` setzen.
   `agent:edge-fn-coder` · `model:Sonnet` · `depends:AL1`
-- [ ] **AL3** — `InventoryMovement`-Model um `movementType`/`unitCost`
+  *(Verifiziert: weder Seed-Function noch demo_data_service inserten
+  `inventory_movements` — kein Code-Change nötig.)*
+- [x] **AL3** — `InventoryMovement`-Model um `movementType`/`unitCost`
   erweitern; `InventoryMovementType`-Enum + Round-Trip-Tests.
   `agent:flutter-coder` · `model:Sonnet` · `depends:AL1`
-- [ ] **AL4** — `InventoryProvider`: alle 4 Schreibmethoden
+- [x] **AL4** — `InventoryProvider`: alle 4 Schreibmethoden
   (`addInventoryItem`/`updateInventoryItem`/`adjustStock`/`checkInDeal`)
   auf getypte `movement_type` umstellen; `checkInDeal` schreibt `goods_in`,
   `adjustStock` schreibt `correction`. `agent:flutter-coder` ·
   `model:Sonnet` · `depends:AL3`
-- [ ] **AL5** — `product_detail_screen.dart` NEU auf der bestehenden
+- [x] **AL5** — `product_detail_screen.dart` NEU auf der bestehenden
   `inventory_items`-Row (Stammdaten, Bestand, getypte Bewegungshistorie,
   Chargen, Lieferant); States (empty/loading/error/no-network/
   no-permission) + A11y-Keys. `agent:ui-builder` · `model:Sonnet` ·
   `depends:AL4`
-- [ ] **AL6** — `inventory_screen.dart`: Movement-Badge/Farbe aus
+- [x] **AL6** — `inventory_screen.dart`: Movement-Badge/Farbe aus
   `movement_type`. `agent:ui-builder` · `model:Sonnet` · `depends:AL4`
-- [ ] **AL7** — l10n-Keys Epic A-lite in `app_de.arb` + `app_en.arb`;
+  *(No-Op für inventory_screen — Movements werden dort nicht angezeigt;
+  Badge-Logik liegt in product_detail_screen. Toter Edit-Button gefixt.)*
+- [x] **AL7** — l10n-Keys Epic A-lite in `app_de.arb` + `app_en.arb`;
   `/check-l10n` grün. `agent:ui-builder` · `model:Sonnet` · `depends:AL5`
-- [ ] **AL8** — Unit-Tests Model + Provider (A-lite) + `smoke-full-app-audit`;
+- [x] **AL8** — Unit-Tests Model + Provider (A-lite) + `smoke-full-app-audit`;
   `_page-registry.md`: Sub-Route `product_detail` namentlich mit
   Pflicht-Tests `smoke-theme, mobile-overflow` ergänzen.
   `agent:flutter-coder` · `model:Sonnet` · `depends:AL5,AL6,AL7`

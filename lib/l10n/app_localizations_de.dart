@@ -3369,4 +3369,108 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get inboxSuggestionAccept => 'Annehmen';
+
+  @override
+  String get productDetailTitle => 'Artikeldetails';
+
+  @override
+  String get productDetailEmpty => 'Keine Daten';
+
+  @override
+  String get productDetailEmptyHint =>
+      'Für diesen Artikel gibt es noch keine Bewegungen.';
+
+  @override
+  String get productDetailLoadError =>
+      'Artikeldetails konnten nicht geladen werden.';
+
+  @override
+  String get movementTypeGoodsIn => 'Wareneingang';
+
+  @override
+  String get movementTypeGoodsOut => 'Warenausgang';
+
+  @override
+  String get movementTypeCorrection => 'Korrektur';
+
+  @override
+  String get movementTypeStocktake => 'Inventur';
+
+  @override
+  String get movementTypeTransfer => 'Umlagerung';
+
+  @override
+  String get movementTypeSale => 'Verkauf';
+
+  @override
+  String get movementHistoryTitle => 'Bewegungshistorie';
+
+  @override
+  String get productDetailSectionStammdaten => 'Stammdaten';
+
+  @override
+  String get productDetailSectionStock => 'Bestand';
+
+  @override
+  String get productDetailSectionSupplier => 'Lieferant';
+
+  @override
+  String get productDetailSectionBatches => 'Chargen';
+
+  @override
+  String get productDetailLabelSku => 'Artikelnummer (SKU)';
+
+  @override
+  String get productDetailLabelEan => 'EAN';
+
+  @override
+  String get productDetailLabelLocation => 'Lagerort';
+
+  @override
+  String get productDetailLabelStatus => 'Status';
+
+  @override
+  String get productDetailLabelSupplier => 'Lieferant';
+
+  @override
+  String get productDetailLabelQuantity => 'Bestand';
+
+  @override
+  String get productDetailLabelMinStock => 'Mindestbestand';
+
+  @override
+  String get productDetailLabelCostPrice => 'Einstandspreis';
+
+  @override
+  String get productDetailLabelArrivalDate => 'Ankunftsdatum';
+
+  @override
+  String get productDetailLabelNote => 'Notiz';
+
+  @override
+  String get productDetailLabelCritical => 'Kritisch';
+
+  @override
+  String get productDetailLabelOk => 'OK';
+
+  @override
+  String get productDetailViewBatches => 'Chargen anzeigen';
+
+  @override
+  String get productDetailNoSupplier => 'Kein Lieferant';
+
+  @override
+  String get productDetailNoLocation => 'Kein Lagerort';
+
+  @override
+  String get productDetailViewerHint =>
+      'Du hast nur Lesezugriff — Buchungsaktionen nicht verfügbar.';
+
+  @override
+  String get productDetailRetry => 'Erneut laden';
+
+  @override
+  String productDetailMovementQuantity(Object sign, int qty) {
+    return '$sign$qty';
+  }
 }

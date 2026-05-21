@@ -204,12 +204,66 @@ class InventoryItem {
       );
 }
 
+/// Getypte Buchungsart einer Lagerbewegung.
+///
+/// Entspricht dem `movement_type`-CHECK-Enum in der DB:
+/// `goods_in | goods_out | correction | stocktake | transfer | sale`.
+enum InventoryMovementType {
+  goodsIn,
+  goodsOut,
+  correction,
+  stocktake,
+  transfer,
+  sale;
+
+  /// Konvertiert den DB-String (snake_case) in den Enum-Wert.
+  /// Unbekannte Werte fallen defensiv auf [correction] zurück — kein Crash.
+  static InventoryMovementType fromDbValue(String value) {
+    switch (value) {
+      case 'goods_in':
+        return InventoryMovementType.goodsIn;
+      case 'goods_out':
+        return InventoryMovementType.goodsOut;
+      case 'correction':
+        return InventoryMovementType.correction;
+      case 'stocktake':
+        return InventoryMovementType.stocktake;
+      case 'transfer':
+        return InventoryMovementType.transfer;
+      case 'sale':
+        return InventoryMovementType.sale;
+      default:
+        return InventoryMovementType.correction;
+    }
+  }
+
+  /// DB-String (snake_case) für diesen Enum-Wert.
+  String get dbValue {
+    switch (this) {
+      case InventoryMovementType.goodsIn:
+        return 'goods_in';
+      case InventoryMovementType.goodsOut:
+        return 'goods_out';
+      case InventoryMovementType.correction:
+        return 'correction';
+      case InventoryMovementType.stocktake:
+        return 'stocktake';
+      case InventoryMovementType.transfer:
+        return 'transfer';
+      case InventoryMovementType.sale:
+        return 'sale';
+    }
+  }
+}
+
 class InventoryMovement {
   final String id;
   final String itemId;
   final DateTime date;
   final int quantityChange;
   final String reason;
+  final InventoryMovementType movementType;
+  final double? unitCost;
   final int? dealId;
   final String? ticketNumber;
   final String? note;
@@ -220,6 +274,8 @@ class InventoryMovement {
     required this.date,
     required this.quantityChange,
     required this.reason,
+    this.movementType = InventoryMovementType.correction,
+    this.unitCost,
     this.dealId,
     this.ticketNumber,
     this.note,
@@ -231,6 +287,8 @@ class InventoryMovement {
         'date': date.toIso8601String(),
         'quantityChange': quantityChange,
         'reason': reason,
+        'movementType': movementType.dbValue,
+        'unitCost': unitCost,
         'dealId': dealId,
         'ticketNumber': ticketNumber,
         'note': note,
@@ -243,6 +301,11 @@ class InventoryMovement {
         date: DateTime.parse(json['date'] as String),
         quantityChange: json['quantityChange'] as int? ?? 0,
         reason: json['reason'] as String? ?? 'Korrektur',
+        movementType: json['movementType'] != null
+            ? InventoryMovementType.fromDbValue(
+                json['movementType'] as String)
+            : InventoryMovementType.correction,
+        unitCost: (json['unitCost'] as num?)?.toDouble(),
         dealId: json['dealId'] as int?,
         ticketNumber: json['ticketNumber'] as String?,
         note: json['note'] as String?,
@@ -250,16 +313,23 @@ class InventoryMovement {
 
   // ── Supabase (snake_case) ─────────────────────────────────────────────────
 
-  Map<String, dynamic> toSupabaseInsert() => {
-        'id': id,
-        'item_id': itemId,
-        'date': date.toIso8601String(),
-        'quantity_change': quantityChange,
-        'reason': reason,
-        'deal_id': dealId,
-        'ticket_number': ticketNumber,
-        'note': note,
-      };
+  Map<String, dynamic> toSupabaseInsert() {
+    final map = <String, dynamic>{
+      'id': id,
+      'item_id': itemId,
+      'date': date.toIso8601String(),
+      'quantity_change': quantityChange,
+      'reason': reason,
+      'movement_type': movementType.dbValue,
+      'deal_id': dealId,
+      'ticket_number': ticketNumber,
+      'note': note,
+    };
+    if (unitCost != null) {
+      map['unit_cost'] = unitCost;
+    }
+    return map;
+  }
 
   factory InventoryMovement.fromSupabase(Map<String, dynamic> row) =>
       InventoryMovement(
@@ -268,9 +338,41 @@ class InventoryMovement {
         date: DateTime.parse(row['date'] as String),
         quantityChange: (row['quantity_change'] as num?)?.toInt() ?? 0,
         reason: row['reason'] as String? ?? 'Korrektur',
+        movementType: row['movement_type'] != null
+            ? InventoryMovementType.fromDbValue(
+                row['movement_type'] as String)
+            : InventoryMovementType.correction,
+        unitCost: (row['unit_cost'] as num?)?.toDouble(),
         dealId: (row['deal_id'] as num?)?.toInt(),
         ticketNumber: row['ticket_number'] as String?,
         note: row['note'] as String?,
+      );
+
+  InventoryMovement copyWith({
+    String? id,
+    String? itemId,
+    DateTime? date,
+    int? quantityChange,
+    String? reason,
+    InventoryMovementType? movementType,
+    Object? unitCost = _sentinel,
+    Object? dealId = _sentinel,
+    Object? ticketNumber = _sentinel,
+    Object? note = _sentinel,
+  }) =>
+      InventoryMovement(
+        id: id ?? this.id,
+        itemId: itemId ?? this.itemId,
+        date: date ?? this.date,
+        quantityChange: quantityChange ?? this.quantityChange,
+        reason: reason ?? this.reason,
+        movementType: movementType ?? this.movementType,
+        unitCost: unitCost == _sentinel ? this.unitCost : unitCost as double?,
+        dealId: dealId == _sentinel ? this.dealId : dealId as int?,
+        ticketNumber: ticketNumber == _sentinel
+            ? this.ticketNumber
+            : ticketNumber as String?,
+        note: note == _sentinel ? this.note : note as String?,
       );
 }
 

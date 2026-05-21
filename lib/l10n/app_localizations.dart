@@ -6103,6 +6103,204 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Annehmen'**
   String get inboxSuggestionAccept;
+
+  /// No description provided for @productDetailTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikeldetails'**
+  String get productDetailTitle;
+
+  /// No description provided for @productDetailEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Daten'**
+  String get productDetailEmpty;
+
+  /// No description provided for @productDetailEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Für diesen Artikel gibt es noch keine Bewegungen.'**
+  String get productDetailEmptyHint;
+
+  /// No description provided for @productDetailLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikeldetails konnten nicht geladen werden.'**
+  String get productDetailLoadError;
+
+  /// No description provided for @movementTypeGoodsIn.
+  ///
+  /// In de, this message translates to:
+  /// **'Wareneingang'**
+  String get movementTypeGoodsIn;
+
+  /// No description provided for @movementTypeGoodsOut.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenausgang'**
+  String get movementTypeGoodsOut;
+
+  /// No description provided for @movementTypeCorrection.
+  ///
+  /// In de, this message translates to:
+  /// **'Korrektur'**
+  String get movementTypeCorrection;
+
+  /// No description provided for @movementTypeStocktake.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur'**
+  String get movementTypeStocktake;
+
+  /// No description provided for @movementTypeTransfer.
+  ///
+  /// In de, this message translates to:
+  /// **'Umlagerung'**
+  String get movementTypeTransfer;
+
+  /// No description provided for @movementTypeSale.
+  ///
+  /// In de, this message translates to:
+  /// **'Verkauf'**
+  String get movementTypeSale;
+
+  /// No description provided for @movementHistoryTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bewegungshistorie'**
+  String get movementHistoryTitle;
+
+  /// No description provided for @productDetailSectionStammdaten.
+  ///
+  /// In de, this message translates to:
+  /// **'Stammdaten'**
+  String get productDetailSectionStammdaten;
+
+  /// No description provided for @productDetailSectionStock.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestand'**
+  String get productDetailSectionStock;
+
+  /// No description provided for @productDetailSectionSupplier.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant'**
+  String get productDetailSectionSupplier;
+
+  /// No description provided for @productDetailSectionBatches.
+  ///
+  /// In de, this message translates to:
+  /// **'Chargen'**
+  String get productDetailSectionBatches;
+
+  /// No description provided for @productDetailLabelSku.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelnummer (SKU)'**
+  String get productDetailLabelSku;
+
+  /// No description provided for @productDetailLabelEan.
+  ///
+  /// In de, this message translates to:
+  /// **'EAN'**
+  String get productDetailLabelEan;
+
+  /// No description provided for @productDetailLabelLocation.
+  ///
+  /// In de, this message translates to:
+  /// **'Lagerort'**
+  String get productDetailLabelLocation;
+
+  /// No description provided for @productDetailLabelStatus.
+  ///
+  /// In de, this message translates to:
+  /// **'Status'**
+  String get productDetailLabelStatus;
+
+  /// No description provided for @productDetailLabelSupplier.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant'**
+  String get productDetailLabelSupplier;
+
+  /// No description provided for @productDetailLabelQuantity.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestand'**
+  String get productDetailLabelQuantity;
+
+  /// No description provided for @productDetailLabelMinStock.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestbestand'**
+  String get productDetailLabelMinStock;
+
+  /// No description provided for @productDetailLabelCostPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstandspreis'**
+  String get productDetailLabelCostPrice;
+
+  /// No description provided for @productDetailLabelArrivalDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Ankunftsdatum'**
+  String get productDetailLabelArrivalDate;
+
+  /// No description provided for @productDetailLabelNote.
+  ///
+  /// In de, this message translates to:
+  /// **'Notiz'**
+  String get productDetailLabelNote;
+
+  /// No description provided for @productDetailLabelCritical.
+  ///
+  /// In de, this message translates to:
+  /// **'Kritisch'**
+  String get productDetailLabelCritical;
+
+  /// No description provided for @productDetailLabelOk.
+  ///
+  /// In de, this message translates to:
+  /// **'OK'**
+  String get productDetailLabelOk;
+
+  /// No description provided for @productDetailViewBatches.
+  ///
+  /// In de, this message translates to:
+  /// **'Chargen anzeigen'**
+  String get productDetailViewBatches;
+
+  /// No description provided for @productDetailNoSupplier.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Lieferant'**
+  String get productDetailNoSupplier;
+
+  /// No description provided for @productDetailNoLocation.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Lagerort'**
+  String get productDetailNoLocation;
+
+  /// No description provided for @productDetailViewerHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Du hast nur Lesezugriff — Buchungsaktionen nicht verfügbar.'**
+  String get productDetailViewerHint;
+
+  /// No description provided for @productDetailRetry.
+  ///
+  /// In de, this message translates to:
+  /// **'Erneut laden'**
+  String get productDetailRetry;
+
+  /// No description provided for @productDetailMovementQuantity.
+  ///
+  /// In de, this message translates to:
+  /// **'{sign}{qty}'**
+  String productDetailMovementQuantity(Object sign, int qty);
 }
 
 class _AppLocalizationsDelegate
