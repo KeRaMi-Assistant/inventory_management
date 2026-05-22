@@ -943,33 +943,37 @@ anbietet.
 
 ### Epic A-lite — getypte Buchungsarten (P0)
 
-- [ ] **AL1** — Migration: `inventory_movements.movement_type`
+- [x] **AL1** — Migration: `inventory_movements.movement_type`
   (NOT NULL DEFAULT `'correction'` + CHECK-Enum) + `unit_cost` (nullable)
   hinzufügen; Service-Role-Backfill `movement_type` per Heuristik aus
   `reason`; Down-Migration (`DROP COLUMN`, Datenverlust-Hinweis im
   Kommentar). `inventory_movements` behält 2-Policy-RLS (append-only).
   `supabase db reset` grün. `agent:db-migrator` · `model:Opus`
-- [ ] **AL2** — `seed-demo-workspace` + `demo_data_service.dart`: bei jedem
+- [x] **AL2** — `seed-demo-workspace` + `demo_data_service.dart`: bei jedem
   `inventory_movements`-Insert `movement_type` setzen.
   `agent:edge-fn-coder` · `model:Sonnet` · `depends:AL1`
-- [ ] **AL3** — `InventoryMovement`-Model um `movementType`/`unitCost`
+  *(Verifiziert: weder Seed-Function noch demo_data_service inserten
+  `inventory_movements` — kein Code-Change nötig.)*
+- [x] **AL3** — `InventoryMovement`-Model um `movementType`/`unitCost`
   erweitern; `InventoryMovementType`-Enum + Round-Trip-Tests.
   `agent:flutter-coder` · `model:Sonnet` · `depends:AL1`
-- [ ] **AL4** — `InventoryProvider`: alle 4 Schreibmethoden
+- [x] **AL4** — `InventoryProvider`: alle 4 Schreibmethoden
   (`addInventoryItem`/`updateInventoryItem`/`adjustStock`/`checkInDeal`)
   auf getypte `movement_type` umstellen; `checkInDeal` schreibt `goods_in`,
   `adjustStock` schreibt `correction`. `agent:flutter-coder` ·
   `model:Sonnet` · `depends:AL3`
-- [ ] **AL5** — `product_detail_screen.dart` NEU auf der bestehenden
+- [x] **AL5** — `product_detail_screen.dart` NEU auf der bestehenden
   `inventory_items`-Row (Stammdaten, Bestand, getypte Bewegungshistorie,
   Chargen, Lieferant); States (empty/loading/error/no-network/
   no-permission) + A11y-Keys. `agent:ui-builder` · `model:Sonnet` ·
   `depends:AL4`
-- [ ] **AL6** — `inventory_screen.dart`: Movement-Badge/Farbe aus
+- [x] **AL6** — `inventory_screen.dart`: Movement-Badge/Farbe aus
   `movement_type`. `agent:ui-builder` · `model:Sonnet` · `depends:AL4`
-- [ ] **AL7** — l10n-Keys Epic A-lite in `app_de.arb` + `app_en.arb`;
+  *(No-Op für inventory_screen — Movements werden dort nicht angezeigt;
+  Badge-Logik liegt in product_detail_screen. Toter Edit-Button gefixt.)*
+- [x] **AL7** — l10n-Keys Epic A-lite in `app_de.arb` + `app_en.arb`;
   `/check-l10n` grün. `agent:ui-builder` · `model:Sonnet` · `depends:AL5`
-- [ ] **AL8** — Unit-Tests Model + Provider (A-lite) + `smoke-full-app-audit`;
+- [x] **AL8** — Unit-Tests Model + Provider (A-lite) + `smoke-full-app-audit`;
   `_page-registry.md`: Sub-Route `product_detail` namentlich mit
   Pflicht-Tests `smoke-theme, mobile-overflow` ergänzen.
   `agent:flutter-coder` · `model:Sonnet` · `depends:AL5,AL6,AL7`
@@ -977,60 +981,60 @@ anbietet.
 
 ### Epic B — Kategorien + Lieferanten (P1)
 
-- [ ] **B1** — Migration `product_categories` (Schema + 4-Policy-RLS +
+- [x] **B1** — Migration `product_categories` (Schema + 4-Policy-RLS +
   Indexe + FK-Cross-Workspace-Trigger für `parent_id`); `suppliers` um
   Adress-/Kreditoren-Spalten erweitern; Down-Migrationen.
   `agent:db-migrator` · `model:Opus` · `depends:AL1`
-- [ ] **B2** — Models `ProductCategory` NEU; `Supplier`-Model um neue
+- [x] **B2** — Models `ProductCategory` NEU; `Supplier`-Model um neue
   Felder erweitern + Round-Trip-Tests. `agent:flutter-coder` ·
   `model:Sonnet` · `depends:B1`
-- [ ] **B3** — `SupabaseRepository` + `InventoryProvider`: CRUD Kategorien;
+- [x] **B3** — `SupabaseRepository` + `InventoryProvider`: CRUD Kategorien;
   `product_categories` + `warehouses` in `loadAll()`-Snapshot vorbereiten
   (Snapshot-Feld). `agent:flutter-coder` · `model:Sonnet` · `depends:B2`
-- [ ] **B4** — `categories_screen.dart` NEU (Sub-Route Warenwirtschaft-Hub,
+- [x] **B4** — `categories_screen.dart` NEU (Sub-Route Warenwirtschaft-Hub,
   States + A11y-Keys); `add_edit_supplier_dialog.dart` um „Erweitert"-
   Abschnitt erweitern (Formular-Mobile-Checkliste).
   `agent:ui-builder` · `model:Sonnet` · `depends:B3,AF6`
   *(depends auf AF6 wegen Hub-Screen — Sub-Route braucht den Hub)*
-- [ ] **B5** — l10n-Keys Epic B + Unit-Tests + `/check-l10n`.
+- [x] **B5** — l10n-Keys Epic B + Unit-Tests + `/check-l10n`.
   `agent:ui-builder` · `model:Sonnet` · `depends:B4`
 
 ### Epic A-full — Produkt-Stammkatalog (P1)
 
-- [ ] **AF1** — Migration `products` (Schema + 4-Policy-RLS + Indexe +
+- [x] **AF1** — Migration `products` (Schema + 4-Policy-RLS + Indexe +
   partial-UNIQUE auf `sku`); FK-Cross-Workspace-Trigger für `category_id`
   + `default_supplier_id`; Down-Migration. `agent:db-migrator` ·
   `model:Opus` · `depends:B1`
-- [ ] **AF2** — Migration: `inventory_items.product_id` (**dauerhaft
+- [x] **AF2** — Migration: `inventory_items.product_id` (**dauerhaft
   nullable**, `ON DELETE SET NULL`) + `warehouse_id` (nullable);
   `inventory_movements.product_id` (nullable) + Index
   `(workspace_id, product_id)`; FK-Cross-Workspace-Trigger für
   `inventory_items.product_id`. **Kein NOT-NULL, kein Backfill.**
   Down-Migration. `agent:db-migrator` · `model:Opus` · `depends:AF1`
-- [ ] **AF3** — Migration: `product_stock`-View (`security_invoker = true`,
+- [x] **AF3** — Migration: `product_stock`-View (`security_invoker = true`,
   `GROUP BY workspace_id, product_id, warehouse_id`); Migration
   `product_suppliers`-Tabelle (Schema + 4-Policy-RLS + partial-UNIQUE
   `is_preferred` + FK-Cross-Workspace-Trigger `product_id`/`supplier_id`);
   Down-Migration. `agent:db-migrator` · `model:Opus` · `depends:AF2`
-- [ ] **AF4** — `seed-demo-workspace` + `demo_data_service.dart`: optional
+- [x] **AF4** — `seed-demo-workspace` + `demo_data_service.dart`: optional
   `products` mitanlegen + Demo-`inventory_items` über `product_id`
   verlinken. `agent:edge-fn-coder` · `model:Sonnet` · `depends:AF2`
-- [ ] **AF5** — Models `Product`, `ProductSupplier` NEU (`toSupabaseInsert`/
+- [x] **AF5** — Models `Product`, `ProductSupplier` NEU (`toSupabaseInsert`/
   `fromSupabase`/`copyWith` + Round-Trip-Tests); `InventoryMovement` um
   `productId` erweitern. `agent:flutter-coder` · `model:Sonnet` ·
   `depends:AF1,AF3`
-- [ ] **AF6** — `SupabaseRepository`: `loadProducts`/`insertProduct`/
+- [x] **AF6** — `SupabaseRepository`: `loadProducts`/`insertProduct`/
   `updateProduct`/`deleteProduct` + `product_suppliers`-CRUD (lazy pro
   Detail-Screen) + `product_stock`-Read; `loadAll()`/`CloudSnapshot` um
   `products` erweitern. `agent:flutter-coder` · `model:Sonnet` ·
   `depends:AF5`
-- [ ] **AF7a** — `InventoryProvider`: Produkt-State + Produkt-CRUD-Methoden.
+- [x] **AF7a** — `InventoryProvider`: Produkt-State + Produkt-CRUD-Methoden.
   `agent:flutter-coder` · `model:Sonnet` · `depends:AF6`
-- [ ] **AF7b** — `InventoryProvider`: `movement_type`-Schreiben aller 4
+- [x] **AF7b** — `InventoryProvider`: `movement_type`-Schreiben aller 4
   Schreibmethoden um `product_id`-Verknüpfung erweitern (sofern Bestands-
   Row ein Produkt hat). `agent:flutter-coder` · `model:Sonnet` ·
   `depends:AF7a,AF2`
-- [ ] **AF7c** — `checkInDeal`-Produkt-Matching: matched ein Produkt per
+- [x] **AF7c** — `checkInDeal`-Produkt-Matching: matched ein Produkt per
   `name`+`sku`; existiert keins, legt es ein neues `products`-Row an und
   verlinkt. `status` bleibt auf der `inventory_items`-Row;
   `tg_check_ticket_archive_from_inventory` + `TicketSummary`-Aggregation
@@ -1038,28 +1042,28 @@ anbietet.
   `inventory_batches` bleiben an der Bestands-Row, Produkt-Detail
   aggregiert über alle Bestands-Rows des Produkts.
   `agent:flutter-coder` · `model:Sonnet` · `depends:AF7b`
-- [ ] **AF8** — KPI-Aggregation: `criticalStockCount`,
+- [x] **AF8** — KPI-Aggregation: `criticalStockCount`,
   `InventoryItem.isCritical`, `totalStockQuantity` aggregieren pro Produkt
   über alle Lager/Bestands-Rows gegen `products.min_stock` (über
   `product_stock`-View); Unit-Tests. `agent:flutter-coder` ·
   `model:Sonnet` · `depends:AF7a,AF2`
-- [ ] **AF9** — `AddEditProductDialog` NEU (Formular-Mobile-Checkliste,
+- [x] **AF9** — `AddEditProductDialog` NEU (Formular-Mobile-Checkliste,
   States, A11y-Keys); Bestands-/Wareneingangs-Dialog optional auf
   `product_id`-Referenz erweitern. `agent:ui-builder` · `model:Sonnet` ·
   `depends:AF7a`
-- [ ] **AF10** — `inventory_screen.dart`: Stock-Tab zeigt Produkte
+- [x] **AF10** — `inventory_screen.dart`: Stock-Tab zeigt Produkte
   gruppiert (+ „Ohne Artikel"-Gruppe für nicht-verknüpfte Rows).
   `agent:ui-builder` · `model:Sonnet` · `depends:AF9`
-- [ ] **AF11** — `warehouse_hub_screen.dart` NEU; genau EIN neuer `MainTab`
+- [x] **AF11** — `warehouse_hub_screen.dart` NEU; genau EIN neuer `MainTab`
   `warehouse` in `main_screen.dart` (`_navIcons`/`_navLabels`/
   `_navVisibility`/`_bottomNavTabs` einmalig erweitern). Hub verlinkt auf
   die Sub-Routen. `agent:ui-builder` · `model:Sonnet` · `depends:AF10`
-- [ ] **AF12** — `product_detail_screen.dart` auf Produkt-Aggregation
+- [x] **AF12** — `product_detail_screen.dart` auf Produkt-Aggregation
   erweitern (Bestand über alle Bestands-Rows, Movement-History paginiert).
   `agent:ui-builder` · `model:Sonnet` · `depends:AF11`
-- [ ] **AF13** — l10n-Keys Epic A-full; `/check-l10n` grün.
+- [x] **AF13** — l10n-Keys Epic A-full; `/check-l10n` grün.
   `agent:ui-builder` · `model:Sonnet` · `depends:AF9`
-- [ ] **AF14** — Unit-Tests Model + Provider (A-full) + KPI-Aggregations-
+- [x] **AF14** — Unit-Tests Model + Provider (A-full) + KPI-Aggregations-
   Test + `smoke-full-app-audit`; `_page-registry.md`: Top-Level
   `warehouse_hub` (Pflicht-Tests `smoke-theme, mobile-overflow`) +
   Sub-Route `categories`, `AddEditProductDialog` namentlich ergänzen.
@@ -1068,29 +1072,29 @@ anbietet.
 
 ### Epic C — Bestellwesen (P1)
 
-- [ ] **C1** — Migration `purchase_orders` + `purchase_order_items`
+- [x] **C1** — Migration `purchase_orders` + `purchase_order_items`
   (Schema + 4-Policy-RLS + Status-Trigger + FK-Cross-Workspace-Trigger
   für `purchase_orders.supplier_id` und `purchase_order_items.product_id`/
   `purchase_order_id`); Down-Migration. `agent:db-migrator` ·
   `model:Opus` · `depends:AF1`
-- [ ] **C2** — Models `PurchaseOrder`, `PurchaseOrderItem` NEU +
+- [x] **C2** — Models `PurchaseOrder`, `PurchaseOrderItem` NEU +
   Round-Trip-Tests. `agent:flutter-coder` · `model:Sonnet` · `depends:C1`
-- [ ] **C3** — `SupabaseRepository` + Provider: PO-CRUD (client-seitige
+- [x] **C3** — `SupabaseRepository` + Provider: PO-CRUD (client-seitige
   `order_number`-Vergabe mit Retry bei UNIQUE-Kollision);
   `purchase_order_items` lazy pro Detail-Screen.
   `agent:flutter-coder` · `model:Sonnet` · `depends:C2`
-- [ ] **C4** — Provider: Wareneingang buchen — **atomares** Increment von
+- [x] **C4** — Provider: Wareneingang buchen — **atomares** Increment von
   `quantity_received` (`SET ... = ... + :x`), schreibt `goods_in`-Movement,
   erhöht Bestand; Unit-Test mit simulierter Parallel-Buchung.
   `agent:flutter-coder` · `model:Sonnet` · `depends:C3`
-- [ ] **C5** — `purchase_orders_screen.dart` + `purchase_order_detail_screen.dart`
+- [x] **C5** — `purchase_orders_screen.dart` + `purchase_order_detail_screen.dart`
   NEU als **Sub-Routen des Warenwirtschaft-Hubs** (KEIN neuer `MainTab`);
   Wareneingang-Buchen-UX (Touch-Stepper, Barcode-Einsprung), States +
   A11y-Keys. `agent:ui-builder` · `model:Sonnet` · `depends:C4,AF11`
-- [ ] **C6** — PDF-Beleg: Bestell-/Lieferschein-PDF via `pdf`/`printing`
+- [x] **C6** — PDF-Beleg: Bestell-/Lieferschein-PDF via `pdf`/`printing`
   (Pattern aus `statistics_export_service.dart`).
   `agent:flutter-coder` · `model:Sonnet` · `depends:C5`
-- [ ] **C7** — l10n-Keys Epic C + Unit-Tests + `smoke-full-app-audit`;
+- [x] **C7** — l10n-Keys Epic C + Unit-Tests + `smoke-full-app-audit`;
   `_page-registry.md`: Sub-Routen `purchase_orders`, `purchase_order_detail`
   + Bestell-Dialog namentlich ergänzen; neuen Pflicht-Test-Schlüssel
   `goods-receipt-flow` definieren + dem PO-Detail zuweisen.
@@ -1099,60 +1103,60 @@ anbietet.
 
 ### Epic D — Mehrlager + Alerts (P1)
 
-- [ ] **D1** — Migration `warehouses` (Schema + 4-Policy-RLS +
+- [x] **D1** — Migration `warehouses` (Schema + 4-Policy-RLS +
   partial-UNIQUE `is_default`); `inventory_items.warehouse_id`-Nutzung
   aktivieren (Index); FK-Cross-Workspace-Trigger für
   `inventory_items.warehouse_id`; Down-Migration. `agent:db-migrator` ·
   `model:Opus` · `depends:AF2`
-- [ ] **D2** — Migration: `notifications_sent.ref_kind`-CHECK um
+- [x] **D2** — Migration: `notifications_sent.ref_kind`-CHECK um
   `'low_stock'` erweitern (DROP+ADD CONSTRAINT) + optional `workspace_id`-
   Spalte; als „irreversibel ab Merge" dokumentiert. `agent:db-migrator` ·
   `model:Opus` · `depends:D1`
-- [ ] **D3** — `Warehouse`-Model NEU; Repository + Provider CRUD +
+- [x] **D3** — `Warehouse`-Model NEU; Repository + Provider CRUD +
   Default-Lager-Bootstrap App-seitig; `warehouses` im `loadAll()`-Snapshot.
   `agent:flutter-coder` · `model:Sonnet` · `depends:D1`
-- [ ] **D4** — `warehouses_screen.dart` NEU als **Sub-Route des
+- [x] **D4** — `warehouses_screen.dart` NEU als **Sub-Route des
   Warenwirtschaft-Hubs** (KEIN neuer `MainTab`); Lager-Dropdown im
   Bestands-Dialog; States + A11y-Keys. `agent:ui-builder` ·
   `model:Sonnet` · `depends:D3,AF11`
-- [ ] **D5** — `send-notifications` Edge-Function um `low_stock`-Alert
+- [x] **D5** — `send-notifications` Edge-Function um `low_stock`-Alert
   erweitern: aggregiert `GROUP BY workspace_id, product_id` gegen
   `product_stock` vs. `products.min_stock`; ein Sammel-Push pro Workspace
   an aktive `workspace_members` mit Preference; PII-armer Body
   („X Artikel unter Mindestbestand"); Dedup via `notifications_sent`
   (`ref_kind='low_stock'`); kein `console.log` von Produktdaten.
   `agent:edge-fn-coder` · `model:Sonnet` · `depends:D2`
-- [ ] **D6** — `dashboard_screen.dart`: aktiver Low-Stock-Alert-Block mit
+- [x] **D6** — `dashboard_screen.dart`: aktiver Low-Stock-Alert-Block mit
   „Jetzt bestellen"-Aktion → öffnet PO-Dialog vorbefüllt.
   `agent:ui-builder` · `model:Sonnet` · `depends:C5,D3`
-- [ ] **D7** — l10n-Keys Epic D + Tests + `smoke-full-app-audit`;
+- [x] **D7** — l10n-Keys Epic D + Tests + `smoke-full-app-audit`;
   `_page-registry.md`: Sub-Route `warehouses` + Lager-Dialog namentlich
   ergänzen. `agent:ui-builder` · `model:Sonnet` · `depends:D4,D6`
   · *(Registry-schreibend — seriell mergen)*
 
 ### Epic E — Inventur + Reporting (P2)
 
-- [ ] **E1** — Migration `stocktakes` + `stocktake_items` (Schema +
+- [x] **E1** — Migration `stocktakes` + `stocktake_items` (Schema +
   4-Policy-RLS + FK-Cross-Workspace-Trigger für `stocktakes.warehouse_id`
   und `stocktake_items.product_id`/`stocktake_id`); Down-Migration.
   `agent:db-migrator` · `model:Opus` · `depends:AF1`
-- [ ] **E2** — Models `Stocktake`, `StocktakeItem` NEU; Repository +
+- [x] **E2** — Models `Stocktake`, `StocktakeItem` NEU; Repository +
   Provider: Inventur starten (Soll-Snapshot aus `product_stock`), zählen
   (inkrementelles, no-network-resilientes Speichern), abschließen
   (Differenz-Movements `movement_type='stocktake'`, append-only).
   `agent:flutter-coder` · `model:Sonnet` · `depends:E1,AF7c`
-- [ ] **E3** — `stocktake_screen.dart` + `stocktake_detail_screen.dart` NEU
+- [x] **E3** — `stocktake_screen.dart` + `stocktake_detail_screen.dart` NEU
   als **Sub-Routen des Warenwirtschaft-Hubs** (KEIN neuer `MainTab`);
   Phone-Inventur-UX (durchscrollbare 48dp-Liste, Filter „nur ungezählte",
   Fortschritts-Header, Barcode-Einsprung via `BarcodeScannerSheet`,
   Differenz-Report als vertikale Cards), States + A11y-Keys.
   `agent:ui-builder` · `model:Sonnet` · `depends:E2,AF11`
-- [ ] **E4** — `inventory_suppliers_tab.dart` um Bestandsbewertung,
+- [x] **E4** — `inventory_suppliers_tab.dart` um Bestandsbewertung,
   Lagerumschlag, ABC-Analyse erweitern (`statistics_service.dart`
   ergänzen); Phone = vertikale Kennzahl-Cards, Tabelle nur ≥ 800 px
   via `LayoutBuilder`. `agent:flutter-coder` · `model:Sonnet` ·
   `depends:AF8`
-- [ ] **E5** — l10n-Keys Epic E + Tests + `smoke-full-app-audit`;
+- [x] **E5** — l10n-Keys Epic E + Tests + `smoke-full-app-audit`;
   `_page-registry.md`: Sub-Routen `stocktake`, `stocktake_detail` +
   Stocktake-Dialoge namentlich ergänzen; neuen Pflicht-Test-Schlüssel
   `stocktake-count-flow` definieren + dem `stocktake_detail` zuweisen.
@@ -1161,18 +1165,18 @@ anbietet.
 
 ### Epic F — CSV + Doku (P1, querschnittlich)
 
-- [ ] **F1** — `csv_service.dart`: neue Sektionen Produkte/Kategorien/Lager/
+- [x] **F1** — `csv_service.dart`: neue Sektionen Produkte/Kategorien/Lager/
   Bestellungen in Export + Import; FK-Referenzen per **SKU/Name** resolven
   (keine rohen UUIDs aus der CSV); CHECK-Constraint-Felder (EAN-Regex,
   Enum-Whitelist, Mengen-Vorzeichen, Längen) client-seitig vorvalidieren;
   kein raw SQL mit String-Interpolation; Legacy-CSV bleibt importierbar;
   Tests. `agent:flutter-coder` · `model:Sonnet` · `depends:AF7c,C4,D3`
-- [ ] **F2** — Handbuch nachziehen: `06-database.md` (neue Tabellen +
+- [x] **F2** — Handbuch nachziehen: `06-database.md` (neue Tabellen +
   `product_stock`-View), `03-screens-walkthrough.md` (neue Screens),
   `05-architecture.md`, `07-edge-functions.md` (`send-notifications` +
   `seed-demo-workspace`-Änderung), `10-glossary.md`.
   `agent:flutter-coder` · `model:Sonnet` · `depends:E5`
-- [ ] **F3** — Hilfeseite (`help_screen.dart` + ARBs) um Sektionen
+- [x] **F3** — Hilfeseite (`help_screen.dart` + ARBs) um Sektionen
   Artikelstamm, Bestellwesen, Lager, Inventur erweitern.
   `agent:ui-builder` · `model:Sonnet` · `depends:E5`
 

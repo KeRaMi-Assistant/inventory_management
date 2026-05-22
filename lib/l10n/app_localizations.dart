@@ -416,6 +416,66 @@ abstract class AppLocalizations {
   /// **'Weitere Bereiche'**
   String get navMoreSheetTitle;
 
+  /// No description provided for @navWarehouse.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft'**
+  String get navWarehouse;
+
+  /// No description provided for @warehouseHubTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft'**
+  String get warehouseHubTitle;
+
+  /// No description provided for @warehouseHubComingSoon.
+  ///
+  /// In de, this message translates to:
+  /// **'Bald verfügbar'**
+  String get warehouseHubComingSoon;
+
+  /// No description provided for @warehouseHubComingSoonHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Funktion wird in einem der nächsten Updates freigeschaltet.'**
+  String get warehouseHubComingSoonHint;
+
+  /// No description provided for @warehouseHubTileProductCatalog.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelstamm'**
+  String get warehouseHubTileProductCatalog;
+
+  /// No description provided for @warehouseHubTilePurchaseOrders.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellungen'**
+  String get warehouseHubTilePurchaseOrders;
+
+  /// No description provided for @warehouseHubTileWarehouses.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager'**
+  String get warehouseHubTileWarehouses;
+
+  /// No description provided for @warehouseHubTileCategories.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppen'**
+  String get warehouseHubTileCategories;
+
+  /// No description provided for @warehouseHubTileStocktake.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur'**
+  String get warehouseHubTileStocktake;
+
+  /// No description provided for @warehouseHubTileReporting.
+  ///
+  /// In de, this message translates to:
+  /// **'Reporting'**
+  String get warehouseHubTileReporting;
+
   /// No description provided for @fieldEmail.
   ///
   /// In de, this message translates to:
@@ -3362,6 +3422,426 @@ abstract class AppLocalizations {
   /// **'Diese Meldung erscheint, wenn du einen Carrier-API-Key speichern willst, aber das Backend keinen Master-Schlüssel hat, mit dem es deinen Key verschlüsselt ablegen kann. Das ist kein Fehler in deinem Account, sondern ein einmaliger Backend-Setup-Schritt:\n• Hosted-Variante (Standard-Nutzer): kurz warten und nochmal versuchen — wir setzen den Master-Key zentral, normalerweise innerhalb weniger Stunden.\n• Self-Hoster / Admin der Supabase-Instanz: die Migration `20260516000000_carrier_master_key_bootstrap.sql` muss eingespielt sein und der `CARRIER_MASTER_KEY`-Secret auf der Supabase-Projektebene gesetzt sein. Details für Admins liegen im Repo unter `supabase/functions/tracking-poll/SETUP.md`.\nBis das gefixt ist, kannst du deine Sendungen weiter manuell pflegen — nur der automatische Live-Status pro Carrier ist solange aus.'**
   String get helpTroubleCarrierSetupDesc;
 
+  /// No description provided for @helpTroubleLowStockPushTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Low-Stock-Push kommt nicht an'**
+  String get helpTroubleLowStockPushTitle;
+
+  /// No description provided for @helpTroubleLowStockPushDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Prüfe zuerst, ob Push-Mitteilungen generell zugestellt werden (OS-Einstellungen → Mitteilungen → Lager-App). Dann: Einstellungen → Push → Kategorie „Mindestbestand\" aktiviert? Wichtig: Low-Stock-Pushes werden pro Workspace zusammengefasst — der Push enthält nur eine Zahl, keine Produktnamen. Wenn das Dashboard bereits die betroffenen Artikel zeigt, ist die Benachrichtigung inhaltlich korrekt, nur der Push fehlt — einmal ausloggen und wieder einloggen, damit der Push-Token neu registriert wird.'**
+  String get helpTroubleLowStockPushDesc;
+
+  /// No description provided for @helpWarenwirtschaftSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft-Hub'**
+  String get helpWarenwirtschaftSection;
+
+  /// No description provided for @helpWarenwirtschaftIntroTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Was ist der Warenwirtschaft-Tab?'**
+  String get helpWarenwirtschaftIntroTitle;
+
+  /// No description provided for @helpWarenwirtschaftIntroDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Tab „Warenwirtschaft\" ist der zentrale Einstieg für alles rund um deinen Artikelstamm, Lager, Bestellungen und Inventur. Von dort erreichst du alle Unterbereiche mit einem Tipp.'**
+  String get helpWarenwirtschaftIntroDesc;
+
+  /// No description provided for @helpWarenwirtschaftSubroutesTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Unterbereiche auf einen Blick'**
+  String get helpWarenwirtschaftSubroutesTitle;
+
+  /// No description provided for @helpWarenwirtschaftSubroutesDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'• Artikelstamm — wiederverwendbare Artikel anlegen und verwalten\n• Warengruppen — Kategorien für deine Artikel\n• Bestellungen — Nachbestellungen an Lieferanten\n• Lager — mehrere physische Lagerorte\n• Inventur — Bestände zählen und abgleichen\n• Berichte — Bestandsbewertung, Lagerumschlag, ABC-Analyse'**
+  String get helpWarenwirtschaftSubroutesDesc;
+
+  /// No description provided for @helpProductCatalogSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelstamm & Warengruppen'**
+  String get helpProductCatalogSection;
+
+  /// No description provided for @helpProductCatalogWhatTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Was ist der Artikelstamm?'**
+  String get helpProductCatalogWhatTitle;
+
+  /// No description provided for @helpProductCatalogWhatDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Im Artikelstamm legst du Produkte einmalig als Vorlage an — mit Name, Artikelnummer (SKU), EAN, Einheit, Einkaufspreis und Mindestbestand. Sobald du Ware einbuchst oder eine Bestellung eingehst, verknüpft die App den Lagerbestand automatisch mit dem passenden Stammartikel.'**
+  String get helpProductCatalogWhatDesc;
+
+  /// No description provided for @helpProductCatalogNewTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Neuen Artikel anlegen'**
+  String get helpProductCatalogNewTitle;
+
+  /// No description provided for @helpProductCatalogNewDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft → Artikelstamm → „+\"-Button. Pflicht: Name. Optional: SKU, EAN, Warengruppe, Lieferant, Standard-Einkaufspreis, Mindestbestand, Mengeneinheit. SKU muss innerhalb des Workspaces eindeutig sein.'**
+  String get helpProductCatalogNewDesc;
+
+  /// No description provided for @helpProductCatalogCategoryTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppen'**
+  String get helpProductCatalogCategoryTitle;
+
+  /// No description provided for @helpProductCatalogCategoryDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppen (Kategorien) helfen dir, deinen Artikelstamm zu strukturieren — z. B. „Elektronik\", „Bekleidung\", „Zubehör\". Du kannst bis zu zwei Ebenen anlegen (Gruppe → Untergruppe). Warenwirtschaft → Warengruppen → „+\"-Button.'**
+  String get helpProductCatalogCategoryDesc;
+
+  /// No description provided for @helpProductCatalogDetailTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel-Detailseite'**
+  String get helpProductCatalogDetailTitle;
+
+  /// No description provided for @helpProductCatalogDetailDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Tippe einen Artikel an, um die 360°-Ansicht zu öffnen: aktueller Bestand über alle Lager, Buchungshistorie (getypt nach Wareneingang, Verkauf, Korrektur, Inventur, Umlagerung), Chargen und verknüpfte Lieferanten.'**
+  String get helpProductCatalogDetailDesc;
+
+  /// No description provided for @helpProductCatalogMovementsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Buchungsarten'**
+  String get helpProductCatalogMovementsTitle;
+
+  /// No description provided for @helpProductCatalogMovementsDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Jede Bestandsveränderung wird mit einer Buchungsart protokolliert:\n• Wareneingang — Ware kommt ins Lager (z. B. Lieferung)\n• Warenausgang — Ware verlässt das Lager\n• Korrektur — manuelle Mengenanpassung\n• Inventur — Differenz aus einer Inventurzählung\n• Umlagerung — Wechsel zwischen Lagerorten\n• Verkauf — Deal abgeschlossen'**
+  String get helpProductCatalogMovementsDesc;
+
+  /// No description provided for @helpPurchaseOrdersSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellwesen'**
+  String get helpPurchaseOrdersSection;
+
+  /// No description provided for @helpPurchaseOrdersWhatTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Was sind Bestellungen?'**
+  String get helpPurchaseOrdersWhatTitle;
+
+  /// No description provided for @helpPurchaseOrdersWhatDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Wenn dein Bestand zur Neige geht, legst du eine Bestellung (Purchase Order) an einen Lieferanten an. Die App verwaltet Bestellpositionen, Mengen und den Status der Lieferung — von Entwurf bis Vollständig erhalten.'**
+  String get helpPurchaseOrdersWhatDesc;
+
+  /// No description provided for @helpPurchaseOrdersNewTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Bestellung anlegen'**
+  String get helpPurchaseOrdersNewTitle;
+
+  /// No description provided for @helpPurchaseOrdersNewDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft → Bestellungen → „+\"-Button → Lieferanten wählen → Artikel und Mengen eintragen → Speichern. Die App vergilt automatisch eine Bestellnummer (z. B. PO-2026-0001).'**
+  String get helpPurchaseOrdersNewDesc;
+
+  /// No description provided for @helpPurchaseOrdersStatusTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellstatus'**
+  String get helpPurchaseOrdersStatusTitle;
+
+  /// No description provided for @helpPurchaseOrdersStatusDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'• Entwurf — noch nicht abgeschickt\n• Bestellt — beim Lieferanten aufgegeben\n• Teilweise erhalten — erste Teillieferung eingegangen\n• Erhalten — vollständig geliefert\n• Storniert — Bestellung wurde abgebrochen'**
+  String get helpPurchaseOrdersStatusDesc;
+
+  /// No description provided for @helpPurchaseOrdersReceiveTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wareneingang buchen'**
+  String get helpPurchaseOrdersReceiveTitle;
+
+  /// No description provided for @helpPurchaseOrdersReceiveDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Öffne die Bestelldetails → „Wareneingang buchen\". Du siehst pro Position die bestellte und bereits erhaltene Menge und gibst die neu eingegangene Menge ein. Die App aktualisiert den Bestand und setzt den Bestellstatus automatisch auf „Teilweise erhalten\" oder „Erhalten\".'**
+  String get helpPurchaseOrdersReceiveDesc;
+
+  /// No description provided for @helpPurchaseOrdersPdfTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellbeleg als PDF'**
+  String get helpPurchaseOrdersPdfTitle;
+
+  /// No description provided for @helpPurchaseOrdersPdfDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Öffne eine Bestellung → PDF-Icon oben rechts. Die App erstellt einen Bestellbeleg mit allen Positionen, den du teilen oder drucken kannst.'**
+  String get helpPurchaseOrdersPdfDesc;
+
+  /// No description provided for @helpPurchaseOrdersReorderTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Schnell nachbestellen'**
+  String get helpPurchaseOrdersReorderTitle;
+
+  /// No description provided for @helpPurchaseOrdersReorderDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Im Dashboard erscheint ein Hinweis, wenn Artikel unter den Mindestbestand fallen. Tippe auf „Jetzt bestellen\", um direkt eine vorausgefüllte Bestellung für die betroffenen Artikel zu öffnen.'**
+  String get helpPurchaseOrdersReorderDesc;
+
+  /// No description provided for @helpWarehousesSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager verwalten'**
+  String get helpWarehousesSection;
+
+  /// No description provided for @helpWarehousesWhatTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Mehrere Lager nutzen'**
+  String get helpWarehousesWhatTitle;
+
+  /// No description provided for @helpWarehousesWhatDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Du kannst mehrere physische Lagerorte anlegen — z. B. „Hauptlager\", „Außenlager\" oder „Büro\". Beim Einbuchen von Ware wählst du, in welches Lager die Menge geht. Warenwirtschaft → Lager.'**
+  String get helpWarehousesWhatDesc;
+
+  /// No description provided for @helpWarehousesNewTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Neues Lager anlegen'**
+  String get helpWarehousesNewTitle;
+
+  /// No description provided for @helpWarehousesNewDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft → Lager → „+\"-Button → Name eingeben (z. B. „Hauptlager\") → optional Adresse → Speichern. Das erste Lager wird automatisch als Hauptlager markiert.'**
+  String get helpWarehousesNewDesc;
+
+  /// No description provided for @helpWarehousesDefaultTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Hauptlager'**
+  String get helpWarehousesDefaultTitle;
+
+  /// No description provided for @helpWarehousesDefaultDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Das als Hauptlager markierte Lager ist vorausgewählt, wenn du Ware einbuchst. Pro Workspace kann genau ein Lager das Hauptlager sein. Du kannst das Hauptlager jederzeit wechseln.'**
+  String get helpWarehousesDefaultDesc;
+
+  /// No description provided for @helpWarehousesStockTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestand pro Lager sehen'**
+  String get helpWarehousesStockTitle;
+
+  /// No description provided for @helpWarehousesStockDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'In der Artikel-Detailseite (Warenwirtschaft → Artikelstamm → Artikel antippen) siehst du den Bestand aufgeteilt nach Lager. Gesamtbestand und Mindestbestand werden über alle Lager zusammengerechnet.'**
+  String get helpWarehousesStockDesc;
+
+  /// No description provided for @helpStocktakeSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur'**
+  String get helpStocktakeSection;
+
+  /// No description provided for @helpStocktakeWhatTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Was ist eine Inventur?'**
+  String get helpStocktakeWhatTitle;
+
+  /// No description provided for @helpStocktakeWhatDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Bei einer Inventur zählst du den tatsächlichen Bestand deiner Artikel und vergleichst ihn mit dem in der App gespeicherten Soll-Bestand. Differenzen werden als Korrekturbuchungen automatisch eingetragen.'**
+  String get helpStocktakeWhatDesc;
+
+  /// No description provided for @helpStocktakeStartTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur starten'**
+  String get helpStocktakeStartTitle;
+
+  /// No description provided for @helpStocktakeStartDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft → Inventur → „+\"-Button → optional Lager und Titel wählen → „Inventur starten\". Die App legt einen Soll-Bestand-Snapshot aus den aktuellen Lagermengen an.'**
+  String get helpStocktakeStartDesc;
+
+  /// No description provided for @helpStocktakeCountTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel zählen'**
+  String get helpStocktakeCountTitle;
+
+  /// No description provided for @helpStocktakeCountDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Gib für jeden Artikel die tatsächlich gezählte Menge ein. Der Filter „Nur ungezählte\" blendet bereits bearbeitete Artikel aus. Du kannst per Barcode-Scan direkt zum passenden Artikel springen. Eingaben werden sofort gespeichert — auch wenn die App zwischendurch offline ist.'**
+  String get helpStocktakeCountDesc;
+
+  /// No description provided for @helpStocktakeCloseTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur abschließen'**
+  String get helpStocktakeCloseTitle;
+
+  /// No description provided for @helpStocktakeCloseDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Wenn alle Positionen gezählt sind (Fortschrittsanzeige oben zeigt 100 %), tippe auf „Inventur abschließen\". Die App bucht alle Differenzen als Inventur-Korrekturen und erstellt einen Differenz-Report. Diese Aktion kann nicht rückgängig gemacht werden.'**
+  String get helpStocktakeCloseDesc;
+
+  /// No description provided for @helpStocktakeDiffTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Differenz-Report'**
+  String get helpStocktakeDiffTitle;
+
+  /// No description provided for @helpStocktakeDiffDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Nach dem Abschluss siehst du eine Liste aller Artikel mit Soll-/Ist-Vergleich und der gebuchten Differenz. Positiv = mehr gezählt als erwartet, Negativ = weniger. Der Report bleibt in der Inventur-Liste abrufbar.'**
+  String get helpStocktakeDiffDesc;
+
+  /// No description provided for @helpWwReportingSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Berichte & Auswertungen'**
+  String get helpWwReportingSection;
+
+  /// No description provided for @helpWwReportingWhatTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Welche Berichte gibt es?'**
+  String get helpWwReportingWhatTitle;
+
+  /// No description provided for @helpWwReportingWhatDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Im Statistiken-Tab → Lager/Lieferanten findest du drei Auswertungen:\n• Bestandsbewertung — Lagerwert zum Stichtag (Menge × Einkaufspreis)\n• Lagerumschlag — wie oft dreht sich dein Lager pro Zeitraum\n• ABC-Analyse — welche Artikel machen den größten Wertanteil aus'**
+  String get helpWwReportingWhatDesc;
+
+  /// No description provided for @helpWwReportingValuationTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestandsbewertung'**
+  String get helpWwReportingValuationTitle;
+
+  /// No description provided for @helpWwReportingValuationDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeigt den Gesamtwert deines Lagers (Menge × Einkaufspreis aller Artikel mit hinterlegtem Preis). Artikel ohne Einkaufspreis werden mit 0 bewertet — pflege fehlende Preise nach, damit der Wert stimmt.'**
+  String get helpWwReportingValuationDesc;
+
+  /// No description provided for @helpWwReportingTurnoverTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Lagerumschlag'**
+  String get helpWwReportingTurnoverTitle;
+
+  /// No description provided for @helpWwReportingTurnoverDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Lagerumschlag zeigt, wie oft dein Durchschnittsbestand im gewählten Zeitraum umgeschlagen wurde. Ein hoher Wert bedeutet schnellen Abverkauf; ein niedriger Wert kann auf Ladenhüter hinweisen.'**
+  String get helpWwReportingTurnoverDesc;
+
+  /// No description provided for @helpWwReportingAbcTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'ABC-Analyse'**
+  String get helpWwReportingAbcTitle;
+
+  /// No description provided for @helpWwReportingAbcDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel werden nach ihrem Wertanteil am Gesamtbestand klassifiziert:\n• A-Artikel — ca. 70–80 % des Wertes, meist wenige Produkte\n• B-Artikel — ca. 15–25 % des Wertes\n• C-Artikel — ca. 5–10 % des Wertes, viele Produkte\nDie Klassifizierung hilft dir zu entscheiden, wo sich enger Einkauf und genauere Planung lohnen.'**
+  String get helpWwReportingAbcDesc;
+
+  /// No description provided for @helpFaqQ20.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie verknüpfe ich einen bestehenden Lagerartikel mit dem Artikelstamm?'**
+  String get helpFaqQ20;
+
+  /// No description provided for @helpFaqA20.
+  ///
+  /// In de, this message translates to:
+  /// **'Öffne den Artikel im Lager-Tab → Bearbeiten → „Produkt verknüpfen\" → Artikel aus dem Stamm suchen und auswählen. Nicht verknüpfte Lagerartikel erscheinen weiterhin in einer eigenen Gruppe „Ohne Artikel\".'**
+  String get helpFaqA20;
+
+  /// No description provided for @helpFaqQ21.
+  ///
+  /// In de, this message translates to:
+  /// **'Was passiert beim Wareneingang mit dem Bestand?'**
+  String get helpFaqQ21;
+
+  /// No description provided for @helpFaqA21.
+  ///
+  /// In de, this message translates to:
+  /// **'Wenn du in einer Bestellung „Wareneingang buchen\" tippst, erhöht die App den Lagerbestand des verknüpften Artikels um die eingebuchte Menge und schreibt eine Buchung vom Typ „Wareneingang\" in die Buchungshistorie. Der Bestellstatus aktualisiert sich automatisch.'**
+  String get helpFaqA21;
+
+  /// No description provided for @helpFaqQ22.
+  ///
+  /// In de, this message translates to:
+  /// **'Kann ich einen Artikel in mehrere Lager aufteilen?'**
+  String get helpFaqQ22;
+
+  /// No description provided for @helpFaqA22.
+  ///
+  /// In de, this message translates to:
+  /// **'Ja. Lege mehrere Lagerartikel für dasselbe Produkt an und weise sie verschiedenen Lagern zu. Die Artikel-Detailseite aggregiert den Gesamtbestand über alle Lager und zeigt ihn aufgeteilt.'**
+  String get helpFaqA22;
+
+  /// No description provided for @helpFaqQ23.
+  ///
+  /// In de, this message translates to:
+  /// **'Warum fehlen Artikel in der Inventur-Liste?'**
+  String get helpFaqQ23;
+
+  /// No description provided for @helpFaqA23.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Inventur erfasst nur Artikel, die mit einem Stammartikel verknüpft sind. Lagerartikel ohne Produktverknüpfung (Gruppe „Ohne Artikel\") tauchen nicht auf. Verknüpfe den Artikel zuerst im Lager-Tab → Artikel bearbeiten → „Produkt verknüpfen\".'**
+  String get helpFaqA23;
+
+  /// No description provided for @helpFaqQ24.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie deaktiviere ich den Low-Stock-Push?'**
+  String get helpFaqQ24;
+
+  /// No description provided for @helpFaqA24.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstellungen → Push → Kategorie „Mindestbestand\" deaktivieren. Der Push wird dann nicht mehr verschickt; die gelbe Warnung im Dashboard und im Lager-Tab bleibt als stiller Hinweis sichtbar.'**
+  String get helpFaqA24;
+
   /// No description provided for @helpPrivacySection.
   ///
   /// In de, this message translates to:
@@ -3421,6 +3901,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Lager ist leer.'**
   String get inventoryEmpty;
+
+  /// No description provided for @inventoryEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Über den + Button kannst du den ersten Artikel hinzufügen.'**
+  String get inventoryEmptyHint;
 
   /// No description provided for @inventoryAddItem.
   ///
@@ -6103,6 +6589,1500 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Annehmen'**
   String get inboxSuggestionAccept;
+
+  /// No description provided for @productCatalogTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelstamm'**
+  String get productCatalogTitle;
+
+  /// No description provided for @productNew.
+  ///
+  /// In de, this message translates to:
+  /// **'Neuer Artikel'**
+  String get productNew;
+
+  /// No description provided for @productUnit.
+  ///
+  /// In de, this message translates to:
+  /// **'Einheit'**
+  String get productUnit;
+
+  /// No description provided for @productDefaultCostPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-EK'**
+  String get productDefaultCostPrice;
+
+  /// No description provided for @productDefaultSalePrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-VK'**
+  String get productDefaultSalePrice;
+
+  /// No description provided for @productCategory.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppe'**
+  String get productCategory;
+
+  /// No description provided for @productDefaultSupplier.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-Lieferant'**
+  String get productDefaultSupplier;
+
+  /// No description provided for @productMinStock.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestbestand'**
+  String get productMinStock;
+
+  /// No description provided for @productTaxRate.
+  ///
+  /// In de, this message translates to:
+  /// **'MwSt.-Satz (%)'**
+  String get productTaxRate;
+
+  /// No description provided for @productIsActive.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiv'**
+  String get productIsActive;
+
+  /// No description provided for @productAdvancedSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Erweitert'**
+  String get productAdvancedSection;
+
+  /// No description provided for @productNameLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelname'**
+  String get productNameLabel;
+
+  /// No description provided for @productSkuLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelnummer (SKU)'**
+  String get productSkuLabel;
+
+  /// No description provided for @productEanLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'EAN / GTIN'**
+  String get productEanLabel;
+
+  /// No description provided for @productNoteLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Notiz'**
+  String get productNoteLabel;
+
+  /// No description provided for @productEditTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel bearbeiten'**
+  String get productEditTitle;
+
+  /// No description provided for @productAddTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Neuer Artikel'**
+  String get productAddTitle;
+
+  /// No description provided for @productGroupWithoutProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne Artikel'**
+  String get productGroupWithoutProduct;
+
+  /// No description provided for @productCatalogEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Artikelstamm'**
+  String get productCatalogEmpty;
+
+  /// No description provided for @productCatalogEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege deinen ersten Artikel an.'**
+  String get productCatalogEmptyHint;
+
+  /// No description provided for @productCatalogLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelstamm konnte nicht geladen werden.'**
+  String get productCatalogLoadError;
+
+  /// No description provided for @productCatalogNoPermission.
+  ///
+  /// In de, this message translates to:
+  /// **'Du hast keine Berechtigung, den Artikelstamm zu bearbeiten.'**
+  String get productCatalogNoPermission;
+
+  /// No description provided for @productCatalogViewerHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Du siehst den Artikelstamm im Lesemodus.'**
+  String get productCatalogViewerHint;
+
+  /// No description provided for @productLinkLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Verknüpfter Stammartikel'**
+  String get productLinkLabel;
+
+  /// No description provided for @productNoLink.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Stammartikel'**
+  String get productNoLink;
+
+  /// No description provided for @productDetailTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikeldetails'**
+  String get productDetailTitle;
+
+  /// No description provided for @productDetailEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Daten'**
+  String get productDetailEmpty;
+
+  /// No description provided for @productDetailEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Für diesen Artikel gibt es noch keine Bewegungen.'**
+  String get productDetailEmptyHint;
+
+  /// No description provided for @productDetailLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikeldetails konnten nicht geladen werden.'**
+  String get productDetailLoadError;
+
+  /// No description provided for @movementTypeGoodsIn.
+  ///
+  /// In de, this message translates to:
+  /// **'Wareneingang'**
+  String get movementTypeGoodsIn;
+
+  /// No description provided for @movementTypeGoodsOut.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenausgang'**
+  String get movementTypeGoodsOut;
+
+  /// No description provided for @movementTypeCorrection.
+  ///
+  /// In de, this message translates to:
+  /// **'Korrektur'**
+  String get movementTypeCorrection;
+
+  /// No description provided for @movementTypeStocktake.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur'**
+  String get movementTypeStocktake;
+
+  /// No description provided for @movementTypeTransfer.
+  ///
+  /// In de, this message translates to:
+  /// **'Umlagerung'**
+  String get movementTypeTransfer;
+
+  /// No description provided for @movementTypeSale.
+  ///
+  /// In de, this message translates to:
+  /// **'Verkauf'**
+  String get movementTypeSale;
+
+  /// No description provided for @movementHistoryTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bewegungshistorie'**
+  String get movementHistoryTitle;
+
+  /// No description provided for @productDetailSectionStammdaten.
+  ///
+  /// In de, this message translates to:
+  /// **'Stammdaten'**
+  String get productDetailSectionStammdaten;
+
+  /// No description provided for @productDetailSectionStock.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestand'**
+  String get productDetailSectionStock;
+
+  /// No description provided for @productDetailSectionSupplier.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant'**
+  String get productDetailSectionSupplier;
+
+  /// No description provided for @productDetailSectionBatches.
+  ///
+  /// In de, this message translates to:
+  /// **'Chargen'**
+  String get productDetailSectionBatches;
+
+  /// No description provided for @productDetailLabelSku.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelnummer (SKU)'**
+  String get productDetailLabelSku;
+
+  /// No description provided for @productDetailLabelEan.
+  ///
+  /// In de, this message translates to:
+  /// **'EAN'**
+  String get productDetailLabelEan;
+
+  /// No description provided for @productDetailLabelLocation.
+  ///
+  /// In de, this message translates to:
+  /// **'Lagerort'**
+  String get productDetailLabelLocation;
+
+  /// No description provided for @productDetailLabelStatus.
+  ///
+  /// In de, this message translates to:
+  /// **'Status'**
+  String get productDetailLabelStatus;
+
+  /// No description provided for @productDetailLabelSupplier.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant'**
+  String get productDetailLabelSupplier;
+
+  /// No description provided for @productDetailLabelQuantity.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestand'**
+  String get productDetailLabelQuantity;
+
+  /// No description provided for @productDetailLabelMinStock.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestbestand'**
+  String get productDetailLabelMinStock;
+
+  /// No description provided for @productDetailLabelCostPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstandspreis'**
+  String get productDetailLabelCostPrice;
+
+  /// No description provided for @productDetailLabelArrivalDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Ankunftsdatum'**
+  String get productDetailLabelArrivalDate;
+
+  /// No description provided for @productDetailLabelNote.
+  ///
+  /// In de, this message translates to:
+  /// **'Notiz'**
+  String get productDetailLabelNote;
+
+  /// No description provided for @productDetailLabelCritical.
+  ///
+  /// In de, this message translates to:
+  /// **'Kritisch'**
+  String get productDetailLabelCritical;
+
+  /// No description provided for @productDetailLabelOk.
+  ///
+  /// In de, this message translates to:
+  /// **'OK'**
+  String get productDetailLabelOk;
+
+  /// No description provided for @productDetailViewBatches.
+  ///
+  /// In de, this message translates to:
+  /// **'Chargen anzeigen'**
+  String get productDetailViewBatches;
+
+  /// No description provided for @productDetailNoSupplier.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Lieferant'**
+  String get productDetailNoSupplier;
+
+  /// No description provided for @productDetailNoLocation.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Lagerort'**
+  String get productDetailNoLocation;
+
+  /// No description provided for @productDetailViewerHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Du hast nur Lesezugriff — Buchungsaktionen nicht verfügbar.'**
+  String get productDetailViewerHint;
+
+  /// No description provided for @productDetailRetry.
+  ///
+  /// In de, this message translates to:
+  /// **'Erneut laden'**
+  String get productDetailRetry;
+
+  /// No description provided for @productDetailMovementQuantity.
+  ///
+  /// In de, this message translates to:
+  /// **'{sign}{qty}'**
+  String productDetailMovementQuantity(Object sign, int qty);
+
+  /// No description provided for @productDetailSectionProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel (Stammdaten)'**
+  String get productDetailSectionProduct;
+
+  /// No description provided for @productDetailLabelProductUnit.
+  ///
+  /// In de, this message translates to:
+  /// **'Einheit'**
+  String get productDetailLabelProductUnit;
+
+  /// No description provided for @productDetailLabelDefaultCostPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-EK'**
+  String get productDetailLabelDefaultCostPrice;
+
+  /// No description provided for @productDetailLabelDefaultSalePrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-VK'**
+  String get productDetailLabelDefaultSalePrice;
+
+  /// No description provided for @productDetailLabelMinStockProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestbestand (Produkt)'**
+  String get productDetailLabelMinStockProduct;
+
+  /// No description provided for @productDetailLabelTaxRate.
+  ///
+  /// In de, this message translates to:
+  /// **'MwSt-Satz'**
+  String get productDetailLabelTaxRate;
+
+  /// No description provided for @productDetailSectionAggregatedStock.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamtbestand'**
+  String get productDetailSectionAggregatedStock;
+
+  /// No description provided for @productDetailLabelTotalQty.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamt (alle Lager)'**
+  String get productDetailLabelTotalQty;
+
+  /// No description provided for @productDetailLabelWarehouseQty.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager {warehouse}'**
+  String productDetailLabelWarehouseQty(Object warehouse);
+
+  /// No description provided for @productDetailLabelNoWarehouse.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Lager zugeordnet'**
+  String get productDetailLabelNoWarehouse;
+
+  /// No description provided for @productDetailMovementsAllProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Bewegungen dieses Produkts (alle Bestands-Rows).'**
+  String get productDetailMovementsAllProduct;
+
+  /// No description provided for @productDetailLoadMoreMovements.
+  ///
+  /// In de, this message translates to:
+  /// **'Weitere {count} laden'**
+  String productDetailLoadMoreMovements(int count);
+
+  /// No description provided for @productDetailAllMovementsShown.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Bewegungen angezeigt'**
+  String get productDetailAllMovementsShown;
+
+  /// No description provided for @stockGroupItemCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count,plural, =1{1 Position} other{{count} Positionen}}'**
+  String stockGroupItemCount(int count);
+
+  /// No description provided for @stockGroupTotalQuantity.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamt: {qty} Stk.'**
+  String stockGroupTotalQuantity(int qty);
+
+  /// No description provided for @categoriesTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppen'**
+  String get categoriesTitle;
+
+  /// No description provided for @categoriesEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Warengruppen'**
+  String get categoriesEmpty;
+
+  /// No description provided for @categoriesEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege deine erste Warengruppe an.'**
+  String get categoriesEmptyHint;
+
+  /// No description provided for @categoriesLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppen konnten nicht geladen werden.'**
+  String get categoriesLoadError;
+
+  /// No description provided for @categoryNew.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Warengruppe'**
+  String get categoryNew;
+
+  /// No description provided for @categoryEdit.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppe bearbeiten'**
+  String get categoryEdit;
+
+  /// No description provided for @categoryDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppe löschen'**
+  String get categoryDelete;
+
+  /// No description provided for @categoryDeletePrompt.
+  ///
+  /// In de, this message translates to:
+  /// **'„{name}\" wirklich löschen?'**
+  String categoryDeletePrompt(Object name);
+
+  /// No description provided for @categoryParent.
+  ///
+  /// In de, this message translates to:
+  /// **'Übergeordnet'**
+  String get categoryParent;
+
+  /// No description provided for @categoryParentNone.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine (Hauptgruppe)'**
+  String get categoryParentNone;
+
+  /// No description provided for @categoryFieldName.
+  ///
+  /// In de, this message translates to:
+  /// **'Name'**
+  String get categoryFieldName;
+
+  /// No description provided for @categoryFieldSortOrder.
+  ///
+  /// In de, this message translates to:
+  /// **'Sortierung'**
+  String get categoryFieldSortOrder;
+
+  /// No description provided for @categoryMaxDepthError.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur 2 Ebenen erlaubt. Bitte eine Hauptgruppe wählen.'**
+  String get categoryMaxDepthError;
+
+  /// No description provided for @categorySortOrderHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Zahl, niedrig = zuerst'**
+  String get categorySortOrderHint;
+
+  /// No description provided for @supplierAddress.
+  ///
+  /// In de, this message translates to:
+  /// **'Adresse'**
+  String get supplierAddress;
+
+  /// No description provided for @supplierAddressStreet.
+  ///
+  /// In de, this message translates to:
+  /// **'Straße'**
+  String get supplierAddressStreet;
+
+  /// No description provided for @supplierAddressZip.
+  ///
+  /// In de, this message translates to:
+  /// **'PLZ'**
+  String get supplierAddressZip;
+
+  /// No description provided for @supplierAddressCity.
+  ///
+  /// In de, this message translates to:
+  /// **'Ort'**
+  String get supplierAddressCity;
+
+  /// No description provided for @supplierAddressCountry.
+  ///
+  /// In de, this message translates to:
+  /// **'Land'**
+  String get supplierAddressCountry;
+
+  /// No description provided for @supplierVatId.
+  ///
+  /// In de, this message translates to:
+  /// **'USt-IdNr'**
+  String get supplierVatId;
+
+  /// No description provided for @supplierCustomerNumber.
+  ///
+  /// In de, this message translates to:
+  /// **'Kundennummer'**
+  String get supplierCustomerNumber;
+
+  /// No description provided for @supplierPaymentTerms.
+  ///
+  /// In de, this message translates to:
+  /// **'Zahlungsziel (Tage)'**
+  String get supplierPaymentTerms;
+
+  /// No description provided for @supplierLeadTime.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferzeit (Tage)'**
+  String get supplierLeadTime;
+
+  /// No description provided for @supplierMinOrderValue.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestbestellwert'**
+  String get supplierMinOrderValue;
+
+  /// No description provided for @supplierAdvancedSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Erweiterte Angaben'**
+  String get supplierAdvancedSection;
+
+  /// No description provided for @commonDaysUnit.
+  ///
+  /// In de, this message translates to:
+  /// **'Tage'**
+  String get commonDaysUnit;
+
+  /// No description provided for @purchaseOrdersTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellungen'**
+  String get purchaseOrdersTitle;
+
+  /// No description provided for @purchaseOrdersEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Bestellungen'**
+  String get purchaseOrdersEmpty;
+
+  /// No description provided for @purchaseOrdersEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege deine erste Bestellung an.'**
+  String get purchaseOrdersEmptyHint;
+
+  /// No description provided for @purchaseOrdersLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellungen konnten nicht geladen werden.'**
+  String get purchaseOrdersLoadError;
+
+  /// No description provided for @purchaseOrderNew.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Bestellung'**
+  String get purchaseOrderNew;
+
+  /// No description provided for @purchaseOrderEdit.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellung bearbeiten'**
+  String get purchaseOrderEdit;
+
+  /// No description provided for @purchaseOrderDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellung löschen'**
+  String get purchaseOrderDelete;
+
+  /// No description provided for @purchaseOrderDeletePrompt.
+  ///
+  /// In de, this message translates to:
+  /// **'„{number}\" wirklich löschen?'**
+  String purchaseOrderDeletePrompt(Object number);
+
+  /// No description provided for @purchaseOrderStatusDraft.
+  ///
+  /// In de, this message translates to:
+  /// **'Entwurf'**
+  String get purchaseOrderStatusDraft;
+
+  /// No description provided for @purchaseOrderStatusOrdered.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellt'**
+  String get purchaseOrderStatusOrdered;
+
+  /// No description provided for @purchaseOrderStatusPartial.
+  ///
+  /// In de, this message translates to:
+  /// **'Teilweise erhalten'**
+  String get purchaseOrderStatusPartial;
+
+  /// No description provided for @purchaseOrderStatusReceived.
+  ///
+  /// In de, this message translates to:
+  /// **'Erhalten'**
+  String get purchaseOrderStatusReceived;
+
+  /// No description provided for @purchaseOrderStatusCancelled.
+  ///
+  /// In de, this message translates to:
+  /// **'Storniert'**
+  String get purchaseOrderStatusCancelled;
+
+  /// No description provided for @purchaseOrderFieldSupplier.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant'**
+  String get purchaseOrderFieldSupplier;
+
+  /// No description provided for @purchaseOrderFieldSupplierHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant wählen'**
+  String get purchaseOrderFieldSupplierHint;
+
+  /// No description provided for @purchaseOrderFieldOrderDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestelldatum'**
+  String get purchaseOrderFieldOrderDate;
+
+  /// No description provided for @purchaseOrderFieldExpectedDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Erwartetes Lieferdatum'**
+  String get purchaseOrderFieldExpectedDate;
+
+  /// No description provided for @purchaseOrderFieldNote.
+  ///
+  /// In de, this message translates to:
+  /// **'Notiz'**
+  String get purchaseOrderFieldNote;
+
+  /// No description provided for @purchaseOrderFieldNoteHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Optionale Anmerkungen zur Bestellung'**
+  String get purchaseOrderFieldNoteHint;
+
+  /// No description provided for @purchaseOrderSectionItems.
+  ///
+  /// In de, this message translates to:
+  /// **'Positionen'**
+  String get purchaseOrderSectionItems;
+
+  /// No description provided for @purchaseOrderItemsEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Positionen'**
+  String get purchaseOrderItemsEmpty;
+
+  /// No description provided for @purchaseOrderItemAdd.
+  ///
+  /// In de, this message translates to:
+  /// **'Position hinzufügen'**
+  String get purchaseOrderItemAdd;
+
+  /// No description provided for @purchaseOrderItemFieldProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel'**
+  String get purchaseOrderItemFieldProduct;
+
+  /// No description provided for @purchaseOrderItemFieldProductHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel wählen'**
+  String get purchaseOrderItemFieldProductHint;
+
+  /// No description provided for @purchaseOrderItemFieldQtyOrdered.
+  ///
+  /// In de, this message translates to:
+  /// **'Menge'**
+  String get purchaseOrderItemFieldQtyOrdered;
+
+  /// No description provided for @purchaseOrderItemFieldUnitPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Einzelpreis (€)'**
+  String get purchaseOrderItemFieldUnitPrice;
+
+  /// No description provided for @purchaseOrderItemDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Position löschen'**
+  String get purchaseOrderItemDelete;
+
+  /// No description provided for @purchaseOrderItemDeletePrompt.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Position wirklich löschen?'**
+  String get purchaseOrderItemDeletePrompt;
+
+  /// No description provided for @purchaseOrderNoSupplierError.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte einen Lieferanten auswählen.'**
+  String get purchaseOrderNoSupplierError;
+
+  /// No description provided for @purchaseOrderNoItemsError.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestens eine Position erforderlich.'**
+  String get purchaseOrderNoItemsError;
+
+  /// No description provided for @purchaseOrderStatusToOrdered.
+  ///
+  /// In de, this message translates to:
+  /// **'Als bestellt markieren'**
+  String get purchaseOrderStatusToOrdered;
+
+  /// No description provided for @purchaseOrderStatusToCancelled.
+  ///
+  /// In de, this message translates to:
+  /// **'Stornieren'**
+  String get purchaseOrderStatusToCancelled;
+
+  /// No description provided for @purchaseOrderStatusChangeConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Status wirklich ändern?'**
+  String get purchaseOrderStatusChangeConfirm;
+
+  /// No description provided for @purchaseOrderDetailTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestelldetails'**
+  String get purchaseOrderDetailTitle;
+
+  /// No description provided for @purchaseOrderDetailSectionHead.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellkopf'**
+  String get purchaseOrderDetailSectionHead;
+
+  /// No description provided for @purchaseOrderLabelNumber.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellnummer'**
+  String get purchaseOrderLabelNumber;
+
+  /// No description provided for @purchaseOrderLabelSupplier.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant'**
+  String get purchaseOrderLabelSupplier;
+
+  /// No description provided for @purchaseOrderLabelStatus.
+  ///
+  /// In de, this message translates to:
+  /// **'Status'**
+  String get purchaseOrderLabelStatus;
+
+  /// No description provided for @purchaseOrderLabelOrderDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestelldatum'**
+  String get purchaseOrderLabelOrderDate;
+
+  /// No description provided for @purchaseOrderLabelExpectedDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Erwartet'**
+  String get purchaseOrderLabelExpectedDate;
+
+  /// No description provided for @purchaseOrderLabelNote.
+  ///
+  /// In de, this message translates to:
+  /// **'Notiz'**
+  String get purchaseOrderLabelNote;
+
+  /// No description provided for @purchaseOrderLabelTotalNet.
+  ///
+  /// In de, this message translates to:
+  /// **'Nettosumme'**
+  String get purchaseOrderLabelTotalNet;
+
+  /// No description provided for @purchaseOrderDetailSectionItems.
+  ///
+  /// In de, this message translates to:
+  /// **'Positionen'**
+  String get purchaseOrderDetailSectionItems;
+
+  /// No description provided for @purchaseOrderItemsLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Positionen konnten nicht geladen werden.'**
+  String get purchaseOrderItemsLoadError;
+
+  /// No description provided for @goodsReceiptBook.
+  ///
+  /// In de, this message translates to:
+  /// **'Wareneingang buchen'**
+  String get goodsReceiptBook;
+
+  /// No description provided for @goodsReceiptSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Wareneingang gebucht.'**
+  String get goodsReceiptSuccess;
+
+  /// No description provided for @goodsReceiptError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Buchen des Wareneingangs.'**
+  String get goodsReceiptError;
+
+  /// No description provided for @goodsReceiptNoProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Position hat kein verknüpftes Produkt und kann nicht eingebucht werden.'**
+  String get goodsReceiptNoProduct;
+
+  /// No description provided for @quantityOrdered.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellt'**
+  String get quantityOrdered;
+
+  /// No description provided for @quantityReceived.
+  ///
+  /// In de, this message translates to:
+  /// **'Erhalten'**
+  String get quantityReceived;
+
+  /// No description provided for @purchaseOrderScanBarcode.
+  ///
+  /// In de, this message translates to:
+  /// **'Barcode scannen'**
+  String get purchaseOrderScanBarcode;
+
+  /// No description provided for @purchaseOrderScanNoMatch.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Artikel für diesen Barcode gefunden.'**
+  String get purchaseOrderScanNoMatch;
+
+  /// No description provided for @purchaseOrderPdfExport.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF-Beleg'**
+  String get purchaseOrderPdfExport;
+
+  /// No description provided for @purchaseOrderPdfExportComingSoon.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF-Export kommt in einem späteren Update.'**
+  String get purchaseOrderPdfExportComingSoon;
+
+  /// No description provided for @purchaseOrderPdfExportError.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF-Beleg konnte nicht erstellt werden.'**
+  String get purchaseOrderPdfExportError;
+
+  /// No description provided for @purchaseOrderStatusChangeError.
+  ///
+  /// In de, this message translates to:
+  /// **'Status konnte nicht geändert werden.'**
+  String get purchaseOrderStatusChangeError;
+
+  /// No description provided for @purchaseOrderViewerHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Du hast nur Lesezugriff — Buchungsaktionen nicht verfügbar.'**
+  String get purchaseOrderViewerHint;
+
+  /// No description provided for @purchaseOrderStatusAutoManaged.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieser Status wird automatisch gepflegt.'**
+  String get purchaseOrderStatusAutoManaged;
+
+  /// No description provided for @poPdfDocumentTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellbeleg'**
+  String get poPdfDocumentTitle;
+
+  /// No description provided for @poPdfSupplierLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant'**
+  String get poPdfSupplierLabel;
+
+  /// No description provided for @poPdfVatIdLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'USt-IdNr'**
+  String get poPdfVatIdLabel;
+
+  /// No description provided for @poPdfOrderDateLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestelldatum'**
+  String get poPdfOrderDateLabel;
+
+  /// No description provided for @poPdfExpectedDateLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Erwartetes Lieferdatum'**
+  String get poPdfExpectedDateLabel;
+
+  /// No description provided for @poPdfStatusLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Status'**
+  String get poPdfStatusLabel;
+
+  /// No description provided for @poPdfSectionItems.
+  ///
+  /// In de, this message translates to:
+  /// **'Positionen'**
+  String get poPdfSectionItems;
+
+  /// No description provided for @poPdfColProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel'**
+  String get poPdfColProduct;
+
+  /// No description provided for @poPdfColOrdered.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellt'**
+  String get poPdfColOrdered;
+
+  /// No description provided for @poPdfColReceived.
+  ///
+  /// In de, this message translates to:
+  /// **'Erhalten'**
+  String get poPdfColReceived;
+
+  /// No description provided for @poPdfColUnitPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Einzelpreis'**
+  String get poPdfColUnitPrice;
+
+  /// No description provided for @poPdfColLineTotal.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeilensumme'**
+  String get poPdfColLineTotal;
+
+  /// No description provided for @poPdfTotalNetLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Nettosumme'**
+  String get poPdfTotalNetLabel;
+
+  /// No description provided for @poPdfNoteLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Notiz'**
+  String get poPdfNoteLabel;
+
+  /// No description provided for @warehousesTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager'**
+  String get warehousesTitle;
+
+  /// No description provided for @warehousesEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Lager'**
+  String get warehousesEmpty;
+
+  /// No description provided for @warehousesEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege dein erstes Lager an.'**
+  String get warehousesEmptyHint;
+
+  /// No description provided for @warehousesLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager konnten nicht geladen werden.'**
+  String get warehousesLoadError;
+
+  /// No description provided for @warehouseNew.
+  ///
+  /// In de, this message translates to:
+  /// **'Neues Lager'**
+  String get warehouseNew;
+
+  /// No description provided for @warehouseDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Hauptlager'**
+  String get warehouseDefault;
+
+  /// No description provided for @warehouseEdit.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager bearbeiten'**
+  String get warehouseEdit;
+
+  /// No description provided for @warehouseNameLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Name'**
+  String get warehouseNameLabel;
+
+  /// No description provided for @warehouseAddressLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Adresse'**
+  String get warehouseAddressLabel;
+
+  /// No description provided for @warehouseIsDefaultLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Standardlager'**
+  String get warehouseIsDefaultLabel;
+
+  /// No description provided for @warehouseIsActiveLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiv'**
+  String get warehouseIsActiveLabel;
+
+  /// No description provided for @warehouseInactiveBadge.
+  ///
+  /// In de, this message translates to:
+  /// **'Inaktiv'**
+  String get warehouseInactiveBadge;
+
+  /// No description provided for @warehouseDeletePrompt.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager \"{name}\" wirklich löschen?'**
+  String warehouseDeletePrompt(Object name);
+
+  /// No description provided for @inventoryWarehouseLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager'**
+  String get inventoryWarehouseLabel;
+
+  /// No description provided for @inventoryNoWarehouse.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Lager'**
+  String get inventoryNoWarehouse;
+
+  /// No description provided for @lowStockAlertTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Niedriger Bestand'**
+  String get lowStockAlertTitle;
+
+  /// No description provided for @lowStockAlertBody.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Artikel unter Mindestbestand'**
+  String lowStockAlertBody(Object count);
+
+  /// No description provided for @lowStockReorderAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Jetzt bestellen'**
+  String get lowStockReorderAction;
+
+  /// No description provided for @reportStockValuation.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestandsbewertung'**
+  String get reportStockValuation;
+
+  /// No description provided for @reportStockValuationSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamtwert des Lagerbestands (Einstandspreis)'**
+  String get reportStockValuationSubtitle;
+
+  /// No description provided for @reportStockValuationTotal.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamtwert'**
+  String get reportStockValuationTotal;
+
+  /// No description provided for @reportStockValuationUnits.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamtmenge'**
+  String get reportStockValuationUnits;
+
+  /// No description provided for @reportStockValuationItemName.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel'**
+  String get reportStockValuationItemName;
+
+  /// No description provided for @reportStockValuationQuantity.
+  ///
+  /// In de, this message translates to:
+  /// **'Menge'**
+  String get reportStockValuationQuantity;
+
+  /// No description provided for @reportStockValuationCostPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'EK'**
+  String get reportStockValuationCostPrice;
+
+  /// No description provided for @reportStockValuationValue.
+  ///
+  /// In de, this message translates to:
+  /// **'Wert'**
+  String get reportStockValuationValue;
+
+  /// No description provided for @reportStockValuationEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Lagerbestand zur Bewertung vorhanden.'**
+  String get reportStockValuationEmpty;
+
+  /// No description provided for @reportInventoryTurnover.
+  ///
+  /// In de, this message translates to:
+  /// **'Lagerumschlag'**
+  String get reportInventoryTurnover;
+
+  /// No description provided for @reportInventoryTurnoverSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Umschlagshäufigkeit des Lagerbestands'**
+  String get reportInventoryTurnoverSubtitle;
+
+  /// No description provided for @reportInventoryTurnoverRate.
+  ///
+  /// In de, this message translates to:
+  /// **'Umschlagshäufigkeit'**
+  String get reportInventoryTurnoverRate;
+
+  /// No description provided for @reportInventoryTurnoverOutflow.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenausgang (Stk.)'**
+  String get reportInventoryTurnoverOutflow;
+
+  /// No description provided for @reportInventoryTurnoverAvgStock.
+  ///
+  /// In de, this message translates to:
+  /// **'Ø Bestand (Stk.)'**
+  String get reportInventoryTurnoverAvgStock;
+
+  /// No description provided for @reportInventoryTurnoverMovements.
+  ///
+  /// In de, this message translates to:
+  /// **'Abgangs-Buchungen'**
+  String get reportInventoryTurnoverMovements;
+
+  /// No description provided for @reportInventoryTurnoverNoData.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Abgangs-Buchungen vorhanden.'**
+  String get reportInventoryTurnoverNoData;
+
+  /// No description provided for @reportInventoryTurnoverHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Verhältnis Warenausgang zu Ø Bestand'**
+  String get reportInventoryTurnoverHint;
+
+  /// No description provided for @reportAbcAnalysis.
+  ///
+  /// In de, this message translates to:
+  /// **'ABC-Analyse'**
+  String get reportAbcAnalysis;
+
+  /// No description provided for @reportAbcAnalysisSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel nach Bestandswert klassifiziert'**
+  String get reportAbcAnalysisSubtitle;
+
+  /// No description provided for @reportAbcClassA.
+  ///
+  /// In de, this message translates to:
+  /// **'A — Werttreiber (≤ 80 %)'**
+  String get reportAbcClassA;
+
+  /// No description provided for @reportAbcClassB.
+  ///
+  /// In de, this message translates to:
+  /// **'B — Mittelfeld (80–95 %)'**
+  String get reportAbcClassB;
+
+  /// No description provided for @reportAbcClassC.
+  ///
+  /// In de, this message translates to:
+  /// **'C — Restmenge (> 95 %)'**
+  String get reportAbcClassC;
+
+  /// No description provided for @reportAbcItemName.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel'**
+  String get reportAbcItemName;
+
+  /// No description provided for @reportAbcItemValue.
+  ///
+  /// In de, this message translates to:
+  /// **'Wert'**
+  String get reportAbcItemValue;
+
+  /// No description provided for @reportAbcItemShare.
+  ///
+  /// In de, this message translates to:
+  /// **'Anteil kum.'**
+  String get reportAbcItemShare;
+
+  /// No description provided for @reportAbcItemClass.
+  ///
+  /// In de, this message translates to:
+  /// **'Klasse'**
+  String get reportAbcItemClass;
+
+  /// No description provided for @reportAbcEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Lagerbestand für ABC-Analyse vorhanden.'**
+  String get reportAbcEmpty;
+
+  /// No description provided for @reportAbcCountItems.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Artikel'**
+  String reportAbcCountItems(int count);
+
+  /// No description provided for @stocktakeTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur'**
+  String get stocktakeTitle;
+
+  /// No description provided for @stocktakeEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Inventuren'**
+  String get stocktakeEmpty;
+
+  /// No description provided for @stocktakeEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Starte deine erste Inventur.'**
+  String get stocktakeEmptyHint;
+
+  /// No description provided for @stocktakeLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventuren konnten nicht geladen werden.'**
+  String get stocktakeLoadError;
+
+  /// No description provided for @stocktakeNew.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Inventur'**
+  String get stocktakeNew;
+
+  /// No description provided for @stocktakeProgress.
+  ///
+  /// In de, this message translates to:
+  /// **'{counted}/{total} gezählt'**
+  String stocktakeProgress(int counted, int total);
+
+  /// No description provided for @stocktakeFilterUncounted.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur ungezählte'**
+  String get stocktakeFilterUncounted;
+
+  /// No description provided for @stocktakeExpected.
+  ///
+  /// In de, this message translates to:
+  /// **'Soll'**
+  String get stocktakeExpected;
+
+  /// No description provided for @stocktakeCounted.
+  ///
+  /// In de, this message translates to:
+  /// **'Gezählt'**
+  String get stocktakeCounted;
+
+  /// No description provided for @stocktakeDifference.
+  ///
+  /// In de, this message translates to:
+  /// **'Differenz'**
+  String get stocktakeDifference;
+
+  /// No description provided for @stocktakeStatusOpen.
+  ///
+  /// In de, this message translates to:
+  /// **'Offen'**
+  String get stocktakeStatusOpen;
+
+  /// No description provided for @stocktakeStatusCounting.
+  ///
+  /// In de, this message translates to:
+  /// **'Läuft'**
+  String get stocktakeStatusCounting;
+
+  /// No description provided for @stocktakeStatusClosed.
+  ///
+  /// In de, this message translates to:
+  /// **'Abgeschlossen'**
+  String get stocktakeStatusClosed;
+
+  /// No description provided for @stocktakeStatusCancelled.
+  ///
+  /// In de, this message translates to:
+  /// **'Storniert'**
+  String get stocktakeStatusCancelled;
+
+  /// No description provided for @stocktakeTitleLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Titel (optional)'**
+  String get stocktakeTitleLabel;
+
+  /// No description provided for @stocktakeTitleHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z. B. Jahresabschluss 2026'**
+  String get stocktakeTitleHint;
+
+  /// No description provided for @stocktakeSelectWarehouse.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager (optional)'**
+  String get stocktakeSelectWarehouse;
+
+  /// No description provided for @stocktakeAllWarehouses.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Lager'**
+  String get stocktakeAllWarehouses;
+
+  /// No description provided for @stocktakeStartAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur starten'**
+  String get stocktakeStartAction;
+
+  /// No description provided for @stocktakeStartError.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur konnte nicht gestartet werden.'**
+  String get stocktakeStartError;
+
+  /// No description provided for @stocktakeSaveError.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen — Eingabe lokal gespeichert.'**
+  String get stocktakeSaveError;
+
+  /// No description provided for @stocktakeScanBarcode.
+  ///
+  /// In de, this message translates to:
+  /// **'Barcode scannen'**
+  String get stocktakeScanBarcode;
+
+  /// No description provided for @stocktakeScanNoMatch.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein passender Artikel gefunden.'**
+  String get stocktakeScanNoMatch;
+
+  /// No description provided for @stocktakeCloseAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur abschließen'**
+  String get stocktakeCloseAction;
+
+  /// No description provided for @stocktakeCloseConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur abschließen?'**
+  String get stocktakeCloseConfirm;
+
+  /// No description provided for @stocktakeCloseConfirmHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Inventur wird abgeschlossen und die Differenzen gebucht. Diese Aktion kann nicht rückgängig gemacht werden.'**
+  String get stocktakeCloseConfirmHint;
+
+  /// No description provided for @stocktakeCloseSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur erfolgreich abgeschlossen.'**
+  String get stocktakeCloseSuccess;
+
+  /// No description provided for @stocktakeCloseError.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur konnte nicht abgeschlossen werden.'**
+  String get stocktakeCloseError;
+
+  /// No description provided for @stocktakeAllCounted.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Positionen gezählt.'**
+  String get stocktakeAllCounted;
+
+  /// No description provided for @stocktakeDiffReportTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Differenz-Report'**
+  String get stocktakeDiffReportTitle;
+
+  /// No description provided for @stocktakeDiffReportNoDiff.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Differenzen — Bestand ist korrekt.'**
+  String get stocktakeDiffReportNoDiff;
+
+  /// No description provided for @stocktakeNoItems.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Positionen'**
+  String get stocktakeNoItems;
 }
 
 class _AppLocalizationsDelegate

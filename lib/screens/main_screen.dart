@@ -27,6 +27,7 @@ import 'statistics_screen.dart';
 import 'suppliers_screen.dart';
 import 'main_tab.dart';
 import 'tickets_screen.dart';
+import 'warehouse_hub_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -48,8 +49,9 @@ class _MainScreenState extends State<MainScreen> {
     (Icons.local_shipping_outlined, Icons.local_shipping),
     (Icons.bar_chart_outlined, Icons.bar_chart_rounded),
     (Icons.history_outlined, Icons.history_rounded),
-    (Icons.settings_outlined, Icons.settings_rounded), // MainTab.settings (8)
-    (Icons.help_outline_rounded, Icons.help_rounded),  // MainTab.help (9)
+    (Icons.settings_outlined, Icons.settings_rounded),  // MainTab.settings (8)
+    (Icons.help_outline_rounded, Icons.help_rounded),   // MainTab.help (9)
+    (Icons.storefront_outlined, Icons.storefront),       // MainTab.warehouse (10) — AF11
   ];
 
   List<String> _navLabels(AppLocalizations l10n) => [
@@ -61,8 +63,9 @@ class _MainScreenState extends State<MainScreen> {
         l10n.navSuppliers,
         l10n.navStatistics,
         l10n.navActivity,
-        l10n.navSettings, // MainTab.settings (8)
-        l10n.navHelp,     // MainTab.help (9)
+        l10n.navSettings,   // MainTab.settings (8)
+        l10n.navHelp,       // MainTab.help (9)
+        l10n.navWarehouse,  // MainTab.warehouse (10) — AF11
       ];
 
   Future<void> _export(BuildContext context, InventoryProvider provider) async {
@@ -73,6 +76,14 @@ class _MainScreenState extends State<MainScreen> {
       List.from(provider.buyers),
       List.from(provider.inventoryItems),
       suppliers: List.from(provider.suppliers),
+      categories: List.from(provider.productCategories),
+      products: List.from(provider.products),
+      warehouses: List.from(provider.warehouses),
+      purchaseOrders: List.from(provider.purchaseOrders),
+      // PO items are not held in the global cache (lazy-loaded per detail
+      // screen), so we export an empty list for now. A future task can wire
+      // up a global PO-items cache when the use case warrants it.
+      purchaseOrderItems: const [],
     );
     if (!context.mounted) return;
     if (err != null) {
@@ -100,7 +111,19 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    final (result, err) = await CsvService.importAll(provider.nextDealId);
+
+    // workspaceId and userId are required by the new section parsers so that
+    // imported entities carry the correct context (not taken from the CSV).
+    final workspaceId =
+        context.read<ActiveWorkspaceProvider>().active?.id ?? '';
+    final userId =
+        context.read<AuthProvider>().currentUser?.id ?? '';
+
+    final (result, err) = await CsvService.importAll(
+      provider.nextDealId,
+      workspaceId: workspaceId,
+      userId: userId,
+    );
     if (!context.mounted) return;
     if (err != null) {
       _showSnack(context, l10n.errorPrefix(err), isError: true);
@@ -143,6 +166,7 @@ class _MainScreenState extends State<MainScreen> {
       MainTab.activity: true,
       MainTab.settings: true,
       MainTab.help: true,
+      MainTab.warehouse: true, // AF11
     };
   }
 
@@ -283,6 +307,7 @@ class _MainScreenState extends State<MainScreen> {
       MainTab.activity => const ActivityScreen(),
       MainTab.settings => const SettingsScreen(embedded: true),
       MainTab.help => const HelpScreen(embedded: true),
+      MainTab.warehouse => const WarehouseHubScreen(), // AF11
     };
   }
 
@@ -353,14 +378,30 @@ class _MainScreenState extends State<MainScreen> {
                 floatingActionButton: fab,
                 floatingActionButtonLocation:
                     FloatingActionButtonLocation.endFloat,
-                bottomNavigationBar: NavigationBar(
-                  key: const Key('mainBottomNav'),
-                  selectedIndex:
-                      _bottomNavSelectedIndex(visibility),
-                  onDestinationSelected: (i) =>
-                      _bottomNavOnTap(i, visibility, context),
-                  destinations: _bottomNavDestinations(
-                      l10n, labels, visibility, navBadgeCounts),
+                bottomNavigationBar: NavigationBarTheme(
+                  data: NavigationBarThemeData(
+                    // Enforce single-line labels — prevents "Dashboar/d"
+                    // wrap on narrow Phone viewports (360-390 dp wide).
+                    labelTextStyle: WidgetStateProperty.resolveWith(
+                      (states) => const TextStyle(
+                        fontSize: 12,
+                        overflow: TextOverflow.ellipsis,
+                        // height: 1 clamps the line-height so Flutter
+                        // does not allocate a second line even when the
+                        // label barely fits.
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                  child: NavigationBar(
+                    key: const Key('mainBottomNav'),
+                    selectedIndex:
+                        _bottomNavSelectedIndex(visibility),
+                    onDestinationSelected: (i) =>
+                        _bottomNavOnTap(i, visibility, context),
+                    destinations: _bottomNavDestinations(
+                        l10n, labels, visibility, navBadgeCounts),
+                  ),
                 ),
                 body: body,
               )

@@ -9,9 +9,18 @@ import '../models/inbox_message.dart';
 import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
 import '../models/mailbox_account.dart';
+import '../models/product.dart';
+import '../models/product_category.dart';
+import '../models/product_stock.dart';
+import '../models/product_supplier.dart';
+import '../models/purchase_order.dart';
+import '../models/purchase_order_item.dart';
 import '../models/shop.dart';
+import '../models/stocktake.dart';
+import '../models/stocktake_item.dart';
 import '../models/supplier.dart';
 import '../models/ticket.dart';
+import '../models/warehouse.dart';
 
 /// Snapshot of all data for the currently signed-in user, used to seed the
 /// in-memory provider after login.
@@ -24,6 +33,28 @@ class CloudSnapshot {
   final List<InventoryMovement> movements;
   final List<ActivityEntry> activities;
   final List<Ticket> tickets;
+  final List<ProductCategory> productCategories;
+
+  /// Artikelstamm (Epic A-full). Lazy-Detail-Tabellen wie `product_suppliers`
+  /// und `product_stock` sind NICHT im globalen Snapshot — sie werden
+  /// on-demand pro Detail-Screen geladen (Committee-Empfehlung 1).
+  final List<Product> products;
+
+  /// Bestellköpfe (Epic C). `purchase_order_items` sind NICHT im globalen
+  /// Snapshot — sie werden lazy pro Detail-Screen geladen (Committee-
+  /// Empfehlung 1, analog `loadBatchesForItem`).
+  final List<PurchaseOrder> purchaseOrders;
+
+  /// Lager (Epic D — Mehrlager). Klein und workspace-weit relevant, daher
+  /// im globalen Snapshot (Committee-Empfehlung 1). Analog `productCategories`.
+  final List<Warehouse> warehouses;
+
+  /// Inventur-Sessions (Epic E — Inventur). Klein und workspace-weit relevant
+  /// (laufende Sessions, max. wenige), daher im globalen Snapshot
+  /// (Committee-Empfehlung 1, analog `purchaseOrders`).
+  /// `stocktake_items` sind NICHT im globalen Snapshot — sie werden lazy
+  /// pro Detail-Screen geladen (Pattern wie `loadPurchaseOrderItems`).
+  final List<Stocktake> stocktakes;
 
   const CloudSnapshot({
     required this.deals,
@@ -34,6 +65,11 @@ class CloudSnapshot {
     required this.movements,
     required this.activities,
     this.tickets = const [],
+    this.productCategories = const [],
+    this.products = const [],
+    this.purchaseOrders = const [],
+    this.warehouses = const [],
+    this.stocktakes = const [],
   });
 
   bool get isEmpty =>
@@ -44,7 +80,12 @@ class CloudSnapshot {
       inventoryItems.isEmpty &&
       movements.isEmpty &&
       activities.isEmpty &&
-      tickets.isEmpty;
+      tickets.isEmpty &&
+      productCategories.isEmpty &&
+      products.isEmpty &&
+      purchaseOrders.isEmpty &&
+      warehouses.isEmpty &&
+      stocktakes.isEmpty;
 }
 
 /// Single point of contact with the Supabase backend. All RLS-scoped tables
@@ -109,6 +150,45 @@ class SupabaseRepository {
 
   // ── Bulk load ─────────────────────────────────────────────────────────────
 
+  /// Führt eine einzelne Tabellen-Query aus und wiederholt den Versuch bei
+  /// einem PostgREST-Schema-Cache-Fehler (`PGRST205` / `PGRST204` —
+  /// Tabelle/View kurzzeitig nicht im Schema-Cache des kalt gestarteten
+  /// Edge-Nodes).
+  ///
+  /// Retry-Strategie: bis zu 3 Versuche nach dem ersten Fehler mit
+  /// ansteigendem Delay (300 ms → 800 ms → 1 500 ms). Alle anderen
+  /// Fehlertypen (RLS-Deny, Netzwerk, Auth) werden sofort durchgereicht —
+  /// keine stille Unterdrückung.
+  ///
+  /// Überschreibbar in Testsubklassen (kein `_`-Prefix absichtlich), um
+  /// Schema-Cache-Retry-Szenarien ohne echten Supabase-Client zu simulieren.
+  Future<List<dynamic>> loadWithSchemaRetry(
+    Future<List<dynamic>> Function() query,
+  ) async {
+    const schemaCacheErrorCodes = {'PGRST205', 'PGRST204'};
+    const retryDelays = [
+      Duration(milliseconds: 300),
+      Duration(milliseconds: 800),
+      Duration(milliseconds: 1500),
+    ];
+
+    for (var attempt = 0; attempt <= retryDelays.length; attempt++) {
+      try {
+        return await query();
+      } on PostgrestException catch (e) {
+        final isSchemaError = schemaCacheErrorCodes.contains(e.code);
+        if (!isSchemaError || attempt == retryDelays.length) {
+          // Kein Schema-Cache-Fehler oder alle Retries erschöpft → durchreichen.
+          rethrow;
+        }
+        await Future<void>.delayed(retryDelays[attempt]);
+      }
+    }
+    // Dieser Zweig ist durch die Schleife nicht erreichbar, aber Dart braucht
+    // einen Rückgabewert.
+    throw StateError('loadWithSchemaRetry: unreachable');
+  }
+
   Future<CloudSnapshot> loadAll() async {
     final ws = _workspaceId;
     if (ws == null) {
@@ -121,65 +201,109 @@ class SupabaseRepository {
         movements: [],
         activities: [],
         tickets: [],
+        productCategories: [],
+        products: [],
+        purchaseOrders: [],
+        warehouses: [],
+        stocktakes: [],
       );
     }
+    // Alle Queries laufen parallel (Future.wait — kein Performance-Regress).
+    // Jede einzelne Query ist durch _loadWithSchemaRetry gegen den PostgREST-
+    // Schema-Cache-Race abgesichert, der auf kalt gestarteten Edge-Nodes in
+    // ~2 von 3 Cold-Reloads HTTP 404 / PGRST205 produziert.
     final results = await Future.wait([
-      _client
+      loadWithSchemaRetry(() => _client
           .from('deals')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('id', ascending: true),
-      _client
+          .order('id', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('buyers')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('sort_order', ascending: true),
-      _client
+          .order('sort_order', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('shops')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('name', ascending: true),
-      _client
+          .order('name', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('suppliers')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('name', ascending: true),
-      _client
+          .order('name', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('inventory_items')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('created_at', ascending: true),
-      _client
+          .order('created_at', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('inventory_movements')
           .select()
           .eq('workspace_id', ws)
-          .order('date', ascending: false),
-      _client
+          .order('date', ascending: false)),
+      loadWithSchemaRetry(() => _client
           .from('activity_log')
           .select()
           .eq('workspace_id', ws)
           .order('date', ascending: false)
-          .limit(50),
-      _client
+          .limit(50)),
+      loadWithSchemaRetry(() => _client
           .from('tickets')
           .select()
           .eq('workspace_id', ws)
-          .order('created_at', ascending: false),
+          .order('created_at', ascending: false)),
+      loadWithSchemaRetry(() => _client
+          .from('product_categories')
+          .select()
+          .eq('workspace_id', ws)
+          .filter('deleted_at', 'is', null)
+          .order('sort_order', ascending: true)),
+      loadWithSchemaRetry(() => _client
+          .from('products')
+          .select()
+          .eq('workspace_id', ws)
+          .filter('deleted_at', 'is', null)
+          .order('name', ascending: true)),
+      loadWithSchemaRetry(() => _client
+          .from('purchase_orders')
+          .select()
+          .eq('workspace_id', ws)
+          .filter('deleted_at', 'is', null)
+          .order('created_at', ascending: false)),
+      loadWithSchemaRetry(() => _client
+          .from('warehouses')
+          .select()
+          .eq('workspace_id', ws)
+          .filter('deleted_at', 'is', null)
+          .order('name', ascending: true)),
+      loadWithSchemaRetry(() => _client
+          .from('stocktakes')
+          .select()
+          .eq('workspace_id', ws)
+          .filter('deleted_at', 'is', null)
+          .order('created_at', ascending: false)),
     ]);
 
-    final dealRows = (results[0] as List).cast<Map<String, dynamic>>();
-    final buyerRows = (results[1] as List).cast<Map<String, dynamic>>();
-    final shopRows = (results[2] as List).cast<Map<String, dynamic>>();
-    final supplierRows = (results[3] as List).cast<Map<String, dynamic>>();
-    final itemRows = (results[4] as List).cast<Map<String, dynamic>>();
-    final movementRows = (results[5] as List).cast<Map<String, dynamic>>();
-    final activityRows = (results[6] as List).cast<Map<String, dynamic>>();
-    final ticketRows = (results[7] as List).cast<Map<String, dynamic>>();
+    final dealRows = results[0].cast<Map<String, dynamic>>();
+    final buyerRows = results[1].cast<Map<String, dynamic>>();
+    final shopRows = results[2].cast<Map<String, dynamic>>();
+    final supplierRows = results[3].cast<Map<String, dynamic>>();
+    final itemRows = results[4].cast<Map<String, dynamic>>();
+    final movementRows = results[5].cast<Map<String, dynamic>>();
+    final activityRows = results[6].cast<Map<String, dynamic>>();
+    final ticketRows = results[7].cast<Map<String, dynamic>>();
+    final categoryRows = results[8].cast<Map<String, dynamic>>();
+    final productRows = results[9].cast<Map<String, dynamic>>();
+    final purchaseOrderRows = results[10].cast<Map<String, dynamic>>();
+    final warehouseRows = results[11].cast<Map<String, dynamic>>();
+    final stocktakeRows = results[12].cast<Map<String, dynamic>>();
 
     final inventoryItems =
         itemRows.map(InventoryItem.fromSupabase).toList();
@@ -209,6 +333,13 @@ class SupabaseRepository {
           movementRows.map(InventoryMovement.fromSupabase).toList(),
       activities: activityRows.map(ActivityEntry.fromSupabase).toList(),
       tickets: ticketRows.map(Ticket.fromSupabase).toList(),
+      productCategories:
+          categoryRows.map(ProductCategory.fromSupabase).toList(),
+      products: productRows.map(Product.fromSupabase).toList(),
+      purchaseOrders:
+          purchaseOrderRows.map(PurchaseOrder.fromSupabase).toList(),
+      warehouses: warehouseRows.map(Warehouse.fromSupabase).toList(),
+      stocktakes: stocktakeRows.map(Stocktake.fromSupabase).toList(),
     );
   }
 
@@ -456,6 +587,611 @@ class SupabaseRepository {
         .from('suppliers')
         .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
         .eq('id', id);
+  }
+
+  // ── Product categories ────────────────────────────────────────────────────
+
+  /// Lädt alle aktiven Kategorien des Workspaces, sortiert nach `sort_order`.
+  Future<List<ProductCategory>> loadProductCategories(
+      String workspaceId) async {
+    final rows = await _client
+        .from('product_categories')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .filter('deleted_at', 'is', null)
+        .order('sort_order', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(ProductCategory.fromSupabase)
+        .toList();
+  }
+
+  Future<ProductCategory> insertProductCategory(
+      ProductCategory category) async {
+    final payload = category.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('product_categories')
+        .insert(payload)
+        .select()
+        .single();
+    return ProductCategory.fromSupabase(row);
+  }
+
+  Future<ProductCategory> updateProductCategory(
+      ProductCategory category) async {
+    final payload = category.toSupabaseInsert();
+    final row = await _client
+        .from('product_categories')
+        .update(payload)
+        .eq('id', category.id)
+        .select()
+        .single();
+    return ProductCategory.fromSupabase(row);
+  }
+
+  /// Soft-Delete: setzt `deleted_at` auf die aktuelle UTC-Zeit (konsistent
+  /// mit dem Pattern aller anderen workspace-scoped Entitäten in diesem
+  /// Repository — kein Hard-Delete).
+  Future<void> deleteProductCategory(String id) async {
+    await _client
+        .from('product_categories')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  // ── Products (Artikelstamm) ───────────────────────────────────────────────
+
+  /// Lädt alle aktiven Artikel-Stammsätze des Workspaces, sortiert nach Name.
+  /// Analog `loadProductCategories` — filtert `deleted_at IS NULL`.
+  Future<List<Product>> loadProducts(String workspaceId) async {
+    final rows = await _client
+        .from('products')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .filter('deleted_at', 'is', null)
+        .order('name', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(Product.fromSupabase)
+        .toList();
+  }
+
+  Future<Product> insertProduct(Product product) async {
+    final payload = product.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('products')
+        .insert(payload)
+        .select()
+        .single();
+    return Product.fromSupabase(row);
+  }
+
+  Future<Product> updateProduct(Product product) async {
+    final payload = product.toSupabaseInsert();
+    final row = await _client
+        .from('products')
+        .update(payload)
+        .eq('id', product.id)
+        .select()
+        .single();
+    return Product.fromSupabase(row);
+  }
+
+  /// Soft-Delete: setzt `deleted_at` auf die aktuelle UTC-Zeit.
+  /// Bestands-Rows (`inventory_items`) mit dieser `product_id` behalten die
+  /// Referenz — der FK ist `ON DELETE SET NULL`, d. h. die DB setzt
+  /// `product_id` nur beim Hard-Delete; unser Soft-Delete lässt die Items
+  /// unverändert. Konsistent mit dem allgemeinen Soft-Delete-Pattern.
+  Future<void> deleteProduct(String id) async {
+    await _client
+        .from('products')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  // ── Product suppliers (lazy — nur pro Detail-Screen) ─────────────────────
+  //
+  // `product_suppliers` ist eine Detail-Tabelle (n:m, pro Produkt wenige Rows).
+  // Sie wird NICHT in `loadAll()`/`CloudSnapshot` aufgenommen (Committee-
+  // Empfehlung 1 — Detail-Tabellen lazy laden). Pattern analog
+  // `loadBatchesForItem`.
+
+  /// Lädt alle aktiven Lieferanten-Zuordnungen eines Produkts.
+  /// Lazy: wird pro `product_detail_screen` on-demand aufgerufen.
+  Future<List<ProductSupplier>> loadProductSuppliers(
+    String workspaceId,
+    String productId,
+  ) async {
+    final rows = await _client
+        .from('product_suppliers')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .eq('product_id', productId)
+        .filter('deleted_at', 'is', null)
+        .order('is_preferred', ascending: false);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(ProductSupplier.fromSupabase)
+        .toList();
+  }
+
+  Future<ProductSupplier> insertProductSupplier(
+      ProductSupplier productSupplier) async {
+    final payload = productSupplier.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('product_suppliers')
+        .insert(payload)
+        .select()
+        .single();
+    return ProductSupplier.fromSupabase(row);
+  }
+
+  Future<ProductSupplier> updateProductSupplier(
+      ProductSupplier productSupplier) async {
+    final payload = productSupplier.toSupabaseInsert();
+    final row = await _client
+        .from('product_suppliers')
+        .update(payload)
+        .eq('id', productSupplier.id)
+        .select()
+        .single();
+    return ProductSupplier.fromSupabase(row);
+  }
+
+  /// Soft-Delete einer Artikel-Lieferanten-Zuordnung.
+  Future<void> deleteProductSupplier(String id) async {
+    await _client
+        .from('product_suppliers')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  // ── Product stock (read-only View) ────────────────────────────────────────
+  //
+  // Der View `product_stock` ist die einzige Aggregations-Quelle für
+  // Lagerbestand pro Produkt/Lager. Er ist read-only (kein insert/update).
+  //
+  // Zwei Varianten werden angeboten:
+  //   • `loadProductStock(workspaceId)` — workspace-weit; der Provider
+  //     kann daraus per `productId` gruppieren (für AF8 / KPI-Aggregation).
+  //   • `loadProductStockForProduct(workspaceId, productId)` — nur ein
+  //     Produkt; für AF12 (Produkt-Detail) effizienter.
+  //
+  // Signatur für AF8 + AF12 abstimmt:
+  //   • AF8 nutzt `loadProductStock` → GroupBy im Provider.
+  //   • AF12 nutzt `loadProductStockForProduct` → direkte Summe im
+  //     Detail-Screen-Provider-Slot.
+
+  /// Lädt den aggregierten Lagerbestand aller Produkte des Workspaces aus dem
+  /// View `product_stock`. Nicht-verknüpfte Bestands-Rows (`product_id IS NULL`)
+  /// sind nicht enthalten — dies ist Absicht gemäß Plan-Datenmodell.
+  ///
+  /// Wird von AF8 für die workspace-weite KPI-Aggregation genutzt.
+  Future<List<ProductStock>> loadProductStock(String workspaceId) async {
+    final rows = await _client
+        .from('product_stock')
+        .select()
+        .eq('workspace_id', workspaceId);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(ProductStock.fromSupabase)
+        .toList();
+  }
+
+  /// Lädt den aggregierten Lagerbestand eines einzelnen Produkts aus dem
+  /// View `product_stock`. Jede Row entspricht einem Lager (oder `null`-Lager
+  /// für nicht-zugeordnete Items).
+  ///
+  /// Wird von AF12 (Produkt-Detail-Screen) für die effiziente Einzel-Abfrage
+  /// genutzt; Gesamtbestand = Summe von `qtyInWarehouse` aller zurückgegebenen
+  /// Rows.
+  Future<List<ProductStock>> loadProductStockForProduct(
+    String workspaceId,
+    String productId,
+  ) async {
+    final rows = await _client
+        .from('product_stock')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .eq('product_id', productId);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(ProductStock.fromSupabase)
+        .toList();
+  }
+
+  // ── Purchase orders (Bestellwesen — Epic C) ──────────────────────────────
+  //
+  // Bestellköpfe liegen im globalen Snapshot (`CloudSnapshot.purchaseOrders`).
+  // `purchase_order_items` sind Detail-Rows und werden LAZY pro Detail-Screen
+  // geladen — Pattern analog `loadBatchesForItem`.
+  //
+  // order_number-Vergabe:
+  //   client-seitig, Format "PO-<YYYY>-<4-stellig>" (z.B. "PO-2026-0001").
+  //   Bei UNIQUE-Constraint-Kollision (`23505`) retryt `insertPurchaseOrder`
+  //   mit der nächsthöheren Nummer (max 5 Versuche, dann Exception).
+  //   Lücken in der Nummerierung sind erlaubt (Pre-Launch-Entscheidung,
+  //   Committee-Finding 12 / API-Kapitel).
+
+  /// Lädt alle aktiven Bestellköpfe des Workspaces.
+  /// Nur für direkte Aufrufe außerhalb von `loadAll()` gedacht
+  /// (z. B. nach einem Workspace-Switch ohne Full-Reload).
+  Future<List<PurchaseOrder>> loadPurchaseOrders(String workspaceId) async {
+    final rows = await _client
+        .from('purchase_orders')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .filter('deleted_at', 'is', null)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(PurchaseOrder.fromSupabase)
+        .toList();
+  }
+
+  /// Lädt einen einzelnen `PurchaseOrder`-Header frisch aus der DB.
+  ///
+  /// Wird nach `bookGoodsReceipt` genutzt, um den vom DB-Trigger aktualisierten
+  /// `status` (und `total_net`) in den lokalen State zu übernehmen, ohne die
+  /// gesamte Liste neu laden zu müssen.
+  ///
+  /// Gibt `null` zurück, wenn die Row nicht gefunden wird (z. B. gelöscht).
+  Future<PurchaseOrder?> loadPurchaseOrderById(
+    String workspaceId,
+    int id,
+  ) async {
+    final rows = await _client
+        .from('purchase_orders')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .eq('id', id)
+        .limit(1);
+    final list = (rows as List).cast<Map<String, dynamic>>();
+    if (list.isEmpty) return null;
+    return PurchaseOrder.fromSupabase(list.first);
+  }
+
+  /// Generiert die nächste `order_number` für den aktiven Workspace im
+  /// aktuellen Jahr. Format: `PO-<YYYY>-<4-stellig>` (z. B. `PO-2026-0001`).
+  ///
+  /// Leitet die laufende Nummer aus den bestehenden `purchase_orders` des
+  /// Workspaces im aktuellen Jahr ab: höchste vorhandene Sequenznummer + 1.
+  /// Gibt `PO-<YYYY>-0001` zurück, wenn noch keine Bestellungen für dieses
+  /// Jahr vorhanden sind.
+  Future<String> _nextOrderNumber() async {
+    final ws = _wsId;
+    final year = DateTime.now().year;
+    final prefix = 'PO-$year-';
+
+    // Nur Bestellungen des aktuellen Jahres mit dem erwarteten Prefix laden.
+    final rows = await _client
+        .from('purchase_orders')
+        .select('order_number')
+        .eq('workspace_id', ws)
+        .like('order_number', '$prefix%');
+
+    int maxSeq = 0;
+    for (final row in (rows as List).cast<Map<String, dynamic>>()) {
+      final orderNumber = row['order_number'] as String?;
+      if (orderNumber == null) continue;
+      // Format: PO-YYYY-NNNN → letztes Segment nach dem letzten '-'.
+      final parts = orderNumber.split('-');
+      if (parts.length < 3) continue;
+      final seq = int.tryParse(parts.last);
+      if (seq != null && seq > maxSeq) maxSeq = seq;
+    }
+
+    final nextSeq = maxSeq + 1;
+    return '$prefix${nextSeq.toString().padLeft(4, '0')}';
+  }
+
+  /// Legt eine neue Bestellung an. Die `order_number` wird client-seitig
+  /// vergeben (siehe `_nextOrderNumber`). Bei UNIQUE-Constraint-Verletzung
+  /// (`23505`) wird mit der nächsthöheren Nummer retried (max 5 Versuche).
+  Future<PurchaseOrder> insertPurchaseOrder(PurchaseOrder order) async {
+    const maxRetries = 5;
+    final year = DateTime.now().year;
+    final prefix = 'PO-$year-';
+
+    // Startnummer aus der Hilfsmethode holen.
+    var currentNumber = await _nextOrderNumber();
+
+    for (var attempt = 0; attempt < maxRetries; attempt++) {
+      final payload = order
+          .copyWith(orderNumber: currentNumber)
+          .toSupabaseInsert()
+        ..['user_id'] = _userId
+        ..['workspace_id'] = _wsId;
+      try {
+        final row = await _client
+            .from('purchase_orders')
+            .insert(payload)
+            .select()
+            .single();
+        return PurchaseOrder.fromSupabase(row);
+      } catch (e) {
+        // Postgres-Fehlercode 23505 = UNIQUE-Violation auf (workspace_id, order_number).
+        final isUniqueViolation = e.toString().contains('23505') ||
+            e.toString().contains('unique') ||
+            e.toString().contains('duplicate');
+        if (!isUniqueViolation || attempt == maxRetries - 1) rethrow;
+
+        // Nächsthöhere Nummer aus dem aktuellen Wert ableiten.
+        // Format: PO-YYYY-NNNN → letztes Segment hochzählen.
+        final parts = currentNumber.split('-');
+        final seq = int.tryParse(parts.last) ?? 0;
+        currentNumber = '$prefix${(seq + 1).toString().padLeft(4, '0')}';
+      }
+    }
+    // Dieser Zweig ist durch den Schleifenaufbau nicht erreichbar, aber
+    // Dart benötigt einen Rückgabewert außerhalb der Schleife.
+    throw StateError(
+        'insertPurchaseOrder: Maximale Retry-Anzahl ($maxRetries) '
+        'für order_number-Vergabe überschritten.');
+  }
+
+  Future<PurchaseOrder> updatePurchaseOrder(PurchaseOrder order) async {
+    final payload = order.toSupabaseInsert();
+    final row = await _client
+        .from('purchase_orders')
+        .update(payload)
+        .eq('id', order.id as Object)
+        .select()
+        .single();
+    return PurchaseOrder.fromSupabase(row);
+  }
+
+  /// Soft-Delete: setzt `deleted_at` auf die aktuelle UTC-Zeit.
+  Future<void> deletePurchaseOrder(int id) async {
+    await _client
+        .from('purchase_orders')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  // ── Purchase order items (lazy — nur pro Detail-Screen) ──────────────────
+  //
+  // Pattern analog `loadProductSuppliers`: die Kind-Tabelle hat eigene
+  // `workspace_id`-Spalte (RLS-sicher, auch ohne Parent-Join).
+
+  /// Lädt alle aktiven Positionen einer Bestellung.
+  /// Lazy: wird pro `purchase_order_detail_screen` on-demand aufgerufen.
+  Future<List<PurchaseOrderItem>> loadPurchaseOrderItems(
+    String workspaceId,
+    int purchaseOrderId,
+  ) async {
+    final rows = await _client
+        .from('purchase_order_items')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .eq('purchase_order_id', purchaseOrderId)
+        .filter('deleted_at', 'is', null)
+        .order('created_at', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(PurchaseOrderItem.fromSupabase)
+        .toList();
+  }
+
+  Future<PurchaseOrderItem> insertPurchaseOrderItem(
+      PurchaseOrderItem item) async {
+    // purchase_order_items hat KEINE user_id-Spalte (nur workspace_id) —
+    // user_id würde PostgREST mit PGRST204 ablehnen.
+    final payload = item.toSupabaseInsert()..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('purchase_order_items')
+        .insert(payload)
+        .select()
+        .single();
+    return PurchaseOrderItem.fromSupabase(row);
+  }
+
+  Future<PurchaseOrderItem> updatePurchaseOrderItem(
+      PurchaseOrderItem item) async {
+    final payload = item.toSupabaseInsert();
+    final row = await _client
+        .from('purchase_order_items')
+        .update(payload)
+        .eq('id', item.id)
+        .select()
+        .single();
+    return PurchaseOrderItem.fromSupabase(row);
+  }
+
+  /// Soft-Delete einer Bestellposition.
+  Future<void> deletePurchaseOrderItem(String id) async {
+    await _client
+        .from('purchase_order_items')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  /// Inkrementiert `quantity_received` einer Bestellposition **atomar**
+  /// (serverseitiges `SET quantity_received = quantity_received + p_qty`)
+  /// über die SECURITY-DEFINER-RPC `increment_po_item_received`.
+  ///
+  /// Kein Read-modify-write: der Supabase-Dart-Client kann keinen
+  /// SQL-Ausdruck (kein `raw(...)`) als Update-Value setzen — daher ist die
+  /// RPC der einzig sichere Weg für das atomare Increment (Committee-Finding 12,
+  /// Risiko 7).
+  ///
+  /// Der Status-Trigger `purchase_order_items_status_trg` feuert auf das
+  /// UPDATE und pflegt `purchase_orders.status` automatisch. Die App setzt
+  /// den Status NICHT manuell.
+  ///
+  /// Wirft bei unbekannter/gelöschter Item-ID, fehlender Workspace-Mitglied-
+  /// schaft oder ungültiger Menge (p_qty <= 0).
+  Future<PurchaseOrderItem> incrementPoItemReceived(
+    String itemId,
+    int qty,
+  ) async {
+    final rows = await _client.rpc(
+      'increment_po_item_received',
+      params: {'p_item_id': itemId, 'p_qty': qty},
+    );
+    final list = (rows as List).cast<Map<String, dynamic>>();
+    if (list.isEmpty) {
+      throw StateError(
+          'increment_po_item_received returned no row for item $itemId');
+    }
+    return PurchaseOrderItem.fromSupabase(list.first);
+  }
+
+  // ── Warehouses (Mehrlager — Epic D) ──────────────────────────────────────
+
+  /// Lädt alle aktiven Lager des Workspaces, sortiert nach Name.
+  /// Analog `loadProductCategories` — filtert `deleted_at IS NULL`.
+  Future<List<Warehouse>> loadWarehouses(String workspaceId) async {
+    final rows = await _client
+        .from('warehouses')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .filter('deleted_at', 'is', null)
+        .order('name', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(Warehouse.fromSupabase)
+        .toList();
+  }
+
+  Future<Warehouse> insertWarehouse(Warehouse warehouse) async {
+    final payload = warehouse.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('warehouses')
+        .insert(payload)
+        .select()
+        .single();
+    return Warehouse.fromSupabase(row);
+  }
+
+  Future<Warehouse> updateWarehouse(Warehouse warehouse) async {
+    final payload = warehouse.toSupabaseInsert();
+    final row = await _client
+        .from('warehouses')
+        .update(payload)
+        .eq('id', warehouse.id)
+        .select()
+        .single();
+    return Warehouse.fromSupabase(row);
+  }
+
+  /// Soft-Delete: setzt `deleted_at` auf die aktuelle UTC-Zeit (konsistent
+  /// mit dem Pattern aller anderen workspace-scoped Entitäten in diesem
+  /// Repository — kein Hard-Delete).
+  Future<void> deleteWarehouse(String id) async {
+    await _client
+        .from('warehouses')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  // ── Stocktakes (Inventur — Epic E) ───────────────────────────────────────
+  //
+  // Inventur-Session-Heads. `stocktake_items` sind NICHT im globalen Snapshot —
+  // sie werden lazy pro `stocktake_detail_screen` on-demand geladen
+  // (Pattern analog `loadPurchaseOrderItems`).
+
+  /// Lädt alle aktiven Inventur-Sessions des Workspaces, absteigend nach
+  /// Erstellungsdatum sortiert. Nur für direkte Aufrufe außerhalb von
+  /// `loadAll()` gedacht (z. B. nach einem Workspace-Switch ohne Full-Reload).
+  Future<List<Stocktake>> loadStocktakes(String workspaceId) async {
+    final rows = await _client
+        .from('stocktakes')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .filter('deleted_at', 'is', null)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(Stocktake.fromSupabase)
+        .toList();
+  }
+
+  Future<Stocktake> insertStocktake(Stocktake stocktake) async {
+    final payload = stocktake.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('stocktakes')
+        .insert(payload)
+        .select()
+        .single();
+    return Stocktake.fromSupabase(row);
+  }
+
+  Future<Stocktake> updateStocktake(Stocktake stocktake) async {
+    final payload = stocktake.toSupabaseInsert();
+    final row = await _client
+        .from('stocktakes')
+        .update(payload)
+        .eq('id', stocktake.id as Object)
+        .select()
+        .single();
+    return Stocktake.fromSupabase(row);
+  }
+
+  /// Soft-Delete: setzt `deleted_at` auf die aktuelle UTC-Zeit.
+  Future<void> deleteStocktake(int id) async {
+    await _client
+        .from('stocktakes')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  // ── Stocktake items (lazy — nur pro Detail-Screen) ────────────────────────
+  //
+  // Pattern analog `loadPurchaseOrderItems`: die Kind-Tabelle hat eigene
+  // `workspace_id`-Spalte (RLS-sicher, auch ohne Parent-Join).
+
+  /// Lädt alle Zähl-Positionen einer Inventur-Session.
+  /// Lazy: wird pro `stocktake_detail_screen` on-demand aufgerufen.
+  Future<List<StocktakeItem>> loadStocktakeItems(
+    String workspaceId,
+    int stocktakeId,
+  ) async {
+    final rows = await _client
+        .from('stocktake_items')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .eq('stocktake_id', stocktakeId)
+        .order('created_at', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(StocktakeItem.fromSupabase)
+        .toList();
+  }
+
+  Future<StocktakeItem> insertStocktakeItem(StocktakeItem item) async {
+    // stocktake_items hat KEINE user_id-Spalte (nur workspace_id) —
+    // user_id würde PostgREST mit PGRST204 ablehnen.
+    final payload = item.toSupabaseInsert()..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('stocktake_items')
+        .insert(payload)
+        .select()
+        .single();
+    return StocktakeItem.fromSupabase(row);
+  }
+
+  /// Aktualisiert eine Zähl-Position. Primärer Anwendungsfall: `counted_qty`
+  /// inkrementell setzen (jede Zähl-Eingabe sofort persistieren).
+  Future<StocktakeItem> updateStocktakeItem(StocktakeItem item) async {
+    final payload = item.toSupabaseInsert();
+    final row = await _client
+        .from('stocktake_items')
+        .update(payload)
+        .eq('id', item.id)
+        .select()
+        .single();
+    return StocktakeItem.fromSupabase(row);
   }
 
   // ── Inventory items ───────────────────────────────────────────────────────

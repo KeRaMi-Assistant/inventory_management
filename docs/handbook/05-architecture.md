@@ -175,13 +175,38 @@ Listener im `_AuthGate` triggern bei Wechsel:
 
 Datei: [`inventory_provider.dart`](../../lib/providers/inventory_provider.dart)
 
-Der größte Provider (~880 LoC). Hält:
+Der mit Abstand größte Provider (seit Epic Warenwirtschaft-Feature-Parity
+deutlich über 880 LoC). Hält jetzt den gesamten Warenwirtschafts-State:
 
-- `deals`, `buyers`, `shops`, `suppliers`, `inventoryItems`,
-  `inventoryMovements`, `activities`, `tickets`.
-- Caches `loadAll()`-Snapshot pro Workspace.
-- Optimistic-Update-Methoden für jede CRUD-Aktion.
-- CSV-Import/Export-Glue (`importCsvAll`).
+**Bestehende Listen (unverändert):**
+`deals`, `buyers`, `shops`, `suppliers`, `inventoryItems`,
+`inventoryMovements`, `activities`, `tickets`.
+
+**Neu (Warenwirtschaft-Feature-Parity, Epic A–E):**
+- `productCategories` — Warengruppen (`product_categories`)
+- `products` — Artikelstamm (`products`)
+- `productStock` — Aggregierter Bestand (`product_stock`-View)
+- `purchaseOrders` + `purchaseOrderItems` — Bestellungen
+- `warehouses` — Lagerorte
+- `stocktakes` + `stocktake_items` — Inventur-Sessions
+
+**Neue CRUD-Methoden (Auswahl):**
+- Kategorien: `addProductCategory`, `updateProductCategory`,
+  `deleteProductCategory`
+- Produkte: `addProduct`, `updateProduct`, `deleteProduct`
+- Bestellungen: `addPurchaseOrder`, `updatePurchaseOrder`,
+  `bookGoodsReceipt(orderId, items)` — ruft RPC
+  `increment_po_item_received` auf
+- Lager: `addWarehouse`, `updateWarehouse`, `deleteWarehouse`
+- Inventur: `addStocktake`, `updateStocktake`, `closeStocktake`,
+  `updateStocktakeItem`
+
+**KPI-Erweiterungen:**
+`totalProductCount`, `lowStockProductCount` (über `product_stock`-View),
+`totalWarehouseCount`.
+
+Caches `loadAll()`-Snapshot pro Workspace. Optimistic-Update-Methoden
+für jede CRUD-Aktion. CSV-Import/Export-Glue (`importCsvAll`).
 
 ### `InboxProvider`
 
@@ -241,6 +266,8 @@ Domain genau einer:
 - `NotificationPreferencesService` — User-Prefs aus `notification_preferences`.
 - `CsvService` — Import/Export (alle Datentypen in einem ZIP).
 - `StatisticsService` / `StatisticsExportService` — Berechnungen + PDF/CSV.
+- `PurchaseOrderPdfService` — PDF-Generierung für Einkaufsbestellungen
+  (Supabase-Storage-Upload + Sharing via `share_plus`).
 - `InboxMatchService` — Helper, der einen `ParsedMessage` an einen Deal
   matcht (Plus/Minus Confidence). Seit Plan
   [`2026-05-13_strict_tracking_extraction.md`](../../plans/2026-05-13_strict_tracking_extraction.md)
@@ -255,6 +282,28 @@ Domain genau einer:
 ## Modelle
 
 Pro Tabelle ein Modell in `lib/models/`. Konstruktoren:
+
+**Neue Modelle (Warenwirtschaft-Feature-Parity):**
+
+| Datei | Klasse | Tabelle |
+|---|---|---|
+| `product_category.dart` | `ProductCategory` | `product_categories` |
+| `product.dart` | `Product` | `products` |
+| `product_stock.dart` | `ProductStock` | `product_stock` (View) |
+| `product_supplier.dart` | `ProductSupplier` | `product_suppliers` |
+| `purchase_order.dart` | `PurchaseOrder` | `purchase_orders` |
+| `purchase_order_item.dart` | `PurchaseOrderItem` | `purchase_order_items` |
+| `warehouse.dart` | `Warehouse` | `warehouses` |
+| `stocktake.dart` | `Stocktake` | `stocktakes` |
+| `stocktake_item.dart` | `StocktakeItem` | `stocktake_items` |
+
+`InventoryMovement` erhält zwei neue Felder: `movementType` (typisierter
+Enum-Wert — `goods_in | goods_out | correction | stocktake | transfer |
+sale`) und `unitCost` (nullable `double`).
+
+`Supplier` erhält die 9 neuen Kreditoren-Felder (alle nullable):
+`addressStreet`, `addressZip`, `addressCity`, `addressCountry`, `vatId`,
+`customerNumber`, `paymentTermsDays`, `leadTimeDays`, `minOrderValue`.
 
 > Ergänzend zu den Tabellen-Modellen lebt in
 > [`lib/models/tracking_confidence.dart`](../../lib/models/tracking_confidence.dart)

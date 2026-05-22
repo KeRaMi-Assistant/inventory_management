@@ -47,6 +47,7 @@ die der Browser-Tester pro Eintrag durchspielt — Definitionen unten.
 | `/pricing` | [`lib/screens/pricing_screen.dart`](../../lib/screens/pricing_screen.dart) | smoke-theme | Plan-Auswahl + Checkout-Trigger. |
 | `/billing-profile` | [`lib/screens/billing_profile_screen.dart`](../../lib/screens/billing_profile_screen.dart) | smoke-theme | Rechnungs-Adresse, push aus Pricing. |
 | `/public-profile/<slug>` | [`lib/screens/public_profile_screen.dart`](../../lib/screens/public_profile_screen.dart) | public-render | **Web-only**, ohne Login. URL `/u/<handle>`. |
+| `/warehouse` | [`lib/screens/warehouse_hub_screen.dart`](../../lib/screens/warehouse_hub_screen.dart) | smoke-theme, mobile-overflow | Neuer `MainTab.warehouse` (Epic A-full, AF11). Hub mit Kacheln zu Sub-Routen: Artikelstamm, Bestellungen, Lager, Kategorien, Inventur, Reporting. A11y-Keys: `Key('hubTileProductCatalog')`, `Key('hubTilePurchaseOrders')`, `Key('hubTileWarehouses')`, `Key('hubTileCategories')`, `Key('hubTileStocktake')`, `Key('hubTileReporting')`. |
 
 ## Auth- & First-Run-Routes (ausgeloggter / Onboarding-Bereich)
 
@@ -72,6 +73,8 @@ Dialogs müssen auf 390×844 ohne horizontalen Scroll funktionieren.
 | `/inventory` → Edit-Item | [`lib/screens/inventory_screen.dart`](../../lib/screens/inventory_screen.dart) (`_AddEditItemDialog`) | smoke-theme, mobile-overflow |
 | `/inventory` → Batch-Sheet | [`lib/widgets/inventory_batches_sheet.dart`](../../lib/widgets/inventory_batches_sheet.dart) | smoke-theme, mobile-overflow |
 | `/inventory` → Barcode-Scan | [`lib/widgets/barcode_scanner_sheet.dart`](../../lib/widgets/barcode_scanner_sheet.dart) | smoke-theme |
+| `/inventory` → Artikel-Detail (Tap auf Item-Card) | [`lib/screens/product_detail_screen.dart`](../../lib/screens/product_detail_screen.dart) | smoke-theme, mobile-overflow | Gepushter Screen (kein eigener MainTab). 360°-Sicht auf bestehender `inventory_items`-Row: Stammdaten, Bestand, getypte Bewegungshistorie (Buchungsart-Badges), Chargen, Lieferant. A11y-Keys: `Key('productDetailScrollView')`, `Key('movementHistoryList')`, `Key('movementRow-<id>')`. Epic A-lite (AL5). |
+| `/warehouse` → Neuer/Bearbeitungs-Artikel (Stammkatalog) | [`lib/widgets/add_edit_product_dialog.dart`](../../lib/widgets/add_edit_product_dialog.dart) | smoke-theme, mobile-overflow | `AddEditProductDialog` — Modal-Dialog für Produkt-Stammsatz (NEU, Epic A-full AF9). `SingleChildScrollView` + `SafeArea` + `MediaQuery.viewInsetsOf`. A11y-Keys: `Key('productSaveButton')`, `Key('productCategoryDropdown')`. Viewer ohne Speichern-Button. |
 | `/suppliers` → Add-/Edit-Supplier | [`lib/widgets/add_edit_supplier_dialog.dart`](../../lib/widgets/add_edit_supplier_dialog.dart) | smoke-theme, mobile-overflow |
 | `/settings` → Add-/Edit-Shop | [`lib/widgets/add_edit_shop_dialog.dart`](../../lib/widgets/add_edit_shop_dialog.dart) | smoke-theme, mobile-overflow |
 | `/settings` → Add-/Edit-Buyer | [`lib/widgets/add_edit_buyer_dialog.dart`](../../lib/widgets/add_edit_buyer_dialog.dart) | smoke-theme, mobile-overflow |
@@ -92,6 +95,13 @@ Dialogs müssen auf 390×844 ohne horizontalen Scroll funktionieren.
 | `/deals` → Attachment-Gallery | [`lib/widgets/attachment_gallery.dart`](../../lib/widgets/attachment_gallery.dart) | smoke-theme |
 | `/deals` → Tracking-Review-Filter | [`lib/widgets/deal_table.dart`](../../lib/widgets/deal_table.dart) (`_FilterBar`) | smoke-tracking-review-chip | Filter-Chip „Prüfen ({count})" filtert auf `tracking_needs_review=true`. Sichtbar nur wenn Count > 0. Kein eigener Top-Level-Screen (Council-Finding #10). Banner in Inbox + Deals via `lib/widgets/tracking_banner_improved_detection.dart`. Badge auf Inbox-Nav-Tab (Index 3). |
 | `/statistics` → Product-Drilldown | [`lib/widgets/statistics/product_drilldown_sheet.dart`](../../lib/widgets/statistics/product_drilldown_sheet.dart) | smoke-theme, mobile-overflow |
+| `/warehouse` → Artikelstamm (Sub-Route) | [`lib/screens/product_catalog_screen.dart`](../../lib/screens/product_catalog_screen.dart) | smoke-theme, mobile-overflow | Produktkatalog-Übersicht: vertikale Cards mit Name, SKU, Kategorie, Standard-EK/-VK, Aktiv-Status. FAB „Neuer Artikel" (`Key('productNewFab')`) — nur für Editor+. Tap auf Card → `AddEditProductDialog` im Edit-Modus. Viewer → kein FAB, kein Edit-Tap. A11y-Keys: `Key('productNewFab')`, `Key('productCatalogCard-<id>')`. Epic A-full. |
+| `/warehouse` → Warengruppen (Sub-Route) | [`lib/screens/categories_screen.dart`](../../lib/screens/categories_screen.dart) | smoke-theme, mobile-overflow |
+| `/warehouse` → Bestellungen (Sub-Route) | [`lib/screens/purchase_orders_screen.dart`](../../lib/screens/purchase_orders_screen.dart) | smoke-theme, mobile-overflow | Liste der Bestellungen mit Status-Badges; FAB „Neue Bestellung" (`Key('poNewFab')`). Sub-Route des Warenwirtschaft-Hubs, kein eigener MainTab. Viewer → FAB ausgeblendet. Epic C (C5). |
+| `/warehouse` → Bestellungs-Detail (Sub-Route) | [`lib/screens/purchase_order_detail_screen.dart`](../../lib/screens/purchase_order_detail_screen.dart) | smoke-theme, mobile-overflow, goods-receipt-flow | Positionen, Wareneingang buchen (Soll/Ist-Stepper), Status, PDF-Export. A11y-Keys: `Key('poCard-<id>')`, `Key('goodsReceiptBookButton')`, `Key('poItemReceivedStepper-<id>')`, `Key('poPdfExportButton')`. Epic C (C6). |
+| `/warehouse` → Lager (Sub-Route) | [`lib/screens/warehouses_screen.dart`](../../lib/screens/warehouses_screen.dart) | smoke-theme, mobile-overflow | Lager verwalten (CRUD). FAB „Neues Lager" (`Key('warehouseNewFab')`). Sub-Route des Warenwirtschaft-Hubs, kein eigener MainTab. Viewer → kein FAB. A11y-Keys: `Key('warehouseRow-<id>')`, `Key('warehouseDropdown')`. Epic D (D3). |
+| `/warehouse` → Inventur (Sub-Route) | [`lib/screens/stocktake_screen.dart`](../../lib/screens/stocktake_screen.dart) | smoke-theme, mobile-overflow | Inventur-Sessionen auflisten; FAB „Neue Inventur" (`Key('stocktakeNewFab')`). Sub-Route des Warenwirtschaft-Hubs, kein eigener MainTab. Viewer → kein FAB. A11y-Keys: `Key('stocktakeRow-<id>')`. Epic E (E3). |
+| `/warehouse` → Inventur-Detail (Sub-Route) | [`lib/screens/stocktake_detail_screen.dart`](../../lib/screens/stocktake_detail_screen.dart) | smoke-theme, mobile-overflow, stocktake-count-flow | Inventur durchführen: durchscrollbare 48dp-Liste, Filter „nur ungezählte" (`Key('stocktakeFilterUncounted')`), Fortschritts-Header, Barcode-Einsprung, Differenz-Report als vertikale Cards, Abschließen-Button (`Key('stocktakeCloseButton')`). A11y-Keys: `Key('stocktakeCountField-<id>')`. Epic E (E3). |
 
 ## Pflicht-Tests-Definitionen
 
@@ -129,6 +139,24 @@ Tester nutzt sie als Sprungmarken in seinem System-Prompt.
   speichern → Eintrag erscheint in Tabelle → Edit → Delete.
 - `public-render` — Public-Profile-URL `/u/test-handle` rendert ohne
   Login-Redirect.
+- `goods-receipt-flow` — Wareneingang gegen eine Bestellung buchen:
+  Bestellungs-Detail öffnen → Position via `Key('poItemReceivedStepper-<id>')`
+  auswählen → Menge per Stepper erhöhen → „Wareneingang buchen"
+  (`Key('goodsReceiptBookButton')`) tippen → `quantity_received` der
+  Position steigt, PO-Status wechselt auf `partially_received` oder
+  `received` je nach verbleibender offener Menge. Kein Overflow,
+  kein Crash auf Phone-Viewport.
+- `stocktake-count-flow` — Inventur vollständig durchführen: Inventur-
+  Übersicht öffnen → „Neue Inventur" (`Key('stocktakeNewFab')`) tippen →
+  Inventur-Detail öffnet → Positionen via `Key('stocktakeCountField-<id>')`
+  zählen (Stepper) → Filter „nur ungezählte" (`Key('stocktakeFilterUncounted')`)
+  aktivieren und verifizieren, dass gezählte Positionen ausgeblendet werden →
+  Fortschritts-Header zeigt `{counted}/{total} gezählt` korrekt → Inventur
+  abschließen (`Key('stocktakeCloseButton')`) → Differenz-Report erscheint als
+  vertikale Cards (kein horizontaler Scroll auf Phone-Viewport) → Bestand der
+  abweichenden Artikel wird angepasst → `inventory_movements` mit
+  `movement_type='stocktake'` werden geschrieben (append-only). Kein Overflow,
+  kein Crash auf 390×844.
 
 ## Pflege-Hinweise
 

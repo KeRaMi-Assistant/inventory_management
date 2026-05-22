@@ -19,6 +19,14 @@ class InventoryItem {
   final double? publicPrice;
   final String? publicDescription;
 
+  /// Optionale Verknüpfung auf `products.id` (Epic A-full).
+  /// Nullable — bestehende Items ohne Produkt-Bezug bleiben gültig.
+  final String? productId;
+
+  /// Optionale Verknüpfung auf `warehouses.id` (Epic D — Mehrlager).
+  /// Nullable — bestehende Items ohne Lager-Zuweisung bleiben gültig.
+  final String? warehouseId;
+
   const InventoryItem({
     required this.id,
     required this.name,
@@ -39,9 +47,25 @@ class InventoryItem {
     this.isPublic = false,
     this.publicPrice,
     this.publicDescription,
+    this.productId,
+    this.warehouseId,
   });
 
+  /// Gibt an, ob die Bestandsmenge dieser einzelnen Row unter dem
+  /// Mindestbestand liegt (`quantity < minStock`).
+  ///
+  /// **Wichtig (Epic A-full / Committee-Finding 9):**
+  /// Für Produkt-verknüpfte Rows (`productId != null`) ist dieser Getter
+  /// NICHT die korrekte Kritisch-Wahrheit — ein Produkt kann mehrere
+  /// Bestands-Rows (z. B. in unterschiedlichen Lagern) haben. Die korrekte
+  /// Aggregation erfolgt ausschließlich im `InventoryProvider.criticalStockCount`
+  /// über den `product_stock`-View gegen `products.min_stock`.
+  ///
+  /// Dieser Getter ist ausschließlich für nicht-produktverknüpfte Rows
+  /// (`productId == null`) korrekt und soll für Item-Level-Anzeige in der
+  /// bestehenden UI genutzt werden (z. B. Warn-Icon pro Row).
   bool get isCritical => quantity < minStock;
+
   double get stockValue => (costPrice ?? 0) * quantity;
 
   // ── Local backup JSON (camelCase) ─────────────────────────────────────────
@@ -66,6 +90,8 @@ class InventoryItem {
         'isPublic': isPublic,
         'publicPrice': publicPrice,
         'publicDescription': publicDescription,
+        'productId': productId,
+        'warehouseId': warehouseId,
       };
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) => InventoryItem(
@@ -93,6 +119,8 @@ class InventoryItem {
         isPublic: json['isPublic'] as bool? ?? false,
         publicPrice: (json['publicPrice'] as num?)?.toDouble(),
         publicDescription: json['publicDescription'] as String?,
+        productId: json['productId'] as String?,
+        warehouseId: json['warehouseId'] as String?,
       );
 
   // ── Supabase (snake_case) ─────────────────────────────────────────────────
@@ -117,6 +145,8 @@ class InventoryItem {
         'is_public': isPublic,
         'public_price': publicPrice,
         'public_description': publicDescription,
+        if (productId != null) 'product_id': productId,
+        if (warehouseId != null) 'warehouse_id': warehouseId,
       };
 
   factory InventoryItem.fromSupabase(Map<String, dynamic> row) {
@@ -144,6 +174,8 @@ class InventoryItem {
       isPublic: (row['is_public'] as bool?) ?? false,
       publicPrice: (row['public_price'] as num?)?.toDouble(),
       publicDescription: row['public_description'] as String?,
+      productId: row['product_id'] as String?,
+      warehouseId: row['warehouse_id'] as String?,
     );
   }
 
@@ -167,6 +199,8 @@ class InventoryItem {
     bool? isPublic,
     Object? publicPrice = _sentinel,
     Object? publicDescription = _sentinel,
+    Object? productId = _sentinel,
+    Object? warehouseId = _sentinel,
   }) =>
       InventoryItem(
         id: id ?? this.id,
@@ -201,7 +235,63 @@ class InventoryItem {
         publicDescription: publicDescription == _sentinel
             ? this.publicDescription
             : publicDescription as String?,
+        productId:
+            productId == _sentinel ? this.productId : productId as String?,
+        warehouseId:
+            warehouseId == _sentinel ? this.warehouseId : warehouseId as String?,
       );
+}
+
+/// Getypte Buchungsart einer Lagerbewegung.
+///
+/// Entspricht dem `movement_type`-CHECK-Enum in der DB:
+/// `goods_in | goods_out | correction | stocktake | transfer | sale`.
+enum InventoryMovementType {
+  goodsIn,
+  goodsOut,
+  correction,
+  stocktake,
+  transfer,
+  sale;
+
+  /// Konvertiert den DB-String (snake_case) in den Enum-Wert.
+  /// Unbekannte Werte fallen defensiv auf [correction] zurück — kein Crash.
+  static InventoryMovementType fromDbValue(String value) {
+    switch (value) {
+      case 'goods_in':
+        return InventoryMovementType.goodsIn;
+      case 'goods_out':
+        return InventoryMovementType.goodsOut;
+      case 'correction':
+        return InventoryMovementType.correction;
+      case 'stocktake':
+        return InventoryMovementType.stocktake;
+      case 'transfer':
+        return InventoryMovementType.transfer;
+      case 'sale':
+        return InventoryMovementType.sale;
+      default:
+        return InventoryMovementType.correction;
+    }
+  }
+
+  /// DB-String (snake_case) für diesen Enum-Wert.
+  String get dbValue {
+    switch (this) {
+      case InventoryMovementType.goodsIn:
+        return 'goods_in';
+      case InventoryMovementType.goodsOut:
+        return 'goods_out';
+      case InventoryMovementType.correction:
+        return 'correction';
+      case InventoryMovementType.stocktake:
+        return 'stocktake';
+      case InventoryMovementType.transfer:
+        return 'transfer';
+      case InventoryMovementType.sale:
+        return 'sale';
+    }
+  }
 }
 
 class InventoryMovement {
@@ -210,9 +300,15 @@ class InventoryMovement {
   final DateTime date;
   final int quantityChange;
   final String reason;
+  final InventoryMovementType movementType;
+  final double? unitCost;
   final int? dealId;
   final String? ticketNumber;
   final String? note;
+
+  /// Optionale Verknüpfung auf `products.id` (Epic A-full).
+  /// Nullable — bestehende Movements ohne Produkt-Bezug bleiben gültig.
+  final String? productId;
 
   const InventoryMovement({
     required this.id,
@@ -220,9 +316,12 @@ class InventoryMovement {
     required this.date,
     required this.quantityChange,
     required this.reason,
+    this.movementType = InventoryMovementType.correction,
+    this.unitCost,
     this.dealId,
     this.ticketNumber,
     this.note,
+    this.productId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -231,9 +330,12 @@ class InventoryMovement {
         'date': date.toIso8601String(),
         'quantityChange': quantityChange,
         'reason': reason,
+        'movementType': movementType.dbValue,
+        'unitCost': unitCost,
         'dealId': dealId,
         'ticketNumber': ticketNumber,
         'note': note,
+        'productId': productId,
       };
 
   factory InventoryMovement.fromJson(Map<String, dynamic> json) =>
@@ -243,23 +345,39 @@ class InventoryMovement {
         date: DateTime.parse(json['date'] as String),
         quantityChange: json['quantityChange'] as int? ?? 0,
         reason: json['reason'] as String? ?? 'Korrektur',
+        movementType: json['movementType'] != null
+            ? InventoryMovementType.fromDbValue(
+                json['movementType'] as String)
+            : InventoryMovementType.correction,
+        unitCost: (json['unitCost'] as num?)?.toDouble(),
         dealId: json['dealId'] as int?,
         ticketNumber: json['ticketNumber'] as String?,
         note: json['note'] as String?,
+        productId: json['productId'] as String?,
       );
 
   // ── Supabase (snake_case) ─────────────────────────────────────────────────
 
-  Map<String, dynamic> toSupabaseInsert() => {
-        'id': id,
-        'item_id': itemId,
-        'date': date.toIso8601String(),
-        'quantity_change': quantityChange,
-        'reason': reason,
-        'deal_id': dealId,
-        'ticket_number': ticketNumber,
-        'note': note,
-      };
+  Map<String, dynamic> toSupabaseInsert() {
+    final map = <String, dynamic>{
+      'id': id,
+      'item_id': itemId,
+      'date': date.toIso8601String(),
+      'quantity_change': quantityChange,
+      'reason': reason,
+      'movement_type': movementType.dbValue,
+      'deal_id': dealId,
+      'ticket_number': ticketNumber,
+      'note': note,
+    };
+    if (unitCost != null) {
+      map['unit_cost'] = unitCost;
+    }
+    if (productId != null) {
+      map['product_id'] = productId;
+    }
+    return map;
+  }
 
   factory InventoryMovement.fromSupabase(Map<String, dynamic> row) =>
       InventoryMovement(
@@ -268,9 +386,45 @@ class InventoryMovement {
         date: DateTime.parse(row['date'] as String),
         quantityChange: (row['quantity_change'] as num?)?.toInt() ?? 0,
         reason: row['reason'] as String? ?? 'Korrektur',
+        movementType: row['movement_type'] != null
+            ? InventoryMovementType.fromDbValue(
+                row['movement_type'] as String)
+            : InventoryMovementType.correction,
+        unitCost: (row['unit_cost'] as num?)?.toDouble(),
         dealId: (row['deal_id'] as num?)?.toInt(),
         ticketNumber: row['ticket_number'] as String?,
         note: row['note'] as String?,
+        productId: row['product_id'] as String?,
+      );
+
+  InventoryMovement copyWith({
+    String? id,
+    String? itemId,
+    DateTime? date,
+    int? quantityChange,
+    String? reason,
+    InventoryMovementType? movementType,
+    Object? unitCost = _sentinel,
+    Object? dealId = _sentinel,
+    Object? ticketNumber = _sentinel,
+    Object? note = _sentinel,
+    Object? productId = _sentinel,
+  }) =>
+      InventoryMovement(
+        id: id ?? this.id,
+        itemId: itemId ?? this.itemId,
+        date: date ?? this.date,
+        quantityChange: quantityChange ?? this.quantityChange,
+        reason: reason ?? this.reason,
+        movementType: movementType ?? this.movementType,
+        unitCost: unitCost == _sentinel ? this.unitCost : unitCost as double?,
+        dealId: dealId == _sentinel ? this.dealId : dealId as int?,
+        ticketNumber: ticketNumber == _sentinel
+            ? this.ticketNumber
+            : ticketNumber as String?,
+        note: note == _sentinel ? this.note : note as String?,
+        productId:
+            productId == _sentinel ? this.productId : productId as String?,
       );
 }
 

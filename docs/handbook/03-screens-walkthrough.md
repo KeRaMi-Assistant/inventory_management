@@ -20,6 +20,20 @@ den jeweiligen Screen.
 | 7 | [Activity](#activity) | `activity_screen.dart` |
 | 8 | [Help](#help) | `help_screen.dart` |
 | 9 | [Settings](#settings) | `settings_screen.dart` |
+| 10 | [Warenwirtschaft-Hub](#warenwirtschaft-hub) | `warehouse_hub_screen.dart` |
+
+Sub-Screens der Warenwirtschaft (kein eigener MainTab, per
+`Navigator.push` erreichbar):
+
+| Sub-Screen | Datei | Erreichbar via |
+|---|---|---|
+| [Produktdetail](#produktdetail) | `product_detail_screen.dart` | Inventory → Item-Tap |
+| [Warengruppen](#warengruppen) | `categories_screen.dart` | Warenwirtschaft-Hub |
+| [Bestellungen](#bestellungen) | `purchase_orders_screen.dart` | Warenwirtschaft-Hub |
+| [Bestellungs-Detail](#bestellungs-detail) | `purchase_order_detail_screen.dart` | Bestellungen → Tap |
+| [Lager](#lager) | `warehouses_screen.dart` | Warenwirtschaft-Hub |
+| [Inventur-Liste](#inventur-liste) | `stocktake_screen.dart` | Warenwirtschaft-Hub |
+| [Inventur-Detail](#inventur-detail) | `stocktake_detail_screen.dart` | Inventur-Liste → Tap |
 
 Auth-/System-Screens (Login, Register, Forgot, Reset, Splash, Onboarding,
 Pricing, BillingProfile, PublicProfile) werden separat über den
@@ -211,14 +225,142 @@ Liste aller Items. Pro Card: Name, SKU, Menge, Lagerort, Status. Aktionen:
   ([`barcode_scanner_sheet.dart`](../../lib/widgets/barcode_scanner_sheet.dart)).
 - **Batches** — Sheet mit allen Chargen (MHD, Liefer-Datum, Lieferant). Siehe
   [`inventory_batches_sheet.dart`](../../lib/widgets/inventory_batches_sheet.dart).
-- **Bewegung erfassen** — `+` / `-` schreibt einen
-  `inventory_movement`-Eintrag.
+- **Bewegung erfassen** — `+` / `-` schreibt einen `inventory_movement`-Eintrag
+  mit typisierter `movement_type`-Spalte (seit Epic A-lite).
+- **Artikel-Detail** — Tap auf Item-Card öffnet den
+  [`ProductDetailScreen`](#produktdetail) als Push-Route (360°-Sicht,
+  Bewegungshistorie mit Buchungsart-Badges, Chargen, Lieferant).
 
 Filter: Status, Lagerort, MHD-Frist, Suchtext.
 
 CSV-Export/Import passiert über
 [`csv_service.dart`](../../lib/services/csv_service.dart) und ist im
 [`MainScreen._import` / `_export`](#main) verkabelt.
+
+## Warenwirtschaft-Hub
+
+Datei:
+[`lib/screens/warehouse_hub_screen.dart`](../../lib/screens/warehouse_hub_screen.dart)
+
+Neuer Top-Level-Tab (MainTab-Index 10, Epic A-full AF11).
+Kachel-Übersicht der Warenwirtschafts-Bereiche. Pro Kachel ein
+`Navigator.push` in die jeweilige Sub-Route:
+
+| Kachel | Ziel-Screen | A11y-Key |
+|---|---|---|
+| Artikelstamm (Placeholder) | — | `Key('hubTileProductCatalog')` |
+| Bestellungen | [`PurchaseOrdersScreen`](#bestellungen) | `Key('hubTilePurchaseOrders')` |
+| Lager | [`WarehousesScreen`](#lager) | `Key('hubTileWarehouses')` |
+| Warengruppen | [`CategoriesScreen`](#warengruppen) | `Key('hubTileCategories')` |
+| Inventur | [`StocktakeScreen`](#inventur-liste) | `Key('hubTileStocktake')` |
+| Reporting | bestehender `StatisticsScreen` | `Key('hubTileReporting')` |
+
+> Die Artikelstamm-Kachel ist noch ein Placeholder — der dedizierte
+> Produktkatalog-Screen ist für Epic A-full geplant, der Hub-Eintrag
+> zeigt das bereits an.
+
+## Produktdetail
+
+Datei:
+[`lib/screens/product_detail_screen.dart`](../../lib/screens/product_detail_screen.dart)
+
+360°-Sicht auf eine bestehende `inventory_items`-Row (Epic A-lite AL5).
+Kein eigener Tab — wird per `Navigator.push` aus dem Inventory-Screen
+geöffnet. Zeigt:
+
+- Stammdaten (Name, SKU, EAN, Lagerort, Status, Mindestbestand).
+- Aktueller Bestand + ggf. Produkt-Link auf den Stammkatalog.
+- **Bewegungshistorie** mit Buchungsart-Badges (`movement_type`):
+  `goods_in`, `goods_out`, `correction`, `stocktake`, `transfer`, `sale`.
+- Chargen-Übersicht.
+- Lieferanten-Info.
+
+A11y-Keys: `Key('productDetailScrollView')`, `Key('movementHistoryList')`,
+`Key('movementRow-<id>')`.
+
+## Warengruppen
+
+Datei:
+[`lib/screens/categories_screen.dart`](../../lib/screens/categories_screen.dart)
+
+CRUD-Liste der Warengruppen (`product_categories`, Epic B / Task B4).
+Sub-Route des Warenwirtschaft-Hubs. Unterkategorien werden eingerückt
+unter ihrer Elternkategorie angezeigt (max. 2 Ebenen). Aktionen: Neu,
+Umbenennen, Löschen (mit Confirm-Dialog). `Viewer`-Rolle sieht kein FAB.
+
+A11y-Keys: `Key('categoryNewFab')`, `Key('categoryRow-<id>')`.
+
+## Bestellungen
+
+Datei:
+[`lib/screens/purchase_orders_screen.dart`](../../lib/screens/purchase_orders_screen.dart)
+
+Liste der Einkaufsbestellungen (Epic C / Task C5). Status-Badges
+(`draft`, `ordered`, `partially_received`, `received`, `cancelled`).
+FAB „Neue Bestellung" (`Key('poNewFab')`), nur wenn `canEdit`. Pro
+Bestellung: Lieferant, Bestellnummer, Datum, Gesamt-Netto.
+
+Tap auf eine Bestellung → [`PurchaseOrderDetailScreen`](#bestellungs-detail).
+
+## Bestellungs-Detail
+
+Datei:
+[`lib/screens/purchase_order_detail_screen.dart`](../../lib/screens/purchase_order_detail_screen.dart)
+
+Detail-View einer Bestellung (Epic C / Task C6). Zeigt alle Positionen
+mit Soll-/Ist-Mengen. **Wareneingang buchen** via Soll/Ist-Stepper
+(`Key('poItemReceivedStepper-<id>')`) und Button
+`Key('goodsReceiptBookButton')`: ruft die SECURITY-DEFINER-RPC
+`increment_po_item_received` auf → DB-Trigger aktualisiert den
+PO-Status automatisch auf `partially_received` oder `received`.
+PDF-Export via `PurchaseOrderPdfService`
+(`Key('poPdfExportButton')`).
+
+A11y-Keys: `Key('poCard-<id>')`, `Key('goodsReceiptBookButton')`,
+`Key('poItemReceivedStepper-<id>')`, `Key('poPdfExportButton')`.
+
+## Lager
+
+Datei:
+[`lib/screens/warehouses_screen.dart`](../../lib/screens/warehouses_screen.dart)
+
+CRUD-Liste der Lagerorte (`warehouses`, Epic D / Task D3). FAB „Neues
+Lager" (`Key('warehouseNewFab')`), nur wenn `canEdit`. Pro Lager:
+Name, Adresse, Default-Flag, Status (aktiv/inaktiv). Nur ein Default-
+Lager pro Workspace (DB-UNIQUE).
+
+A11y-Keys: `Key('warehouseRow-<id>')`, `Key('warehouseDropdown')`.
+
+## Inventur-Liste
+
+Datei:
+[`lib/screens/stocktake_screen.dart`](../../lib/screens/stocktake_screen.dart)
+
+Liste der Inventur-Sessions (`stocktakes`, Epic E / Task E3). FAB
+„Neue Inventur" (`Key('stocktakeNewFab')`), nur wenn `canEdit`. Status-
+Anzeige pro Session: `open`, `counting`, `closed`, `cancelled`. Tap →
+[`StocktakeDetailScreen`](#inventur-detail).
+
+A11y-Keys: `Key('stocktakeRow-<id>')`.
+
+## Inventur-Detail
+
+Datei:
+[`lib/screens/stocktake_detail_screen.dart`](../../lib/screens/stocktake_detail_screen.dart)
+
+Vollständiger Inventur-Workflow (Epic E / Task E3):
+
+1. Scrollbare 48dp-Zeilen-Liste der `stocktake_items` (Soll vs. Ist).
+2. Filter „nur ungezählte" (`Key('stocktakeFilterUncounted')`).
+3. Fortschritts-Header (`{counted}/{total} gezählt`).
+4. Barcode-Einsprung für schnelle Mengen-Eingabe.
+5. **Abschließen** (`Key('stocktakeCloseButton')`) → Differenz-Report als
+   vertikale Cards (Mobile-safe, kein horizontaler Scroll) → Bestand
+   wird angepasst → `inventory_movements` mit `movement_type='stocktake'`
+   (append-only) werden geschrieben.
+
+A11y-Keys: `Key('stocktakeCountField-<id>')`,
+`Key('stocktakeFilterUncounted')`, `Key('stocktakeCloseButton')`.
 
 ## Suppliers
 
@@ -342,5 +484,13 @@ Viewport zuerst.
 - [`lib/screens/inbox_screen.dart`](../../lib/screens/inbox_screen.dart) — Inbox-UI
 - [`lib/screens/inventory_screen.dart`](../../lib/screens/inventory_screen.dart) — Inventory
 - [`lib/screens/settings_screen.dart`](../../lib/screens/settings_screen.dart) — Settings (alles workspace- und user-bezogen)
+- [`lib/screens/warehouse_hub_screen.dart`](../../lib/screens/warehouse_hub_screen.dart) — Warenwirtschaft-Hub
+- [`lib/screens/product_detail_screen.dart`](../../lib/screens/product_detail_screen.dart) — Produkt-Detailansicht
+- [`lib/screens/categories_screen.dart`](../../lib/screens/categories_screen.dart) — Warengruppen-Verwaltung
+- [`lib/screens/purchase_orders_screen.dart`](../../lib/screens/purchase_orders_screen.dart) — Bestellungen-Liste
+- [`lib/screens/purchase_order_detail_screen.dart`](../../lib/screens/purchase_order_detail_screen.dart) — Bestellungs-Detail + Wareneingang
+- [`lib/screens/warehouses_screen.dart`](../../lib/screens/warehouses_screen.dart) — Lager-Verwaltung
+- [`lib/screens/stocktake_screen.dart`](../../lib/screens/stocktake_screen.dart) — Inventur-Sessionen
+- [`lib/screens/stocktake_detail_screen.dart`](../../lib/screens/stocktake_detail_screen.dart) — Inventur-Durchführung
 - [`lib/widgets/`](../../lib/widgets/) — Wiederverwendete Form-Dialoge
 - [Glossar](10-glossary.md) — Begriffsdefinitionen

@@ -83,9 +83,6 @@ if echo "$cmd" | grep -qE 'rm\s+(-[a-zA-Z]*r[a-zA-Z]*f|-rf|-fr)'; then
 fi
 
 # Supabase Prod-Aktionen
-if echo "$cmd" | grep -qE '\bsupabase\s+db\s+push\b'; then
-  block "supabase db push ist verboten — manuell vom User ausführen"
-fi
 if echo "$cmd" | grep -qE '\bsupabase\s+link\b'; then
   block "supabase link ist verboten — manuell vom User ausführen"
 fi

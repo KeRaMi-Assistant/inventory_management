@@ -208,6 +208,8 @@ interface SchemaInfo {
   hasDealTicketId: boolean
   hasDealShippedAt: boolean
   hasInventoryPublicCols: boolean
+  hasProducts: boolean
+  hasInventoryProductId: boolean
 }
 
 async function detectSchema(
@@ -225,11 +227,15 @@ async function detectSchema(
     'inventory_items',
     'is_public',
   )
+  const hasProducts = await probeTable(admin, 'products')
+  const hasInventoryProductId = await probeColumn(admin, 'inventory_items', 'product_id')
   return {
     hasTickets,
     hasDealTicketId,
     hasDealShippedAt,
     hasInventoryPublicCols,
+    hasProducts,
+    hasInventoryProductId,
   }
 }
 
@@ -488,6 +494,7 @@ async function runCleanup(
 ): Promise<CleanupResult> {
   // Reihenfolge: Kinder vor Eltern (FKs sind ON DELETE CASCADE/SET NULL,
   // aber wir wollen exakte Counts pro Tabelle für die Antwort).
+  // inventory_items.product_id → products, daher items vor products löschen.
   const tables: string[] = [
     'pending_deal_suggestions',
     'inventory_movements',
@@ -496,6 +503,7 @@ async function runCleanup(
     'inventory_items',
     'deals',
   ]
+  if (schema.hasProducts) tables.push('products')
   if (schema.hasTickets) tables.push('tickets')
   tables.push('activity_log', 'buyers', 'shops', 'suppliers')
 
@@ -524,6 +532,7 @@ interface SeedResult {
   suppliers: number
   tickets: number
   deals: number
+  products: number
   inventory_items: number
   activity_log: number
 }
@@ -804,6 +813,38 @@ async function runSeed(
   const itemCount = Math.min(12, Math.max(8, topProducts.length))
   const itemSources = topProducts.slice(0, itemCount)
 
+  // ---- Produktstamm (optional, nur wenn products-Tabelle existiert) -------
+  // Ein Produkt pro Demo-Item — minimal befüllt (Pflicht-Felder + sku).
+  // product_id-Index: productIdByIdx[i] liefert die ID des i-ten Produkts.
+  const productIdByIdx: Record<number, string> = {}
+  if (schema.hasProducts && schema.hasInventoryProductId) {
+    const productsPayload = itemSources.map((name, idx) => {
+      const supplier = suppliers[idx % suppliers.length]
+      const dealMatch = deals.find((d) => d.product === name)
+      const cost = dealMatch?.ek_brutto ?? round2(40 + rng() * 200)
+      return {
+        workspace_id: workspaceId,
+        user_id: userId,
+        name,
+        sku: `DEMO-${String(idx + 1).padStart(3, '0')}`,
+        default_cost_price: cost,
+        default_sale_price: round2(cost * 1.25),
+        default_supplier_id: supplier?.id ?? null,
+        min_stock: 1,
+        is_active: true,
+      }
+    })
+    const { data: prodInserted, error: prodErr } = await admin
+      .from('products')
+      .insert(productsPayload)
+      .select('id')
+    if (prodErr) throw new Error(`products insert failed: ${prodErr.message}`)
+    const prodRows = (prodInserted ?? []) as Array<{ id: string }>
+    for (let i = 0; i < prodRows.length; i++) {
+      productIdByIdx[i] = prodRows[i].id
+    }
+  }
+
   const inventoryPayload = itemSources.map((name, idx) => {
     const supplier = suppliers[idx % suppliers.length]
     const dealMatch = deals.find((d) => d.product === name)
@@ -829,6 +870,10 @@ async function runSeed(
       itemRow.is_public = idx < 3
       itemRow.public_price = idx < 3 ? round2(cost * 1.25) : null
       itemRow.public_description = idx < 3 ? `Sofort verfügbar — ${name}` : null
+    }
+    // Verlinkung auf Produktstamm (additive, nullable)
+    if (schema.hasInventoryProductId && productIdByIdx[idx] != null) {
+      itemRow.product_id = productIdByIdx[idx]
     }
     return itemRow
   })
@@ -865,6 +910,7 @@ async function runSeed(
     suppliers: suppliers.length,
     tickets: tickets.length,
     deals: deals.length,
+    products: Object.keys(productIdByIdx).length,
     inventory_items: items.length,
     activity_log: (activityInserted ?? []).length,
   }

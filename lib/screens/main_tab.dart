@@ -17,4 +17,8 @@ enum MainTab {
   activity,
   settings,
   help,
+  /// Warenwirtschaft-Hub (AF11). Sub-routes (Bestellungen, Lager,
+  /// Warengruppen, Inventur, Reporting) werden als gepushte Routen
+  /// INNERHALB des Hubs geöffnet — kein eigener MainTab pro Bereich.
+  warehouse,
 }

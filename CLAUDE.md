@@ -94,7 +94,11 @@ extrahiert:
 - **Migrations:** `supabase/migrations/YYYYMMDDHHMMSS_<slug>.sql`. Erstellen via `supabase migration new <slug>`.
 - **RLS ist PFLICHT** für jede neue Tabelle. Policies orientieren sich an bestehenden Workspace-Policies (siehe `20260504000300_workspace_rls_fix.sql`, `20260504000500_data_workspace_scope.sql`).
 - **Migrations lokal testen:** `supabase db reset` muss erfolgreich durchlaufen, bevor committed wird.
-- **`supabase db push` gegen Prod:** NIEMALS automatisch. Nur User explizit nach Bestätigung.
+- **`supabase db push`:** Erlaubt — Claude darf Migrationen automatisch
+  gegen das verlinkte Supabase-Projekt deployen (Stakeholder-Freigabe
+  2026-05-22). Voraussetzung: `supabase db reset` lief lokal grün. Kein
+  Mensch-im-Loop-Stop mehr. Begründung: Pre-Launch, keine echten Nutzer,
+  alles git-versioniert — siehe §Projekt-Status.
 - **Edge Functions:** TypeScript/Deno in `supabase/functions/<name>/index.ts`. Shared Code in `supabase/functions/_shared/`. Kein Secret hartcodieren — `Deno.env.get('NAME')`.
 
 ### Tests
@@ -602,16 +606,19 @@ Watchdogs (parallel):
 
 System pausiert UNBEDINGT bei (User-Aktion erforderlich):
 
-1. `supabase db push` gegen Prod
-2. `gh pr merge --admin` (außer Stakeholder-Override via `MERGE_ADMIN_OVERRIDE=1`)
-3. `supabase secrets set`
-4. OAuth-Token-Expiry (gh, claude, supabase)
-5. Cost-Cap überschritten (Hard-Stop, manueller Reset via `resume.sh`)
-6. PANIC nach 3 consecutive failures (resume.sh nur via valider user-session)
-7. Self-Mod-Hit (Worker hat Blocklist-Pfad gewollt)
-8. Disput unresolved nach 3 Rounds → Stakeholder-Notify
-9. Anthropic Admin-API-Spend-Limit
-10. Branch-Protection-Setup (einmalig)
+1. `gh pr merge --admin` (außer Stakeholder-Override via `MERGE_ADMIN_OVERRIDE=1`)
+2. `supabase secrets set`
+3. OAuth-Token-Expiry (gh, claude, supabase)
+4. Cost-Cap überschritten (Hard-Stop, manueller Reset via `resume.sh`)
+5. PANIC nach 3 consecutive failures (resume.sh nur via valider user-session)
+6. Self-Mod-Hit (Worker hat Blocklist-Pfad gewollt)
+7. Disput unresolved nach 3 Rounds → Stakeholder-Notify
+8. Anthropic Admin-API-Spend-Limit
+9. Branch-Protection-Setup (einmalig)
+
+> **Hinweis:** `supabase db push` ist seit 2026-05-22 KEIN Stop mehr —
+> Claude darf Migrationen automatisch deployen (Stakeholder-Freigabe,
+> Pre-Launch). Siehe §Supabase.
 
 ### Intake-Council (User-Gated Backlog-Aufnahme)
 

@@ -184,6 +184,37 @@ class AppLocalizationsDe extends AppLocalizations {
   String get navMoreSheetTitle => 'Weitere Bereiche';
 
   @override
+  String get navWarehouse => 'Warenwirtschaft';
+
+  @override
+  String get warehouseHubTitle => 'Warenwirtschaft';
+
+  @override
+  String get warehouseHubComingSoon => 'Bald verfügbar';
+
+  @override
+  String get warehouseHubComingSoonHint =>
+      'Diese Funktion wird in einem der nächsten Updates freigeschaltet.';
+
+  @override
+  String get warehouseHubTileProductCatalog => 'Artikelstamm';
+
+  @override
+  String get warehouseHubTilePurchaseOrders => 'Bestellungen';
+
+  @override
+  String get warehouseHubTileWarehouses => 'Lager';
+
+  @override
+  String get warehouseHubTileCategories => 'Warengruppen';
+
+  @override
+  String get warehouseHubTileStocktake => 'Inventur';
+
+  @override
+  String get warehouseHubTileReporting => 'Reporting';
+
+  @override
   String get fieldEmail => 'E-Mail';
 
   @override
@@ -1862,6 +1893,251 @@ class AppLocalizationsDe extends AppLocalizations {
       'Diese Meldung erscheint, wenn du einen Carrier-API-Key speichern willst, aber das Backend keinen Master-Schlüssel hat, mit dem es deinen Key verschlüsselt ablegen kann. Das ist kein Fehler in deinem Account, sondern ein einmaliger Backend-Setup-Schritt:\n• Hosted-Variante (Standard-Nutzer): kurz warten und nochmal versuchen — wir setzen den Master-Key zentral, normalerweise innerhalb weniger Stunden.\n• Self-Hoster / Admin der Supabase-Instanz: die Migration `20260516000000_carrier_master_key_bootstrap.sql` muss eingespielt sein und der `CARRIER_MASTER_KEY`-Secret auf der Supabase-Projektebene gesetzt sein. Details für Admins liegen im Repo unter `supabase/functions/tracking-poll/SETUP.md`.\nBis das gefixt ist, kannst du deine Sendungen weiter manuell pflegen — nur der automatische Live-Status pro Carrier ist solange aus.';
 
   @override
+  String get helpTroubleLowStockPushTitle => 'Low-Stock-Push kommt nicht an';
+
+  @override
+  String get helpTroubleLowStockPushDesc =>
+      'Prüfe zuerst, ob Push-Mitteilungen generell zugestellt werden (OS-Einstellungen → Mitteilungen → Lager-App). Dann: Einstellungen → Push → Kategorie „Mindestbestand\" aktiviert? Wichtig: Low-Stock-Pushes werden pro Workspace zusammengefasst — der Push enthält nur eine Zahl, keine Produktnamen. Wenn das Dashboard bereits die betroffenen Artikel zeigt, ist die Benachrichtigung inhaltlich korrekt, nur der Push fehlt — einmal ausloggen und wieder einloggen, damit der Push-Token neu registriert wird.';
+
+  @override
+  String get helpWarenwirtschaftSection => 'Warenwirtschaft-Hub';
+
+  @override
+  String get helpWarenwirtschaftIntroTitle =>
+      'Was ist der Warenwirtschaft-Tab?';
+
+  @override
+  String get helpWarenwirtschaftIntroDesc =>
+      'Der Tab „Warenwirtschaft\" ist der zentrale Einstieg für alles rund um deinen Artikelstamm, Lager, Bestellungen und Inventur. Von dort erreichst du alle Unterbereiche mit einem Tipp.';
+
+  @override
+  String get helpWarenwirtschaftSubroutesTitle =>
+      'Unterbereiche auf einen Blick';
+
+  @override
+  String get helpWarenwirtschaftSubroutesDesc =>
+      '• Artikelstamm — wiederverwendbare Artikel anlegen und verwalten\n• Warengruppen — Kategorien für deine Artikel\n• Bestellungen — Nachbestellungen an Lieferanten\n• Lager — mehrere physische Lagerorte\n• Inventur — Bestände zählen und abgleichen\n• Berichte — Bestandsbewertung, Lagerumschlag, ABC-Analyse';
+
+  @override
+  String get helpProductCatalogSection => 'Artikelstamm & Warengruppen';
+
+  @override
+  String get helpProductCatalogWhatTitle => 'Was ist der Artikelstamm?';
+
+  @override
+  String get helpProductCatalogWhatDesc =>
+      'Im Artikelstamm legst du Produkte einmalig als Vorlage an — mit Name, Artikelnummer (SKU), EAN, Einheit, Einkaufspreis und Mindestbestand. Sobald du Ware einbuchst oder eine Bestellung eingehst, verknüpft die App den Lagerbestand automatisch mit dem passenden Stammartikel.';
+
+  @override
+  String get helpProductCatalogNewTitle => 'Neuen Artikel anlegen';
+
+  @override
+  String get helpProductCatalogNewDesc =>
+      'Warenwirtschaft → Artikelstamm → „+\"-Button. Pflicht: Name. Optional: SKU, EAN, Warengruppe, Lieferant, Standard-Einkaufspreis, Mindestbestand, Mengeneinheit. SKU muss innerhalb des Workspaces eindeutig sein.';
+
+  @override
+  String get helpProductCatalogCategoryTitle => 'Warengruppen';
+
+  @override
+  String get helpProductCatalogCategoryDesc =>
+      'Warengruppen (Kategorien) helfen dir, deinen Artikelstamm zu strukturieren — z. B. „Elektronik\", „Bekleidung\", „Zubehör\". Du kannst bis zu zwei Ebenen anlegen (Gruppe → Untergruppe). Warenwirtschaft → Warengruppen → „+\"-Button.';
+
+  @override
+  String get helpProductCatalogDetailTitle => 'Artikel-Detailseite';
+
+  @override
+  String get helpProductCatalogDetailDesc =>
+      'Tippe einen Artikel an, um die 360°-Ansicht zu öffnen: aktueller Bestand über alle Lager, Buchungshistorie (getypt nach Wareneingang, Verkauf, Korrektur, Inventur, Umlagerung), Chargen und verknüpfte Lieferanten.';
+
+  @override
+  String get helpProductCatalogMovementsTitle => 'Buchungsarten';
+
+  @override
+  String get helpProductCatalogMovementsDesc =>
+      'Jede Bestandsveränderung wird mit einer Buchungsart protokolliert:\n• Wareneingang — Ware kommt ins Lager (z. B. Lieferung)\n• Warenausgang — Ware verlässt das Lager\n• Korrektur — manuelle Mengenanpassung\n• Inventur — Differenz aus einer Inventurzählung\n• Umlagerung — Wechsel zwischen Lagerorten\n• Verkauf — Deal abgeschlossen';
+
+  @override
+  String get helpPurchaseOrdersSection => 'Bestellwesen';
+
+  @override
+  String get helpPurchaseOrdersWhatTitle => 'Was sind Bestellungen?';
+
+  @override
+  String get helpPurchaseOrdersWhatDesc =>
+      'Wenn dein Bestand zur Neige geht, legst du eine Bestellung (Purchase Order) an einen Lieferanten an. Die App verwaltet Bestellpositionen, Mengen und den Status der Lieferung — von Entwurf bis Vollständig erhalten.';
+
+  @override
+  String get helpPurchaseOrdersNewTitle => 'Neue Bestellung anlegen';
+
+  @override
+  String get helpPurchaseOrdersNewDesc =>
+      'Warenwirtschaft → Bestellungen → „+\"-Button → Lieferanten wählen → Artikel und Mengen eintragen → Speichern. Die App vergilt automatisch eine Bestellnummer (z. B. PO-2026-0001).';
+
+  @override
+  String get helpPurchaseOrdersStatusTitle => 'Bestellstatus';
+
+  @override
+  String get helpPurchaseOrdersStatusDesc =>
+      '• Entwurf — noch nicht abgeschickt\n• Bestellt — beim Lieferanten aufgegeben\n• Teilweise erhalten — erste Teillieferung eingegangen\n• Erhalten — vollständig geliefert\n• Storniert — Bestellung wurde abgebrochen';
+
+  @override
+  String get helpPurchaseOrdersReceiveTitle => 'Wareneingang buchen';
+
+  @override
+  String get helpPurchaseOrdersReceiveDesc =>
+      'Öffne die Bestelldetails → „Wareneingang buchen\". Du siehst pro Position die bestellte und bereits erhaltene Menge und gibst die neu eingegangene Menge ein. Die App aktualisiert den Bestand und setzt den Bestellstatus automatisch auf „Teilweise erhalten\" oder „Erhalten\".';
+
+  @override
+  String get helpPurchaseOrdersPdfTitle => 'Bestellbeleg als PDF';
+
+  @override
+  String get helpPurchaseOrdersPdfDesc =>
+      'Öffne eine Bestellung → PDF-Icon oben rechts. Die App erstellt einen Bestellbeleg mit allen Positionen, den du teilen oder drucken kannst.';
+
+  @override
+  String get helpPurchaseOrdersReorderTitle => 'Schnell nachbestellen';
+
+  @override
+  String get helpPurchaseOrdersReorderDesc =>
+      'Im Dashboard erscheint ein Hinweis, wenn Artikel unter den Mindestbestand fallen. Tippe auf „Jetzt bestellen\", um direkt eine vorausgefüllte Bestellung für die betroffenen Artikel zu öffnen.';
+
+  @override
+  String get helpWarehousesSection => 'Lager verwalten';
+
+  @override
+  String get helpWarehousesWhatTitle => 'Mehrere Lager nutzen';
+
+  @override
+  String get helpWarehousesWhatDesc =>
+      'Du kannst mehrere physische Lagerorte anlegen — z. B. „Hauptlager\", „Außenlager\" oder „Büro\". Beim Einbuchen von Ware wählst du, in welches Lager die Menge geht. Warenwirtschaft → Lager.';
+
+  @override
+  String get helpWarehousesNewTitle => 'Neues Lager anlegen';
+
+  @override
+  String get helpWarehousesNewDesc =>
+      'Warenwirtschaft → Lager → „+\"-Button → Name eingeben (z. B. „Hauptlager\") → optional Adresse → Speichern. Das erste Lager wird automatisch als Hauptlager markiert.';
+
+  @override
+  String get helpWarehousesDefaultTitle => 'Hauptlager';
+
+  @override
+  String get helpWarehousesDefaultDesc =>
+      'Das als Hauptlager markierte Lager ist vorausgewählt, wenn du Ware einbuchst. Pro Workspace kann genau ein Lager das Hauptlager sein. Du kannst das Hauptlager jederzeit wechseln.';
+
+  @override
+  String get helpWarehousesStockTitle => 'Bestand pro Lager sehen';
+
+  @override
+  String get helpWarehousesStockDesc =>
+      'In der Artikel-Detailseite (Warenwirtschaft → Artikelstamm → Artikel antippen) siehst du den Bestand aufgeteilt nach Lager. Gesamtbestand und Mindestbestand werden über alle Lager zusammengerechnet.';
+
+  @override
+  String get helpStocktakeSection => 'Inventur';
+
+  @override
+  String get helpStocktakeWhatTitle => 'Was ist eine Inventur?';
+
+  @override
+  String get helpStocktakeWhatDesc =>
+      'Bei einer Inventur zählst du den tatsächlichen Bestand deiner Artikel und vergleichst ihn mit dem in der App gespeicherten Soll-Bestand. Differenzen werden als Korrekturbuchungen automatisch eingetragen.';
+
+  @override
+  String get helpStocktakeStartTitle => 'Inventur starten';
+
+  @override
+  String get helpStocktakeStartDesc =>
+      'Warenwirtschaft → Inventur → „+\"-Button → optional Lager und Titel wählen → „Inventur starten\". Die App legt einen Soll-Bestand-Snapshot aus den aktuellen Lagermengen an.';
+
+  @override
+  String get helpStocktakeCountTitle => 'Artikel zählen';
+
+  @override
+  String get helpStocktakeCountDesc =>
+      'Gib für jeden Artikel die tatsächlich gezählte Menge ein. Der Filter „Nur ungezählte\" blendet bereits bearbeitete Artikel aus. Du kannst per Barcode-Scan direkt zum passenden Artikel springen. Eingaben werden sofort gespeichert — auch wenn die App zwischendurch offline ist.';
+
+  @override
+  String get helpStocktakeCloseTitle => 'Inventur abschließen';
+
+  @override
+  String get helpStocktakeCloseDesc =>
+      'Wenn alle Positionen gezählt sind (Fortschrittsanzeige oben zeigt 100 %), tippe auf „Inventur abschließen\". Die App bucht alle Differenzen als Inventur-Korrekturen und erstellt einen Differenz-Report. Diese Aktion kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get helpStocktakeDiffTitle => 'Differenz-Report';
+
+  @override
+  String get helpStocktakeDiffDesc =>
+      'Nach dem Abschluss siehst du eine Liste aller Artikel mit Soll-/Ist-Vergleich und der gebuchten Differenz. Positiv = mehr gezählt als erwartet, Negativ = weniger. Der Report bleibt in der Inventur-Liste abrufbar.';
+
+  @override
+  String get helpWwReportingSection => 'Berichte & Auswertungen';
+
+  @override
+  String get helpWwReportingWhatTitle => 'Welche Berichte gibt es?';
+
+  @override
+  String get helpWwReportingWhatDesc =>
+      'Im Statistiken-Tab → Lager/Lieferanten findest du drei Auswertungen:\n• Bestandsbewertung — Lagerwert zum Stichtag (Menge × Einkaufspreis)\n• Lagerumschlag — wie oft dreht sich dein Lager pro Zeitraum\n• ABC-Analyse — welche Artikel machen den größten Wertanteil aus';
+
+  @override
+  String get helpWwReportingValuationTitle => 'Bestandsbewertung';
+
+  @override
+  String get helpWwReportingValuationDesc =>
+      'Zeigt den Gesamtwert deines Lagers (Menge × Einkaufspreis aller Artikel mit hinterlegtem Preis). Artikel ohne Einkaufspreis werden mit 0 bewertet — pflege fehlende Preise nach, damit der Wert stimmt.';
+
+  @override
+  String get helpWwReportingTurnoverTitle => 'Lagerumschlag';
+
+  @override
+  String get helpWwReportingTurnoverDesc =>
+      'Der Lagerumschlag zeigt, wie oft dein Durchschnittsbestand im gewählten Zeitraum umgeschlagen wurde. Ein hoher Wert bedeutet schnellen Abverkauf; ein niedriger Wert kann auf Ladenhüter hinweisen.';
+
+  @override
+  String get helpWwReportingAbcTitle => 'ABC-Analyse';
+
+  @override
+  String get helpWwReportingAbcDesc =>
+      'Artikel werden nach ihrem Wertanteil am Gesamtbestand klassifiziert:\n• A-Artikel — ca. 70–80 % des Wertes, meist wenige Produkte\n• B-Artikel — ca. 15–25 % des Wertes\n• C-Artikel — ca. 5–10 % des Wertes, viele Produkte\nDie Klassifizierung hilft dir zu entscheiden, wo sich enger Einkauf und genauere Planung lohnen.';
+
+  @override
+  String get helpFaqQ20 =>
+      'Wie verknüpfe ich einen bestehenden Lagerartikel mit dem Artikelstamm?';
+
+  @override
+  String get helpFaqA20 =>
+      'Öffne den Artikel im Lager-Tab → Bearbeiten → „Produkt verknüpfen\" → Artikel aus dem Stamm suchen und auswählen. Nicht verknüpfte Lagerartikel erscheinen weiterhin in einer eigenen Gruppe „Ohne Artikel\".';
+
+  @override
+  String get helpFaqQ21 => 'Was passiert beim Wareneingang mit dem Bestand?';
+
+  @override
+  String get helpFaqA21 =>
+      'Wenn du in einer Bestellung „Wareneingang buchen\" tippst, erhöht die App den Lagerbestand des verknüpften Artikels um die eingebuchte Menge und schreibt eine Buchung vom Typ „Wareneingang\" in die Buchungshistorie. Der Bestellstatus aktualisiert sich automatisch.';
+
+  @override
+  String get helpFaqQ22 => 'Kann ich einen Artikel in mehrere Lager aufteilen?';
+
+  @override
+  String get helpFaqA22 =>
+      'Ja. Lege mehrere Lagerartikel für dasselbe Produkt an und weise sie verschiedenen Lagern zu. Die Artikel-Detailseite aggregiert den Gesamtbestand über alle Lager und zeigt ihn aufgeteilt.';
+
+  @override
+  String get helpFaqQ23 => 'Warum fehlen Artikel in der Inventur-Liste?';
+
+  @override
+  String get helpFaqA23 =>
+      'Die Inventur erfasst nur Artikel, die mit einem Stammartikel verknüpft sind. Lagerartikel ohne Produktverknüpfung (Gruppe „Ohne Artikel\") tauchen nicht auf. Verknüpfe den Artikel zuerst im Lager-Tab → Artikel bearbeiten → „Produkt verknüpfen\".';
+
+  @override
+  String get helpFaqQ24 => 'Wie deaktiviere ich den Low-Stock-Push?';
+
+  @override
+  String get helpFaqA24 =>
+      'Einstellungen → Push → Kategorie „Mindestbestand\" deaktivieren. Der Push wird dann nicht mehr verschickt; die gelbe Warnung im Dashboard und im Lager-Tab bleibt als stiller Hinweis sichtbar.';
+
+  @override
   String get helpPrivacySection => 'Datenschutz & Kontakt';
 
   @override
@@ -1893,6 +2169,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get inventoryEmpty => 'Lager ist leer.';
+
+  @override
+  String get inventoryEmptyHint =>
+      'Über den + Button kannst du den ersten Artikel hinzufügen.';
 
   @override
   String get inventoryAddItem => 'Artikel hinzufügen';
@@ -3369,4 +3649,811 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get inboxSuggestionAccept => 'Annehmen';
+
+  @override
+  String get productCatalogTitle => 'Artikelstamm';
+
+  @override
+  String get productNew => 'Neuer Artikel';
+
+  @override
+  String get productUnit => 'Einheit';
+
+  @override
+  String get productDefaultCostPrice => 'Standard-EK';
+
+  @override
+  String get productDefaultSalePrice => 'Standard-VK';
+
+  @override
+  String get productCategory => 'Warengruppe';
+
+  @override
+  String get productDefaultSupplier => 'Standard-Lieferant';
+
+  @override
+  String get productMinStock => 'Mindestbestand';
+
+  @override
+  String get productTaxRate => 'MwSt.-Satz (%)';
+
+  @override
+  String get productIsActive => 'Aktiv';
+
+  @override
+  String get productAdvancedSection => 'Erweitert';
+
+  @override
+  String get productNameLabel => 'Artikelname';
+
+  @override
+  String get productSkuLabel => 'Artikelnummer (SKU)';
+
+  @override
+  String get productEanLabel => 'EAN / GTIN';
+
+  @override
+  String get productNoteLabel => 'Notiz';
+
+  @override
+  String get productEditTitle => 'Artikel bearbeiten';
+
+  @override
+  String get productAddTitle => 'Neuer Artikel';
+
+  @override
+  String get productGroupWithoutProduct => 'Ohne Artikel';
+
+  @override
+  String get productCatalogEmpty => 'Kein Artikelstamm';
+
+  @override
+  String get productCatalogEmptyHint => 'Lege deinen ersten Artikel an.';
+
+  @override
+  String get productCatalogLoadError =>
+      'Artikelstamm konnte nicht geladen werden.';
+
+  @override
+  String get productCatalogNoPermission =>
+      'Du hast keine Berechtigung, den Artikelstamm zu bearbeiten.';
+
+  @override
+  String get productCatalogViewerHint =>
+      'Du siehst den Artikelstamm im Lesemodus.';
+
+  @override
+  String get productLinkLabel => 'Verknüpfter Stammartikel';
+
+  @override
+  String get productNoLink => 'Kein Stammartikel';
+
+  @override
+  String get productDetailTitle => 'Artikeldetails';
+
+  @override
+  String get productDetailEmpty => 'Keine Daten';
+
+  @override
+  String get productDetailEmptyHint =>
+      'Für diesen Artikel gibt es noch keine Bewegungen.';
+
+  @override
+  String get productDetailLoadError =>
+      'Artikeldetails konnten nicht geladen werden.';
+
+  @override
+  String get movementTypeGoodsIn => 'Wareneingang';
+
+  @override
+  String get movementTypeGoodsOut => 'Warenausgang';
+
+  @override
+  String get movementTypeCorrection => 'Korrektur';
+
+  @override
+  String get movementTypeStocktake => 'Inventur';
+
+  @override
+  String get movementTypeTransfer => 'Umlagerung';
+
+  @override
+  String get movementTypeSale => 'Verkauf';
+
+  @override
+  String get movementHistoryTitle => 'Bewegungshistorie';
+
+  @override
+  String get productDetailSectionStammdaten => 'Stammdaten';
+
+  @override
+  String get productDetailSectionStock => 'Bestand';
+
+  @override
+  String get productDetailSectionSupplier => 'Lieferant';
+
+  @override
+  String get productDetailSectionBatches => 'Chargen';
+
+  @override
+  String get productDetailLabelSku => 'Artikelnummer (SKU)';
+
+  @override
+  String get productDetailLabelEan => 'EAN';
+
+  @override
+  String get productDetailLabelLocation => 'Lagerort';
+
+  @override
+  String get productDetailLabelStatus => 'Status';
+
+  @override
+  String get productDetailLabelSupplier => 'Lieferant';
+
+  @override
+  String get productDetailLabelQuantity => 'Bestand';
+
+  @override
+  String get productDetailLabelMinStock => 'Mindestbestand';
+
+  @override
+  String get productDetailLabelCostPrice => 'Einstandspreis';
+
+  @override
+  String get productDetailLabelArrivalDate => 'Ankunftsdatum';
+
+  @override
+  String get productDetailLabelNote => 'Notiz';
+
+  @override
+  String get productDetailLabelCritical => 'Kritisch';
+
+  @override
+  String get productDetailLabelOk => 'OK';
+
+  @override
+  String get productDetailViewBatches => 'Chargen anzeigen';
+
+  @override
+  String get productDetailNoSupplier => 'Kein Lieferant';
+
+  @override
+  String get productDetailNoLocation => 'Kein Lagerort';
+
+  @override
+  String get productDetailViewerHint =>
+      'Du hast nur Lesezugriff — Buchungsaktionen nicht verfügbar.';
+
+  @override
+  String get productDetailRetry => 'Erneut laden';
+
+  @override
+  String productDetailMovementQuantity(Object sign, int qty) {
+    return '$sign$qty';
+  }
+
+  @override
+  String get productDetailSectionProduct => 'Artikel (Stammdaten)';
+
+  @override
+  String get productDetailLabelProductUnit => 'Einheit';
+
+  @override
+  String get productDetailLabelDefaultCostPrice => 'Standard-EK';
+
+  @override
+  String get productDetailLabelDefaultSalePrice => 'Standard-VK';
+
+  @override
+  String get productDetailLabelMinStockProduct => 'Mindestbestand (Produkt)';
+
+  @override
+  String get productDetailLabelTaxRate => 'MwSt-Satz';
+
+  @override
+  String get productDetailSectionAggregatedStock => 'Gesamtbestand';
+
+  @override
+  String get productDetailLabelTotalQty => 'Gesamt (alle Lager)';
+
+  @override
+  String productDetailLabelWarehouseQty(Object warehouse) {
+    return 'Lager $warehouse';
+  }
+
+  @override
+  String get productDetailLabelNoWarehouse => 'Kein Lager zugeordnet';
+
+  @override
+  String get productDetailMovementsAllProduct =>
+      'Alle Bewegungen dieses Produkts (alle Bestands-Rows).';
+
+  @override
+  String productDetailLoadMoreMovements(int count) {
+    return 'Weitere $count laden';
+  }
+
+  @override
+  String get productDetailAllMovementsShown => 'Alle Bewegungen angezeigt';
+
+  @override
+  String stockGroupItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Positionen',
+      one: '1 Position',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String stockGroupTotalQuantity(int qty) {
+    return 'Gesamt: $qty Stk.';
+  }
+
+  @override
+  String get categoriesTitle => 'Warengruppen';
+
+  @override
+  String get categoriesEmpty => 'Keine Warengruppen';
+
+  @override
+  String get categoriesEmptyHint => 'Lege deine erste Warengruppe an.';
+
+  @override
+  String get categoriesLoadError =>
+      'Warengruppen konnten nicht geladen werden.';
+
+  @override
+  String get categoryNew => 'Neue Warengruppe';
+
+  @override
+  String get categoryEdit => 'Warengruppe bearbeiten';
+
+  @override
+  String get categoryDelete => 'Warengruppe löschen';
+
+  @override
+  String categoryDeletePrompt(Object name) {
+    return '„$name\" wirklich löschen?';
+  }
+
+  @override
+  String get categoryParent => 'Übergeordnet';
+
+  @override
+  String get categoryParentNone => 'Keine (Hauptgruppe)';
+
+  @override
+  String get categoryFieldName => 'Name';
+
+  @override
+  String get categoryFieldSortOrder => 'Sortierung';
+
+  @override
+  String get categoryMaxDepthError =>
+      'Nur 2 Ebenen erlaubt. Bitte eine Hauptgruppe wählen.';
+
+  @override
+  String get categorySortOrderHint => 'Zahl, niedrig = zuerst';
+
+  @override
+  String get supplierAddress => 'Adresse';
+
+  @override
+  String get supplierAddressStreet => 'Straße';
+
+  @override
+  String get supplierAddressZip => 'PLZ';
+
+  @override
+  String get supplierAddressCity => 'Ort';
+
+  @override
+  String get supplierAddressCountry => 'Land';
+
+  @override
+  String get supplierVatId => 'USt-IdNr';
+
+  @override
+  String get supplierCustomerNumber => 'Kundennummer';
+
+  @override
+  String get supplierPaymentTerms => 'Zahlungsziel (Tage)';
+
+  @override
+  String get supplierLeadTime => 'Lieferzeit (Tage)';
+
+  @override
+  String get supplierMinOrderValue => 'Mindestbestellwert';
+
+  @override
+  String get supplierAdvancedSection => 'Erweiterte Angaben';
+
+  @override
+  String get commonDaysUnit => 'Tage';
+
+  @override
+  String get purchaseOrdersTitle => 'Bestellungen';
+
+  @override
+  String get purchaseOrdersEmpty => 'Keine Bestellungen';
+
+  @override
+  String get purchaseOrdersEmptyHint => 'Lege deine erste Bestellung an.';
+
+  @override
+  String get purchaseOrdersLoadError =>
+      'Bestellungen konnten nicht geladen werden.';
+
+  @override
+  String get purchaseOrderNew => 'Neue Bestellung';
+
+  @override
+  String get purchaseOrderEdit => 'Bestellung bearbeiten';
+
+  @override
+  String get purchaseOrderDelete => 'Bestellung löschen';
+
+  @override
+  String purchaseOrderDeletePrompt(Object number) {
+    return '„$number\" wirklich löschen?';
+  }
+
+  @override
+  String get purchaseOrderStatusDraft => 'Entwurf';
+
+  @override
+  String get purchaseOrderStatusOrdered => 'Bestellt';
+
+  @override
+  String get purchaseOrderStatusPartial => 'Teilweise erhalten';
+
+  @override
+  String get purchaseOrderStatusReceived => 'Erhalten';
+
+  @override
+  String get purchaseOrderStatusCancelled => 'Storniert';
+
+  @override
+  String get purchaseOrderFieldSupplier => 'Lieferant';
+
+  @override
+  String get purchaseOrderFieldSupplierHint => 'Lieferant wählen';
+
+  @override
+  String get purchaseOrderFieldOrderDate => 'Bestelldatum';
+
+  @override
+  String get purchaseOrderFieldExpectedDate => 'Erwartetes Lieferdatum';
+
+  @override
+  String get purchaseOrderFieldNote => 'Notiz';
+
+  @override
+  String get purchaseOrderFieldNoteHint =>
+      'Optionale Anmerkungen zur Bestellung';
+
+  @override
+  String get purchaseOrderSectionItems => 'Positionen';
+
+  @override
+  String get purchaseOrderItemsEmpty => 'Keine Positionen';
+
+  @override
+  String get purchaseOrderItemAdd => 'Position hinzufügen';
+
+  @override
+  String get purchaseOrderItemFieldProduct => 'Artikel';
+
+  @override
+  String get purchaseOrderItemFieldProductHint => 'Artikel wählen';
+
+  @override
+  String get purchaseOrderItemFieldQtyOrdered => 'Menge';
+
+  @override
+  String get purchaseOrderItemFieldUnitPrice => 'Einzelpreis (€)';
+
+  @override
+  String get purchaseOrderItemDelete => 'Position löschen';
+
+  @override
+  String get purchaseOrderItemDeletePrompt =>
+      'Diese Position wirklich löschen?';
+
+  @override
+  String get purchaseOrderNoSupplierError =>
+      'Bitte einen Lieferanten auswählen.';
+
+  @override
+  String get purchaseOrderNoItemsError =>
+      'Mindestens eine Position erforderlich.';
+
+  @override
+  String get purchaseOrderStatusToOrdered => 'Als bestellt markieren';
+
+  @override
+  String get purchaseOrderStatusToCancelled => 'Stornieren';
+
+  @override
+  String get purchaseOrderStatusChangeConfirm => 'Status wirklich ändern?';
+
+  @override
+  String get purchaseOrderDetailTitle => 'Bestelldetails';
+
+  @override
+  String get purchaseOrderDetailSectionHead => 'Bestellkopf';
+
+  @override
+  String get purchaseOrderLabelNumber => 'Bestellnummer';
+
+  @override
+  String get purchaseOrderLabelSupplier => 'Lieferant';
+
+  @override
+  String get purchaseOrderLabelStatus => 'Status';
+
+  @override
+  String get purchaseOrderLabelOrderDate => 'Bestelldatum';
+
+  @override
+  String get purchaseOrderLabelExpectedDate => 'Erwartet';
+
+  @override
+  String get purchaseOrderLabelNote => 'Notiz';
+
+  @override
+  String get purchaseOrderLabelTotalNet => 'Nettosumme';
+
+  @override
+  String get purchaseOrderDetailSectionItems => 'Positionen';
+
+  @override
+  String get purchaseOrderItemsLoadError =>
+      'Positionen konnten nicht geladen werden.';
+
+  @override
+  String get goodsReceiptBook => 'Wareneingang buchen';
+
+  @override
+  String get goodsReceiptSuccess => 'Wareneingang gebucht.';
+
+  @override
+  String get goodsReceiptError => 'Fehler beim Buchen des Wareneingangs.';
+
+  @override
+  String get goodsReceiptNoProduct =>
+      'Diese Position hat kein verknüpftes Produkt und kann nicht eingebucht werden.';
+
+  @override
+  String get quantityOrdered => 'Bestellt';
+
+  @override
+  String get quantityReceived => 'Erhalten';
+
+  @override
+  String get purchaseOrderScanBarcode => 'Barcode scannen';
+
+  @override
+  String get purchaseOrderScanNoMatch =>
+      'Kein Artikel für diesen Barcode gefunden.';
+
+  @override
+  String get purchaseOrderPdfExport => 'PDF-Beleg';
+
+  @override
+  String get purchaseOrderPdfExportComingSoon =>
+      'PDF-Export kommt in einem späteren Update.';
+
+  @override
+  String get purchaseOrderPdfExportError =>
+      'PDF-Beleg konnte nicht erstellt werden.';
+
+  @override
+  String get purchaseOrderStatusChangeError =>
+      'Status konnte nicht geändert werden.';
+
+  @override
+  String get purchaseOrderViewerHint =>
+      'Du hast nur Lesezugriff — Buchungsaktionen nicht verfügbar.';
+
+  @override
+  String get purchaseOrderStatusAutoManaged =>
+      'Dieser Status wird automatisch gepflegt.';
+
+  @override
+  String get poPdfDocumentTitle => 'Bestellbeleg';
+
+  @override
+  String get poPdfSupplierLabel => 'Lieferant';
+
+  @override
+  String get poPdfVatIdLabel => 'USt-IdNr';
+
+  @override
+  String get poPdfOrderDateLabel => 'Bestelldatum';
+
+  @override
+  String get poPdfExpectedDateLabel => 'Erwartetes Lieferdatum';
+
+  @override
+  String get poPdfStatusLabel => 'Status';
+
+  @override
+  String get poPdfSectionItems => 'Positionen';
+
+  @override
+  String get poPdfColProduct => 'Artikel';
+
+  @override
+  String get poPdfColOrdered => 'Bestellt';
+
+  @override
+  String get poPdfColReceived => 'Erhalten';
+
+  @override
+  String get poPdfColUnitPrice => 'Einzelpreis';
+
+  @override
+  String get poPdfColLineTotal => 'Zeilensumme';
+
+  @override
+  String get poPdfTotalNetLabel => 'Nettosumme';
+
+  @override
+  String get poPdfNoteLabel => 'Notiz';
+
+  @override
+  String get warehousesTitle => 'Lager';
+
+  @override
+  String get warehousesEmpty => 'Keine Lager';
+
+  @override
+  String get warehousesEmptyHint => 'Lege dein erstes Lager an.';
+
+  @override
+  String get warehousesLoadError => 'Lager konnten nicht geladen werden.';
+
+  @override
+  String get warehouseNew => 'Neues Lager';
+
+  @override
+  String get warehouseDefault => 'Hauptlager';
+
+  @override
+  String get warehouseEdit => 'Lager bearbeiten';
+
+  @override
+  String get warehouseNameLabel => 'Name';
+
+  @override
+  String get warehouseAddressLabel => 'Adresse';
+
+  @override
+  String get warehouseIsDefaultLabel => 'Standardlager';
+
+  @override
+  String get warehouseIsActiveLabel => 'Aktiv';
+
+  @override
+  String get warehouseInactiveBadge => 'Inaktiv';
+
+  @override
+  String warehouseDeletePrompt(Object name) {
+    return 'Lager \"$name\" wirklich löschen?';
+  }
+
+  @override
+  String get inventoryWarehouseLabel => 'Lager';
+
+  @override
+  String get inventoryNoWarehouse => 'Kein Lager';
+
+  @override
+  String get lowStockAlertTitle => 'Niedriger Bestand';
+
+  @override
+  String lowStockAlertBody(Object count) {
+    return '$count Artikel unter Mindestbestand';
+  }
+
+  @override
+  String get lowStockReorderAction => 'Jetzt bestellen';
+
+  @override
+  String get reportStockValuation => 'Bestandsbewertung';
+
+  @override
+  String get reportStockValuationSubtitle =>
+      'Gesamtwert des Lagerbestands (Einstandspreis)';
+
+  @override
+  String get reportStockValuationTotal => 'Gesamtwert';
+
+  @override
+  String get reportStockValuationUnits => 'Gesamtmenge';
+
+  @override
+  String get reportStockValuationItemName => 'Artikel';
+
+  @override
+  String get reportStockValuationQuantity => 'Menge';
+
+  @override
+  String get reportStockValuationCostPrice => 'EK';
+
+  @override
+  String get reportStockValuationValue => 'Wert';
+
+  @override
+  String get reportStockValuationEmpty =>
+      'Kein Lagerbestand zur Bewertung vorhanden.';
+
+  @override
+  String get reportInventoryTurnover => 'Lagerumschlag';
+
+  @override
+  String get reportInventoryTurnoverSubtitle =>
+      'Umschlagshäufigkeit des Lagerbestands';
+
+  @override
+  String get reportInventoryTurnoverRate => 'Umschlagshäufigkeit';
+
+  @override
+  String get reportInventoryTurnoverOutflow => 'Warenausgang (Stk.)';
+
+  @override
+  String get reportInventoryTurnoverAvgStock => 'Ø Bestand (Stk.)';
+
+  @override
+  String get reportInventoryTurnoverMovements => 'Abgangs-Buchungen';
+
+  @override
+  String get reportInventoryTurnoverNoData =>
+      'Keine Abgangs-Buchungen vorhanden.';
+
+  @override
+  String get reportInventoryTurnoverHint =>
+      'Verhältnis Warenausgang zu Ø Bestand';
+
+  @override
+  String get reportAbcAnalysis => 'ABC-Analyse';
+
+  @override
+  String get reportAbcAnalysisSubtitle =>
+      'Artikel nach Bestandswert klassifiziert';
+
+  @override
+  String get reportAbcClassA => 'A — Werttreiber (≤ 80 %)';
+
+  @override
+  String get reportAbcClassB => 'B — Mittelfeld (80–95 %)';
+
+  @override
+  String get reportAbcClassC => 'C — Restmenge (> 95 %)';
+
+  @override
+  String get reportAbcItemName => 'Artikel';
+
+  @override
+  String get reportAbcItemValue => 'Wert';
+
+  @override
+  String get reportAbcItemShare => 'Anteil kum.';
+
+  @override
+  String get reportAbcItemClass => 'Klasse';
+
+  @override
+  String get reportAbcEmpty => 'Kein Lagerbestand für ABC-Analyse vorhanden.';
+
+  @override
+  String reportAbcCountItems(int count) {
+    return '$count Artikel';
+  }
+
+  @override
+  String get stocktakeTitle => 'Inventur';
+
+  @override
+  String get stocktakeEmpty => 'Keine Inventuren';
+
+  @override
+  String get stocktakeEmptyHint => 'Starte deine erste Inventur.';
+
+  @override
+  String get stocktakeLoadError => 'Inventuren konnten nicht geladen werden.';
+
+  @override
+  String get stocktakeNew => 'Neue Inventur';
+
+  @override
+  String stocktakeProgress(int counted, int total) {
+    return '$counted/$total gezählt';
+  }
+
+  @override
+  String get stocktakeFilterUncounted => 'Nur ungezählte';
+
+  @override
+  String get stocktakeExpected => 'Soll';
+
+  @override
+  String get stocktakeCounted => 'Gezählt';
+
+  @override
+  String get stocktakeDifference => 'Differenz';
+
+  @override
+  String get stocktakeStatusOpen => 'Offen';
+
+  @override
+  String get stocktakeStatusCounting => 'Läuft';
+
+  @override
+  String get stocktakeStatusClosed => 'Abgeschlossen';
+
+  @override
+  String get stocktakeStatusCancelled => 'Storniert';
+
+  @override
+  String get stocktakeTitleLabel => 'Titel (optional)';
+
+  @override
+  String get stocktakeTitleHint => 'z. B. Jahresabschluss 2026';
+
+  @override
+  String get stocktakeSelectWarehouse => 'Lager (optional)';
+
+  @override
+  String get stocktakeAllWarehouses => 'Alle Lager';
+
+  @override
+  String get stocktakeStartAction => 'Inventur starten';
+
+  @override
+  String get stocktakeStartError => 'Inventur konnte nicht gestartet werden.';
+
+  @override
+  String get stocktakeSaveError =>
+      'Speichern fehlgeschlagen — Eingabe lokal gespeichert.';
+
+  @override
+  String get stocktakeScanBarcode => 'Barcode scannen';
+
+  @override
+  String get stocktakeScanNoMatch => 'Kein passender Artikel gefunden.';
+
+  @override
+  String get stocktakeCloseAction => 'Inventur abschließen';
+
+  @override
+  String get stocktakeCloseConfirm => 'Inventur abschließen?';
+
+  @override
+  String get stocktakeCloseConfirmHint =>
+      'Die Inventur wird abgeschlossen und die Differenzen gebucht. Diese Aktion kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get stocktakeCloseSuccess => 'Inventur erfolgreich abgeschlossen.';
+
+  @override
+  String get stocktakeCloseError =>
+      'Inventur konnte nicht abgeschlossen werden.';
+
+  @override
+  String get stocktakeAllCounted => 'Alle Positionen gezählt.';
+
+  @override
+  String get stocktakeDiffReportTitle => 'Differenz-Report';
+
+  @override
+  String get stocktakeDiffReportNoDiff =>
+      'Keine Differenzen — Bestand ist korrekt.';
+
+  @override
+  String get stocktakeNoItems => 'Keine Positionen';
 }

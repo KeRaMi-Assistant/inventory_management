@@ -184,6 +184,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navMoreSheetTitle => 'More sections';
 
   @override
+  String get navWarehouse => 'Warehousing';
+
+  @override
+  String get warehouseHubTitle => 'Warehousing';
+
+  @override
+  String get warehouseHubComingSoon => 'Coming soon';
+
+  @override
+  String get warehouseHubComingSoonHint =>
+      'This feature will be available in an upcoming update.';
+
+  @override
+  String get warehouseHubTileProductCatalog => 'Product catalog';
+
+  @override
+  String get warehouseHubTilePurchaseOrders => 'Orders';
+
+  @override
+  String get warehouseHubTileWarehouses => 'Warehouses';
+
+  @override
+  String get warehouseHubTileCategories => 'Categories';
+
+  @override
+  String get warehouseHubTileStocktake => 'Stocktake';
+
+  @override
+  String get warehouseHubTileReporting => 'Reporting';
+
+  @override
   String get fieldEmail => 'Email';
 
   @override
@@ -1861,6 +1892,251 @@ class AppLocalizationsEn extends AppLocalizations {
       'This message appears when you try to save a carrier API key but the backend has no master key to encrypt it with. It\'s not a problem with your account but a one-off backend setup step:\n• Hosted setup (regular users): wait a moment and try again — we set the master key centrally, usually within a few hours.\n• Self-hoster / Supabase admin: migration `20260516000000_carrier_master_key_bootstrap.sql` must be applied and the `CARRIER_MASTER_KEY` secret has to be set at the Supabase project level. Admin details live in the repo at `supabase/functions/tracking-poll/SETUP.md`.\nUntil it\'s fixed you can keep updating shipments manually — only the automatic per-carrier live status is paused.';
 
   @override
+  String get helpTroubleLowStockPushTitle =>
+      'Low-stock push notifications not arriving';
+
+  @override
+  String get helpTroubleLowStockPushDesc =>
+      'First check that push notifications are generally allowed (OS Settings → Notifications → your app). Then: Settings → Push → is the \"Low stock\" category enabled? Note: low-stock pushes are batched per workspace — the notification contains a count only, no product names. If the dashboard already shows the affected items, the alert logic is working correctly; only the push token may be stale — log out and back in to re-register it.';
+
+  @override
+  String get helpWarenwirtschaftSection => 'Warehouse hub';
+
+  @override
+  String get helpWarenwirtschaftIntroTitle => 'What is the Warehousing tab?';
+
+  @override
+  String get helpWarenwirtschaftIntroDesc =>
+      'The Warehousing tab is the central entry point for everything related to your product catalog, warehouses, orders, and stocktakes. From there you can reach all sub-areas with a single tap.';
+
+  @override
+  String get helpWarenwirtschaftSubroutesTitle => 'Sub-areas at a glance';
+
+  @override
+  String get helpWarenwirtschaftSubroutesDesc =>
+      '• Product catalog — create and manage reusable products\n• Categories — organise products into groups\n• Orders — purchase orders to suppliers\n• Warehouses — manage multiple physical storage locations\n• Stocktake — count and reconcile your stock\n• Reports — stock valuation, inventory turnover, ABC analysis';
+
+  @override
+  String get helpProductCatalogSection => 'Product catalog & categories';
+
+  @override
+  String get helpProductCatalogWhatTitle => 'What is the product catalog?';
+
+  @override
+  String get helpProductCatalogWhatDesc =>
+      'The product catalog lets you create products once as a master record — with a name, SKU, EAN, unit, default cost price, and minimum stock level. Whenever you book goods in or receive a purchase order, the app automatically links the stock entry to the matching master product.';
+
+  @override
+  String get helpProductCatalogNewTitle => 'Create a new product';
+
+  @override
+  String get helpProductCatalogNewDesc =>
+      'Warehousing → Product catalog → \"+\" button. Required: name. Optional: SKU, EAN, category, supplier, default cost price, minimum stock, unit. The SKU must be unique within your workspace.';
+
+  @override
+  String get helpProductCatalogCategoryTitle => 'Categories';
+
+  @override
+  String get helpProductCatalogCategoryDesc =>
+      'Categories help you structure your product catalog — for example \"Electronics\", \"Clothing\", or \"Accessories\". You can create up to two levels (group → subgroup). Warehousing → Categories → \"+\" button.';
+
+  @override
+  String get helpProductCatalogDetailTitle => 'Product detail view';
+
+  @override
+  String get helpProductCatalogDetailDesc =>
+      'Tap any product to open the 360° view: current stock across all warehouses, movement history (typed by goods-in, sale, correction, stocktake, transfer), batches, and linked suppliers.';
+
+  @override
+  String get helpProductCatalogMovementsTitle => 'Movement types';
+
+  @override
+  String get helpProductCatalogMovementsDesc =>
+      'Every stock change is recorded with a movement type:\n• Goods in — stock arriving at your warehouse (e.g. a delivery)\n• Goods out — stock leaving your warehouse\n• Correction — manual quantity adjustment\n• Stocktake — difference posted from a stocktake session\n• Transfer — move between warehouse locations\n• Sale — deal completed';
+
+  @override
+  String get helpPurchaseOrdersSection => 'Purchase orders';
+
+  @override
+  String get helpPurchaseOrdersWhatTitle => 'What are purchase orders?';
+
+  @override
+  String get helpPurchaseOrdersWhatDesc =>
+      'When stock runs low, you create a purchase order to a supplier. The app tracks order lines, quantities, and delivery status — from draft through to fully received.';
+
+  @override
+  String get helpPurchaseOrdersNewTitle => 'Create a new order';
+
+  @override
+  String get helpPurchaseOrdersNewDesc =>
+      'Warehousing → Orders → \"+\" button → select supplier → add products and quantities → save. The app assigns an order number automatically (e.g. PO-2026-0001).';
+
+  @override
+  String get helpPurchaseOrdersStatusTitle => 'Order status';
+
+  @override
+  String get helpPurchaseOrdersStatusDesc =>
+      '• Draft — not yet submitted to the supplier\n• Ordered — sent to the supplier\n• Partially received — first partial delivery arrived\n• Received — fully delivered\n• Cancelled — order was called off';
+
+  @override
+  String get helpPurchaseOrdersReceiveTitle => 'Book a goods receipt';
+
+  @override
+  String get helpPurchaseOrdersReceiveDesc =>
+      'Open order details → \"Book goods receipt\". For each line you see the ordered and already received quantity; enter the newly arrived amount. The app updates stock and automatically sets the order status to \"Partially received\" or \"Received\".';
+
+  @override
+  String get helpPurchaseOrdersPdfTitle => 'Export order as PDF';
+
+  @override
+  String get helpPurchaseOrdersPdfDesc =>
+      'Open an order → PDF icon in the top right. The app generates an order document with all lines, ready to share or print.';
+
+  @override
+  String get helpPurchaseOrdersReorderTitle => 'Quick reorder';
+
+  @override
+  String get helpPurchaseOrdersReorderDesc =>
+      'The dashboard shows an alert when any article falls below its minimum stock. Tap \"Reorder now\" to open a pre-filled purchase order for the affected items.';
+
+  @override
+  String get helpWarehousesSection => 'Warehouse management';
+
+  @override
+  String get helpWarehousesWhatTitle => 'Using multiple warehouses';
+
+  @override
+  String get helpWarehousesWhatDesc =>
+      'You can create several physical storage locations — for example \"Main warehouse\", \"Off-site storage\", or \"Office\". When booking stock in, you choose which warehouse receives the quantity. Warehousing → Warehouses.';
+
+  @override
+  String get helpWarehousesNewTitle => 'Create a new warehouse';
+
+  @override
+  String get helpWarehousesNewDesc =>
+      'Warehousing → Warehouses → \"+\" button → enter a name (e.g. \"Main warehouse\") → optionally an address → save. The first warehouse is automatically set as the default.';
+
+  @override
+  String get helpWarehousesDefaultTitle => 'Default warehouse';
+
+  @override
+  String get helpWarehousesDefaultDesc =>
+      'The warehouse marked as default is pre-selected when booking stock in. Each workspace can have exactly one default warehouse. You can change the default at any time.';
+
+  @override
+  String get helpWarehousesStockTitle => 'View stock per warehouse';
+
+  @override
+  String get helpWarehousesStockDesc =>
+      'On the product detail page (Warehousing → Product catalog → tap a product) you see stock split by warehouse. Total stock and minimum stock are summed across all warehouses.';
+
+  @override
+  String get helpStocktakeSection => 'Stocktake';
+
+  @override
+  String get helpStocktakeWhatTitle => 'What is a stocktake?';
+
+  @override
+  String get helpStocktakeWhatDesc =>
+      'A stocktake lets you count your actual stock and compare it to the quantities recorded in the app. Differences are automatically posted as correction entries.';
+
+  @override
+  String get helpStocktakeStartTitle => 'Start a stocktake';
+
+  @override
+  String get helpStocktakeStartDesc =>
+      'Warehousing → Stocktake → \"+\" button → optionally choose a warehouse and title → \"Start stocktake\". The app takes a snapshot of current stock quantities as the expected values.';
+
+  @override
+  String get helpStocktakeCountTitle => 'Count items';
+
+  @override
+  String get helpStocktakeCountDesc =>
+      'Enter the physically counted quantity for each item. The \"Uncounted only\" filter hides already processed items. You can jump straight to an item using the barcode scanner. Entries are saved immediately — even if the app goes offline.';
+
+  @override
+  String get helpStocktakeCloseTitle => 'Close a stocktake';
+
+  @override
+  String get helpStocktakeCloseDesc =>
+      'Once all items are counted (the progress indicator at the top reaches 100 %), tap \"Close stocktake\". The app posts all differences as stocktake corrections and produces a difference report. This action cannot be undone.';
+
+  @override
+  String get helpStocktakeDiffTitle => 'Difference report';
+
+  @override
+  String get helpStocktakeDiffDesc =>
+      'After closing, you see a list of all items with expected/counted comparison and the posted difference. Positive = more counted than expected, negative = less. The report stays available in the stocktake list.';
+
+  @override
+  String get helpWwReportingSection => 'Reports & analysis';
+
+  @override
+  String get helpWwReportingWhatTitle => 'What reports are available?';
+
+  @override
+  String get helpWwReportingWhatDesc =>
+      'In the Statistics tab → Warehouse/Suppliers you find three reports:\n• Stock valuation — warehouse value at a given date (quantity × cost price)\n• Inventory turnover — how often your stock turns over in a period\n• ABC analysis — which items represent the greatest share of value';
+
+  @override
+  String get helpWwReportingValuationTitle => 'Stock valuation';
+
+  @override
+  String get helpWwReportingValuationDesc =>
+      'Shows the total value of your warehouse (quantity × cost price for all items with a price set). Items without a cost price are counted as 0 — fill in missing prices so the figure is accurate.';
+
+  @override
+  String get helpWwReportingTurnoverTitle => 'Inventory turnover';
+
+  @override
+  String get helpWwReportingTurnoverDesc =>
+      'Inventory turnover shows how many times your average stock was sold and replaced in the selected period. A high value means fast-moving stock; a low value may indicate slow-movers.';
+
+  @override
+  String get helpWwReportingAbcTitle => 'ABC analysis';
+
+  @override
+  String get helpWwReportingAbcDesc =>
+      'Items are classified by their share of total stock value:\n• A-items — roughly 70–80 % of total value, usually few products\n• B-items — roughly 15–25 % of total value\n• C-items — roughly 5–10 % of total value, many products\nThe classification helps you decide where tighter purchasing and more precise planning pay off.';
+
+  @override
+  String get helpFaqQ20 =>
+      'How do I link an existing stock item to the product catalog?';
+
+  @override
+  String get helpFaqA20 =>
+      'Open the item in the Inventory tab → Edit → \"Link product\" → search for and select the catalog product. Unlinked stock items continue to appear in a separate \"Without product\" group.';
+
+  @override
+  String get helpFaqQ21 => 'What happens to stock when I book a goods receipt?';
+
+  @override
+  String get helpFaqA21 =>
+      'When you tap \"Book goods receipt\" in a purchase order, the app increases the linked product\'s stock by the received quantity and writes a \"Goods in\" entry to the movement history. The order status updates automatically.';
+
+  @override
+  String get helpFaqQ22 => 'Can I split an item across multiple warehouses?';
+
+  @override
+  String get helpFaqA22 =>
+      'Yes. Create multiple stock entries for the same product and assign them to different warehouses. The product detail page aggregates the total stock across all warehouses and shows it broken down by location.';
+
+  @override
+  String get helpFaqQ23 =>
+      'Why are some items missing from the stocktake list?';
+
+  @override
+  String get helpFaqA23 =>
+      'The stocktake only includes items linked to a catalog product. Stock items without a product link (the \"Without product\" group) do not appear. Link the item first in the Inventory tab → Edit item → \"Link product\".';
+
+  @override
+  String get helpFaqQ24 => 'How do I turn off the low-stock push notification?';
+
+  @override
+  String get helpFaqA24 =>
+      'Settings → Push → disable the \"Low stock\" category. Push notifications for low stock will stop; the yellow warning in the dashboard and inventory tab remains as a silent indicator.';
+
+  @override
   String get helpPrivacySection => 'Privacy & contact';
 
   @override
@@ -1892,6 +2168,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inventoryEmpty => 'Inventory is empty.';
+
+  @override
+  String get inventoryEmptyHint => 'Use the + button to add your first item.';
 
   @override
   String get inventoryAddItem => 'Add item';
@@ -3362,4 +3641,792 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inboxSuggestionAccept => 'Accept';
+
+  @override
+  String get productCatalogTitle => 'Product catalog';
+
+  @override
+  String get productNew => 'New product';
+
+  @override
+  String get productUnit => 'Unit';
+
+  @override
+  String get productDefaultCostPrice => 'Default cost price';
+
+  @override
+  String get productDefaultSalePrice => 'Default sale price';
+
+  @override
+  String get productCategory => 'Category';
+
+  @override
+  String get productDefaultSupplier => 'Default supplier';
+
+  @override
+  String get productMinStock => 'Minimum stock';
+
+  @override
+  String get productTaxRate => 'VAT rate (%)';
+
+  @override
+  String get productIsActive => 'Active';
+
+  @override
+  String get productAdvancedSection => 'Advanced';
+
+  @override
+  String get productNameLabel => 'Product name';
+
+  @override
+  String get productSkuLabel => 'Article number (SKU)';
+
+  @override
+  String get productEanLabel => 'EAN / GTIN';
+
+  @override
+  String get productNoteLabel => 'Note';
+
+  @override
+  String get productEditTitle => 'Edit product';
+
+  @override
+  String get productAddTitle => 'New product';
+
+  @override
+  String get productGroupWithoutProduct => 'Without product';
+
+  @override
+  String get productCatalogEmpty => 'Empty product catalog';
+
+  @override
+  String get productCatalogEmptyHint => 'Create your first product.';
+
+  @override
+  String get productCatalogLoadError => 'Could not load product catalog.';
+
+  @override
+  String get productCatalogNoPermission =>
+      'You do not have permission to edit the product catalog.';
+
+  @override
+  String get productCatalogViewerHint =>
+      'You are viewing the product catalog in read-only mode.';
+
+  @override
+  String get productLinkLabel => 'Linked product';
+
+  @override
+  String get productNoLink => 'No linked product';
+
+  @override
+  String get productDetailTitle => 'Product details';
+
+  @override
+  String get productDetailEmpty => 'No data';
+
+  @override
+  String get productDetailEmptyHint => 'No movements for this item yet.';
+
+  @override
+  String get productDetailLoadError => 'Could not load product details.';
+
+  @override
+  String get movementTypeGoodsIn => 'Goods in';
+
+  @override
+  String get movementTypeGoodsOut => 'Goods out';
+
+  @override
+  String get movementTypeCorrection => 'Correction';
+
+  @override
+  String get movementTypeStocktake => 'Stocktake';
+
+  @override
+  String get movementTypeTransfer => 'Transfer';
+
+  @override
+  String get movementTypeSale => 'Sale';
+
+  @override
+  String get movementHistoryTitle => 'Movement history';
+
+  @override
+  String get productDetailSectionStammdaten => 'Master data';
+
+  @override
+  String get productDetailSectionStock => 'Stock';
+
+  @override
+  String get productDetailSectionSupplier => 'Supplier';
+
+  @override
+  String get productDetailSectionBatches => 'Batches';
+
+  @override
+  String get productDetailLabelSku => 'Article number (SKU)';
+
+  @override
+  String get productDetailLabelEan => 'EAN';
+
+  @override
+  String get productDetailLabelLocation => 'Location';
+
+  @override
+  String get productDetailLabelStatus => 'Status';
+
+  @override
+  String get productDetailLabelSupplier => 'Supplier';
+
+  @override
+  String get productDetailLabelQuantity => 'Stock';
+
+  @override
+  String get productDetailLabelMinStock => 'Minimum stock';
+
+  @override
+  String get productDetailLabelCostPrice => 'Cost price';
+
+  @override
+  String get productDetailLabelArrivalDate => 'Arrival date';
+
+  @override
+  String get productDetailLabelNote => 'Note';
+
+  @override
+  String get productDetailLabelCritical => 'Critical';
+
+  @override
+  String get productDetailLabelOk => 'OK';
+
+  @override
+  String get productDetailViewBatches => 'View batches';
+
+  @override
+  String get productDetailNoSupplier => 'No supplier';
+
+  @override
+  String get productDetailNoLocation => 'No location';
+
+  @override
+  String get productDetailViewerHint =>
+      'You have read-only access — booking actions unavailable.';
+
+  @override
+  String get productDetailRetry => 'Reload';
+
+  @override
+  String productDetailMovementQuantity(Object sign, int qty) {
+    return '$sign$qty';
+  }
+
+  @override
+  String get productDetailSectionProduct => 'Product (master data)';
+
+  @override
+  String get productDetailLabelProductUnit => 'Unit';
+
+  @override
+  String get productDetailLabelDefaultCostPrice => 'Default cost price';
+
+  @override
+  String get productDetailLabelDefaultSalePrice => 'Default sale price';
+
+  @override
+  String get productDetailLabelMinStockProduct => 'Min. stock (product)';
+
+  @override
+  String get productDetailLabelTaxRate => 'Tax rate';
+
+  @override
+  String get productDetailSectionAggregatedStock => 'Total stock';
+
+  @override
+  String get productDetailLabelTotalQty => 'Total (all warehouses)';
+
+  @override
+  String productDetailLabelWarehouseQty(Object warehouse) {
+    return 'Warehouse $warehouse';
+  }
+
+  @override
+  String get productDetailLabelNoWarehouse => 'No warehouse assigned';
+
+  @override
+  String get productDetailMovementsAllProduct =>
+      'All movements for this product (all stock rows).';
+
+  @override
+  String productDetailLoadMoreMovements(int count) {
+    return 'Load $count more';
+  }
+
+  @override
+  String get productDetailAllMovementsShown => 'All movements shown';
+
+  @override
+  String stockGroupItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String stockGroupTotalQuantity(int qty) {
+    return 'Total: $qty units';
+  }
+
+  @override
+  String get categoriesTitle => 'Categories';
+
+  @override
+  String get categoriesEmpty => 'No categories';
+
+  @override
+  String get categoriesEmptyHint => 'Create your first category.';
+
+  @override
+  String get categoriesLoadError => 'Could not load categories.';
+
+  @override
+  String get categoryNew => 'New category';
+
+  @override
+  String get categoryEdit => 'Edit category';
+
+  @override
+  String get categoryDelete => 'Delete category';
+
+  @override
+  String categoryDeletePrompt(Object name) {
+    return 'Delete \"$name\"?';
+  }
+
+  @override
+  String get categoryParent => 'Parent category';
+
+  @override
+  String get categoryParentNone => 'None (top-level)';
+
+  @override
+  String get categoryFieldName => 'Name';
+
+  @override
+  String get categoryFieldSortOrder => 'Sort order';
+
+  @override
+  String get categoryMaxDepthError =>
+      'Only 2 levels allowed. Please select a top-level category.';
+
+  @override
+  String get categorySortOrderHint => 'Number, lower = first';
+
+  @override
+  String get supplierAddress => 'Address';
+
+  @override
+  String get supplierAddressStreet => 'Street';
+
+  @override
+  String get supplierAddressZip => 'ZIP / Postal code';
+
+  @override
+  String get supplierAddressCity => 'City';
+
+  @override
+  String get supplierAddressCountry => 'Country';
+
+  @override
+  String get supplierVatId => 'VAT ID';
+
+  @override
+  String get supplierCustomerNumber => 'Customer number';
+
+  @override
+  String get supplierPaymentTerms => 'Payment terms (days)';
+
+  @override
+  String get supplierLeadTime => 'Lead time (days)';
+
+  @override
+  String get supplierMinOrderValue => 'Minimum order value';
+
+  @override
+  String get supplierAdvancedSection => 'Advanced details';
+
+  @override
+  String get commonDaysUnit => 'days';
+
+  @override
+  String get purchaseOrdersTitle => 'Orders';
+
+  @override
+  String get purchaseOrdersEmpty => 'No orders';
+
+  @override
+  String get purchaseOrdersEmptyHint => 'Create your first order.';
+
+  @override
+  String get purchaseOrdersLoadError => 'Could not load orders.';
+
+  @override
+  String get purchaseOrderNew => 'New order';
+
+  @override
+  String get purchaseOrderEdit => 'Edit order';
+
+  @override
+  String get purchaseOrderDelete => 'Delete order';
+
+  @override
+  String purchaseOrderDeletePrompt(Object number) {
+    return 'Delete order \"$number\"?';
+  }
+
+  @override
+  String get purchaseOrderStatusDraft => 'Draft';
+
+  @override
+  String get purchaseOrderStatusOrdered => 'Ordered';
+
+  @override
+  String get purchaseOrderStatusPartial => 'Partially received';
+
+  @override
+  String get purchaseOrderStatusReceived => 'Received';
+
+  @override
+  String get purchaseOrderStatusCancelled => 'Cancelled';
+
+  @override
+  String get purchaseOrderFieldSupplier => 'Supplier';
+
+  @override
+  String get purchaseOrderFieldSupplierHint => 'Select supplier';
+
+  @override
+  String get purchaseOrderFieldOrderDate => 'Order date';
+
+  @override
+  String get purchaseOrderFieldExpectedDate => 'Expected delivery date';
+
+  @override
+  String get purchaseOrderFieldNote => 'Note';
+
+  @override
+  String get purchaseOrderFieldNoteHint => 'Optional notes about the order';
+
+  @override
+  String get purchaseOrderSectionItems => 'Items';
+
+  @override
+  String get purchaseOrderItemsEmpty => 'No items';
+
+  @override
+  String get purchaseOrderItemAdd => 'Add item';
+
+  @override
+  String get purchaseOrderItemFieldProduct => 'Product';
+
+  @override
+  String get purchaseOrderItemFieldProductHint => 'Select product';
+
+  @override
+  String get purchaseOrderItemFieldQtyOrdered => 'Quantity';
+
+  @override
+  String get purchaseOrderItemFieldUnitPrice => 'Unit price (€)';
+
+  @override
+  String get purchaseOrderItemDelete => 'Delete item';
+
+  @override
+  String get purchaseOrderItemDeletePrompt => 'Delete this item?';
+
+  @override
+  String get purchaseOrderNoSupplierError => 'Please select a supplier.';
+
+  @override
+  String get purchaseOrderNoItemsError => 'At least one item is required.';
+
+  @override
+  String get purchaseOrderStatusToOrdered => 'Mark as ordered';
+
+  @override
+  String get purchaseOrderStatusToCancelled => 'Cancel order';
+
+  @override
+  String get purchaseOrderStatusChangeConfirm => 'Change status?';
+
+  @override
+  String get purchaseOrderDetailTitle => 'Order details';
+
+  @override
+  String get purchaseOrderDetailSectionHead => 'Order header';
+
+  @override
+  String get purchaseOrderLabelNumber => 'Order number';
+
+  @override
+  String get purchaseOrderLabelSupplier => 'Supplier';
+
+  @override
+  String get purchaseOrderLabelStatus => 'Status';
+
+  @override
+  String get purchaseOrderLabelOrderDate => 'Order date';
+
+  @override
+  String get purchaseOrderLabelExpectedDate => 'Expected';
+
+  @override
+  String get purchaseOrderLabelNote => 'Note';
+
+  @override
+  String get purchaseOrderLabelTotalNet => 'Net total';
+
+  @override
+  String get purchaseOrderDetailSectionItems => 'Items';
+
+  @override
+  String get purchaseOrderItemsLoadError => 'Could not load items.';
+
+  @override
+  String get goodsReceiptBook => 'Book goods receipt';
+
+  @override
+  String get goodsReceiptSuccess => 'Goods receipt booked.';
+
+  @override
+  String get goodsReceiptError => 'Error booking goods receipt.';
+
+  @override
+  String get goodsReceiptNoProduct =>
+      'This item has no linked product and cannot be booked.';
+
+  @override
+  String get quantityOrdered => 'Ordered';
+
+  @override
+  String get quantityReceived => 'Received';
+
+  @override
+  String get purchaseOrderScanBarcode => 'Scan barcode';
+
+  @override
+  String get purchaseOrderScanNoMatch => 'No product found for this barcode.';
+
+  @override
+  String get purchaseOrderPdfExport => 'PDF receipt';
+
+  @override
+  String get purchaseOrderPdfExportComingSoon =>
+      'PDF export is coming in a future update.';
+
+  @override
+  String get purchaseOrderPdfExportError => 'Could not create PDF receipt.';
+
+  @override
+  String get purchaseOrderStatusChangeError => 'Could not change status.';
+
+  @override
+  String get purchaseOrderViewerHint =>
+      'You have read-only access — booking actions unavailable.';
+
+  @override
+  String get purchaseOrderStatusAutoManaged =>
+      'This status is managed automatically.';
+
+  @override
+  String get poPdfDocumentTitle => 'Purchase Order';
+
+  @override
+  String get poPdfSupplierLabel => 'Supplier';
+
+  @override
+  String get poPdfVatIdLabel => 'VAT ID';
+
+  @override
+  String get poPdfOrderDateLabel => 'Order date';
+
+  @override
+  String get poPdfExpectedDateLabel => 'Expected delivery date';
+
+  @override
+  String get poPdfStatusLabel => 'Status';
+
+  @override
+  String get poPdfSectionItems => 'Line items';
+
+  @override
+  String get poPdfColProduct => 'Product';
+
+  @override
+  String get poPdfColOrdered => 'Ordered';
+
+  @override
+  String get poPdfColReceived => 'Received';
+
+  @override
+  String get poPdfColUnitPrice => 'Unit price';
+
+  @override
+  String get poPdfColLineTotal => 'Line total';
+
+  @override
+  String get poPdfTotalNetLabel => 'Net total';
+
+  @override
+  String get poPdfNoteLabel => 'Note';
+
+  @override
+  String get warehousesTitle => 'Warehouses';
+
+  @override
+  String get warehousesEmpty => 'No warehouses';
+
+  @override
+  String get warehousesEmptyHint => 'Create your first warehouse.';
+
+  @override
+  String get warehousesLoadError => 'Could not load warehouses.';
+
+  @override
+  String get warehouseNew => 'New warehouse';
+
+  @override
+  String get warehouseDefault => 'Main warehouse';
+
+  @override
+  String get warehouseEdit => 'Edit warehouse';
+
+  @override
+  String get warehouseNameLabel => 'Name';
+
+  @override
+  String get warehouseAddressLabel => 'Address';
+
+  @override
+  String get warehouseIsDefaultLabel => 'Default warehouse';
+
+  @override
+  String get warehouseIsActiveLabel => 'Active';
+
+  @override
+  String get warehouseInactiveBadge => 'Inactive';
+
+  @override
+  String warehouseDeletePrompt(Object name) {
+    return 'Delete warehouse \"$name\"?';
+  }
+
+  @override
+  String get inventoryWarehouseLabel => 'Warehouse';
+
+  @override
+  String get inventoryNoWarehouse => 'No warehouse';
+
+  @override
+  String get lowStockAlertTitle => 'Low stock';
+
+  @override
+  String lowStockAlertBody(Object count) {
+    return '$count items below minimum stock';
+  }
+
+  @override
+  String get lowStockReorderAction => 'Reorder now';
+
+  @override
+  String get reportStockValuation => 'Stock valuation';
+
+  @override
+  String get reportStockValuationSubtitle =>
+      'Total inventory value at cost price';
+
+  @override
+  String get reportStockValuationTotal => 'Total value';
+
+  @override
+  String get reportStockValuationUnits => 'Total units';
+
+  @override
+  String get reportStockValuationItemName => 'Item';
+
+  @override
+  String get reportStockValuationQuantity => 'Qty';
+
+  @override
+  String get reportStockValuationCostPrice => 'Cost';
+
+  @override
+  String get reportStockValuationValue => 'Value';
+
+  @override
+  String get reportStockValuationEmpty =>
+      'No inventory available for valuation.';
+
+  @override
+  String get reportInventoryTurnover => 'Inventory turnover';
+
+  @override
+  String get reportInventoryTurnoverSubtitle =>
+      'How often stock is sold and replaced';
+
+  @override
+  String get reportInventoryTurnoverRate => 'Turnover rate';
+
+  @override
+  String get reportInventoryTurnoverOutflow => 'Outflow (units)';
+
+  @override
+  String get reportInventoryTurnoverAvgStock => 'Avg. stock (units)';
+
+  @override
+  String get reportInventoryTurnoverMovements => 'Outflow entries';
+
+  @override
+  String get reportInventoryTurnoverNoData => 'No outflow movements available.';
+
+  @override
+  String get reportInventoryTurnoverHint => 'Ratio of outflow to average stock';
+
+  @override
+  String get reportAbcAnalysis => 'ABC analysis';
+
+  @override
+  String get reportAbcAnalysisSubtitle => 'Items classified by stock value';
+
+  @override
+  String get reportAbcClassA => 'A — High value (≤ 80 %)';
+
+  @override
+  String get reportAbcClassB => 'B — Medium value (80–95 %)';
+
+  @override
+  String get reportAbcClassC => 'C — Low value (> 95 %)';
+
+  @override
+  String get reportAbcItemName => 'Item';
+
+  @override
+  String get reportAbcItemValue => 'Value';
+
+  @override
+  String get reportAbcItemShare => 'Cum. share';
+
+  @override
+  String get reportAbcItemClass => 'Class';
+
+  @override
+  String get reportAbcEmpty => 'No inventory available for ABC analysis.';
+
+  @override
+  String reportAbcCountItems(int count) {
+    return '$count items';
+  }
+
+  @override
+  String get stocktakeTitle => 'Stocktake';
+
+  @override
+  String get stocktakeEmpty => 'No stocktakes';
+
+  @override
+  String get stocktakeEmptyHint => 'Start your first stocktake.';
+
+  @override
+  String get stocktakeLoadError => 'Could not load stocktakes.';
+
+  @override
+  String get stocktakeNew => 'New stocktake';
+
+  @override
+  String stocktakeProgress(int counted, int total) {
+    return '$counted/$total counted';
+  }
+
+  @override
+  String get stocktakeFilterUncounted => 'Uncounted only';
+
+  @override
+  String get stocktakeExpected => 'Expected';
+
+  @override
+  String get stocktakeCounted => 'Counted';
+
+  @override
+  String get stocktakeDifference => 'Difference';
+
+  @override
+  String get stocktakeStatusOpen => 'Open';
+
+  @override
+  String get stocktakeStatusCounting => 'Counting';
+
+  @override
+  String get stocktakeStatusClosed => 'Closed';
+
+  @override
+  String get stocktakeStatusCancelled => 'Cancelled';
+
+  @override
+  String get stocktakeTitleLabel => 'Title (optional)';
+
+  @override
+  String get stocktakeTitleHint => 'e.g. Year-end 2026';
+
+  @override
+  String get stocktakeSelectWarehouse => 'Warehouse (optional)';
+
+  @override
+  String get stocktakeAllWarehouses => 'All warehouses';
+
+  @override
+  String get stocktakeStartAction => 'Start stocktake';
+
+  @override
+  String get stocktakeStartError => 'Could not start stocktake.';
+
+  @override
+  String get stocktakeSaveError => 'Save failed — input kept locally.';
+
+  @override
+  String get stocktakeScanBarcode => 'Scan barcode';
+
+  @override
+  String get stocktakeScanNoMatch => 'No matching product found.';
+
+  @override
+  String get stocktakeCloseAction => 'Close stocktake';
+
+  @override
+  String get stocktakeCloseConfirm => 'Close stocktake?';
+
+  @override
+  String get stocktakeCloseConfirmHint =>
+      'The stocktake will be closed and differences will be posted. This action cannot be undone.';
+
+  @override
+  String get stocktakeCloseSuccess => 'Stocktake closed successfully.';
+
+  @override
+  String get stocktakeCloseError => 'Could not close stocktake.';
+
+  @override
+  String get stocktakeAllCounted => 'All positions counted.';
+
+  @override
+  String get stocktakeDiffReportTitle => 'Difference report';
+
+  @override
+  String get stocktakeDiffReportNoDiff => 'No differences — stock is correct.';
+
+  @override
+  String get stocktakeNoItems => 'No items';
 }
