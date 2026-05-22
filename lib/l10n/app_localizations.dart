@@ -6739,6 +6739,438 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Tage'**
   String get commonDaysUnit;
+
+  /// No description provided for @purchaseOrdersTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellungen'**
+  String get purchaseOrdersTitle;
+
+  /// No description provided for @purchaseOrdersEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Bestellungen'**
+  String get purchaseOrdersEmpty;
+
+  /// No description provided for @purchaseOrdersEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege deine erste Bestellung an.'**
+  String get purchaseOrdersEmptyHint;
+
+  /// No description provided for @purchaseOrdersLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellungen konnten nicht geladen werden.'**
+  String get purchaseOrdersLoadError;
+
+  /// No description provided for @purchaseOrderNew.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Bestellung'**
+  String get purchaseOrderNew;
+
+  /// No description provided for @purchaseOrderEdit.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellung bearbeiten'**
+  String get purchaseOrderEdit;
+
+  /// No description provided for @purchaseOrderDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellung löschen'**
+  String get purchaseOrderDelete;
+
+  /// No description provided for @purchaseOrderDeletePrompt.
+  ///
+  /// In de, this message translates to:
+  /// **'„{number}\" wirklich löschen?'**
+  String purchaseOrderDeletePrompt(Object number);
+
+  /// No description provided for @purchaseOrderStatusDraft.
+  ///
+  /// In de, this message translates to:
+  /// **'Entwurf'**
+  String get purchaseOrderStatusDraft;
+
+  /// No description provided for @purchaseOrderStatusOrdered.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellt'**
+  String get purchaseOrderStatusOrdered;
+
+  /// No description provided for @purchaseOrderStatusPartial.
+  ///
+  /// In de, this message translates to:
+  /// **'Teilweise erhalten'**
+  String get purchaseOrderStatusPartial;
+
+  /// No description provided for @purchaseOrderStatusReceived.
+  ///
+  /// In de, this message translates to:
+  /// **'Erhalten'**
+  String get purchaseOrderStatusReceived;
+
+  /// No description provided for @purchaseOrderStatusCancelled.
+  ///
+  /// In de, this message translates to:
+  /// **'Storniert'**
+  String get purchaseOrderStatusCancelled;
+
+  /// No description provided for @purchaseOrderFieldSupplier.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant'**
+  String get purchaseOrderFieldSupplier;
+
+  /// No description provided for @purchaseOrderFieldSupplierHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant wählen'**
+  String get purchaseOrderFieldSupplierHint;
+
+  /// No description provided for @purchaseOrderFieldOrderDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestelldatum'**
+  String get purchaseOrderFieldOrderDate;
+
+  /// No description provided for @purchaseOrderFieldExpectedDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Erwartetes Lieferdatum'**
+  String get purchaseOrderFieldExpectedDate;
+
+  /// No description provided for @purchaseOrderFieldNote.
+  ///
+  /// In de, this message translates to:
+  /// **'Notiz'**
+  String get purchaseOrderFieldNote;
+
+  /// No description provided for @purchaseOrderFieldNoteHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Optionale Anmerkungen zur Bestellung'**
+  String get purchaseOrderFieldNoteHint;
+
+  /// No description provided for @purchaseOrderSectionItems.
+  ///
+  /// In de, this message translates to:
+  /// **'Positionen'**
+  String get purchaseOrderSectionItems;
+
+  /// No description provided for @purchaseOrderItemsEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Positionen'**
+  String get purchaseOrderItemsEmpty;
+
+  /// No description provided for @purchaseOrderItemAdd.
+  ///
+  /// In de, this message translates to:
+  /// **'Position hinzufügen'**
+  String get purchaseOrderItemAdd;
+
+  /// No description provided for @purchaseOrderItemFieldProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel'**
+  String get purchaseOrderItemFieldProduct;
+
+  /// No description provided for @purchaseOrderItemFieldProductHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel wählen'**
+  String get purchaseOrderItemFieldProductHint;
+
+  /// No description provided for @purchaseOrderItemFieldQtyOrdered.
+  ///
+  /// In de, this message translates to:
+  /// **'Menge'**
+  String get purchaseOrderItemFieldQtyOrdered;
+
+  /// No description provided for @purchaseOrderItemFieldUnitPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Einzelpreis (€)'**
+  String get purchaseOrderItemFieldUnitPrice;
+
+  /// No description provided for @purchaseOrderItemDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Position löschen'**
+  String get purchaseOrderItemDelete;
+
+  /// No description provided for @purchaseOrderItemDeletePrompt.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Position wirklich löschen?'**
+  String get purchaseOrderItemDeletePrompt;
+
+  /// No description provided for @purchaseOrderNoSupplierError.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte einen Lieferanten auswählen.'**
+  String get purchaseOrderNoSupplierError;
+
+  /// No description provided for @purchaseOrderNoItemsError.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestens eine Position erforderlich.'**
+  String get purchaseOrderNoItemsError;
+
+  /// No description provided for @purchaseOrderStatusToOrdered.
+  ///
+  /// In de, this message translates to:
+  /// **'Als bestellt markieren'**
+  String get purchaseOrderStatusToOrdered;
+
+  /// No description provided for @purchaseOrderStatusToCancelled.
+  ///
+  /// In de, this message translates to:
+  /// **'Stornieren'**
+  String get purchaseOrderStatusToCancelled;
+
+  /// No description provided for @purchaseOrderStatusChangeConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Status wirklich ändern?'**
+  String get purchaseOrderStatusChangeConfirm;
+
+  /// No description provided for @purchaseOrderDetailTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestelldetails'**
+  String get purchaseOrderDetailTitle;
+
+  /// No description provided for @purchaseOrderDetailSectionHead.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellkopf'**
+  String get purchaseOrderDetailSectionHead;
+
+  /// No description provided for @purchaseOrderLabelNumber.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellnummer'**
+  String get purchaseOrderLabelNumber;
+
+  /// No description provided for @purchaseOrderLabelSupplier.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant'**
+  String get purchaseOrderLabelSupplier;
+
+  /// No description provided for @purchaseOrderLabelStatus.
+  ///
+  /// In de, this message translates to:
+  /// **'Status'**
+  String get purchaseOrderLabelStatus;
+
+  /// No description provided for @purchaseOrderLabelOrderDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestelldatum'**
+  String get purchaseOrderLabelOrderDate;
+
+  /// No description provided for @purchaseOrderLabelExpectedDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Erwartet'**
+  String get purchaseOrderLabelExpectedDate;
+
+  /// No description provided for @purchaseOrderLabelNote.
+  ///
+  /// In de, this message translates to:
+  /// **'Notiz'**
+  String get purchaseOrderLabelNote;
+
+  /// No description provided for @purchaseOrderLabelTotalNet.
+  ///
+  /// In de, this message translates to:
+  /// **'Nettosumme'**
+  String get purchaseOrderLabelTotalNet;
+
+  /// No description provided for @purchaseOrderDetailSectionItems.
+  ///
+  /// In de, this message translates to:
+  /// **'Positionen'**
+  String get purchaseOrderDetailSectionItems;
+
+  /// No description provided for @purchaseOrderItemsLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Positionen konnten nicht geladen werden.'**
+  String get purchaseOrderItemsLoadError;
+
+  /// No description provided for @goodsReceiptBook.
+  ///
+  /// In de, this message translates to:
+  /// **'Wareneingang buchen'**
+  String get goodsReceiptBook;
+
+  /// No description provided for @goodsReceiptSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Wareneingang gebucht.'**
+  String get goodsReceiptSuccess;
+
+  /// No description provided for @goodsReceiptError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Buchen des Wareneingangs.'**
+  String get goodsReceiptError;
+
+  /// No description provided for @goodsReceiptNoProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Position hat kein verknüpftes Produkt und kann nicht eingebucht werden.'**
+  String get goodsReceiptNoProduct;
+
+  /// No description provided for @quantityOrdered.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellt'**
+  String get quantityOrdered;
+
+  /// No description provided for @quantityReceived.
+  ///
+  /// In de, this message translates to:
+  /// **'Erhalten'**
+  String get quantityReceived;
+
+  /// No description provided for @purchaseOrderScanBarcode.
+  ///
+  /// In de, this message translates to:
+  /// **'Barcode scannen'**
+  String get purchaseOrderScanBarcode;
+
+  /// No description provided for @purchaseOrderScanNoMatch.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Artikel für diesen Barcode gefunden.'**
+  String get purchaseOrderScanNoMatch;
+
+  /// No description provided for @purchaseOrderPdfExport.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF-Beleg'**
+  String get purchaseOrderPdfExport;
+
+  /// No description provided for @purchaseOrderPdfExportComingSoon.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF-Export kommt in einem späteren Update.'**
+  String get purchaseOrderPdfExportComingSoon;
+
+  /// No description provided for @purchaseOrderPdfExportError.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF-Beleg konnte nicht erstellt werden.'**
+  String get purchaseOrderPdfExportError;
+
+  /// No description provided for @purchaseOrderStatusChangeError.
+  ///
+  /// In de, this message translates to:
+  /// **'Status konnte nicht geändert werden.'**
+  String get purchaseOrderStatusChangeError;
+
+  /// No description provided for @purchaseOrderViewerHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Du hast nur Lesezugriff — Buchungsaktionen nicht verfügbar.'**
+  String get purchaseOrderViewerHint;
+
+  /// No description provided for @purchaseOrderStatusAutoManaged.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieser Status wird automatisch gepflegt.'**
+  String get purchaseOrderStatusAutoManaged;
+
+  /// No description provided for @poPdfDocumentTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellbeleg'**
+  String get poPdfDocumentTitle;
+
+  /// No description provided for @poPdfSupplierLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant'**
+  String get poPdfSupplierLabel;
+
+  /// No description provided for @poPdfVatIdLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'USt-IdNr'**
+  String get poPdfVatIdLabel;
+
+  /// No description provided for @poPdfOrderDateLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestelldatum'**
+  String get poPdfOrderDateLabel;
+
+  /// No description provided for @poPdfExpectedDateLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Erwartetes Lieferdatum'**
+  String get poPdfExpectedDateLabel;
+
+  /// No description provided for @poPdfStatusLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Status'**
+  String get poPdfStatusLabel;
+
+  /// No description provided for @poPdfSectionItems.
+  ///
+  /// In de, this message translates to:
+  /// **'Positionen'**
+  String get poPdfSectionItems;
+
+  /// No description provided for @poPdfColProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel'**
+  String get poPdfColProduct;
+
+  /// No description provided for @poPdfColOrdered.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellt'**
+  String get poPdfColOrdered;
+
+  /// No description provided for @poPdfColReceived.
+  ///
+  /// In de, this message translates to:
+  /// **'Erhalten'**
+  String get poPdfColReceived;
+
+  /// No description provided for @poPdfColUnitPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Einzelpreis'**
+  String get poPdfColUnitPrice;
+
+  /// No description provided for @poPdfColLineTotal.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeilensumme'**
+  String get poPdfColLineTotal;
+
+  /// No description provided for @poPdfTotalNetLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Nettosumme'**
+  String get poPdfTotalNetLabel;
+
+  /// No description provided for @poPdfNoteLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Notiz'**
+  String get poPdfNoteLabel;
 }
 
 class _AppLocalizationsDelegate

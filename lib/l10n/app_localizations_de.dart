@@ -3712,4 +3712,235 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get commonDaysUnit => 'Tage';
+
+  @override
+  String get purchaseOrdersTitle => 'Bestellungen';
+
+  @override
+  String get purchaseOrdersEmpty => 'Keine Bestellungen';
+
+  @override
+  String get purchaseOrdersEmptyHint => 'Lege deine erste Bestellung an.';
+
+  @override
+  String get purchaseOrdersLoadError =>
+      'Bestellungen konnten nicht geladen werden.';
+
+  @override
+  String get purchaseOrderNew => 'Neue Bestellung';
+
+  @override
+  String get purchaseOrderEdit => 'Bestellung bearbeiten';
+
+  @override
+  String get purchaseOrderDelete => 'Bestellung löschen';
+
+  @override
+  String purchaseOrderDeletePrompt(Object number) {
+    return '„$number\" wirklich löschen?';
+  }
+
+  @override
+  String get purchaseOrderStatusDraft => 'Entwurf';
+
+  @override
+  String get purchaseOrderStatusOrdered => 'Bestellt';
+
+  @override
+  String get purchaseOrderStatusPartial => 'Teilweise erhalten';
+
+  @override
+  String get purchaseOrderStatusReceived => 'Erhalten';
+
+  @override
+  String get purchaseOrderStatusCancelled => 'Storniert';
+
+  @override
+  String get purchaseOrderFieldSupplier => 'Lieferant';
+
+  @override
+  String get purchaseOrderFieldSupplierHint => 'Lieferant wählen';
+
+  @override
+  String get purchaseOrderFieldOrderDate => 'Bestelldatum';
+
+  @override
+  String get purchaseOrderFieldExpectedDate => 'Erwartetes Lieferdatum';
+
+  @override
+  String get purchaseOrderFieldNote => 'Notiz';
+
+  @override
+  String get purchaseOrderFieldNoteHint =>
+      'Optionale Anmerkungen zur Bestellung';
+
+  @override
+  String get purchaseOrderSectionItems => 'Positionen';
+
+  @override
+  String get purchaseOrderItemsEmpty => 'Keine Positionen';
+
+  @override
+  String get purchaseOrderItemAdd => 'Position hinzufügen';
+
+  @override
+  String get purchaseOrderItemFieldProduct => 'Artikel';
+
+  @override
+  String get purchaseOrderItemFieldProductHint => 'Artikel wählen';
+
+  @override
+  String get purchaseOrderItemFieldQtyOrdered => 'Menge';
+
+  @override
+  String get purchaseOrderItemFieldUnitPrice => 'Einzelpreis (€)';
+
+  @override
+  String get purchaseOrderItemDelete => 'Position löschen';
+
+  @override
+  String get purchaseOrderItemDeletePrompt =>
+      'Diese Position wirklich löschen?';
+
+  @override
+  String get purchaseOrderNoSupplierError =>
+      'Bitte einen Lieferanten auswählen.';
+
+  @override
+  String get purchaseOrderNoItemsError =>
+      'Mindestens eine Position erforderlich.';
+
+  @override
+  String get purchaseOrderStatusToOrdered => 'Als bestellt markieren';
+
+  @override
+  String get purchaseOrderStatusToCancelled => 'Stornieren';
+
+  @override
+  String get purchaseOrderStatusChangeConfirm => 'Status wirklich ändern?';
+
+  @override
+  String get purchaseOrderDetailTitle => 'Bestelldetails';
+
+  @override
+  String get purchaseOrderDetailSectionHead => 'Bestellkopf';
+
+  @override
+  String get purchaseOrderLabelNumber => 'Bestellnummer';
+
+  @override
+  String get purchaseOrderLabelSupplier => 'Lieferant';
+
+  @override
+  String get purchaseOrderLabelStatus => 'Status';
+
+  @override
+  String get purchaseOrderLabelOrderDate => 'Bestelldatum';
+
+  @override
+  String get purchaseOrderLabelExpectedDate => 'Erwartet';
+
+  @override
+  String get purchaseOrderLabelNote => 'Notiz';
+
+  @override
+  String get purchaseOrderLabelTotalNet => 'Nettosumme';
+
+  @override
+  String get purchaseOrderDetailSectionItems => 'Positionen';
+
+  @override
+  String get purchaseOrderItemsLoadError =>
+      'Positionen konnten nicht geladen werden.';
+
+  @override
+  String get goodsReceiptBook => 'Wareneingang buchen';
+
+  @override
+  String get goodsReceiptSuccess => 'Wareneingang gebucht.';
+
+  @override
+  String get goodsReceiptError => 'Fehler beim Buchen des Wareneingangs.';
+
+  @override
+  String get goodsReceiptNoProduct =>
+      'Diese Position hat kein verknüpftes Produkt und kann nicht eingebucht werden.';
+
+  @override
+  String get quantityOrdered => 'Bestellt';
+
+  @override
+  String get quantityReceived => 'Erhalten';
+
+  @override
+  String get purchaseOrderScanBarcode => 'Barcode scannen';
+
+  @override
+  String get purchaseOrderScanNoMatch =>
+      'Kein Artikel für diesen Barcode gefunden.';
+
+  @override
+  String get purchaseOrderPdfExport => 'PDF-Beleg';
+
+  @override
+  String get purchaseOrderPdfExportComingSoon =>
+      'PDF-Export kommt in einem späteren Update.';
+
+  @override
+  String get purchaseOrderPdfExportError =>
+      'PDF-Beleg konnte nicht erstellt werden.';
+
+  @override
+  String get purchaseOrderStatusChangeError =>
+      'Status konnte nicht geändert werden.';
+
+  @override
+  String get purchaseOrderViewerHint =>
+      'Du hast nur Lesezugriff — Buchungsaktionen nicht verfügbar.';
+
+  @override
+  String get purchaseOrderStatusAutoManaged =>
+      'Dieser Status wird automatisch gepflegt.';
+
+  @override
+  String get poPdfDocumentTitle => 'Bestellbeleg';
+
+  @override
+  String get poPdfSupplierLabel => 'Lieferant';
+
+  @override
+  String get poPdfVatIdLabel => 'USt-IdNr';
+
+  @override
+  String get poPdfOrderDateLabel => 'Bestelldatum';
+
+  @override
+  String get poPdfExpectedDateLabel => 'Erwartetes Lieferdatum';
+
+  @override
+  String get poPdfStatusLabel => 'Status';
+
+  @override
+  String get poPdfSectionItems => 'Positionen';
+
+  @override
+  String get poPdfColProduct => 'Artikel';
+
+  @override
+  String get poPdfColOrdered => 'Bestellt';
+
+  @override
+  String get poPdfColReceived => 'Erhalten';
+
+  @override
+  String get poPdfColUnitPrice => 'Einzelpreis';
+
+  @override
+  String get poPdfColLineTotal => 'Zeilensumme';
+
+  @override
+  String get poPdfTotalNetLabel => 'Nettosumme';
+
+  @override
+  String get poPdfNoteLabel => 'Notiz';
 }

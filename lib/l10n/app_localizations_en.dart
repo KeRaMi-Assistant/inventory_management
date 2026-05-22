@@ -3702,4 +3702,226 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonDaysUnit => 'days';
+
+  @override
+  String get purchaseOrdersTitle => 'Orders';
+
+  @override
+  String get purchaseOrdersEmpty => 'No orders';
+
+  @override
+  String get purchaseOrdersEmptyHint => 'Create your first order.';
+
+  @override
+  String get purchaseOrdersLoadError => 'Could not load orders.';
+
+  @override
+  String get purchaseOrderNew => 'New order';
+
+  @override
+  String get purchaseOrderEdit => 'Edit order';
+
+  @override
+  String get purchaseOrderDelete => 'Delete order';
+
+  @override
+  String purchaseOrderDeletePrompt(Object number) {
+    return 'Delete order \"$number\"?';
+  }
+
+  @override
+  String get purchaseOrderStatusDraft => 'Draft';
+
+  @override
+  String get purchaseOrderStatusOrdered => 'Ordered';
+
+  @override
+  String get purchaseOrderStatusPartial => 'Partially received';
+
+  @override
+  String get purchaseOrderStatusReceived => 'Received';
+
+  @override
+  String get purchaseOrderStatusCancelled => 'Cancelled';
+
+  @override
+  String get purchaseOrderFieldSupplier => 'Supplier';
+
+  @override
+  String get purchaseOrderFieldSupplierHint => 'Select supplier';
+
+  @override
+  String get purchaseOrderFieldOrderDate => 'Order date';
+
+  @override
+  String get purchaseOrderFieldExpectedDate => 'Expected delivery date';
+
+  @override
+  String get purchaseOrderFieldNote => 'Note';
+
+  @override
+  String get purchaseOrderFieldNoteHint => 'Optional notes about the order';
+
+  @override
+  String get purchaseOrderSectionItems => 'Items';
+
+  @override
+  String get purchaseOrderItemsEmpty => 'No items';
+
+  @override
+  String get purchaseOrderItemAdd => 'Add item';
+
+  @override
+  String get purchaseOrderItemFieldProduct => 'Product';
+
+  @override
+  String get purchaseOrderItemFieldProductHint => 'Select product';
+
+  @override
+  String get purchaseOrderItemFieldQtyOrdered => 'Quantity';
+
+  @override
+  String get purchaseOrderItemFieldUnitPrice => 'Unit price (€)';
+
+  @override
+  String get purchaseOrderItemDelete => 'Delete item';
+
+  @override
+  String get purchaseOrderItemDeletePrompt => 'Delete this item?';
+
+  @override
+  String get purchaseOrderNoSupplierError => 'Please select a supplier.';
+
+  @override
+  String get purchaseOrderNoItemsError => 'At least one item is required.';
+
+  @override
+  String get purchaseOrderStatusToOrdered => 'Mark as ordered';
+
+  @override
+  String get purchaseOrderStatusToCancelled => 'Cancel order';
+
+  @override
+  String get purchaseOrderStatusChangeConfirm => 'Change status?';
+
+  @override
+  String get purchaseOrderDetailTitle => 'Order details';
+
+  @override
+  String get purchaseOrderDetailSectionHead => 'Order header';
+
+  @override
+  String get purchaseOrderLabelNumber => 'Order number';
+
+  @override
+  String get purchaseOrderLabelSupplier => 'Supplier';
+
+  @override
+  String get purchaseOrderLabelStatus => 'Status';
+
+  @override
+  String get purchaseOrderLabelOrderDate => 'Order date';
+
+  @override
+  String get purchaseOrderLabelExpectedDate => 'Expected';
+
+  @override
+  String get purchaseOrderLabelNote => 'Note';
+
+  @override
+  String get purchaseOrderLabelTotalNet => 'Net total';
+
+  @override
+  String get purchaseOrderDetailSectionItems => 'Items';
+
+  @override
+  String get purchaseOrderItemsLoadError => 'Could not load items.';
+
+  @override
+  String get goodsReceiptBook => 'Book goods receipt';
+
+  @override
+  String get goodsReceiptSuccess => 'Goods receipt booked.';
+
+  @override
+  String get goodsReceiptError => 'Error booking goods receipt.';
+
+  @override
+  String get goodsReceiptNoProduct =>
+      'This item has no linked product and cannot be booked.';
+
+  @override
+  String get quantityOrdered => 'Ordered';
+
+  @override
+  String get quantityReceived => 'Received';
+
+  @override
+  String get purchaseOrderScanBarcode => 'Scan barcode';
+
+  @override
+  String get purchaseOrderScanNoMatch => 'No product found for this barcode.';
+
+  @override
+  String get purchaseOrderPdfExport => 'PDF receipt';
+
+  @override
+  String get purchaseOrderPdfExportComingSoon =>
+      'PDF export is coming in a future update.';
+
+  @override
+  String get purchaseOrderPdfExportError => 'Could not create PDF receipt.';
+
+  @override
+  String get purchaseOrderStatusChangeError => 'Could not change status.';
+
+  @override
+  String get purchaseOrderViewerHint =>
+      'You have read-only access — booking actions unavailable.';
+
+  @override
+  String get purchaseOrderStatusAutoManaged =>
+      'This status is managed automatically.';
+
+  @override
+  String get poPdfDocumentTitle => 'Purchase Order';
+
+  @override
+  String get poPdfSupplierLabel => 'Supplier';
+
+  @override
+  String get poPdfVatIdLabel => 'VAT ID';
+
+  @override
+  String get poPdfOrderDateLabel => 'Order date';
+
+  @override
+  String get poPdfExpectedDateLabel => 'Expected delivery date';
+
+  @override
+  String get poPdfStatusLabel => 'Status';
+
+  @override
+  String get poPdfSectionItems => 'Line items';
+
+  @override
+  String get poPdfColProduct => 'Product';
+
+  @override
+  String get poPdfColOrdered => 'Ordered';
+
+  @override
+  String get poPdfColReceived => 'Received';
+
+  @override
+  String get poPdfColUnitPrice => 'Unit price';
+
+  @override
+  String get poPdfColLineTotal => 'Line total';
+
+  @override
+  String get poPdfTotalNetLabel => 'Net total';
+
+  @override
+  String get poPdfNoteLabel => 'Note';
 }

@@ -1072,29 +1072,29 @@ anbietet.
 
 ### Epic C — Bestellwesen (P1)
 
-- [ ] **C1** — Migration `purchase_orders` + `purchase_order_items`
+- [x] **C1** — Migration `purchase_orders` + `purchase_order_items`
   (Schema + 4-Policy-RLS + Status-Trigger + FK-Cross-Workspace-Trigger
   für `purchase_orders.supplier_id` und `purchase_order_items.product_id`/
   `purchase_order_id`); Down-Migration. `agent:db-migrator` ·
   `model:Opus` · `depends:AF1`
-- [ ] **C2** — Models `PurchaseOrder`, `PurchaseOrderItem` NEU +
+- [x] **C2** — Models `PurchaseOrder`, `PurchaseOrderItem` NEU +
   Round-Trip-Tests. `agent:flutter-coder` · `model:Sonnet` · `depends:C1`
-- [ ] **C3** — `SupabaseRepository` + Provider: PO-CRUD (client-seitige
+- [x] **C3** — `SupabaseRepository` + Provider: PO-CRUD (client-seitige
   `order_number`-Vergabe mit Retry bei UNIQUE-Kollision);
   `purchase_order_items` lazy pro Detail-Screen.
   `agent:flutter-coder` · `model:Sonnet` · `depends:C2`
-- [ ] **C4** — Provider: Wareneingang buchen — **atomares** Increment von
+- [x] **C4** — Provider: Wareneingang buchen — **atomares** Increment von
   `quantity_received` (`SET ... = ... + :x`), schreibt `goods_in`-Movement,
   erhöht Bestand; Unit-Test mit simulierter Parallel-Buchung.
   `agent:flutter-coder` · `model:Sonnet` · `depends:C3`
-- [ ] **C5** — `purchase_orders_screen.dart` + `purchase_order_detail_screen.dart`
+- [x] **C5** — `purchase_orders_screen.dart` + `purchase_order_detail_screen.dart`
   NEU als **Sub-Routen des Warenwirtschaft-Hubs** (KEIN neuer `MainTab`);
   Wareneingang-Buchen-UX (Touch-Stepper, Barcode-Einsprung), States +
   A11y-Keys. `agent:ui-builder` · `model:Sonnet` · `depends:C4,AF11`
-- [ ] **C6** — PDF-Beleg: Bestell-/Lieferschein-PDF via `pdf`/`printing`
+- [x] **C6** — PDF-Beleg: Bestell-/Lieferschein-PDF via `pdf`/`printing`
   (Pattern aus `statistics_export_service.dart`).
   `agent:flutter-coder` · `model:Sonnet` · `depends:C5`
-- [ ] **C7** — l10n-Keys Epic C + Unit-Tests + `smoke-full-app-audit`;
+- [x] **C7** — l10n-Keys Epic C + Unit-Tests + `smoke-full-app-audit`;
   `_page-registry.md`: Sub-Routen `purchase_orders`, `purchase_order_detail`
   + Bestell-Dialog namentlich ergänzen; neuen Pflicht-Test-Schlüssel
   `goods-receipt-flow` definieren + dem PO-Detail zuweisen.

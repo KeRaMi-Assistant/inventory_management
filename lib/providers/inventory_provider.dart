@@ -13,6 +13,8 @@ import '../models/inventory_item.dart';
 import '../models/product.dart';
 import '../models/product_category.dart';
 import '../models/product_stock.dart';
+import '../models/purchase_order.dart';
+import '../models/purchase_order_item.dart';
 import '../models/shop.dart';
 import '../models/supplier.dart';
 import '../models/ticket.dart';
@@ -42,6 +44,11 @@ class InventoryProvider extends ChangeNotifier {
   List<ProductCategory> _productCategories = [];
   List<Product> _products = [];
 
+  /// Bestellköpfe (Epic C). `purchase_order_items` werden NICHT global
+  /// gehalten — sie werden lazy pro Detail-Screen geladen (Committee-
+  /// Empfehlung 1, analog `loadBatchesForItem`).
+  List<PurchaseOrder> _purchaseOrders = [];
+
   /// Aggregierter Lagerbestand aus dem DB-View `product_stock` (Epic A-full,
   /// read-only). Jede Row = Bestand eines Produkts pro Lager. Wird in
   /// [loadData] nach [loadAll] geladen — der View ist klein (workspace-weit)
@@ -69,6 +76,10 @@ class InventoryProvider extends ChangeNotifier {
   List<ProductCategory> get productCategories =>
       List.unmodifiable(_productCategories);
   List<Product> get products => List.unmodifiable(_products);
+
+  /// Bestellköpfe, absteigend nach Erstellungsdatum sortiert.
+  List<PurchaseOrder> get purchaseOrders =>
+      List.unmodifiable(_purchaseOrders);
 
   /// Aggregierter Lagerbestand pro Produkt/Lager aus dem View `product_stock`.
   /// Nur Rows mit `product_id IS NOT NULL` — nicht-verknüpfte Items fehlen
@@ -346,6 +357,7 @@ class InventoryProvider extends ChangeNotifier {
     _tickets = [];
     _productCategories = [];
     _products = [];
+    _purchaseOrders = [];
     _productStock = [];
     _lastError = null;
     _activeWorkspaceId = null;
@@ -371,6 +383,8 @@ class InventoryProvider extends ChangeNotifier {
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     _products = List.of(snapshot.products)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _purchaseOrders = List.of(snapshot.purchaseOrders)
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   // ── TICKETS ───────────────────────────────────────────────────────────────
@@ -863,6 +877,189 @@ class InventoryProvider extends ChangeNotifier {
       _log('Artikel gelöscht: ${product.name}', 'product');
     }
     notifyListeners();
+  }
+
+  // ── PURCHASE ORDERS ───────────────────────────────────────────────────────
+
+  /// Legt eine neue Bestellung an. Die `order_number` wird im Repository
+  /// client-seitig vergeben (mit UNIQUE-Constraint-Retry — siehe
+  /// `SupabaseRepository.insertPurchaseOrder`). Der zurückgegebene
+  /// `PurchaseOrder` hat die server-seitig zugewiesene `id` (BIGSERIAL).
+  Future<PurchaseOrder> addPurchaseOrder(PurchaseOrder order) async {
+    final saved = await _repository.insertPurchaseOrder(order);
+    _purchaseOrders.insert(0, saved);
+    _log('Bestellung angelegt: ${saved.orderNumber}', 'purchase_order');
+    notifyListeners();
+    return saved;
+  }
+
+  Future<void> updatePurchaseOrder(PurchaseOrder order) async {
+    final saved = await _repository.updatePurchaseOrder(order);
+    final idx = _purchaseOrders.indexWhere((po) => po.id == saved.id);
+    if (idx == -1) return;
+    _purchaseOrders[idx] = saved;
+    _purchaseOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _log('Bestellung aktualisiert: ${saved.orderNumber}', 'purchase_order');
+    notifyListeners();
+  }
+
+  /// Soft-Delete. Entfernt die Bestellung aus dem lokalen Cache.
+  /// Bestellpositionen (`purchase_order_items`) werden DB-seitig
+  /// durch `ON DELETE CASCADE` entfernt — sie liegen nicht im globalen
+  /// Cache, daher ist kein lokales Aufräumen nötig.
+  Future<void> deletePurchaseOrder(int id) async {
+    final order = _purchaseOrders.where((po) => po.id == id).firstOrNull;
+    await _repository.deletePurchaseOrder(id);
+    _purchaseOrders.removeWhere((po) => po.id == id);
+    if (order != null) {
+      _log('Bestellung gelöscht: ${order.orderNumber}', 'purchase_order');
+    }
+    notifyListeners();
+  }
+
+  // ── PURCHASE ORDER ITEMS (lazy — nur pro Detail-Screen) ──────────────────
+
+  /// Lädt alle Positionen einer Bestellung on-demand.
+  /// Pattern analog `loadBatchesForItem`: kein globaler State, der
+  /// Detail-Screen hält den State selbst (oder via Provider-Slot).
+  Future<List<PurchaseOrderItem>> loadPurchaseOrderItems(
+    int purchaseOrderId,
+  ) {
+    final wsId = _repository.activeWorkspaceId;
+    if (wsId == null) return Future.value(const []);
+    return _repository.loadPurchaseOrderItems(wsId, purchaseOrderId);
+  }
+
+  Future<PurchaseOrderItem> addPurchaseOrderItem(
+      PurchaseOrderItem item) async {
+    final saved = await _repository.insertPurchaseOrderItem(item);
+    _log('Bestellposition hinzugefügt', 'purchase_order');
+    return saved;
+  }
+
+  Future<PurchaseOrderItem> updatePurchaseOrderItem(
+      PurchaseOrderItem item) async {
+    final saved = await _repository.updatePurchaseOrderItem(item);
+    _log('Bestellposition aktualisiert', 'purchase_order');
+    return saved;
+  }
+
+  Future<void> deletePurchaseOrderItem(String id) async {
+    await _repository.deletePurchaseOrderItem(id);
+    _log('Bestellposition gelöscht', 'purchase_order');
+  }
+
+  // ── WARENEINGANG BUCHEN (C4) ──────────────────────────────────────────────
+
+  /// Bucht einen Wareneingang gegen eine Bestellposition.
+  ///
+  /// Pro Aufruf:
+  ///
+  /// 1. **Atomares Increment** von `purchase_order_items.quantity_received`
+  ///    via SECURITY-DEFINER-RPC `increment_po_item_received` —
+  ///    kein Read-modify-write (Committee-Finding 12, Risiko 7).
+  ///    Der DB-Status-Trigger (`purchase_order_items_status_trg`) pflegt
+  ///    `purchase_orders.status` automatisch; die App setzt den Status
+  ///    NICHT manuell.
+  ///
+  /// 2. **`goods_in`-Movement** für das verknüpfte `product_id` der
+  ///    Bestellposition, mit `unitCost` aus `unit_price` der Position.
+  ///
+  /// 3. **Bestandserhöhung**: Sucht eine aktive `inventory_items`-Row für
+  ///    das Produkt in `_inventoryItems` (lokaler Cache). Findet sie:
+  ///    erhöht via `updateInventoryItem`. Findet sie nicht: legt eine
+  ///    schlanke neue Row an (`insertInventoryItem`). Das Anlegen einer
+  ///    vollständigen Lager-Row (inkl. Lager/Warehouse) ist Epic D —
+  ///    für C4 genügt eine schlanke Row mit `productId`, `quantity` und
+  ///    `status = 'Im Lager'`.
+  ///
+  /// Wirft, wenn `item.productId == null` (PO-Position ohne verknüpftes
+  /// Produkt), wenn `receivedQty <= 0`, oder wenn die RPC fehlschlägt.
+  Future<PurchaseOrderItem> bookGoodsReceipt({
+    required PurchaseOrderItem item,
+    required int receivedQty,
+  }) async {
+    if (receivedQty <= 0) {
+      throw ArgumentError.value(
+          receivedQty, 'receivedQty', 'Menge muss > 0 sein.');
+    }
+    final productId = item.productId;
+    if (productId == null) {
+      throw ArgumentError(
+          'bookGoodsReceipt: PurchaseOrderItem hat keine product_id — '
+          'Wareneingang ohne Produkt-Verknüpfung nicht möglich.');
+    }
+
+    // 1. Atomares Increment auf der Datenbank-Seite.
+    final updatedItem =
+        await _repository.incrementPoItemReceived(item.id, receivedQty);
+
+    // 2. goods_in-Movement für das Produkt schreiben.
+    //    itemId: wir verwenden die item.id der Bestellposition als Referenz.
+    //    Da inventory_movements.item_id auf inventory_items verweist und hier
+    //    eine PO-Position die Quelle ist, setzen wir itemId optional auf die
+    //    erste existierende Bestands-Row des Produkts (oder leer, falls keine).
+    //    Das Movement ist primär über product_id auswertbar (Epic A-full).
+    // _inventoryItems enthält nur aktive Items (deleted_at IS NULL ist beim
+    // Load bereits gefiltert). Kein deletedAt auf InventoryItem-Model nötig.
+    final existingItemForProduct = _inventoryItems
+        .where((i) => i.productId == productId)
+        .firstOrNull;
+
+    final movement = InventoryMovement(
+      id: _uuid.v4(),
+      itemId: existingItemForProduct?.id ?? item.id,
+      date: DateTime.now(),
+      quantityChange: receivedQty,
+      reason: 'Wareneingang gegen Bestellung',
+      movementType: InventoryMovementType.goodsIn,
+      unitCost: item.unitPrice,
+      productId: productId,
+    );
+    final savedMovement = await _repository.insertMovement(movement);
+    _movements.insert(0, savedMovement);
+
+    // 3. Bestand erhöhen.
+    if (existingItemForProduct != null) {
+      // Bestehende Row erhöhen.
+      final updatedInventory = existingItemForProduct.copyWith(
+        quantity: existingItemForProduct.quantity + receivedQty,
+      );
+      final savedInventory =
+          await _repository.updateInventoryItem(updatedInventory);
+      final idx =
+          _inventoryItems.indexWhere((i) => i.id == savedInventory.id);
+      if (idx != -1) {
+        _inventoryItems[idx] = savedInventory;
+      }
+    } else {
+      // Keine existierende Bestands-Row für dieses Produkt →
+      // schlanke neue Row anlegen. Lager-Zuordnung (warehouse_id) ist
+      // Epic D — hier genügt eine Row mit productId + quantity.
+      // Der Produktname wird aus dem lokalen Cache gelöst.
+      final product = _products.where((p) => p.id == productId).firstOrNull;
+      final newItem = InventoryItem(
+        id: _uuid.v4(),
+        name: product?.name ?? productId,
+        sku: product?.sku,
+        quantity: receivedQty,
+        minStock: product?.minStock ?? 0,
+        costPrice: item.unitPrice,
+        arrivalDate: DateTime.now(),
+        status: 'Im Lager',
+        productId: productId,
+      );
+      final savedInventory = await _repository.insertInventoryItem(newItem);
+      _inventoryItems.add(savedInventory);
+      _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
+    }
+
+    _log(
+      'Wareneingang gebucht: +$receivedQty für Produkt $productId',
+      'purchase_order',
+    );
+    notifyListeners();
+    return updatedItem;
   }
 
   // ── INVENTORY ITEMS ───────────────────────────────────────────────────────

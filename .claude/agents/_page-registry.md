@@ -95,6 +95,8 @@ Dialogs müssen auf 390×844 ohne horizontalen Scroll funktionieren.
 | `/deals` → Attachment-Gallery | [`lib/widgets/attachment_gallery.dart`](../../lib/widgets/attachment_gallery.dart) | smoke-theme |
 | `/deals` → Tracking-Review-Filter | [`lib/widgets/deal_table.dart`](../../lib/widgets/deal_table.dart) (`_FilterBar`) | smoke-tracking-review-chip | Filter-Chip „Prüfen ({count})" filtert auf `tracking_needs_review=true`. Sichtbar nur wenn Count > 0. Kein eigener Top-Level-Screen (Council-Finding #10). Banner in Inbox + Deals via `lib/widgets/tracking_banner_improved_detection.dart`. Badge auf Inbox-Nav-Tab (Index 3). |
 | `/statistics` → Product-Drilldown | [`lib/widgets/statistics/product_drilldown_sheet.dart`](../../lib/widgets/statistics/product_drilldown_sheet.dart) | smoke-theme, mobile-overflow |
+| `/warehouse` → Bestellungen (Sub-Route) | [`lib/screens/purchase_orders_screen.dart`](../../lib/screens/purchase_orders_screen.dart) | smoke-theme, mobile-overflow | Liste der Bestellungen mit Status-Badges; FAB „Neue Bestellung" (`Key('poNewFab')`). Sub-Route des Warenwirtschaft-Hubs, kein eigener MainTab. Viewer → FAB ausgeblendet. Epic C (C5). |
+| `/warehouse` → Bestellungs-Detail (Sub-Route) | [`lib/screens/purchase_order_detail_screen.dart`](../../lib/screens/purchase_order_detail_screen.dart) | smoke-theme, mobile-overflow, goods-receipt-flow | Positionen, Wareneingang buchen (Soll/Ist-Stepper), Status, PDF-Export. A11y-Keys: `Key('poCard-<id>')`, `Key('goodsReceiptBookButton')`, `Key('poItemReceivedStepper-<id>')`, `Key('poPdfExportButton')`. Epic C (C6). |
 
 ## Pflicht-Tests-Definitionen
 
@@ -132,6 +134,13 @@ Tester nutzt sie als Sprungmarken in seinem System-Prompt.
   speichern → Eintrag erscheint in Tabelle → Edit → Delete.
 - `public-render` — Public-Profile-URL `/u/test-handle` rendert ohne
   Login-Redirect.
+- `goods-receipt-flow` — Wareneingang gegen eine Bestellung buchen:
+  Bestellungs-Detail öffnen → Position via `Key('poItemReceivedStepper-<id>')`
+  auswählen → Menge per Stepper erhöhen → „Wareneingang buchen"
+  (`Key('goodsReceiptBookButton')`) tippen → `quantity_received` der
+  Position steigt, PO-Status wechselt auf `partially_received` oder
+  `received` je nach verbleibender offener Menge. Kein Overflow,
+  kein Crash auf Phone-Viewport.
 
 ## Pflege-Hinweise
 

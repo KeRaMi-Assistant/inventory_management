@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import 'categories_screen.dart';
+import 'purchase_orders_screen.dart';
 import 'statistics_screen.dart';
 
 /// Hub-Screen für die Warenwirtschaft (AF11).
@@ -49,13 +50,17 @@ class WarehouseHubScreen extends StatelessWidget {
         ),
 
         // ── Bestellungen (Epic C) ─────────────────────────────────────
-        // TODO(C5): ersetze onTap durch Navigator.push(PurchaseOrdersScreen)
         _HubTile(
           key: const Key('hubTilePurchaseOrders'),
           icon: Icons.shopping_cart_outlined,
           title: l10n.warehouseHubTilePurchaseOrders,
-          isPlaceholder: true, // Epic C
-          onTap: () => _showComingSoon(context, l10n),
+          isPlaceholder: false,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const PurchaseOrdersScreen(),
+            ),
+          ),
         ),
 
         // ── Lager (Epic D) ────────────────────────────────────────────

@@ -13,6 +13,8 @@ import '../models/product.dart';
 import '../models/product_category.dart';
 import '../models/product_stock.dart';
 import '../models/product_supplier.dart';
+import '../models/purchase_order.dart';
+import '../models/purchase_order_item.dart';
 import '../models/shop.dart';
 import '../models/supplier.dart';
 import '../models/ticket.dart';
@@ -35,6 +37,11 @@ class CloudSnapshot {
   /// on-demand pro Detail-Screen geladen (Committee-Empfehlung 1).
   final List<Product> products;
 
+  /// Bestellköpfe (Epic C). `purchase_order_items` sind NICHT im globalen
+  /// Snapshot — sie werden lazy pro Detail-Screen geladen (Committee-
+  /// Empfehlung 1, analog `loadBatchesForItem`).
+  final List<PurchaseOrder> purchaseOrders;
+
   const CloudSnapshot({
     required this.deals,
     required this.buyers,
@@ -46,6 +53,7 @@ class CloudSnapshot {
     this.tickets = const [],
     this.productCategories = const [],
     this.products = const [],
+    this.purchaseOrders = const [],
   });
 
   bool get isEmpty =>
@@ -58,7 +66,8 @@ class CloudSnapshot {
       activities.isEmpty &&
       tickets.isEmpty &&
       productCategories.isEmpty &&
-      products.isEmpty;
+      products.isEmpty &&
+      purchaseOrders.isEmpty;
 }
 
 /// Single point of contact with the Supabase backend. All RLS-scoped tables
@@ -137,6 +146,7 @@ class SupabaseRepository {
         tickets: [],
         productCategories: [],
         products: [],
+        purchaseOrders: [],
       );
     }
     final results = await Future.wait([
@@ -198,6 +208,12 @@ class SupabaseRepository {
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
           .order('name', ascending: true),
+      _client
+          .from('purchase_orders')
+          .select()
+          .eq('workspace_id', ws)
+          .filter('deleted_at', 'is', null)
+          .order('created_at', ascending: false),
     ]);
 
     final dealRows = (results[0] as List).cast<Map<String, dynamic>>();
@@ -210,6 +226,8 @@ class SupabaseRepository {
     final ticketRows = (results[7] as List).cast<Map<String, dynamic>>();
     final categoryRows = (results[8] as List).cast<Map<String, dynamic>>();
     final productRows = (results[9] as List).cast<Map<String, dynamic>>();
+    final purchaseOrderRows =
+        (results[10] as List).cast<Map<String, dynamic>>();
 
     final inventoryItems =
         itemRows.map(InventoryItem.fromSupabase).toList();
@@ -242,6 +260,8 @@ class SupabaseRepository {
       productCategories:
           categoryRows.map(ProductCategory.fromSupabase).toList(),
       products: productRows.map(Product.fromSupabase).toList(),
+      purchaseOrders:
+          purchaseOrderRows.map(PurchaseOrder.fromSupabase).toList(),
     );
   }
 
@@ -706,6 +726,221 @@ class SupabaseRepository {
         .cast<Map<String, dynamic>>()
         .map(ProductStock.fromSupabase)
         .toList();
+  }
+
+  // ── Purchase orders (Bestellwesen — Epic C) ──────────────────────────────
+  //
+  // Bestellköpfe liegen im globalen Snapshot (`CloudSnapshot.purchaseOrders`).
+  // `purchase_order_items` sind Detail-Rows und werden LAZY pro Detail-Screen
+  // geladen — Pattern analog `loadBatchesForItem`.
+  //
+  // order_number-Vergabe:
+  //   client-seitig, Format "PO-<YYYY>-<4-stellig>" (z.B. "PO-2026-0001").
+  //   Bei UNIQUE-Constraint-Kollision (`23505`) retryt `insertPurchaseOrder`
+  //   mit der nächsthöheren Nummer (max 5 Versuche, dann Exception).
+  //   Lücken in der Nummerierung sind erlaubt (Pre-Launch-Entscheidung,
+  //   Committee-Finding 12 / API-Kapitel).
+
+  /// Lädt alle aktiven Bestellköpfe des Workspaces.
+  /// Nur für direkte Aufrufe außerhalb von `loadAll()` gedacht
+  /// (z. B. nach einem Workspace-Switch ohne Full-Reload).
+  Future<List<PurchaseOrder>> loadPurchaseOrders(String workspaceId) async {
+    final rows = await _client
+        .from('purchase_orders')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .filter('deleted_at', 'is', null)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(PurchaseOrder.fromSupabase)
+        .toList();
+  }
+
+  /// Generiert die nächste `order_number` für den aktiven Workspace im
+  /// aktuellen Jahr. Format: `PO-<YYYY>-<4-stellig>` (z. B. `PO-2026-0001`).
+  ///
+  /// Leitet die laufende Nummer aus den bestehenden `purchase_orders` des
+  /// Workspaces im aktuellen Jahr ab: höchste vorhandene Sequenznummer + 1.
+  /// Gibt `PO-<YYYY>-0001` zurück, wenn noch keine Bestellungen für dieses
+  /// Jahr vorhanden sind.
+  Future<String> _nextOrderNumber() async {
+    final ws = _wsId;
+    final year = DateTime.now().year;
+    final prefix = 'PO-$year-';
+
+    // Nur Bestellungen des aktuellen Jahres mit dem erwarteten Prefix laden.
+    final rows = await _client
+        .from('purchase_orders')
+        .select('order_number')
+        .eq('workspace_id', ws)
+        .like('order_number', '$prefix%');
+
+    int maxSeq = 0;
+    for (final row in (rows as List).cast<Map<String, dynamic>>()) {
+      final orderNumber = row['order_number'] as String?;
+      if (orderNumber == null) continue;
+      // Format: PO-YYYY-NNNN → letztes Segment nach dem letzten '-'.
+      final parts = orderNumber.split('-');
+      if (parts.length < 3) continue;
+      final seq = int.tryParse(parts.last);
+      if (seq != null && seq > maxSeq) maxSeq = seq;
+    }
+
+    final nextSeq = maxSeq + 1;
+    return '$prefix${nextSeq.toString().padLeft(4, '0')}';
+  }
+
+  /// Legt eine neue Bestellung an. Die `order_number` wird client-seitig
+  /// vergeben (siehe `_nextOrderNumber`). Bei UNIQUE-Constraint-Verletzung
+  /// (`23505`) wird mit der nächsthöheren Nummer retried (max 5 Versuche).
+  Future<PurchaseOrder> insertPurchaseOrder(PurchaseOrder order) async {
+    const maxRetries = 5;
+    final year = DateTime.now().year;
+    final prefix = 'PO-$year-';
+
+    // Startnummer aus der Hilfsmethode holen.
+    var currentNumber = await _nextOrderNumber();
+
+    for (var attempt = 0; attempt < maxRetries; attempt++) {
+      final payload = order
+          .copyWith(orderNumber: currentNumber)
+          .toSupabaseInsert()
+        ..['user_id'] = _userId
+        ..['workspace_id'] = _wsId;
+      try {
+        final row = await _client
+            .from('purchase_orders')
+            .insert(payload)
+            .select()
+            .single();
+        return PurchaseOrder.fromSupabase(row);
+      } catch (e) {
+        // Postgres-Fehlercode 23505 = UNIQUE-Violation auf (workspace_id, order_number).
+        final isUniqueViolation = e.toString().contains('23505') ||
+            e.toString().contains('unique') ||
+            e.toString().contains('duplicate');
+        if (!isUniqueViolation || attempt == maxRetries - 1) rethrow;
+
+        // Nächsthöhere Nummer aus dem aktuellen Wert ableiten.
+        // Format: PO-YYYY-NNNN → letztes Segment hochzählen.
+        final parts = currentNumber.split('-');
+        final seq = int.tryParse(parts.last) ?? 0;
+        currentNumber = '$prefix${(seq + 1).toString().padLeft(4, '0')}';
+      }
+    }
+    // Dieser Zweig ist durch den Schleifenaufbau nicht erreichbar, aber
+    // Dart benötigt einen Rückgabewert außerhalb der Schleife.
+    throw StateError(
+        'insertPurchaseOrder: Maximale Retry-Anzahl ($maxRetries) '
+        'für order_number-Vergabe überschritten.');
+  }
+
+  Future<PurchaseOrder> updatePurchaseOrder(PurchaseOrder order) async {
+    final payload = order.toSupabaseInsert();
+    final row = await _client
+        .from('purchase_orders')
+        .update(payload)
+        .eq('id', order.id as Object)
+        .select()
+        .single();
+    return PurchaseOrder.fromSupabase(row);
+  }
+
+  /// Soft-Delete: setzt `deleted_at` auf die aktuelle UTC-Zeit.
+  Future<void> deletePurchaseOrder(int id) async {
+    await _client
+        .from('purchase_orders')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  // ── Purchase order items (lazy — nur pro Detail-Screen) ──────────────────
+  //
+  // Pattern analog `loadProductSuppliers`: die Kind-Tabelle hat eigene
+  // `workspace_id`-Spalte (RLS-sicher, auch ohne Parent-Join).
+
+  /// Lädt alle aktiven Positionen einer Bestellung.
+  /// Lazy: wird pro `purchase_order_detail_screen` on-demand aufgerufen.
+  Future<List<PurchaseOrderItem>> loadPurchaseOrderItems(
+    String workspaceId,
+    int purchaseOrderId,
+  ) async {
+    final rows = await _client
+        .from('purchase_order_items')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .eq('purchase_order_id', purchaseOrderId)
+        .filter('deleted_at', 'is', null)
+        .order('created_at', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(PurchaseOrderItem.fromSupabase)
+        .toList();
+  }
+
+  Future<PurchaseOrderItem> insertPurchaseOrderItem(
+      PurchaseOrderItem item) async {
+    final payload = item.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('purchase_order_items')
+        .insert(payload)
+        .select()
+        .single();
+    return PurchaseOrderItem.fromSupabase(row);
+  }
+
+  Future<PurchaseOrderItem> updatePurchaseOrderItem(
+      PurchaseOrderItem item) async {
+    final payload = item.toSupabaseInsert();
+    final row = await _client
+        .from('purchase_order_items')
+        .update(payload)
+        .eq('id', item.id)
+        .select()
+        .single();
+    return PurchaseOrderItem.fromSupabase(row);
+  }
+
+  /// Soft-Delete einer Bestellposition.
+  Future<void> deletePurchaseOrderItem(String id) async {
+    await _client
+        .from('purchase_order_items')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  /// Inkrementiert `quantity_received` einer Bestellposition **atomar**
+  /// (serverseitiges `SET quantity_received = quantity_received + p_qty`)
+  /// über die SECURITY-DEFINER-RPC `increment_po_item_received`.
+  ///
+  /// Kein Read-modify-write: der Supabase-Dart-Client kann keinen
+  /// SQL-Ausdruck (kein `raw(...)`) als Update-Value setzen — daher ist die
+  /// RPC der einzig sichere Weg für das atomare Increment (Committee-Finding 12,
+  /// Risiko 7).
+  ///
+  /// Der Status-Trigger `purchase_order_items_status_trg` feuert auf das
+  /// UPDATE und pflegt `purchase_orders.status` automatisch. Die App setzt
+  /// den Status NICHT manuell.
+  ///
+  /// Wirft bei unbekannter/gelöschter Item-ID, fehlender Workspace-Mitglied-
+  /// schaft oder ungültiger Menge (p_qty <= 0).
+  Future<PurchaseOrderItem> incrementPoItemReceived(
+    String itemId,
+    int qty,
+  ) async {
+    final rows = await _client.rpc(
+      'increment_po_item_received',
+      params: {'p_item_id': itemId, 'p_qty': qty},
+    );
+    final list = (rows as List).cast<Map<String, dynamic>>();
+    if (list.isEmpty) {
+      throw StateError(
+          'increment_po_item_received returned no row for item $itemId');
+    }
+    return PurchaseOrderItem.fromSupabase(list.first);
   }
 
   // ── Inventory items ───────────────────────────────────────────────────────
