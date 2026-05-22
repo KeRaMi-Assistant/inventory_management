@@ -81,10 +81,26 @@ const toIso = (raw: string | undefined): string | undefined => {
 }
 
 // ── DHL ──────────────────────────────────────────────────────────────────
-// Endpoint: `https://api-eu.dhl.com/track/shipments?trackingNumber=...`
-// Auth   : `DHL-API-Key: <apiKey>` Header. Liefert JSON mit `shipments[]`,
-//          jedes Shipment hat `status.statusCode` (z.B. `delivered`,
-//          `transit`, `unknown`) und `status.timestamp`.
+// Endpoint: `https://api-eu.dhl.com/parcel/de/tracking/v0/shipments?trackingNumber=...`
+// Auth    : `DHL-API-Key: <apiKey>` Header.
+//
+// Hintergrund 2026-05-22: Die "Shipment Tracking – Unified" API
+// (`/track/shipments`) wurde für unsere App-Registrierung revoked. Stattdessen
+// hat die App die "Parcel DE Tracking (Post & Parcel Germany)" API
+// freigeschaltet (10 000 000 calls/day vs. 250/day bei Unified). Wir migrieren
+// deshalb auf `/parcel/de/tracking/v0/shipments`.
+//
+// Die Parcel-DE-Tracking-API spricht XML als Standard, kann aber via
+// `Accept: application/json` JSON zurückgeben. Field-Namen bleiben hyphenated
+// (`piece-code`, `status-timestamp`, `delivery-event-flag`, `pieceshipment`).
+// Wir parsen defensiv beide Schemas:
+//   * Variante A (Unified-style, falls die JSON-Variante darauf gemappt wird):
+//     `{ shipments: [{ status: { statusCode, status, description, timestamp } }] }`.
+//   * Variante B (Parcel-DE-XML-to-JSON):
+//     `{ pieceshipmentlist: { pieceshipment: [{ piece-code, status,
+//       status-timestamp, delivery-event-flag, pieceeventlist:{ pieceevent:[...] } }] } }`.
+// Beide Pfade werden in `parseResponse` probiert. Bestehende Unified-Tests
+// bleiben dadurch grün; neue Parcel-DE-Samples werden ebenfalls erkannt.
 export const dhlAdapter: TrackingAdapter = {
   id: 'dhl',
   label: 'DHL',
@@ -99,8 +115,14 @@ export const dhlAdapter: TrackingAdapter = {
   /// akzeptiert den Key nicht" (401/403 → auth_error, kurze TTL +
   /// last_error auf workspace_carrier_credentials).
   async probeStatus(tracking, apiKey): Promise<ProbeOutcome> {
-    const url = new URL('https://api-eu.dhl.com/track/shipments')
+    const url = new URL(
+      'https://api-eu.dhl.com/parcel/de/tracking/v0/shipments',
+    )
+    // Beide Parameter-Namen mitgeben — die Unified-API kannte
+    // `trackingNumber`, die Parcel-DE-API spricht historisch `piece-code`.
+    // Doppel-Set ist safe: der jeweils nicht verstandene Param wird ignoriert.
     url.searchParams.set('trackingNumber', tracking)
+    url.searchParams.set('piece-code', tracking)
     let res: Response
     try {
       res = await fetch(url.toString(), {
@@ -130,34 +152,168 @@ export const dhlAdapter: TrackingAdapter = {
 
   parseResponse(payload) {
     if (!isObject(payload)) return null
-    const shipments = payload.shipments
-    if (!Array.isArray(shipments) || shipments.length === 0) return null
-    const shipment = shipments[0]
-    if (!isObject(shipment)) return null
-    const status = isObject(shipment.status) ? shipment.status : null
-    const code = pickString(status, 'statusCode', 'status')?.toLowerCase()
-    // `status`-Feld zuerst: bei DHL ist das das kurze, kuratierte Label
-    // ("Zugestellt", "In Zustellung"). `description` ist der ausgeschriebene
-    // Satz mit kleingeschriebenem Verb — weniger nützlich als Last-Event.
-    const description =
-      pickString(status, 'status', 'description') ?? undefined
-    const timestamp = pickString(status, 'timestamp')
 
-    let normalized: TrackingDeliveryStatus = 'unknown'
-    if (code === 'delivered') normalized = 'delivered'
-    else if (code === 'transit' || code === 'pre-transit' || code === 'out-for-delivery') {
-      normalized = 'in_transit'
-    } else if (code === 'failure' || code === 'exception') {
-      normalized = 'exception'
-    }
+    // Variante A — Unified-style JSON: `{ shipments: [{ status: {...} }] }`.
+    const unified = parseDhlUnified(payload)
+    if (unified) return unified
 
-    return {
-      status: normalized,
-      deliveredAt: normalized === 'delivered' ? toIso(timestamp) : undefined,
-      lastEvent: description,
-      rawStatusCode: code,
-    }
+    // Variante B — Parcel-DE-style JSON (XML-to-JSON):
+    //   `{ pieceshipmentlist: { pieceshipment: [...] } }`.
+    const parcelDe = parseDhlParcelDe(payload)
+    if (parcelDe) return parcelDe
+
+    return null
   },
+}
+
+/// Parser für das Unified-/Shipment-Tracking-Schema:
+///   `{ shipments: [{ status: { statusCode, status, description, timestamp } }] }`
+function parseDhlUnified(
+  payload: Record<string, unknown>,
+): ParsedTracking | null {
+  const shipments = payload.shipments
+  if (!Array.isArray(shipments) || shipments.length === 0) return null
+  const shipment = shipments[0]
+  if (!isObject(shipment)) return null
+  const status = isObject(shipment.status) ? shipment.status : null
+  if (!status) return null
+  const code = pickString(status, 'statusCode', 'status')?.toLowerCase()
+  // `status`-Feld zuerst: bei DHL ist das das kurze, kuratierte Label
+  // ("Zugestellt", "In Zustellung"). `description` ist der ausgeschriebene
+  // Satz mit kleingeschriebenem Verb — weniger nützlich als Last-Event.
+  const description =
+    pickString(status, 'status', 'description') ?? undefined
+  const timestamp = pickString(status, 'timestamp')
+
+  const normalized = normalizeDhlStatusCode(code)
+  return {
+    status: normalized,
+    deliveredAt: normalized === 'delivered' ? toIso(timestamp) : undefined,
+    lastEvent: description,
+    rawStatusCode: code,
+  }
+}
+
+/// Parser für das Parcel-DE-Tracking-Schema (XML-to-JSON):
+///   `{ pieceshipmentlist: { pieceshipment: <obj|array>, ... } }`
+/// Felder pro Shipment: `piece-code`, `status`, `status-timestamp`,
+/// `delivery-event-flag` ("1"=delivered, "0"=pending),
+/// `pieceeventlist.pieceevent[]` mit `event-timestamp`, `event-status`,
+/// `event-text`, `standard-event-code`.
+function parseDhlParcelDe(
+  payload: Record<string, unknown>,
+): ParsedTracking | null {
+  const list = isObject(payload.pieceshipmentlist)
+    ? payload.pieceshipmentlist
+    : null
+  if (!list) return null
+  // `pieceshipment` kann ein Objekt (1 Treffer) oder ein Array sein (mehrere).
+  const rawShipment = list.pieceshipment
+  const shipment: Record<string, unknown> | null = Array.isArray(rawShipment)
+    ? (isObject(rawShipment[0]) ? (rawShipment[0] as Record<string, unknown>) : null)
+    : (isObject(rawShipment) ? rawShipment as Record<string, unknown> : null)
+  if (!shipment) return null
+
+  // Letztes Event: `pieceeventlist.pieceevent` (kann ebenfalls Obj oder Array sein).
+  const eventList = isObject(shipment.pieceeventlist)
+    ? shipment.pieceeventlist
+    : null
+  const rawEvents = eventList?.pieceevent
+  const events: Record<string, unknown>[] = Array.isArray(rawEvents)
+    ? rawEvents.filter(isObject) as Record<string, unknown>[]
+    : (isObject(rawEvents) ? [rawEvents as Record<string, unknown>] : [])
+
+  // Event mit jüngstem Timestamp gewinnt — DHL liefert in der Praxis
+  // chronologisch sortiert, aber wir vertrauen darauf nicht.
+  let latestEvent: Record<string, unknown> | null = null
+  let latestTs = -Infinity
+  for (const ev of events) {
+    const ts = pickString(ev, 'event-timestamp')
+    const t = ts ? Date.parse(ts) : NaN
+    if (!Number.isNaN(t) && t > latestTs) {
+      latestTs = t
+      latestEvent = ev
+    }
+  }
+  if (!latestEvent && events.length > 0) latestEvent = events[events.length - 1]
+
+  // Status-Quellen, in dieser Priorität:
+  //  1. `delivery-event-flag` ("1" → delivered, sicherstes Signal).
+  //  2. `standard-event-code` (z.B. "ZU"=Zugestellt) oder `event-status`-Code
+  //     am letzten Event.
+  //  3. Top-Level `status` als Text-Fallback.
+  const deliveryFlag = pickString(shipment, 'delivery-event-flag')
+  const eventCode =
+    pickString(latestEvent, 'standard-event-code', 'event-status')?.toLowerCase()
+  const eventText =
+    pickString(latestEvent, 'event-text', 'event-status') ??
+    pickString(shipment, 'status') ?? undefined
+  const eventTs =
+    pickString(latestEvent, 'event-timestamp') ??
+    pickString(shipment, 'status-timestamp')
+
+  let normalized: TrackingDeliveryStatus = 'unknown'
+  if (deliveryFlag === '1') {
+    normalized = 'delivered'
+  } else if (eventCode) {
+    // DHL-DE-Standard-Event-Codes (kuratierte Mappings):
+    //   ZU  = Zugestellt           → delivered
+    //   AZ  = Ausgeliefert         → delivered (synonym)
+    //   IZ  = In Zustellung        → in_transit
+    //   ES  = Empfangen            → in_transit
+    //   AB  = Abgeholt             → in_transit
+    //   BA  = Bearbeitung          → in_transit
+    //   RT  = Rücktransport        → exception
+    //   ZF  = Zustellfehler        → exception
+    if (eventCode === 'zu' || eventCode === 'az') normalized = 'delivered'
+    else if (
+      eventCode === 'iz' || eventCode === 'es' || eventCode === 'ab' ||
+      eventCode === 'ba' || eventCode === 'transit' ||
+      eventCode === 'pre-transit' || eventCode === 'out-for-delivery'
+    ) {
+      normalized = 'in_transit'
+    } else if (
+      eventCode === 'rt' || eventCode === 'zf' ||
+      eventCode === 'failure' || eventCode === 'exception'
+    ) {
+      normalized = 'exception'
+    } else {
+      // Unbekannter Code → versuch's noch über den Text.
+      const txt = (eventText ?? '').toLowerCase()
+      if (txt.includes('zugestellt') || txt.includes('delivered')) {
+        normalized = 'delivered'
+      }
+    }
+  } else if (eventText) {
+    const txt = eventText.toLowerCase()
+    if (txt.includes('zugestellt') || txt.includes('delivered')) {
+      normalized = 'delivered'
+    } else if (txt.includes('zustellung') || txt.includes('transit')) {
+      normalized = 'in_transit'
+    }
+  }
+
+  return {
+    status: normalized,
+    deliveredAt: normalized === 'delivered' ? toIso(eventTs) : undefined,
+    lastEvent: eventText,
+    rawStatusCode: eventCode,
+  }
+}
+
+/// Mapping für Unified-style statusCode → unsere normalisierte Enum-Variante.
+function normalizeDhlStatusCode(
+  code: string | undefined,
+): TrackingDeliveryStatus {
+  if (code === 'delivered') return 'delivered'
+  if (
+    code === 'transit' || code === 'pre-transit' ||
+    code === 'out-for-delivery'
+  ) {
+    return 'in_transit'
+  }
+  if (code === 'failure' || code === 'exception') return 'exception'
+  return 'unknown'
 }
 
 // ── DPD ──────────────────────────────────────────────────────────────────
