@@ -1275,45 +1275,42 @@ class InventoryProvider extends ChangeNotifier {
           'Wareneingang ohne Produkt-Verknüpfung nicht möglich.');
     }
 
-    // 1. Atomares Increment auf der Datenbank-Seite.
-    final updatedItem =
-        await _repository.incrementPoItemReceived(item.id, receivedQty);
-
-    // 2. goods_in-Movement für das Produkt schreiben.
-    //    itemId: wir verwenden die item.id der Bestellposition als Referenz.
-    //    Da inventory_movements.item_id auf inventory_items verweist und hier
-    //    eine PO-Position die Quelle ist, setzen wir itemId optional auf die
-    //    erste existierende Bestands-Row des Produkts (oder leer, falls keine).
-    //    Das Movement ist primär über product_id auswertbar (Epic A-full).
+    // Reihenfolge (Konsistenz-Begründung):
+    //   A. inventory_items-Row auflösen ODER neu anlegen → liefert gültige
+    //      inventory_items.id für den FK in inventory_movements.item_id.
+    //   B. goods_in-Movement mit der gültigen inventory_items.id schreiben.
+    //   C. Atomares Increment von purchase_order_items.quantity_received via RPC.
+    //
+    // Begründung der Reihenfolge A→B→C:
+    //   - inventory_movements.item_id REFERENCES public.inventory_items(id) NOT NULL.
+    //     Das Movement darf ERST nach der existierenden/neu angelegten Row
+    //     geschrieben werden — sonst FK-Verletzung (HTTP 409).
+    //   - Fällt C (RPC) nach B aus, existiert das Movement, aber quantity_received
+    //     ist nicht erhöht. Das ist ein Partial-Failure, aber kein Datenverlust:
+    //     quantity_received kann retrograd korrigiert werden; ein Movement ohne
+    //     Bestandszeile wäre schwerer zu reparieren.
+    //   - Fällt B (Movement) aus, ist nur die Bestands-Row angelegt. Benigne —
+    //     kein FK-Schaden, Bestand ist korrekt, Movement fehlt (Audit-Lücke,
+    //     aber kein Datenfehler).
+    //   - Ein echter Transaktions-Wrapper über alle 3 Schritte ist clientseitig
+    //     nicht möglich; die Reihenfolge minimiert den worst-case-Schaden.
+    //
     // _inventoryItems enthält nur aktive Items (deleted_at IS NULL ist beim
-    // Load bereits gefiltert). Kein deletedAt auf InventoryItem-Model nötig.
+    // Load bereits gefiltert).
+
+    // ── A. inventory_items-Row auflösen oder anlegen ─────────────────────────
     final existingItemForProduct = _inventoryItems
         .where((i) => i.productId == productId)
         .firstOrNull;
 
-    final movement = InventoryMovement(
-      id: _uuid.v4(),
-      itemId: existingItemForProduct?.id ?? item.id,
-      date: DateTime.now(),
-      quantityChange: receivedQty,
-      reason: 'Wareneingang gegen Bestellung',
-      movementType: InventoryMovementType.goodsIn,
-      unitCost: item.unitPrice,
-      productId: productId,
-    );
-    final savedMovement = await _repository.insertMovement(movement);
-    _movements.insert(0, savedMovement);
-
-    // 3. Bestand erhöhen.
+    final InventoryItem savedInventory;
     if (existingItemForProduct != null) {
-      // Bestehende Row erhöhen.
-      final updatedInventory = existingItemForProduct.copyWith(
+      // Bestehende Row: Bestand jetzt erhöhen, ID ist bereits gültig.
+      final updatedInventoryItem = existingItemForProduct.copyWith(
         quantity: existingItemForProduct.quantity + receivedQty,
       );
-      final savedInventory =
-          await _repository.updateInventoryItem(updatedInventory);
-      final idx =
-          _inventoryItems.indexWhere((i) => i.id == savedInventory.id);
+      savedInventory = await _repository.updateInventoryItem(updatedInventoryItem);
+      final idx = _inventoryItems.indexWhere((i) => i.id == savedInventory.id);
       if (idx != -1) {
         _inventoryItems[idx] = savedInventory;
       }
@@ -1321,7 +1318,7 @@ class InventoryProvider extends ChangeNotifier {
       // Keine existierende Bestands-Row für dieses Produkt →
       // schlanke neue Row anlegen. Lager-Zuordnung (warehouse_id) ist
       // Epic D — hier genügt eine Row mit productId + quantity.
-      // Der Produktname wird aus dem lokalen Cache gelöst.
+      // Produktname aus dem lokalen Cache auflösen.
       final product = _products.where((p) => p.id == productId).firstOrNull;
       final newItem = InventoryItem(
         id: _uuid.v4(),
@@ -1334,10 +1331,32 @@ class InventoryProvider extends ChangeNotifier {
         status: 'Im Lager',
         productId: productId,
       );
-      final savedInventory = await _repository.insertInventoryItem(newItem);
+      savedInventory = await _repository.insertInventoryItem(newItem);
       _inventoryItems.add(savedInventory);
       _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
     }
+
+    // ── B. goods_in-Movement mit der GÜLTIGEN inventory_items.id schreiben ───
+    //    savedInventory.id ist immer eine gültige inventory_items-ID —
+    //    entweder die bestehende Row oder die soeben angelegte neue Row.
+    //    NIEMALS item.id (= purchase_order_items-ID) verwenden, da
+    //    inventory_movements.item_id → inventory_items(id) referenziert.
+    final movement = InventoryMovement(
+      id: _uuid.v4(),
+      itemId: savedInventory.id,
+      date: DateTime.now(),
+      quantityChange: receivedQty,
+      reason: 'Wareneingang gegen Bestellung',
+      movementType: InventoryMovementType.goodsIn,
+      unitCost: item.unitPrice,
+      productId: productId,
+    );
+    final savedMovement = await _repository.insertMovement(movement);
+    _movements.insert(0, savedMovement);
+
+    // ── C. Atomares Increment auf der Datenbank-Seite (purchase_order_items) ─
+    final updatedItem =
+        await _repository.incrementPoItemReceived(item.id, receivedQty);
 
     _log(
       'Wareneingang gebucht: +$receivedQty für Produkt $productId',

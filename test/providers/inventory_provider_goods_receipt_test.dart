@@ -27,6 +27,13 @@ class _FakeRepository extends SupabaseRepository {
   /// Aktueller `quantity_received`-Wert pro item-ID (atomar akkumuliert).
   final Map<String, int> _receivedByItemId = {};
 
+  /// Bekannte `inventory_items`-IDs im Fake-Store.
+  /// Wird beim Insert/Update gepflegt.
+  /// `insertMovement` wirft einen [StateError], wenn `itemId` nicht drin ist —
+  /// simuliert so die echte FK-Constraint
+  /// (`inventory_movements.item_id REFERENCES inventory_items(id)`).
+  final Set<String> _knownInventoryItemIds = {};
+
   /// Protokoll aller `incrementPoItemReceived`-Aufrufe für Assertions.
   final List<({String itemId, int qty})> incrementCalls = [];
 
@@ -52,17 +59,23 @@ class _FakeRepository extends SupabaseRepository {
   // ── Snapshot ──
 
   @override
-  Future<CloudSnapshot> loadAll() async => CloudSnapshot(
-        deals: const [],
-        buyers: const [],
-        shops: const [],
-        suppliers: const [],
-        inventoryItems: List.of(seedInventoryItems),
-        movements: const [],
-        activities: const [],
-        products: List.of(seedProducts),
-        purchaseOrders: const [],
-      );
+  Future<CloudSnapshot> loadAll() async {
+    // Seed-IDs der Inventory-Items in den FK-Satz aufnehmen.
+    for (final i in seedInventoryItems) {
+      _knownInventoryItemIds.add(i.id);
+    }
+    return CloudSnapshot(
+      deals: const [],
+      buyers: const [],
+      shops: const [],
+      suppliers: const [],
+      inventoryItems: List.of(seedInventoryItems),
+      movements: const [],
+      activities: const [],
+      products: List.of(seedProducts),
+      purchaseOrders: const [],
+    );
+  }
 
   // ── Atomares Increment — simuliert `SET qty_received = qty_received + p_qty` ──
 
@@ -98,8 +111,21 @@ class _FakeRepository extends SupabaseRepository {
 
   // ── Movement ──
 
+  /// Simuliert die Datenbank-FK-Constraint
+  /// `inventory_movements.item_id REFERENCES public.inventory_items(id)`.
+  ///
+  /// Wirft [StateError] (analog zu HTTP 409 auf echter DB) wenn `itemId`
+  /// keine bekannte `inventory_items`-ID ist — z.B. wenn fälschlicherweise
+  /// eine `purchase_order_items`-ID übergeben wird.
   @override
   Future<InventoryMovement> insertMovement(InventoryMovement movement) async {
+    if (!_knownInventoryItemIds.contains(movement.itemId)) {
+      throw StateError(
+        'FK-Verletzung (simuliert): inventory_movements.item_id="${movement.itemId}" '
+        'ist keine bekannte inventory_items-ID. '
+        'Bekannte IDs: ${_knownInventoryItemIds.toList()}',
+      );
+    }
     insertedMovements.add(movement);
     return movement;
   }
@@ -108,6 +134,9 @@ class _FakeRepository extends SupabaseRepository {
 
   @override
   Future<InventoryItem> insertInventoryItem(InventoryItem item) async {
+    // Neue ID als bekannte inventory_items-ID registrieren, damit
+    // nachfolgende Movement-Inserts diese ID als gültig akzeptieren.
+    _knownInventoryItemIds.add(item.id);
     insertedInventoryItems.add(item);
     return item;
   }
@@ -267,6 +296,91 @@ void main() {
       expect(inserted.quantity, equals(7));
       expect(inserted.status, equals('Im Lager'));
       expect(inserted.name, equals('Widget')); // aus Produkt-Cache
+    });
+
+    // ── FK-Regression-Test (Browser-Bug: itemId war PO-Item-ID statt inventory-ID) ──
+    //
+    // Vorher: `itemId: existingItemForProduct?.id ?? item.id` — bei fehlendem
+    // Inventory-Eintrag wurde `item.id` (purchase_order_items-ID) verwendet.
+    // Das verursacht eine FK-Verletzung (HTTP 409) auf echter DB, weil
+    // `inventory_movements.item_id` auf `inventory_items(id)` referenziert.
+    //
+    // Jetzt: inventory_items-Row wird VOR dem Movement-INSERT angelegt/aufgelöst.
+    // Das Movement bekommt immer die gültige inventory_items-ID.
+    test(
+        'FK-Constraint: Movement.itemId ist eine gültige inventory_items-ID — '
+        'NICHT die purchase_order_items-ID (Regression: Browser-Bug goods-receipt-flow)',
+        () async {
+      final repo = _FakeRepository();
+      final product = _makeProduct(id: 'prod-fk', name: 'FK-Test-Produkt');
+      // PO-Item mit ANDERER ID als das Produkt — soll NICHT als Movement.itemId landen.
+      final poItem = _makePoItem(
+        id: 'poi-fk-id', // purchase_order_items-ID — DARF NICHT in movement.itemId landen
+        productId: 'prod-fk',
+        unitPrice: 12.50,
+      );
+      repo.seedProducts = [product];
+      repo.seedInventoryItems = []; // keine Bestands-Row → neuer Artikel
+      repo.seedPurchaseOrderItems = [poItem];
+
+      final provider = _makeProvider(repo);
+      await provider.loadData();
+
+      // Würde mit altem Code StateError werfen (FK-Simulation),
+      // weil 'poi-fk-id' keine inventory_items-ID ist.
+      await provider.bookGoodsReceipt(item: poItem, receivedQty: 5);
+
+      // Eine neue Bestands-Row muss angelegt worden sein.
+      expect(repo.insertedInventoryItems, hasLength(1));
+      final newInventoryId = repo.insertedInventoryItems.first.id;
+
+      // Das Movement muss mit der ID der neu angelegten Inventory-Row arbeiten.
+      expect(repo.insertedMovements, hasLength(1));
+      final mv = repo.insertedMovements.first;
+      expect(
+        mv.itemId,
+        equals(newInventoryId),
+        reason: 'movement.itemId muss die inventory_items-ID sein, '
+            'nicht die purchase_order_items-ID "poi-fk-id".',
+      );
+      expect(mv.itemId, isNot(equals('poi-fk-id')),
+          reason: 'PO-Item-ID darf NIEMALS als movement.itemId verwendet werden.');
+    });
+
+    test(
+        'FK-Constraint: Movement.itemId ist eine gültige inventory_items-ID — '
+        'auch wenn existierende Bestands-Row vorhanden (Update-Pfad)',
+        () async {
+      final repo = _FakeRepository();
+      final product = _makeProduct(id: 'prod-fk2', name: 'FK-Update-Produkt');
+      final existingItem = _makeInventoryItem(
+        id: 'inv-fk2',
+        name: 'FK-Update-Produkt',
+        quantity: 20,
+        productId: 'prod-fk2',
+      );
+      final poItem = _makePoItem(
+        id: 'poi-fk2-id', // purchase_order_items-ID — DARF NICHT in movement.itemId
+        productId: 'prod-fk2',
+        unitPrice: 8.00,
+      );
+      repo.seedProducts = [product];
+      repo.seedInventoryItems = [existingItem];
+      repo.seedPurchaseOrderItems = [poItem];
+
+      final provider = _makeProvider(repo);
+      await provider.loadData();
+
+      await provider.bookGoodsReceipt(item: poItem, receivedQty: 3);
+
+      expect(repo.insertedMovements, hasLength(1));
+      final mv = repo.insertedMovements.first;
+      expect(
+        mv.itemId,
+        equals('inv-fk2'),
+        reason: 'movement.itemId muss die existierende inventory_items-ID sein.',
+      );
+      expect(mv.itemId, isNot(equals('poi-fk2-id')));
     });
 
     test('wirft ArgumentError wenn receivedQty <= 0', () async {
