@@ -2075,7 +2075,7 @@ class _EmptyInventoryState extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          l10n.suppliersEmptyHint,
+          l10n.inventoryEmptyHint,
           style: TextStyle(
               color: AppTheme.textMutedOf(context), fontSize: 12),
         ),

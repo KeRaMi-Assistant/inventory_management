@@ -3902,6 +3902,12 @@ abstract class AppLocalizations {
   /// **'Lager ist leer.'**
   String get inventoryEmpty;
 
+  /// No description provided for @inventoryEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Über den + Button kannst du den ersten Artikel hinzufügen.'**
+  String get inventoryEmptyHint;
+
   /// No description provided for @inventoryAddItem.
   ///
   /// In de, this message translates to:

@@ -839,6 +839,7 @@
   "ticketsNoTicket": "No ticket",
 
   "inventoryEmpty": "Inventory is empty.",
+  "inventoryEmptyHint": "Use the + button to add your first item.",
   "inventoryAddItem": "Add item",
   "inventoryColName": "Name",
   "inventoryColSku": "SKU",

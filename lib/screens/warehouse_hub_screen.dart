@@ -108,7 +108,9 @@ class WarehouseHubScreen extends StatelessWidget {
         ),
 
         // ── Reporting ─────────────────────────────────────────────────
-        // Zeigt den bestehenden StatisticsScreen (existiert bereits).
+        // Zeigt den bestehenden StatisticsScreen in einem Wrapper-Scaffold
+        // mit AppBar (Back-Button), damit iOS-Nutzer nicht in einer
+        // Sackgasse landen. Der StatisticsScreen selbst ist unverändert.
         _HubTile(
           key: const Key('hubTileReporting'),
           icon: Icons.bar_chart_outlined,
@@ -117,7 +119,10 @@ class WarehouseHubScreen extends StatelessWidget {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const StatisticsScreen(),
+              builder: (_) => Scaffold(
+                appBar: AppBar(title: Text(l10n.warehouseHubTileReporting)),
+                body: const StatisticsScreen(),
+              ),
             ),
           ),
         ),

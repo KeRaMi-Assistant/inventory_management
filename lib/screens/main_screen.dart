@@ -378,14 +378,30 @@ class _MainScreenState extends State<MainScreen> {
                 floatingActionButton: fab,
                 floatingActionButtonLocation:
                     FloatingActionButtonLocation.endFloat,
-                bottomNavigationBar: NavigationBar(
-                  key: const Key('mainBottomNav'),
-                  selectedIndex:
-                      _bottomNavSelectedIndex(visibility),
-                  onDestinationSelected: (i) =>
-                      _bottomNavOnTap(i, visibility, context),
-                  destinations: _bottomNavDestinations(
-                      l10n, labels, visibility, navBadgeCounts),
+                bottomNavigationBar: NavigationBarTheme(
+                  data: NavigationBarThemeData(
+                    // Enforce single-line labels — prevents "Dashboar/d"
+                    // wrap on narrow Phone viewports (360-390 dp wide).
+                    labelTextStyle: WidgetStateProperty.resolveWith(
+                      (states) => const TextStyle(
+                        fontSize: 12,
+                        overflow: TextOverflow.ellipsis,
+                        // height: 1 clamps the line-height so Flutter
+                        // does not allocate a second line even when the
+                        // label barely fits.
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                  child: NavigationBar(
+                    key: const Key('mainBottomNav'),
+                    selectedIndex:
+                        _bottomNavSelectedIndex(visibility),
+                    onDestinationSelected: (i) =>
+                        _bottomNavOnTap(i, visibility, context),
+                    destinations: _bottomNavDestinations(
+                        l10n, labels, visibility, navBadgeCounts),
+                  ),
                 ),
                 body: body,
               )

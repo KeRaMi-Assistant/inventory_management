@@ -2171,6 +2171,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get inventoryEmpty => 'Lager ist leer.';
 
   @override
+  String get inventoryEmptyHint =>
+      'Über den + Button kannst du den ersten Artikel hinzufügen.';
+
+  @override
   String get inventoryAddItem => 'Artikel hinzufügen';
 
   @override

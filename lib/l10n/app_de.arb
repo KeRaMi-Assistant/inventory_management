@@ -839,6 +839,7 @@
   "ticketsNoTicket": "Kein Ticket",
 
   "inventoryEmpty": "Lager ist leer.",
+  "inventoryEmptyHint": "Über den + Button kannst du den ersten Artikel hinzufügen.",
   "inventoryAddItem": "Artikel hinzufügen",
   "inventoryColName": "Name",
   "inventoryColSku": "SKU",
