@@ -1358,6 +1358,35 @@ class InventoryProvider extends ChangeNotifier {
     final updatedItem =
         await _repository.incrementPoItemReceived(item.id, receivedQty);
 
+    // ── D. PO-Header-Refresh (Best-Effort) ──────────────────────────────────
+    // Der DB-Trigger `purchase_order_items_status_trg` aktualisiert serverseitig
+    // `purchase_orders.status` (z. B. `ordered` → `partially_received` →
+    // `received`). Da der Provider `_purchaseOrders` lokal cached, spiegelt der
+    // lokale State den neuen Status erst nach einem App-Reload wider — ohne
+    // diesen Re-Fetch.
+    //
+    // Strategie: den betroffenen PO-Header-Eintrag gezielt neu laden und im
+    // `_purchaseOrders`-Cache ersetzen. Schlägt der Re-Fetch fehl (Netzwerk,
+    // PO wurde zwischenzeitlich gelöscht), bleibt der bereits gebuchte
+    // Wareneingang bestehen — kein Fehler, kein Rollback. Der UI-State korrigiert
+    // sich beim nächsten regulären Load.
+    final poId = item.purchaseOrderId;
+    final wsId = _repository.activeWorkspaceId;
+    if (poId != null && wsId != null) {
+      try {
+        final freshPo = await _repository.loadPurchaseOrderById(wsId, poId);
+        if (freshPo != null) {
+          final idx = _purchaseOrders.indexWhere((po) => po.id == poId);
+          if (idx != -1) {
+            _purchaseOrders[idx] = freshPo;
+          }
+        }
+      } catch (_) {
+        // Best-Effort: Re-Fetch-Fehler still schlucken.
+        // Der Buchungs-Erfolg ist bereits abgeschlossen.
+      }
+    }
+
     _log(
       'Wareneingang gebucht: +$receivedQty für Produkt $productId',
       'purchase_order',

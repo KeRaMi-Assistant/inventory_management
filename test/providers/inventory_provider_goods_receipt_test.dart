@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management/models/inventory_item.dart';
 import 'package:inventory_management/models/product.dart';
+import 'package:inventory_management/models/purchase_order.dart';
 import 'package:inventory_management/models/purchase_order_item.dart';
 import 'package:inventory_management/providers/inventory_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
@@ -50,6 +51,21 @@ class _FakeRepository extends SupabaseRepository {
   List<Product> seedProducts = [];
   List<InventoryItem> seedInventoryItems = [];
   List<PurchaseOrderItem> seedPurchaseOrderItems = [];
+  List<PurchaseOrder> seedPurchaseOrders = [];
+
+  /// Optionale Überschreibung: wenn gesetzt, liefert `loadPurchaseOrderById`
+  /// für die entsprechende PO-ID diesen Wert (simuliert den trigger-aktualisierten
+  /// PO-Header, den der DB-Trigger nach einem Wareneingang schreibt).
+  final Map<int, PurchaseOrder> _poRefetchResults = {};
+
+  /// IDs aller POs, für die `loadPurchaseOrderById` aufgerufen wurde.
+  final List<int> refetchedPoIds = [];
+
+  /// Seed: legt fest, welchen PO-Header `loadPurchaseOrderById` für [poId]
+  /// zurückliefert (simuliert den trigger-aktualisierten Status).
+  void seedPoRefetch(int poId, PurchaseOrder po) {
+    _poRefetchResults[poId] = po;
+  }
 
   /// Initialisiert `quantity_received` für ein Item (Pre-Condition in Tests).
   void seedReceivedQty(String itemId, int qty) {
@@ -73,7 +89,7 @@ class _FakeRepository extends SupabaseRepository {
       movements: const [],
       activities: const [],
       products: List.of(seedProducts),
-      purchaseOrders: const [],
+      purchaseOrders: List.of(seedPurchaseOrders),
     );
   }
 
@@ -149,6 +165,17 @@ class _FakeRepository extends SupabaseRepository {
 
   @override
   Future<void> deleteInventoryItem(String id) async {}
+
+  // ── PO-Header-Refetch (Stale-State-Fix) ──
+
+  @override
+  Future<PurchaseOrder?> loadPurchaseOrderById(
+    String workspaceId,
+    int id,
+  ) async {
+    refetchedPoIds.add(id);
+    return _poRefetchResults[id];
+  }
 }
 
 // ── Hilfsfunktionen ──────────────────────────────────────────────────────────
@@ -201,6 +228,22 @@ InventoryItem _makeInventoryItem({
     name: name,
     quantity: quantity,
     productId: productId,
+  );
+}
+
+PurchaseOrder _makePurchaseOrder({
+  required int id,
+  PurchaseOrderStatus status = PurchaseOrderStatus.ordered,
+}) {
+  final now = DateTime.utc(2026, 5, 22, 10);
+  return PurchaseOrder(
+    id: id,
+    workspaceId: 'ws-test',
+    userId: 'user-test',
+    orderNumber: 'PO-2026-000$id',
+    status: status,
+    createdAt: now,
+    updatedAt: now,
   );
 }
 
@@ -517,6 +560,141 @@ void main() {
         equals(25),
         reason: 'Alle ${calls.length} Increments müssen ankommen.',
       );
+    });
+  });
+
+  // ── Stale-State-Fix: PO-Header-Refresh nach Wareneingang ────────────────────
+  //
+  // Browser-Test (Epic C) fand: nach `bookGoodsReceipt` zeigte die UI weiterhin
+  // den alten `status` des PO-Headers (z. B. `ordered`), obwohl der DB-Trigger
+  // `purchase_order_items_status_trg` den Status serverseitig auf `received`
+  // gesetzt hatte. Erst ein App-Reload zog den korrekten Status.
+  //
+  // Fix: nach erfolgreichem `incrementPoItemReceived` wird der PO-Header via
+  // `loadPurchaseOrderById` frisch aus der DB geladen und im `_purchaseOrders`-
+  // Cache ersetzt. Dieser Test prüft, dass der Provider nach dem Buchen den
+  // refresh-aktualisierten Status im State zeigt.
+
+  group('bookGoodsReceipt — PO-Header-Refresh (Stale-State-Fix)', () {
+    test(
+        'lädt PO-Header neu nach Buchung und übernimmt trigger-aktualisierten Status',
+        () async {
+      final repo = _FakeRepository();
+      final product = _makeProduct(id: 'prod-refresh', name: 'Refresh-Test');
+
+      // PO-Header initial mit Status `ordered` im lokalen Cache.
+      final poHeader = _makePurchaseOrder(
+        id: 1,
+        status: PurchaseOrderStatus.ordered,
+      );
+      final poItem = _makePoItem(
+        id: 'poi-refresh',
+        productId: 'prod-refresh',
+        quantityOrdered: 5,
+      );
+
+      repo.seedProducts = [product];
+      repo.seedPurchaseOrders = [poHeader];
+      repo.seedPurchaseOrderItems = [poItem];
+
+      // Fake: DB-Trigger hat Status auf `received` gesetzt — das ist das Ergebnis,
+      // das `loadPurchaseOrderById` nach dem Buchen zurückliefert.
+      final refreshedPoHeader = _makePurchaseOrder(
+        id: 1,
+        status: PurchaseOrderStatus.received,
+      );
+      repo.seedPoRefetch(1, refreshedPoHeader);
+
+      final provider = _makeProvider(repo);
+      await provider.loadData();
+
+      // Vor dem Buchen: Status ist `ordered` im lokalen Cache.
+      expect(
+        provider.purchaseOrders.first.status,
+        equals(PurchaseOrderStatus.ordered),
+      );
+
+      await provider.bookGoodsReceipt(item: poItem, receivedQty: 5);
+
+      // Nach dem Buchen: `loadPurchaseOrderById` muss aufgerufen worden sein.
+      expect(repo.refetchedPoIds, contains(1));
+
+      // Der lokale Cache-Status muss nun `received` zeigen (trigger-Wert).
+      expect(
+        provider.purchaseOrders.first.status,
+        equals(PurchaseOrderStatus.received),
+        reason: 'PO-Header-Status muss nach dem Buchungs-Re-Fetch aktuell sein '
+            '(kein Stale-State bis zum nächsten App-Reload).',
+      );
+    });
+
+    test(
+        'Buchungs-Erfolg bleibt bestehen, wenn PO-Header-Re-Fetch fehlschlägt',
+        () async {
+      final repo = _FakeRepository();
+      final product = _makeProduct(id: 'prod-nofetch', name: 'No-Fetch-Test');
+      final poHeader =
+          _makePurchaseOrder(id: 2, status: PurchaseOrderStatus.ordered);
+      final poItem = _makePoItem(
+        id: 'poi-nofetch',
+        productId: 'prod-nofetch',
+        quantityOrdered: 3,
+      );
+
+      repo.seedProducts = [product];
+      repo.seedPurchaseOrders = [poHeader];
+      repo.seedPurchaseOrderItems = [poItem];
+      // Kein `seedPoRefetch` → `loadPurchaseOrderById` gibt `null` zurück.
+      // Dies simuliert einen Re-Fetch-Fehler oder eine gelöschte PO.
+
+      final provider = _makeProvider(repo);
+      await provider.loadData();
+
+      // Der Aufruf darf NICHT werfen — Re-Fetch-Fehler sind Best-Effort.
+      final result = await provider.bookGoodsReceipt(
+        item: poItem,
+        receivedQty: 3,
+      );
+
+      // Das Increment muss trotzdem durchgegangen sein.
+      expect(repo.incrementCalls, hasLength(1));
+      expect(result.quantityReceived, equals(3));
+
+      // Der lokale PO-Status bleibt auf dem alten Wert (kein Crash, kein
+      // Rollback — UI korrigiert sich beim nächsten Load).
+      expect(
+        provider.purchaseOrders.first.status,
+        equals(PurchaseOrderStatus.ordered),
+      );
+    });
+
+    test('kein Re-Fetch wenn item.purchaseOrderId null ist', () async {
+      final repo = _FakeRepository();
+      final product = _makeProduct(id: 'prod-nullpo', name: 'Null-PO-Test');
+      final now = DateTime.utc(2026, 5, 22, 10);
+      // PO-Item ohne purchaseOrderId (edge case).
+      final poItemNullPoId = PurchaseOrderItem(
+        id: 'poi-nullpo',
+        workspaceId: 'ws-test',
+        purchaseOrderId: null, // kein PO-Bezug
+        productId: 'prod-nullpo',
+        quantityOrdered: 2,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      repo.seedProducts = [product];
+      repo.seedPurchaseOrderItems = [poItemNullPoId];
+
+      final provider = _makeProvider(repo);
+      await provider.loadData();
+
+      // Kein Fehler, kein Re-Fetch-Versuch.
+      await provider.bookGoodsReceipt(item: poItemNullPoId, receivedQty: 2);
+
+      expect(repo.refetchedPoIds, isEmpty,
+          reason: 'Kein Re-Fetch wenn purchaseOrderId null ist.');
+      expect(repo.incrementCalls, hasLength(1));
     });
   });
 }

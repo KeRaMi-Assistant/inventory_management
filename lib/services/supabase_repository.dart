@@ -835,6 +835,28 @@ class SupabaseRepository {
         .toList();
   }
 
+  /// Lädt einen einzelnen `PurchaseOrder`-Header frisch aus der DB.
+  ///
+  /// Wird nach `bookGoodsReceipt` genutzt, um den vom DB-Trigger aktualisierten
+  /// `status` (und `total_net`) in den lokalen State zu übernehmen, ohne die
+  /// gesamte Liste neu laden zu müssen.
+  ///
+  /// Gibt `null` zurück, wenn die Row nicht gefunden wird (z. B. gelöscht).
+  Future<PurchaseOrder?> loadPurchaseOrderById(
+    String workspaceId,
+    int id,
+  ) async {
+    final rows = await _client
+        .from('purchase_orders')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .eq('id', id)
+        .limit(1);
+    final list = (rows as List).cast<Map<String, dynamic>>();
+    if (list.isEmpty) return null;
+    return PurchaseOrder.fromSupabase(list.first);
+  }
+
   /// Generiert die nächste `order_number` für den aktiven Workspace im
   /// aktuellen Jahr. Format: `PO-<YYYY>-<4-stellig>` (z. B. `PO-2026-0001`).
   ///
