@@ -184,6 +184,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navMoreSheetTitle => 'More sections';
 
   @override
+  String get navWarehouse => 'Warehousing';
+
+  @override
+  String get warehouseHubTitle => 'Warehousing';
+
+  @override
+  String get warehouseHubComingSoon => 'Coming soon';
+
+  @override
+  String get warehouseHubComingSoonHint =>
+      'This feature will be available in an upcoming update.';
+
+  @override
+  String get warehouseHubTileProductCatalog => 'Product catalog';
+
+  @override
+  String get warehouseHubTilePurchaseOrders => 'Orders';
+
+  @override
+  String get warehouseHubTileWarehouses => 'Warehouses';
+
+  @override
+  String get warehouseHubTileCategories => 'Categories';
+
+  @override
+  String get warehouseHubTileStocktake => 'Stocktake';
+
+  @override
+  String get warehouseHubTileReporting => 'Reporting';
+
+  @override
   String get fieldEmail => 'Email';
 
   @override
@@ -3364,6 +3395,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inboxSuggestionAccept => 'Accept';
 
   @override
+  String get productCatalogTitle => 'Product catalog';
+
+  @override
+  String get productNew => 'New product';
+
+  @override
+  String get productUnit => 'Unit';
+
+  @override
+  String get productDefaultCostPrice => 'Default cost price';
+
+  @override
+  String get productDefaultSalePrice => 'Default sale price';
+
+  @override
+  String get productCategory => 'Category';
+
+  @override
+  String get productDefaultSupplier => 'Default supplier';
+
+  @override
+  String get productMinStock => 'Minimum stock';
+
+  @override
+  String get productTaxRate => 'VAT rate (%)';
+
+  @override
+  String get productIsActive => 'Active';
+
+  @override
+  String get productAdvancedSection => 'Advanced';
+
+  @override
+  String get productNameLabel => 'Product name';
+
+  @override
+  String get productSkuLabel => 'Article number (SKU)';
+
+  @override
+  String get productEanLabel => 'EAN / GTIN';
+
+  @override
+  String get productNoteLabel => 'Note';
+
+  @override
+  String get productEditTitle => 'Edit product';
+
+  @override
+  String get productAddTitle => 'New product';
+
+  @override
+  String get productGroupWithoutProduct => 'Without product';
+
+  @override
+  String get productCatalogEmpty => 'Empty product catalog';
+
+  @override
+  String get productCatalogEmptyHint => 'Create your first product.';
+
+  @override
+  String get productLinkLabel => 'Linked product';
+
+  @override
+  String get productNoLink => 'No linked product';
+
+  @override
   String get productDetailTitle => 'Product details';
 
   @override
@@ -3464,4 +3561,145 @@ class AppLocalizationsEn extends AppLocalizations {
   String productDetailMovementQuantity(Object sign, int qty) {
     return '$sign$qty';
   }
+
+  @override
+  String get productDetailSectionProduct => 'Product (master data)';
+
+  @override
+  String get productDetailLabelProductUnit => 'Unit';
+
+  @override
+  String get productDetailLabelDefaultCostPrice => 'Default cost price';
+
+  @override
+  String get productDetailLabelDefaultSalePrice => 'Default sale price';
+
+  @override
+  String get productDetailLabelMinStockProduct => 'Min. stock (product)';
+
+  @override
+  String get productDetailLabelTaxRate => 'Tax rate';
+
+  @override
+  String get productDetailSectionAggregatedStock => 'Total stock';
+
+  @override
+  String get productDetailLabelTotalQty => 'Total (all warehouses)';
+
+  @override
+  String productDetailLabelWarehouseQty(Object warehouse) {
+    return 'Warehouse $warehouse';
+  }
+
+  @override
+  String get productDetailLabelNoWarehouse => 'No warehouse assigned';
+
+  @override
+  String get productDetailMovementsAllProduct =>
+      'All movements for this product (all stock rows).';
+
+  @override
+  String productDetailLoadMoreMovements(int count) {
+    return 'Load $count more';
+  }
+
+  @override
+  String get productDetailAllMovementsShown => 'All movements shown';
+
+  @override
+  String stockGroupItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String stockGroupTotalQuantity(int qty) {
+    return 'Total: $qty units';
+  }
+
+  @override
+  String get categoriesTitle => 'Categories';
+
+  @override
+  String get categoriesEmpty => 'No categories';
+
+  @override
+  String get categoriesEmptyHint => 'Create your first category.';
+
+  @override
+  String get categoriesLoadError => 'Could not load categories.';
+
+  @override
+  String get categoryNew => 'New category';
+
+  @override
+  String get categoryEdit => 'Edit category';
+
+  @override
+  String get categoryDelete => 'Delete category';
+
+  @override
+  String categoryDeletePrompt(Object name) {
+    return 'Delete \"$name\"?';
+  }
+
+  @override
+  String get categoryParent => 'Parent category';
+
+  @override
+  String get categoryParentNone => 'None (top-level)';
+
+  @override
+  String get categoryFieldName => 'Name';
+
+  @override
+  String get categoryFieldSortOrder => 'Sort order';
+
+  @override
+  String get categoryMaxDepthError =>
+      'Only 2 levels allowed. Please select a top-level category.';
+
+  @override
+  String get categorySortOrderHint => 'Number, lower = first';
+
+  @override
+  String get supplierAddress => 'Address';
+
+  @override
+  String get supplierAddressStreet => 'Street';
+
+  @override
+  String get supplierAddressZip => 'ZIP / Postal code';
+
+  @override
+  String get supplierAddressCity => 'City';
+
+  @override
+  String get supplierAddressCountry => 'Country';
+
+  @override
+  String get supplierVatId => 'VAT ID';
+
+  @override
+  String get supplierCustomerNumber => 'Customer number';
+
+  @override
+  String get supplierPaymentTerms => 'Payment terms (days)';
+
+  @override
+  String get supplierLeadTime => 'Lead time (days)';
+
+  @override
+  String get supplierMinOrderValue => 'Minimum order value';
+
+  @override
+  String get supplierAdvancedSection => 'Advanced details';
+
+  @override
+  String get commonDaysUnit => 'days';
 }

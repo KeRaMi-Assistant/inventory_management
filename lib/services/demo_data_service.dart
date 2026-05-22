@@ -107,10 +107,45 @@ class DemoDataService {
         i: ticketsOut[i]['ticket_number'] as String,
     };
 
+    // Products (Stammkatalog) — optional: überspringen, wenn die Tabelle noch
+    // nicht existiert (schema-additive, kein Hard-Fail).
+    // productIdByIdx[i] → UUID des angelegten Produkts für itemsIn[i].
+    final productIdByIdx = <int, String>{};
+    try {
+      final productsPayload = <Map<String, dynamic>>[];
+      for (var i = 0; i < itemsIn.length; i++) {
+        final it = itemsIn[i];
+        final supplierIdx = it['supplier_idx'] as int? ?? 0;
+        final productId = _uuid.v4();
+        productsPayload.add({
+          'id': productId,
+          'workspace_id': workspaceId,
+          'user_id': user.id,
+          'name': it['name'] as String,
+          'sku': it['sku'] as String?,
+          'default_cost_price': it['cost_price'],
+          'default_sale_price': it['cost_price'] != null
+              ? (((it['cost_price'] as num) * 1.25 * 100).round() / 100)
+              : null,
+          'default_supplier_id': supplierIdByIdx[supplierIdx],
+          'min_stock': it['min_stock'] ?? 0,
+          'is_active': true,
+          'is_demo': true,
+        });
+        productIdByIdx[i] = productId;
+      }
+      await _insert('products', productsPayload, 'id');
+    } catch (_) {
+      // products-Tabelle existiert noch nicht — additive, kein Hard-Fail.
+      productIdByIdx.clear();
+    }
+
     // Inventory items
-    final itemsPayload = itemsIn.map((it) {
+    final itemsPayload = <Map<String, dynamic>>[];
+    for (var idx = 0; idx < itemsIn.length; idx++) {
+      final it = itemsIn[idx];
       final supplierIdx = it['supplier_idx'] as int? ?? 0;
-      return {
+      final row = <String, dynamic>{
         'id': _uuid.v4(),
         'workspace_id': workspaceId,
         'user_id': user.id,
@@ -126,7 +161,12 @@ class DemoDataService {
         'status': 'Im Lager',
         'is_demo': true,
       };
-    }).toList();
+      // Verlinkung auf Produktstamm (additive, nullable)
+      if (productIdByIdx.containsKey(idx)) {
+        row['product_id'] = productIdByIdx[idx];
+      }
+      itemsPayload.add(row);
+    }
     final itemsOut = await _insert('inventory_items', itemsPayload, 'id');
 
     // Deals
@@ -173,6 +213,7 @@ class DemoDataService {
       shops: shopsOut.length,
       suppliers: suppliersOut.length,
       tickets: ticketsOut.length,
+      products: productIdByIdx.length,
       inventoryItems: itemsOut.length,
       deals: dealsOut.length,
     );
@@ -182,9 +223,16 @@ class DemoDataService {
   /// Reihenfolge: Kinder vor Eltern. RLS schützt vor Cross-Workspace-Wipes;
   /// der zusätzliche `eq('workspace_id', …)` ist defense-in-depth.
   Future<DemoWipeResult> wipeDemoData({required String workspaceId}) async {
-    int deals = 0, items = 0, tickets = 0, buyers = 0, shops = 0, suppliers = 0;
+    int deals = 0, items = 0, products = 0, tickets = 0, buyers = 0, shops = 0, suppliers = 0;
     deals = await _wipe('deals', workspaceId);
+    // inventory_items.product_id → products: items zuerst löschen, dann Stamm.
     items = await _wipe('inventory_items', workspaceId);
+    // products optional mitlöschen — graceful bei fehlendem Schema.
+    try {
+      products = await _wipe('products', workspaceId);
+    } catch (_) {
+      products = 0;
+    }
     tickets = await _wipe('tickets', workspaceId);
     buyers = await _wipe('buyers', workspaceId);
     shops = await _wipe('shops', workspaceId);
@@ -194,6 +242,7 @@ class DemoDataService {
     return DemoWipeResult(
       deals: deals,
       inventoryItems: items,
+      products: products,
       tickets: tickets,
       buyers: buyers,
       shops: shops,
@@ -208,18 +257,23 @@ class DemoDataService {
     for (final t in const [
       'deals',
       'inventory_items',
+      'products',
       'buyers',
       'shops',
       'suppliers',
       'tickets',
     ]) {
-      final rows = await _client
-          .from(t)
-          .select('workspace_id')
-          .eq('workspace_id', workspaceId)
-          .eq('is_demo', true)
-          .limit(1);
-      if ((rows as List).isNotEmpty) return true;
+      try {
+        final rows = await _client
+            .from(t)
+            .select('workspace_id')
+            .eq('workspace_id', workspaceId)
+            .eq('is_demo', true)
+            .limit(1);
+        if ((rows as List).isNotEmpty) return true;
+      } catch (_) {
+        // Tabelle existiert noch nicht — überspringen.
+      }
     }
     return false;
   }
@@ -292,6 +346,7 @@ class DemoSeedResult {
   final int shops;
   final int suppliers;
   final int tickets;
+  final int products;
   final int inventoryItems;
   final int deals;
   const DemoSeedResult({
@@ -299,12 +354,13 @@ class DemoSeedResult {
     required this.shops,
     required this.suppliers,
     required this.tickets,
+    required this.products,
     required this.inventoryItems,
     required this.deals,
   });
 
   int get total =>
-      buyers + shops + suppliers + tickets + inventoryItems + deals;
+      buyers + shops + suppliers + tickets + products + inventoryItems + deals;
 }
 
 class DemoWipeResult {
@@ -312,6 +368,7 @@ class DemoWipeResult {
   final int shops;
   final int suppliers;
   final int tickets;
+  final int products;
   final int inventoryItems;
   final int deals;
   const DemoWipeResult({
@@ -319,10 +376,11 @@ class DemoWipeResult {
     required this.shops,
     required this.suppliers,
     required this.tickets,
+    required this.products,
     required this.inventoryItems,
     required this.deals,
   });
 
   int get total =>
-      buyers + shops + suppliers + tickets + inventoryItems + deals;
+      buyers + shops + suppliers + tickets + products + inventoryItems + deals;
 }

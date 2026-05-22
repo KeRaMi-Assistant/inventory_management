@@ -66,6 +66,16 @@
   "navSettings": "Settings",
   "navMore": "More",
   "navMoreSheetTitle": "More sections",
+  "navWarehouse": "Warehousing",
+  "warehouseHubTitle": "Warehousing",
+  "warehouseHubComingSoon": "Coming soon",
+  "warehouseHubComingSoonHint": "This feature will be available in an upcoming update.",
+  "warehouseHubTileProductCatalog": "Product catalog",
+  "warehouseHubTilePurchaseOrders": "Orders",
+  "warehouseHubTileWarehouses": "Warehouses",
+  "warehouseHubTileCategories": "Categories",
+  "warehouseHubTileStocktake": "Stocktake",
+  "warehouseHubTileReporting": "Reporting",
 
   "fieldEmail": "Email",
   "fieldPassword": "Password",
@@ -1316,6 +1326,28 @@
   "inboxSuggestionEdit": "Edit before accepting",
   "inboxSuggestionAccept": "Accept",
 
+  "productCatalogTitle": "Product catalog",
+  "productNew": "New product",
+  "productUnit": "Unit",
+  "productDefaultCostPrice": "Default cost price",
+  "productDefaultSalePrice": "Default sale price",
+  "productCategory": "Category",
+  "productDefaultSupplier": "Default supplier",
+  "productMinStock": "Minimum stock",
+  "productTaxRate": "VAT rate (%)",
+  "productIsActive": "Active",
+  "productAdvancedSection": "Advanced",
+  "productNameLabel": "Product name",
+  "productSkuLabel": "Article number (SKU)",
+  "productEanLabel": "EAN / GTIN",
+  "productNoteLabel": "Note",
+  "productEditTitle": "Edit product",
+  "productAddTitle": "New product",
+  "productGroupWithoutProduct": "Without product",
+  "productCatalogEmpty": "Empty product catalog",
+  "productCatalogEmptyHint": "Create your first product.",
+  "productLinkLabel": "Linked product",
+  "productNoLink": "No linked product",
   "productDetailTitle": "Product details",
   "productDetailEmpty": "No data",
   "productDetailEmptyHint": "No movements for this item yet.",
@@ -1354,5 +1386,72 @@
       "sign": {},
       "qty": { "type": "int" }
     }
-  }
+  },
+  "productDetailSectionProduct": "Product (master data)",
+  "productDetailLabelProductUnit": "Unit",
+  "productDetailLabelDefaultCostPrice": "Default cost price",
+  "productDetailLabelDefaultSalePrice": "Default sale price",
+  "productDetailLabelMinStockProduct": "Min. stock (product)",
+  "productDetailLabelTaxRate": "Tax rate",
+  "productDetailSectionAggregatedStock": "Total stock",
+  "productDetailLabelTotalQty": "Total (all warehouses)",
+  "productDetailLabelWarehouseQty": "Warehouse {warehouse}",
+  "@productDetailLabelWarehouseQty": {
+    "placeholders": {
+      "warehouse": {}
+    }
+  },
+  "productDetailLabelNoWarehouse": "No warehouse assigned",
+  "productDetailMovementsAllProduct": "All movements for this product (all stock rows).",
+  "productDetailLoadMoreMovements": "Load {count} more",
+  "@productDetailLoadMoreMovements": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "productDetailAllMovementsShown": "All movements shown",
+
+  "stockGroupItemCount": "{count,plural, =1{1 item} other{{count} items}}",
+  "@stockGroupItemCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "stockGroupTotalQuantity": "Total: {qty} units",
+  "@stockGroupTotalQuantity": {
+    "placeholders": {
+      "qty": { "type": "int" }
+    }
+  },
+
+  "categoriesTitle": "Categories",
+  "categoriesEmpty": "No categories",
+  "categoriesEmptyHint": "Create your first category.",
+  "categoriesLoadError": "Could not load categories.",
+  "categoryNew": "New category",
+  "categoryEdit": "Edit category",
+  "categoryDelete": "Delete category",
+  "categoryDeletePrompt": "Delete \"{name}\"?",
+  "@categoryDeletePrompt": {
+    "placeholders": { "name": {} }
+  },
+  "categoryParent": "Parent category",
+  "categoryParentNone": "None (top-level)",
+  "categoryFieldName": "Name",
+  "categoryFieldSortOrder": "Sort order",
+  "categoryMaxDepthError": "Only 2 levels allowed. Please select a top-level category.",
+  "categorySortOrderHint": "Number, lower = first",
+
+  "supplierAddress": "Address",
+  "supplierAddressStreet": "Street",
+  "supplierAddressZip": "ZIP / Postal code",
+  "supplierAddressCity": "City",
+  "supplierAddressCountry": "Country",
+  "supplierVatId": "VAT ID",
+  "supplierCustomerNumber": "Customer number",
+  "supplierPaymentTerms": "Payment terms (days)",
+  "supplierLeadTime": "Lead time (days)",
+  "supplierMinOrderValue": "Minimum order value",
+  "supplierAdvancedSection": "Advanced details",
+  "commonDaysUnit": "days"
 }

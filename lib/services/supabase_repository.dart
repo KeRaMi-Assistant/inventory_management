@@ -9,6 +9,10 @@ import '../models/inbox_message.dart';
 import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
 import '../models/mailbox_account.dart';
+import '../models/product.dart';
+import '../models/product_category.dart';
+import '../models/product_stock.dart';
+import '../models/product_supplier.dart';
 import '../models/shop.dart';
 import '../models/supplier.dart';
 import '../models/ticket.dart';
@@ -24,6 +28,12 @@ class CloudSnapshot {
   final List<InventoryMovement> movements;
   final List<ActivityEntry> activities;
   final List<Ticket> tickets;
+  final List<ProductCategory> productCategories;
+
+  /// Artikelstamm (Epic A-full). Lazy-Detail-Tabellen wie `product_suppliers`
+  /// und `product_stock` sind NICHT im globalen Snapshot — sie werden
+  /// on-demand pro Detail-Screen geladen (Committee-Empfehlung 1).
+  final List<Product> products;
 
   const CloudSnapshot({
     required this.deals,
@@ -34,6 +44,8 @@ class CloudSnapshot {
     required this.movements,
     required this.activities,
     this.tickets = const [],
+    this.productCategories = const [],
+    this.products = const [],
   });
 
   bool get isEmpty =>
@@ -44,7 +56,9 @@ class CloudSnapshot {
       inventoryItems.isEmpty &&
       movements.isEmpty &&
       activities.isEmpty &&
-      tickets.isEmpty;
+      tickets.isEmpty &&
+      productCategories.isEmpty &&
+      products.isEmpty;
 }
 
 /// Single point of contact with the Supabase backend. All RLS-scoped tables
@@ -121,6 +135,8 @@ class SupabaseRepository {
         movements: [],
         activities: [],
         tickets: [],
+        productCategories: [],
+        products: [],
       );
     }
     final results = await Future.wait([
@@ -170,6 +186,18 @@ class SupabaseRepository {
           .select()
           .eq('workspace_id', ws)
           .order('created_at', ascending: false),
+      _client
+          .from('product_categories')
+          .select()
+          .eq('workspace_id', ws)
+          .filter('deleted_at', 'is', null)
+          .order('sort_order', ascending: true),
+      _client
+          .from('products')
+          .select()
+          .eq('workspace_id', ws)
+          .filter('deleted_at', 'is', null)
+          .order('name', ascending: true),
     ]);
 
     final dealRows = (results[0] as List).cast<Map<String, dynamic>>();
@@ -180,6 +208,8 @@ class SupabaseRepository {
     final movementRows = (results[5] as List).cast<Map<String, dynamic>>();
     final activityRows = (results[6] as List).cast<Map<String, dynamic>>();
     final ticketRows = (results[7] as List).cast<Map<String, dynamic>>();
+    final categoryRows = (results[8] as List).cast<Map<String, dynamic>>();
+    final productRows = (results[9] as List).cast<Map<String, dynamic>>();
 
     final inventoryItems =
         itemRows.map(InventoryItem.fromSupabase).toList();
@@ -209,6 +239,9 @@ class SupabaseRepository {
           movementRows.map(InventoryMovement.fromSupabase).toList(),
       activities: activityRows.map(ActivityEntry.fromSupabase).toList(),
       tickets: ticketRows.map(Ticket.fromSupabase).toList(),
+      productCategories:
+          categoryRows.map(ProductCategory.fromSupabase).toList(),
+      products: productRows.map(Product.fromSupabase).toList(),
     );
   }
 
@@ -456,6 +489,223 @@ class SupabaseRepository {
         .from('suppliers')
         .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
         .eq('id', id);
+  }
+
+  // ── Product categories ────────────────────────────────────────────────────
+
+  /// Lädt alle aktiven Kategorien des Workspaces, sortiert nach `sort_order`.
+  Future<List<ProductCategory>> loadProductCategories(
+      String workspaceId) async {
+    final rows = await _client
+        .from('product_categories')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .filter('deleted_at', 'is', null)
+        .order('sort_order', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(ProductCategory.fromSupabase)
+        .toList();
+  }
+
+  Future<ProductCategory> insertProductCategory(
+      ProductCategory category) async {
+    final payload = category.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('product_categories')
+        .insert(payload)
+        .select()
+        .single();
+    return ProductCategory.fromSupabase(row);
+  }
+
+  Future<ProductCategory> updateProductCategory(
+      ProductCategory category) async {
+    final payload = category.toSupabaseInsert();
+    final row = await _client
+        .from('product_categories')
+        .update(payload)
+        .eq('id', category.id)
+        .select()
+        .single();
+    return ProductCategory.fromSupabase(row);
+  }
+
+  /// Soft-Delete: setzt `deleted_at` auf die aktuelle UTC-Zeit (konsistent
+  /// mit dem Pattern aller anderen workspace-scoped Entitäten in diesem
+  /// Repository — kein Hard-Delete).
+  Future<void> deleteProductCategory(String id) async {
+    await _client
+        .from('product_categories')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  // ── Products (Artikelstamm) ───────────────────────────────────────────────
+
+  /// Lädt alle aktiven Artikel-Stammsätze des Workspaces, sortiert nach Name.
+  /// Analog `loadProductCategories` — filtert `deleted_at IS NULL`.
+  Future<List<Product>> loadProducts(String workspaceId) async {
+    final rows = await _client
+        .from('products')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .filter('deleted_at', 'is', null)
+        .order('name', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(Product.fromSupabase)
+        .toList();
+  }
+
+  Future<Product> insertProduct(Product product) async {
+    final payload = product.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('products')
+        .insert(payload)
+        .select()
+        .single();
+    return Product.fromSupabase(row);
+  }
+
+  Future<Product> updateProduct(Product product) async {
+    final payload = product.toSupabaseInsert();
+    final row = await _client
+        .from('products')
+        .update(payload)
+        .eq('id', product.id)
+        .select()
+        .single();
+    return Product.fromSupabase(row);
+  }
+
+  /// Soft-Delete: setzt `deleted_at` auf die aktuelle UTC-Zeit.
+  /// Bestands-Rows (`inventory_items`) mit dieser `product_id` behalten die
+  /// Referenz — der FK ist `ON DELETE SET NULL`, d. h. die DB setzt
+  /// `product_id` nur beim Hard-Delete; unser Soft-Delete lässt die Items
+  /// unverändert. Konsistent mit dem allgemeinen Soft-Delete-Pattern.
+  Future<void> deleteProduct(String id) async {
+    await _client
+        .from('products')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  // ── Product suppliers (lazy — nur pro Detail-Screen) ─────────────────────
+  //
+  // `product_suppliers` ist eine Detail-Tabelle (n:m, pro Produkt wenige Rows).
+  // Sie wird NICHT in `loadAll()`/`CloudSnapshot` aufgenommen (Committee-
+  // Empfehlung 1 — Detail-Tabellen lazy laden). Pattern analog
+  // `loadBatchesForItem`.
+
+  /// Lädt alle aktiven Lieferanten-Zuordnungen eines Produkts.
+  /// Lazy: wird pro `product_detail_screen` on-demand aufgerufen.
+  Future<List<ProductSupplier>> loadProductSuppliers(
+    String workspaceId,
+    String productId,
+  ) async {
+    final rows = await _client
+        .from('product_suppliers')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .eq('product_id', productId)
+        .filter('deleted_at', 'is', null)
+        .order('is_preferred', ascending: false);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(ProductSupplier.fromSupabase)
+        .toList();
+  }
+
+  Future<ProductSupplier> insertProductSupplier(
+      ProductSupplier productSupplier) async {
+    final payload = productSupplier.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('product_suppliers')
+        .insert(payload)
+        .select()
+        .single();
+    return ProductSupplier.fromSupabase(row);
+  }
+
+  Future<ProductSupplier> updateProductSupplier(
+      ProductSupplier productSupplier) async {
+    final payload = productSupplier.toSupabaseInsert();
+    final row = await _client
+        .from('product_suppliers')
+        .update(payload)
+        .eq('id', productSupplier.id)
+        .select()
+        .single();
+    return ProductSupplier.fromSupabase(row);
+  }
+
+  /// Soft-Delete einer Artikel-Lieferanten-Zuordnung.
+  Future<void> deleteProductSupplier(String id) async {
+    await _client
+        .from('product_suppliers')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  // ── Product stock (read-only View) ────────────────────────────────────────
+  //
+  // Der View `product_stock` ist die einzige Aggregations-Quelle für
+  // Lagerbestand pro Produkt/Lager. Er ist read-only (kein insert/update).
+  //
+  // Zwei Varianten werden angeboten:
+  //   • `loadProductStock(workspaceId)` — workspace-weit; der Provider
+  //     kann daraus per `productId` gruppieren (für AF8 / KPI-Aggregation).
+  //   • `loadProductStockForProduct(workspaceId, productId)` — nur ein
+  //     Produkt; für AF12 (Produkt-Detail) effizienter.
+  //
+  // Signatur für AF8 + AF12 abstimmt:
+  //   • AF8 nutzt `loadProductStock` → GroupBy im Provider.
+  //   • AF12 nutzt `loadProductStockForProduct` → direkte Summe im
+  //     Detail-Screen-Provider-Slot.
+
+  /// Lädt den aggregierten Lagerbestand aller Produkte des Workspaces aus dem
+  /// View `product_stock`. Nicht-verknüpfte Bestands-Rows (`product_id IS NULL`)
+  /// sind nicht enthalten — dies ist Absicht gemäß Plan-Datenmodell.
+  ///
+  /// Wird von AF8 für die workspace-weite KPI-Aggregation genutzt.
+  Future<List<ProductStock>> loadProductStock(String workspaceId) async {
+    final rows = await _client
+        .from('product_stock')
+        .select()
+        .eq('workspace_id', workspaceId);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(ProductStock.fromSupabase)
+        .toList();
+  }
+
+  /// Lädt den aggregierten Lagerbestand eines einzelnen Produkts aus dem
+  /// View `product_stock`. Jede Row entspricht einem Lager (oder `null`-Lager
+  /// für nicht-zugeordnete Items).
+  ///
+  /// Wird von AF12 (Produkt-Detail-Screen) für die effiziente Einzel-Abfrage
+  /// genutzt; Gesamtbestand = Summe von `qtyInWarehouse` aller zurückgegebenen
+  /// Rows.
+  Future<List<ProductStock>> loadProductStockForProduct(
+    String workspaceId,
+    String productId,
+  ) async {
+    final rows = await _client
+        .from('product_stock')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .eq('product_id', productId);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(ProductStock.fromSupabase)
+        .toList();
   }
 
   // ── Inventory items ───────────────────────────────────────────────────────

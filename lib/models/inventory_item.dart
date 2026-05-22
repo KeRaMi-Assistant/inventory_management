@@ -19,6 +19,10 @@ class InventoryItem {
   final double? publicPrice;
   final String? publicDescription;
 
+  /// Optionale Verknüpfung auf `products.id` (Epic A-full).
+  /// Nullable — bestehende Items ohne Produkt-Bezug bleiben gültig.
+  final String? productId;
+
   const InventoryItem({
     required this.id,
     required this.name,
@@ -39,9 +43,24 @@ class InventoryItem {
     this.isPublic = false,
     this.publicPrice,
     this.publicDescription,
+    this.productId,
   });
 
+  /// Gibt an, ob die Bestandsmenge dieser einzelnen Row unter dem
+  /// Mindestbestand liegt (`quantity < minStock`).
+  ///
+  /// **Wichtig (Epic A-full / Committee-Finding 9):**
+  /// Für Produkt-verknüpfte Rows (`productId != null`) ist dieser Getter
+  /// NICHT die korrekte Kritisch-Wahrheit — ein Produkt kann mehrere
+  /// Bestands-Rows (z. B. in unterschiedlichen Lagern) haben. Die korrekte
+  /// Aggregation erfolgt ausschließlich im `InventoryProvider.criticalStockCount`
+  /// über den `product_stock`-View gegen `products.min_stock`.
+  ///
+  /// Dieser Getter ist ausschließlich für nicht-produktverknüpfte Rows
+  /// (`productId == null`) korrekt und soll für Item-Level-Anzeige in der
+  /// bestehenden UI genutzt werden (z. B. Warn-Icon pro Row).
   bool get isCritical => quantity < minStock;
+
   double get stockValue => (costPrice ?? 0) * quantity;
 
   // ── Local backup JSON (camelCase) ─────────────────────────────────────────
@@ -66,6 +85,7 @@ class InventoryItem {
         'isPublic': isPublic,
         'publicPrice': publicPrice,
         'publicDescription': publicDescription,
+        'productId': productId,
       };
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) => InventoryItem(
@@ -93,6 +113,7 @@ class InventoryItem {
         isPublic: json['isPublic'] as bool? ?? false,
         publicPrice: (json['publicPrice'] as num?)?.toDouble(),
         publicDescription: json['publicDescription'] as String?,
+        productId: json['productId'] as String?,
       );
 
   // ── Supabase (snake_case) ─────────────────────────────────────────────────
@@ -117,6 +138,7 @@ class InventoryItem {
         'is_public': isPublic,
         'public_price': publicPrice,
         'public_description': publicDescription,
+        if (productId != null) 'product_id': productId,
       };
 
   factory InventoryItem.fromSupabase(Map<String, dynamic> row) {
@@ -144,6 +166,7 @@ class InventoryItem {
       isPublic: (row['is_public'] as bool?) ?? false,
       publicPrice: (row['public_price'] as num?)?.toDouble(),
       publicDescription: row['public_description'] as String?,
+      productId: row['product_id'] as String?,
     );
   }
 
@@ -167,6 +190,7 @@ class InventoryItem {
     bool? isPublic,
     Object? publicPrice = _sentinel,
     Object? publicDescription = _sentinel,
+    Object? productId = _sentinel,
   }) =>
       InventoryItem(
         id: id ?? this.id,
@@ -201,6 +225,8 @@ class InventoryItem {
         publicDescription: publicDescription == _sentinel
             ? this.publicDescription
             : publicDescription as String?,
+        productId:
+            productId == _sentinel ? this.productId : productId as String?,
       );
 }
 
@@ -268,6 +294,10 @@ class InventoryMovement {
   final String? ticketNumber;
   final String? note;
 
+  /// Optionale Verknüpfung auf `products.id` (Epic A-full).
+  /// Nullable — bestehende Movements ohne Produkt-Bezug bleiben gültig.
+  final String? productId;
+
   const InventoryMovement({
     required this.id,
     required this.itemId,
@@ -279,6 +309,7 @@ class InventoryMovement {
     this.dealId,
     this.ticketNumber,
     this.note,
+    this.productId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -292,6 +323,7 @@ class InventoryMovement {
         'dealId': dealId,
         'ticketNumber': ticketNumber,
         'note': note,
+        'productId': productId,
       };
 
   factory InventoryMovement.fromJson(Map<String, dynamic> json) =>
@@ -309,6 +341,7 @@ class InventoryMovement {
         dealId: json['dealId'] as int?,
         ticketNumber: json['ticketNumber'] as String?,
         note: json['note'] as String?,
+        productId: json['productId'] as String?,
       );
 
   // ── Supabase (snake_case) ─────────────────────────────────────────────────
@@ -328,6 +361,9 @@ class InventoryMovement {
     if (unitCost != null) {
       map['unit_cost'] = unitCost;
     }
+    if (productId != null) {
+      map['product_id'] = productId;
+    }
     return map;
   }
 
@@ -346,6 +382,7 @@ class InventoryMovement {
         dealId: (row['deal_id'] as num?)?.toInt(),
         ticketNumber: row['ticket_number'] as String?,
         note: row['note'] as String?,
+        productId: row['product_id'] as String?,
       );
 
   InventoryMovement copyWith({
@@ -359,6 +396,7 @@ class InventoryMovement {
     Object? dealId = _sentinel,
     Object? ticketNumber = _sentinel,
     Object? note = _sentinel,
+    Object? productId = _sentinel,
   }) =>
       InventoryMovement(
         id: id ?? this.id,
@@ -373,6 +411,8 @@ class InventoryMovement {
             ? this.ticketNumber
             : ticketNumber as String?,
         note: note == _sentinel ? this.note : note as String?,
+        productId:
+            productId == _sentinel ? this.productId : productId as String?,
       );
 }
 

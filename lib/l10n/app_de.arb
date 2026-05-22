@@ -66,6 +66,16 @@
   "navSettings": "Einstellungen",
   "navMore": "Mehr",
   "navMoreSheetTitle": "Weitere Bereiche",
+  "navWarehouse": "Warenwirtschaft",
+  "warehouseHubTitle": "Warenwirtschaft",
+  "warehouseHubComingSoon": "Bald verfügbar",
+  "warehouseHubComingSoonHint": "Diese Funktion wird in einem der nächsten Updates freigeschaltet.",
+  "warehouseHubTileProductCatalog": "Artikelstamm",
+  "warehouseHubTilePurchaseOrders": "Bestellungen",
+  "warehouseHubTileWarehouses": "Lager",
+  "warehouseHubTileCategories": "Warengruppen",
+  "warehouseHubTileStocktake": "Inventur",
+  "warehouseHubTileReporting": "Reporting",
 
   "fieldEmail": "E-Mail",
   "fieldPassword": "Passwort",
@@ -1316,6 +1326,28 @@
   "inboxSuggestionEdit": "Vor Übernahme bearbeiten",
   "inboxSuggestionAccept": "Annehmen",
 
+  "productCatalogTitle": "Artikelstamm",
+  "productNew": "Neuer Artikel",
+  "productUnit": "Einheit",
+  "productDefaultCostPrice": "Standard-EK",
+  "productDefaultSalePrice": "Standard-VK",
+  "productCategory": "Warengruppe",
+  "productDefaultSupplier": "Standard-Lieferant",
+  "productMinStock": "Mindestbestand",
+  "productTaxRate": "MwSt.-Satz (%)",
+  "productIsActive": "Aktiv",
+  "productAdvancedSection": "Erweitert",
+  "productNameLabel": "Artikelname",
+  "productSkuLabel": "Artikelnummer (SKU)",
+  "productEanLabel": "EAN / GTIN",
+  "productNoteLabel": "Notiz",
+  "productEditTitle": "Artikel bearbeiten",
+  "productAddTitle": "Neuer Artikel",
+  "productGroupWithoutProduct": "Ohne Artikel",
+  "productCatalogEmpty": "Kein Artikelstamm",
+  "productCatalogEmptyHint": "Lege deinen ersten Artikel an.",
+  "productLinkLabel": "Verknüpfter Stammartikel",
+  "productNoLink": "Kein Stammartikel",
   "productDetailTitle": "Artikeldetails",
   "productDetailEmpty": "Keine Daten",
   "productDetailEmptyHint": "Für diesen Artikel gibt es noch keine Bewegungen.",
@@ -1354,5 +1386,72 @@
       "sign": {},
       "qty": { "type": "int" }
     }
-  }
+  },
+  "productDetailSectionProduct": "Artikel (Stammdaten)",
+  "productDetailLabelProductUnit": "Einheit",
+  "productDetailLabelDefaultCostPrice": "Standard-EK",
+  "productDetailLabelDefaultSalePrice": "Standard-VK",
+  "productDetailLabelMinStockProduct": "Mindestbestand (Produkt)",
+  "productDetailLabelTaxRate": "MwSt-Satz",
+  "productDetailSectionAggregatedStock": "Gesamtbestand",
+  "productDetailLabelTotalQty": "Gesamt (alle Lager)",
+  "productDetailLabelWarehouseQty": "Lager {warehouse}",
+  "@productDetailLabelWarehouseQty": {
+    "placeholders": {
+      "warehouse": {}
+    }
+  },
+  "productDetailLabelNoWarehouse": "Kein Lager zugeordnet",
+  "productDetailMovementsAllProduct": "Alle Bewegungen dieses Produkts (alle Bestands-Rows).",
+  "productDetailLoadMoreMovements": "Weitere {count} laden",
+  "@productDetailLoadMoreMovements": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "productDetailAllMovementsShown": "Alle Bewegungen angezeigt",
+
+  "stockGroupItemCount": "{count,plural, =1{1 Position} other{{count} Positionen}}",
+  "@stockGroupItemCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "stockGroupTotalQuantity": "Gesamt: {qty} Stk.",
+  "@stockGroupTotalQuantity": {
+    "placeholders": {
+      "qty": { "type": "int" }
+    }
+  },
+
+  "categoriesTitle": "Warengruppen",
+  "categoriesEmpty": "Keine Warengruppen",
+  "categoriesEmptyHint": "Lege deine erste Warengruppe an.",
+  "categoriesLoadError": "Warengruppen konnten nicht geladen werden.",
+  "categoryNew": "Neue Warengruppe",
+  "categoryEdit": "Warengruppe bearbeiten",
+  "categoryDelete": "Warengruppe löschen",
+  "categoryDeletePrompt": "„{name}\" wirklich löschen?",
+  "@categoryDeletePrompt": {
+    "placeholders": { "name": {} }
+  },
+  "categoryParent": "Übergeordnet",
+  "categoryParentNone": "Keine (Hauptgruppe)",
+  "categoryFieldName": "Name",
+  "categoryFieldSortOrder": "Sortierung",
+  "categoryMaxDepthError": "Nur 2 Ebenen erlaubt. Bitte eine Hauptgruppe wählen.",
+  "categorySortOrderHint": "Zahl, niedrig = zuerst",
+
+  "supplierAddress": "Adresse",
+  "supplierAddressStreet": "Straße",
+  "supplierAddressZip": "PLZ",
+  "supplierAddressCity": "Ort",
+  "supplierAddressCountry": "Land",
+  "supplierVatId": "USt-IdNr",
+  "supplierCustomerNumber": "Kundennummer",
+  "supplierPaymentTerms": "Zahlungsziel (Tage)",
+  "supplierLeadTime": "Lieferzeit (Tage)",
+  "supplierMinOrderValue": "Mindestbestellwert",
+  "supplierAdvancedSection": "Erweiterte Angaben",
+  "commonDaysUnit": "Tage"
 }

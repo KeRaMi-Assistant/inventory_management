@@ -27,6 +27,7 @@ import 'statistics_screen.dart';
 import 'suppliers_screen.dart';
 import 'main_tab.dart';
 import 'tickets_screen.dart';
+import 'warehouse_hub_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -48,8 +49,9 @@ class _MainScreenState extends State<MainScreen> {
     (Icons.local_shipping_outlined, Icons.local_shipping),
     (Icons.bar_chart_outlined, Icons.bar_chart_rounded),
     (Icons.history_outlined, Icons.history_rounded),
-    (Icons.settings_outlined, Icons.settings_rounded), // MainTab.settings (8)
-    (Icons.help_outline_rounded, Icons.help_rounded),  // MainTab.help (9)
+    (Icons.settings_outlined, Icons.settings_rounded),  // MainTab.settings (8)
+    (Icons.help_outline_rounded, Icons.help_rounded),   // MainTab.help (9)
+    (Icons.storefront_outlined, Icons.storefront),       // MainTab.warehouse (10) — AF11
   ];
 
   List<String> _navLabels(AppLocalizations l10n) => [
@@ -61,8 +63,9 @@ class _MainScreenState extends State<MainScreen> {
         l10n.navSuppliers,
         l10n.navStatistics,
         l10n.navActivity,
-        l10n.navSettings, // MainTab.settings (8)
-        l10n.navHelp,     // MainTab.help (9)
+        l10n.navSettings,   // MainTab.settings (8)
+        l10n.navHelp,       // MainTab.help (9)
+        l10n.navWarehouse,  // MainTab.warehouse (10) — AF11
       ];
 
   Future<void> _export(BuildContext context, InventoryProvider provider) async {
@@ -143,6 +146,7 @@ class _MainScreenState extends State<MainScreen> {
       MainTab.activity: true,
       MainTab.settings: true,
       MainTab.help: true,
+      MainTab.warehouse: true, // AF11
     };
   }
 
@@ -283,6 +287,7 @@ class _MainScreenState extends State<MainScreen> {
       MainTab.activity => const ActivityScreen(),
       MainTab.settings => const SettingsScreen(embedded: true),
       MainTab.help => const HelpScreen(embedded: true),
+      MainTab.warehouse => const WarehouseHubScreen(), // AF11
     };
   }
 

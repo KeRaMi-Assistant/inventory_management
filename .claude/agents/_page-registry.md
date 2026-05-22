@@ -47,6 +47,7 @@ die der Browser-Tester pro Eintrag durchspielt — Definitionen unten.
 | `/pricing` | [`lib/screens/pricing_screen.dart`](../../lib/screens/pricing_screen.dart) | smoke-theme | Plan-Auswahl + Checkout-Trigger. |
 | `/billing-profile` | [`lib/screens/billing_profile_screen.dart`](../../lib/screens/billing_profile_screen.dart) | smoke-theme | Rechnungs-Adresse, push aus Pricing. |
 | `/public-profile/<slug>` | [`lib/screens/public_profile_screen.dart`](../../lib/screens/public_profile_screen.dart) | public-render | **Web-only**, ohne Login. URL `/u/<handle>`. |
+| `/warehouse` | [`lib/screens/warehouse_hub_screen.dart`](../../lib/screens/warehouse_hub_screen.dart) | smoke-theme, mobile-overflow | Neuer `MainTab.warehouse` (Epic A-full, AF11). Hub mit Kacheln zu Sub-Routen: Bestellungen, Lager, Kategorien, Inventur, Reporting. A11y-Keys: `Key('hubTilePurchaseOrders')`, `Key('hubTileWarehouses')`, `Key('hubTileCategories')`, `Key('hubTileStocktake')`, `Key('hubTileReporting')`. |
 
 ## Auth- & First-Run-Routes (ausgeloggter / Onboarding-Bereich)
 
@@ -73,6 +74,7 @@ Dialogs müssen auf 390×844 ohne horizontalen Scroll funktionieren.
 | `/inventory` → Batch-Sheet | [`lib/widgets/inventory_batches_sheet.dart`](../../lib/widgets/inventory_batches_sheet.dart) | smoke-theme, mobile-overflow |
 | `/inventory` → Barcode-Scan | [`lib/widgets/barcode_scanner_sheet.dart`](../../lib/widgets/barcode_scanner_sheet.dart) | smoke-theme |
 | `/inventory` → Artikel-Detail (Tap auf Item-Card) | [`lib/screens/product_detail_screen.dart`](../../lib/screens/product_detail_screen.dart) | smoke-theme, mobile-overflow | Gepushter Screen (kein eigener MainTab). 360°-Sicht auf bestehender `inventory_items`-Row: Stammdaten, Bestand, getypte Bewegungshistorie (Buchungsart-Badges), Chargen, Lieferant. A11y-Keys: `Key('productDetailScrollView')`, `Key('movementHistoryList')`, `Key('movementRow-<id>')`. Epic A-lite (AL5). |
+| `/warehouse` → Neuer/Bearbeitungs-Artikel (Stammkatalog) | [`lib/widgets/add_edit_product_dialog.dart`](../../lib/widgets/add_edit_product_dialog.dart) | smoke-theme, mobile-overflow | `AddEditProductDialog` — Modal-Dialog für Produkt-Stammsatz (NEU, Epic A-full AF9). `SingleChildScrollView` + `SafeArea` + `MediaQuery.viewInsetsOf`. A11y-Keys: `Key('productSaveButton')`, `Key('productCategoryDropdown')`. Viewer ohne Speichern-Button. |
 | `/suppliers` → Add-/Edit-Supplier | [`lib/widgets/add_edit_supplier_dialog.dart`](../../lib/widgets/add_edit_supplier_dialog.dart) | smoke-theme, mobile-overflow |
 | `/settings` → Add-/Edit-Shop | [`lib/widgets/add_edit_shop_dialog.dart`](../../lib/widgets/add_edit_shop_dialog.dart) | smoke-theme, mobile-overflow |
 | `/settings` → Add-/Edit-Buyer | [`lib/widgets/add_edit_buyer_dialog.dart`](../../lib/widgets/add_edit_buyer_dialog.dart) | smoke-theme, mobile-overflow |

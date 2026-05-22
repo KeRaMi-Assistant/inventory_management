@@ -10,6 +10,9 @@ import '../models/tracking_confidence.dart';
 import '../models/deal_comment.dart';
 import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
+import '../models/product.dart';
+import '../models/product_category.dart';
+import '../models/product_stock.dart';
 import '../models/shop.dart';
 import '../models/supplier.dart';
 import '../models/ticket.dart';
@@ -36,6 +39,14 @@ class InventoryProvider extends ChangeNotifier {
   List<InventoryMovement> _movements = [];
   List<ActivityEntry> _activities = [];
   List<Ticket> _tickets = [];
+  List<ProductCategory> _productCategories = [];
+  List<Product> _products = [];
+
+  /// Aggregierter Lagerbestand aus dem DB-View `product_stock` (Epic A-full,
+  /// read-only). Jede Row = Bestand eines Produkts pro Lager. Wird in
+  /// [loadData] nach [loadAll] geladen — der View ist klein (workspace-weit)
+  /// und wird für KPI-Aggregation in [criticalStockCount] benötigt.
+  List<ProductStock> _productStock = [];
 
   bool _loading = false;
   Object? _lastError;
@@ -55,6 +66,15 @@ class InventoryProvider extends ChangeNotifier {
   List<InventoryMovement> get movements => List.unmodifiable(_movements);
   List<ActivityEntry> get activities => List.unmodifiable(_activities);
   List<Ticket> get tickets => List.unmodifiable(_tickets);
+  List<ProductCategory> get productCategories =>
+      List.unmodifiable(_productCategories);
+  List<Product> get products => List.unmodifiable(_products);
+
+  /// Aggregierter Lagerbestand pro Produkt/Lager aus dem View `product_stock`.
+  /// Nur Rows mit `product_id IS NOT NULL` — nicht-verknüpfte Items fehlen
+  /// hier bewusst (sie fallen nicht in den View). Für KPI-Nutzung in
+  /// [criticalStockCount] und später im Produkt-Detail-Screen (AF12).
+  List<ProductStock> get productStock => List.unmodifiable(_productStock);
 
   static const List<String> statusOptions = [
     'Bestellt',
@@ -101,12 +121,81 @@ class InventoryProvider extends ChangeNotifier {
     }).length;
   }
 
-  int get criticalStockCount =>
-      _inventoryItems.where((item) => item.isCritical).length;
+  /// Anzahl der Artikel/Produkte, deren Gesamtbestand unter dem Mindestbestand
+  /// liegt (Kritisch-Bewertung).
+  ///
+  /// **Aggregations-Logik (Epic A-full / Committee-Finding 9):**
+  /// - Produkt-verknüpfte Items (`product_id != null`) werden pro Produkt
+  ///   aggregiert: Gesamtbestand = Summe aller `product_stock.qty_in_warehouse`
+  ///   über alle Lager eines Produkts. Verglichen wird gegen
+  ///   `products.min_stock`. Ein Produkt zählt genau einmal — auch wenn es
+  ///   mehrere `inventory_items`-Rows hat (z. B. unterschiedliche Lager/Chargen).
+  ///   Dies verhindert überhöhte KPI-Werte (Regressions-Schutz Committee-Bug #9).
+  /// - Nicht-verknüpfte Items (`product_id == null`) behalten die Item-Level-
+  ///   Logik: `item.isCritical` (`quantity < minStock`) — jede Row für sich,
+  ///   da kein Produkt-Mindestbestand vorhanden ist.
+  /// - Gesamtwert = (kritische Produkte) + (kritische nicht-verknüpfte Items).
+  ///
+  /// Solange `_productStock` leer ist (View noch nicht geladen oder kein aktiver
+  /// Workspace), fällt die Logik für alle Items auf Item-Level zurück (Safe
+  /// Fallback).
+  int get criticalStockCount {
+    // 1. Aggregierten Bestand pro Produkt aus product_stock aufbauen.
+    //    productId → Gesamtbestand über alle Lager/Rows.
+    final Map<String, int> totalByProduct = {};
+    for (final stock in _productStock) {
+      totalByProduct.update(
+        stock.productId,
+        (existing) => existing + stock.qtyInWarehouse,
+        ifAbsent: () => stock.qtyInWarehouse,
+      );
+    }
+
+    // 2. Produkte mit aggregiertem Bestand < min_stock zählen.
+    //    Nur Produkte, für die auch mindestens eine product_stock-Row existiert,
+    //    werden hier berücksichtigt — Produkte ohne jegliche Bestands-Rows haben
+    //    implizit qty = 0, aber der View gibt sie nicht zurück (sie fehlen im
+    //    View, da alle Bestands-Rows deleted_at haben oder keine existieren).
+    //    Das ist akzeptabel: 0 Bestand bei 0 Mindestbestand = nicht kritisch;
+    //    und Produkte mit echter min_stock-Anforderung aber ohne Bestands-Rows
+    //    werden in D4 (Low-Stock-Alerts) separat behandelt.
+    final productIds = _products.map((p) => p.id).toSet();
+    final productMinStock = <String, int>{
+      for (final p in _products) p.id: p.minStock,
+    };
+
+    int criticalProductCount = 0;
+    final countedProductIds = <String>{};
+    for (final productId in totalByProduct.keys) {
+      // Nur zählen wenn das Produkt noch im lokalen Cache ist (nicht gelöscht).
+      if (!productIds.contains(productId)) continue;
+      if (countedProductIds.contains(productId)) continue;
+      countedProductIds.add(productId);
+
+      final totalQty = totalByProduct[productId] ?? 0;
+      final minStock = productMinStock[productId] ?? 0;
+      if (totalQty < minStock) {
+        criticalProductCount++;
+      }
+    }
+
+    // 3. Nicht-verknüpfte Items (product_id == null) → Item-Level-Logik.
+    //    isCritical ist für diese Items die korrekte Wahrheit.
+    final criticalUnlinkedCount = _inventoryItems
+        .where((item) => item.productId == null && item.isCritical)
+        .length;
+
+    return criticalProductCount + criticalUnlinkedCount;
+  }
 
   int get missingInvoiceCount =>
       _deals.where((d) => !d.hasReceipt && d.status != 'Done').length;
 
+  /// Gesamtmenge aller Lagerartikel (Summe aller `inventory_items.quantity`).
+  ///
+  /// `quantity` ist die physische Wahrheit pro Bestands-Row — die Summierung
+  /// hier ist korrekt. Nur die *kritisch*-Bewertung muss aggregieren (per
+  /// Produkt), die Gesamtmenge nicht. Enthält auch nicht-verknüpfte Rows.
   int get totalStockQuantity =>
       _inventoryItems.fold(0, (sum, item) => sum + item.quantity);
 
@@ -207,8 +296,35 @@ class InventoryProvider extends ChangeNotifier {
     _lastError = null;
     notifyListeners();
     try {
+      // Workspace-ID aus dem Repository holen (der Single Source of Truth für
+      // den aktiven Workspace): `_repository.activeWorkspaceId` ist auch für
+      // Test-Fakes korrekt befüllt, während `_activeWorkspaceId` bei direkten
+      // `loadData()`-Aufrufen (ohne vorangehendes `setActiveWorkspace`) null
+      // sein kann.
+      final wsId = _repository.activeWorkspaceId ?? _activeWorkspaceId;
+
+      // Hauptdaten laden.
       final snapshot = await _repository.loadAll();
       _hydrateFrom(snapshot);
+
+      // product_stock separat laden — read-only View, kann defensiv fehlschlagen.
+      // Fehler (z. B. fehlende Implementierung in Test-Fakes oder Netzwerkfehler)
+      // fallen auf einen leeren Cache zurück; die App bleibt nutzbar, nur die
+      // Produkt-aggregierten KPIs (criticalStockCount für verknüpfte Produkte)
+      // zeigen 0 statt korrekter Werte.
+      if (wsId != null) {
+        try {
+          _productStock = await _repository.loadProductStock(wsId);
+        } catch (e) {
+          _productStock = [];
+          if (kDebugMode) {
+            debugPrint('InventoryProvider: product_stock konnte nicht geladen '
+                'werden (non-fatal): $e');
+          }
+        }
+      } else {
+        _productStock = [];
+      }
     } catch (e) {
       _lastError = e;
       if (kDebugMode) debugPrint('InventoryProvider.loadData failed: $e');
@@ -228,6 +344,9 @@ class InventoryProvider extends ChangeNotifier {
     _movements = [];
     _activities = [];
     _tickets = [];
+    _productCategories = [];
+    _products = [];
+    _productStock = [];
     _lastError = null;
     _activeWorkspaceId = null;
     _repository.setActiveWorkspace(null);
@@ -248,6 +367,10 @@ class InventoryProvider extends ChangeNotifier {
     _activities = List.of(snapshot.activities)
       ..sort((a, b) => b.date.compareTo(a.date));
     _tickets = List.of(snapshot.tickets);
+    _productCategories = List.of(snapshot.productCategories)
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    _products = List.of(snapshot.products)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
   }
 
   // ── TICKETS ───────────────────────────────────────────────────────────────
@@ -679,6 +802,69 @@ class InventoryProvider extends ChangeNotifier {
     return (added: added, skipped: skipped);
   }
 
+  // ── PRODUCT CATEGORIES ────────────────────────────────────────────────────
+
+  Future<void> addProductCategory(ProductCategory category) async {
+    final saved = await _repository.insertProductCategory(category);
+    _productCategories.add(saved);
+    _productCategories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    _log('Warengruppe hinzugefügt: ${saved.name}', 'category');
+    notifyListeners();
+  }
+
+  Future<void> updateProductCategory(ProductCategory category) async {
+    final saved = await _repository.updateProductCategory(category);
+    final idx = _productCategories.indexWhere((c) => c.id == saved.id);
+    if (idx == -1) return;
+    _productCategories[idx] = saved;
+    _productCategories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    _log('Warengruppe aktualisiert: ${saved.name}', 'category');
+    notifyListeners();
+  }
+
+  Future<void> deleteProductCategory(String id) async {
+    final category =
+        _productCategories.where((c) => c.id == id).firstOrNull;
+    await _repository.deleteProductCategory(id);
+    _productCategories.removeWhere((c) => c.id == id);
+    if (category != null) {
+      _log('Warengruppe gelöscht: ${category.name}', 'category');
+    }
+    notifyListeners();
+  }
+
+  // ── PRODUCTS ──────────────────────────────────────────────────────────────
+
+  Future<void> addProduct(Product product) async {
+    final saved = await _repository.insertProduct(product);
+    _products.add(saved);
+    _products.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _log('Artikel hinzugefügt: ${saved.name}', 'product');
+    notifyListeners();
+  }
+
+  Future<void> updateProduct(Product product) async {
+    final saved = await _repository.updateProduct(product);
+    final idx = _products.indexWhere((p) => p.id == saved.id);
+    if (idx == -1) return;
+    _products[idx] = saved;
+    _products.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _log('Artikel aktualisiert: ${saved.name}', 'product');
+    notifyListeners();
+  }
+
+  Future<void> deleteProduct(String id) async {
+    final product = _products.where((p) => p.id == id).firstOrNull;
+    await _repository.deleteProduct(id);
+    _products.removeWhere((p) => p.id == id);
+    if (product != null) {
+      _log('Artikel gelöscht: ${product.name}', 'product');
+    }
+    notifyListeners();
+  }
+
   // ── INVENTORY ITEMS ───────────────────────────────────────────────────────
 
   Future<void> addInventoryItem(InventoryItem item) async {
@@ -698,6 +884,7 @@ class InventoryProvider extends ChangeNotifier {
         unitCost: saved.costPrice,
         dealId: saved.dealId,
         ticketNumber: saved.ticketNumber,
+        productId: saved.productId,
       );
       final savedMovement = await _repository.insertMovement(movement);
       _movements.insert(0, savedMovement);
@@ -733,6 +920,7 @@ class InventoryProvider extends ChangeNotifier {
         unitCost: isIncoming ? saved.costPrice : null,
         dealId: saved.dealId,
         ticketNumber: saved.ticketNumber,
+        productId: saved.productId,
       );
       final savedMovement = await _repository.insertMovement(movement);
       _movements.insert(0, savedMovement);
@@ -783,6 +971,7 @@ class InventoryProvider extends ChangeNotifier {
           : null,
       dealId: dealId,
       ticketNumber: ticketNumber,
+      productId: current.productId,
     );
     final savedMovement = await _repository.insertMovement(movement);
     _movements.insert(0, savedMovement);
@@ -797,10 +986,20 @@ class InventoryProvider extends ChangeNotifier {
     String? location,
     String? sku,
   }) async {
+    final effectiveSku = sku?.trim().isEmpty ?? true ? null : sku!.trim();
+
+    // Produkt-Matching: erst im lokalen Cache suchen, dann ggf. neu anlegen.
+    // Ein Wareneingang darf NIEMALS an der Produkt-Verknüpfung scheitern —
+    // Fehler beim Anlegen des Produkts werden defensiv behandelt.
+    final matchedProductId = await _matchOrCreateProduct(
+      name: deal.product,
+      sku: effectiveSku,
+    );
+
     final item = InventoryItem(
       id: _uuid.v4(),
       name: deal.product,
-      sku: sku?.trim().isEmpty ?? true ? null : sku!.trim(),
+      sku: effectiveSku,
       quantity: deal.quantity,
       minStock: 0,
       location: location?.trim().isEmpty ?? true ? null : location!.trim(),
@@ -810,6 +1009,7 @@ class InventoryProvider extends ChangeNotifier {
       ticketNumber: deal.ticketNumber,
       ticketUrl: deal.ticketUrl,
       status: 'Im Lager',
+      productId: matchedProductId,
     );
 
     final savedItem = await _repository.insertInventoryItem(item);
@@ -826,6 +1026,7 @@ class InventoryProvider extends ChangeNotifier {
       unitCost: deal.ekBrutto,
       dealId: deal.id,
       ticketNumber: deal.ticketNumber,
+      productId: savedItem.productId,
     );
     final savedMovement = await _repository.insertMovement(movement);
     _movements.insert(0, savedMovement);
@@ -842,6 +1043,69 @@ class InventoryProvider extends ChangeNotifier {
 
     _log('Artikel via Deal eingebucht: ${deal.product}', 'stock');
     notifyListeners();
+  }
+
+  /// Sucht ein bestehendes [Product] per SKU (primär, case-insensitiv) oder
+  /// Name (sekundär, case-insensitiv) in `_products`. Wird kein Treffer
+  /// gefunden, wird ein neues Produkt über das Repository angelegt und in
+  /// `_products` aufgenommen. Schlägt das Anlegen fehl (z. B. SKU-UNIQUE-
+  /// Kollision durch Race), wird `null` zurückgegeben — der Caller bucht
+  /// das Item dann ohne `product_id` ein.
+  ///
+  /// `status` wird NICHT auf das Produkt verschoben — es bleibt auf der
+  /// `inventory_items`-Bestands-Row. Der Archive-Trigger
+  /// `tg_check_ticket_archive_from_inventory` und die
+  /// `TicketSummary`-Aggregation über `ticket_number`/`inventoryItemIds`
+  /// bleiben unberührt.
+  Future<String?> _matchOrCreateProduct({
+    required String name,
+    String? sku,
+  }) async {
+    final nameLower = name.toLowerCase().trim();
+    final skuLower = sku?.toLowerCase().trim();
+
+    // 1. Primäres Matching: SKU (case-insensitiv) — nur wenn SKU vorhanden.
+    if (skuLower != null && skuLower.isNotEmpty) {
+      final bysku = _products.where((p) {
+        final pSku = p.sku?.toLowerCase().trim();
+        return pSku != null && pSku == skuLower;
+      }).firstOrNull;
+      if (bysku != null) return bysku.id;
+    }
+
+    // 2. Sekundäres Matching: Name (exakt, case-insensitiv).
+    final byName = _products.where((p) {
+      return p.name.toLowerCase().trim() == nameLower;
+    }).firstOrNull;
+    if (byName != null) return byName.id;
+
+    // 3. Kein Treffer → neues Produkt anlegen.
+    try {
+      final now = DateTime.now().toUtc();
+      final newProduct = Product(
+        id: '',
+        workspaceId: _repository.activeWorkspaceId ?? '',
+        userId: '',
+        name: name.trim(),
+        sku: sku?.trim().isEmpty ?? true ? null : sku!.trim(),
+        createdAt: now,
+        updatedAt: now,
+      );
+      final saved = await _repository.insertProduct(newProduct);
+      _products.add(saved);
+      _products.sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      return saved.id;
+    } catch (e) {
+      // Defensiv: Wareneingang darf nicht an der Produkt-Verknüpfung scheitern.
+      // Mögliche Ursachen: SKU-UNIQUE-Kollision durch Race-Condition, kein
+      // aktiver Workspace, Netzwerkfehler. Item wird ohne product_id eingebucht.
+      if (kDebugMode) {
+        debugPrint('checkInDeal: Produkt-Anlegen fehlgeschlagen ($e) '
+            '— Item wird ohne product_id eingebucht.');
+      }
+      return null;
+    }
   }
 
   // ── DEAL COMMENTS ────────────────────────────────────────────────────────

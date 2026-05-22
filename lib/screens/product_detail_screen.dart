@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/inventory_item.dart';
+import '../models/product.dart';
+import '../models/product_stock.dart';
 import '../models/supplier.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
@@ -13,18 +15,44 @@ import '../widgets/inventory_batches_sheet.dart';
 
 /// 360°-Detail-Sicht auf eine bestehende [InventoryItem]-Row.
 ///
-/// Zeigt:
-/// - Stammdaten (Name, SKU, EAN, Lagerort, Status, Lieferant, EK, Ankunft, Notiz)
-/// - Aktueller Bestand (Menge, Mindestbestand, kritisch ja/nein)
-/// - Bewegungshistorie (getypte [InventoryMovement]s mit Buchungsart-Badge)
-/// - Chargen (via [InventoryBatchesSheet])
+/// **Zwei Modi (additiv, rückwärtskompatibel):**
+///
+/// 1. `item.productId != null` → **Produkt-Aggregations-Modus**
+///    - Zeigt zusätzlich Produkt-Stammdaten aus dem `products`-Katalog
+///    - Zeigt aggregierten Gesamtbestand des Produkts über ALLE Bestands-Rows
+///      via `product_stock`-View (aufgeschlüsselt nach Lager wenn mehrere)
+///    - Bewegungshistorie umfasst Movements aller Items die dem Produkt gehören
+///      (via `movement.productId`) + clientseitige Pagination (50 Einträge)
+///
+/// 2. `item.productId == null` → **Single-Row-Modus (bisheriges Verhalten)**
+///    - Stammdaten der Bestands-Row, Bestand der Row, Movements der Row
+///    - Keine Aggregation, keine Produkt-Sektion
 ///
 /// Navigation: gepusht per [Navigator.push] vom [InventoryScreen].
 /// A11y-Keys: `productDetailScrollView`, `movementHistoryList`, `movementRow-<id>`.
-class ProductDetailScreen extends StatelessWidget {
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pagination constant
+// ─────────────────────────────────────────────────────────────────────────────
+
+const int _kMovementPageSize = 50;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Screen (StatefulWidget for pagination state)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class ProductDetailScreen extends StatefulWidget {
   final InventoryItem item;
 
   const ProductDetailScreen({super.key, required this.item});
+
+  @override
+  State<ProductDetailScreen> createState() => _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  /// How many movements are currently visible.
+  int _visibleMovements = _kMovementPageSize;
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +67,9 @@ class ProductDetailScreen extends StatelessWidget {
 
     // Item aus Provider-Liste holen, damit live-Updates ankommen.
     final liveItem = provider.inventoryItems
-            .where((i) => i.id == item.id)
+            .where((i) => i.id == widget.item.id)
             .firstOrNull ??
-        item;
+        widget.item;
 
     final supplier = liveItem.supplierId != null
         ? provider.suppliers
@@ -49,9 +77,37 @@ class ProductDetailScreen extends StatelessWidget {
             .firstOrNull
         : null;
 
-    final itemMovements = provider.movements
-        .where((m) => m.itemId == liveItem.id)
-        .toList();
+    // ── Produkt-Aggregations-Modus ───────────────────────────────────────────
+    final productId = liveItem.productId;
+    final Product? product = productId != null
+        ? provider.products.where((p) => p.id == productId).firstOrNull
+        : null;
+
+    // Aggregierter Bestand aus product_stock-View.
+    // Falls noch nicht geladen: leere Liste (View lädt async in loadData).
+    final List<ProductStock> productStockRows = productId != null
+        ? provider.productStock
+            .where((s) => s.productId == productId)
+            .toList()
+        : [];
+
+    // Movements: bei verknüpftem Produkt ALLE Movements mit diesem productId
+    // (katalogweite Sicht), fallback auf item-basierte Movements.
+    final List<InventoryMovement> allMovements = productId != null
+        ? provider.movements
+            .where((m) => m.productId == productId)
+            .toList()
+        : provider.movements
+            .where((m) => m.itemId == liveItem.id)
+            .toList();
+
+    // Provider-Movements sind bereits absteigend nach Datum sortiert.
+    // Clientseitige Pagination: nur die ersten _visibleMovements zeigen.
+    final visibleCount =
+        _visibleMovements.clamp(0, allMovements.length);
+    final pagedMovements = allMovements.take(visibleCount).toList();
+    final hasMore = allMovements.length > visibleCount;
+    final remainingCount = allMovements.length - visibleCount;
 
     return Scaffold(
       appBar: AppBar(
@@ -68,7 +124,21 @@ class ProductDetailScreen extends StatelessWidget {
               if (!canEdit)
                 _ViewerHintBanner(l10n: l10n),
 
-              // ── Stammdaten ──────────────────────────────────────────────
+              // ── Produkt-Stammdaten (nur im Produkt-Aggregations-Modus) ──────
+              if (product != null) ...[
+                _SectionCard(
+                  title: l10n.productDetailSectionProduct,
+                  icon: Icons.category_outlined,
+                  child: _ProductMasterSection(
+                    product: product,
+                    money: money,
+                    l10n: l10n,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // ── Stammdaten der Bestands-Row ─────────────────────────────────
               _SectionCard(
                 title: l10n.productDetailSectionStammdaten,
                 icon: Icons.info_outline,
@@ -82,15 +152,28 @@ class ProductDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // ── Bestand ─────────────────────────────────────────────────
-              _SectionCard(
-                title: l10n.productDetailSectionStock,
-                icon: Icons.inventory_2_outlined,
-                child: _StockSection(item: liveItem, l10n: l10n),
-              ),
+              // ── Bestand ─────────────────────────────────────────────────────
+              // Im Produkt-Modus: aggregierter Gesamtbestand über alle Lager.
+              // Im Single-Row-Modus: Bestand der einzelnen Row.
+              if (productId != null && productStockRows.isNotEmpty)
+                _SectionCard(
+                  title: l10n.productDetailSectionAggregatedStock,
+                  icon: Icons.inventory_2_outlined,
+                  child: _AggregatedStockSection(
+                    stockRows: productStockRows,
+                    product: product,
+                    l10n: l10n,
+                  ),
+                )
+              else
+                _SectionCard(
+                  title: l10n.productDetailSectionStock,
+                  icon: Icons.inventory_2_outlined,
+                  child: _StockSection(item: liveItem, l10n: l10n),
+                ),
               const SizedBox(height: 12),
 
-              // ── Chargen ─────────────────────────────────────────────────
+              // ── Chargen ─────────────────────────────────────────────────────
               _SectionCard(
                 title: l10n.productDetailSectionBatches,
                 icon: Icons.layers_outlined,
@@ -101,14 +184,22 @@ class ProductDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // ── Bewegungshistorie ────────────────────────────────────────
+              // ── Bewegungshistorie (paginiert) ────────────────────────────────
               _SectionCard(
                 title: l10n.movementHistoryTitle,
                 icon: Icons.history_outlined,
                 child: _MovementHistorySection(
-                  movements: itemMovements,
+                  movements: pagedMovements,
+                  hasMore: hasMore,
+                  remainingCount: remainingCount,
+                  isProductScope: productId != null,
                   money: money,
                   l10n: l10n,
+                  onLoadMore: () {
+                    setState(() {
+                      _visibleMovements += _kMovementPageSize;
+                    });
+                  },
                 ),
               ),
             ],
@@ -117,7 +208,6 @@ class ProductDetailScreen extends StatelessWidget {
       ),
     );
   }
-
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -168,7 +258,193 @@ class _SectionCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Stammdaten
+// Produkt-Stammdaten (Epic A-full — nur wenn productId != null)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ProductMasterSection extends StatelessWidget {
+  final Product product;
+  final NumberFormat money;
+  final AppLocalizations l10n;
+
+  const _ProductMasterSection({
+    required this.product,
+    required this.money,
+    required this.l10n,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _LabelValue(
+          label: product.name,
+          value: null,
+          isHeadline: true,
+        ),
+        const SizedBox(height: 8),
+        if (product.sku != null)
+          _LabelValue(
+            label: l10n.productDetailLabelSku,
+            value: product.sku!,
+          ),
+        if (product.ean != null)
+          _LabelValue(
+            label: l10n.productDetailLabelEan,
+            value: product.ean!,
+          ),
+        _LabelValue(
+          label: l10n.productDetailLabelProductUnit,
+          value: product.unit,
+        ),
+        if (product.defaultCostPrice != null)
+          _LabelValue(
+            label: l10n.productDetailLabelDefaultCostPrice,
+            value: money.format(product.defaultCostPrice),
+          ),
+        if (product.defaultSalePrice != null)
+          _LabelValue(
+            label: l10n.productDetailLabelDefaultSalePrice,
+            value: money.format(product.defaultSalePrice),
+          ),
+        if (product.minStock > 0)
+          _LabelValue(
+            label: l10n.productDetailLabelMinStockProduct,
+            value: '${product.minStock}',
+          ),
+        if (product.taxRate != null)
+          _LabelValue(
+            label: l10n.productDetailLabelTaxRate,
+            value: '${product.taxRate!.toStringAsFixed(1)} %',
+          ),
+        if (product.note != null && product.note!.isNotEmpty)
+          _LabelValue(
+            label: l10n.productDetailLabelNote,
+            value: product.note!,
+          ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Aggregierter Bestand (Produkt-Modus)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AggregatedStockSection extends StatelessWidget {
+  final List<ProductStock> stockRows;
+  final Product? product;
+  final AppLocalizations l10n;
+
+  const _AggregatedStockSection({
+    required this.stockRows,
+    required this.product,
+    required this.l10n,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final totalQty =
+        stockRows.fold(0, (sum, s) => sum + s.qtyInWarehouse);
+    final minStock = product?.minStock ?? 0;
+    final isCritical = minStock > 0 && totalQty < minStock;
+    final atMin = minStock > 0 && totalQty == minStock;
+
+    final stockColor = isCritical
+        ? AppTheme.dangerTextOf(context)
+        : atMin
+            ? AppTheme.warningTextOf(context)
+            : AppTheme.successTextOf(context);
+
+    // KPI-Boxen-Zeile: Gesamtbestand + Mindestbestand + Status.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _KpiBox(
+                label: l10n.productDetailLabelTotalQty,
+                value: '$totalQty',
+                valueColor: stockColor,
+                icon: Icons.inventory_2_outlined,
+                iconColor: stockColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _KpiBox(
+                label: l10n.productDetailLabelMinStock,
+                value: '$minStock',
+                valueColor: AppTheme.textPrimaryOf(context),
+                icon: Icons.warning_amber_outlined,
+                iconColor: AppTheme.textMutedOf(context),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _KpiBox(
+                label: l10n.productDetailLabelStatus,
+                value: isCritical
+                    ? l10n.productDetailLabelCritical
+                    : l10n.productDetailLabelOk,
+                valueColor: stockColor,
+                icon: isCritical
+                    ? Icons.error_outline
+                    : Icons.check_circle_outline,
+                iconColor: stockColor,
+              ),
+            ),
+          ],
+        ),
+
+        // Aufschlüsselung nach Lager (nur wenn mehrere Lager vorhanden).
+        if (stockRows.length > 1) ...[
+          const SizedBox(height: 12),
+          Divider(height: 1, color: AppTheme.borderOf(context)),
+          const SizedBox(height: 10),
+          ...stockRows.map(
+            (row) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.warehouse_outlined,
+                    size: 14,
+                    color: AppTheme.textMutedOf(context),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      row.warehouseId != null
+                          ? l10n.productDetailLabelWarehouseQty(
+                              row.warehouseId!)
+                          : l10n.productDetailLabelNoWarehouse,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondaryOf(context),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${row.qtyInWarehouse}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimaryOf(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stammdaten (Bestands-Row)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _StammdatenSection extends StatelessWidget {
@@ -233,7 +509,7 @@ class _StammdatenSection extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Bestand
+// Bestand (Single-Row-Modus)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _StockSection extends StatelessWidget {
@@ -365,18 +641,26 @@ class _BatchesSection extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Bewegungshistorie
+// Bewegungshistorie (paginiert)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _MovementHistorySection extends StatelessWidget {
   final List<InventoryMovement> movements;
+  final bool hasMore;
+  final int remainingCount;
+  final bool isProductScope;
   final NumberFormat money;
   final AppLocalizations l10n;
+  final VoidCallback onLoadMore;
 
   const _MovementHistorySection({
     required this.movements,
+    required this.hasMore,
+    required this.remainingCount,
+    required this.isProductScope,
     required this.money,
     required this.l10n,
+    required this.onLoadMore,
   });
 
   @override
@@ -410,24 +694,91 @@ class _MovementHistorySection extends StatelessWidget {
       );
     }
 
-    return ListView.separated(
-      key: const Key('movementHistoryList'),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: movements.length,
-      separatorBuilder: (_, _) => Divider(
-        height: 1,
-        color: AppTheme.borderOf(context),
-      ),
-      itemBuilder: (context, i) {
-        final m = movements[i];
-        return _MovementRow(
-          key: Key('movementRow-${m.id}'),
-          movement: m,
-          money: money,
-          l10n: l10n,
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Scope-Hinweis: wenn Produkt-Modus, zeige kleinen Hinweis
+        if (isProductScope) ...[
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.infoBgOf(context),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppTheme.infoBorderOf(context)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 14,
+                  color: AppTheme.infoTextOf(context),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    l10n.productDetailMovementsAllProduct,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.infoTextOf(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
+
+        // Bewegungs-Liste
+        ListView.separated(
+          key: const Key('movementHistoryList'),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: movements.length,
+          separatorBuilder: (_, _) => Divider(
+            height: 1,
+            color: AppTheme.borderOf(context),
+          ),
+          itemBuilder: (context, i) {
+            final m = movements[i];
+            return _MovementRow(
+              key: Key('movementRow-${m.id}'),
+              movement: m,
+              money: money,
+              l10n: l10n,
+            );
+          },
+        ),
+
+        // Pagination-Footer
+        if (hasMore) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onLoadMore,
+              icon: const Icon(Icons.expand_more, size: 18),
+              label: Text(
+                l10n.productDetailLoadMoreMovements(
+                  remainingCount.clamp(1, remainingCount),
+                ),
+              ),
+            ),
+          ),
+        ] else if (movements.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              l10n.productDetailAllMovementsShown,
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.textDisabledOf(context),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -450,7 +801,8 @@ class _MovementRow extends StatelessWidget {
         DateFormat.yMd(Localizations.localeOf(context).toLanguageTag());
     final isPositive = movement.quantityChange > 0;
 
-    final (badgeLabel, badgeBg, badgeFg) = _badgeStyle(context, movement.movementType);
+    final (badgeLabel, badgeBg, badgeFg) =
+        _badgeStyle(context, movement.movementType);
     final qtyColor = isPositive
         ? AppTheme.successTextOf(context)
         : AppTheme.dangerTextOf(context);

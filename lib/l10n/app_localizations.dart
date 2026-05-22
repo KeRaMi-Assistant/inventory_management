@@ -416,6 +416,66 @@ abstract class AppLocalizations {
   /// **'Weitere Bereiche'**
   String get navMoreSheetTitle;
 
+  /// No description provided for @navWarehouse.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft'**
+  String get navWarehouse;
+
+  /// No description provided for @warehouseHubTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft'**
+  String get warehouseHubTitle;
+
+  /// No description provided for @warehouseHubComingSoon.
+  ///
+  /// In de, this message translates to:
+  /// **'Bald verfügbar'**
+  String get warehouseHubComingSoon;
+
+  /// No description provided for @warehouseHubComingSoonHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Funktion wird in einem der nächsten Updates freigeschaltet.'**
+  String get warehouseHubComingSoonHint;
+
+  /// No description provided for @warehouseHubTileProductCatalog.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelstamm'**
+  String get warehouseHubTileProductCatalog;
+
+  /// No description provided for @warehouseHubTilePurchaseOrders.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellungen'**
+  String get warehouseHubTilePurchaseOrders;
+
+  /// No description provided for @warehouseHubTileWarehouses.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager'**
+  String get warehouseHubTileWarehouses;
+
+  /// No description provided for @warehouseHubTileCategories.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppen'**
+  String get warehouseHubTileCategories;
+
+  /// No description provided for @warehouseHubTileStocktake.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur'**
+  String get warehouseHubTileStocktake;
+
+  /// No description provided for @warehouseHubTileReporting.
+  ///
+  /// In de, this message translates to:
+  /// **'Reporting'**
+  String get warehouseHubTileReporting;
+
   /// No description provided for @fieldEmail.
   ///
   /// In de, this message translates to:
@@ -6104,6 +6164,138 @@ abstract class AppLocalizations {
   /// **'Annehmen'**
   String get inboxSuggestionAccept;
 
+  /// No description provided for @productCatalogTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelstamm'**
+  String get productCatalogTitle;
+
+  /// No description provided for @productNew.
+  ///
+  /// In de, this message translates to:
+  /// **'Neuer Artikel'**
+  String get productNew;
+
+  /// No description provided for @productUnit.
+  ///
+  /// In de, this message translates to:
+  /// **'Einheit'**
+  String get productUnit;
+
+  /// No description provided for @productDefaultCostPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-EK'**
+  String get productDefaultCostPrice;
+
+  /// No description provided for @productDefaultSalePrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-VK'**
+  String get productDefaultSalePrice;
+
+  /// No description provided for @productCategory.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppe'**
+  String get productCategory;
+
+  /// No description provided for @productDefaultSupplier.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-Lieferant'**
+  String get productDefaultSupplier;
+
+  /// No description provided for @productMinStock.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestbestand'**
+  String get productMinStock;
+
+  /// No description provided for @productTaxRate.
+  ///
+  /// In de, this message translates to:
+  /// **'MwSt.-Satz (%)'**
+  String get productTaxRate;
+
+  /// No description provided for @productIsActive.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiv'**
+  String get productIsActive;
+
+  /// No description provided for @productAdvancedSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Erweitert'**
+  String get productAdvancedSection;
+
+  /// No description provided for @productNameLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelname'**
+  String get productNameLabel;
+
+  /// No description provided for @productSkuLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelnummer (SKU)'**
+  String get productSkuLabel;
+
+  /// No description provided for @productEanLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'EAN / GTIN'**
+  String get productEanLabel;
+
+  /// No description provided for @productNoteLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Notiz'**
+  String get productNoteLabel;
+
+  /// No description provided for @productEditTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel bearbeiten'**
+  String get productEditTitle;
+
+  /// No description provided for @productAddTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Neuer Artikel'**
+  String get productAddTitle;
+
+  /// No description provided for @productGroupWithoutProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne Artikel'**
+  String get productGroupWithoutProduct;
+
+  /// No description provided for @productCatalogEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Artikelstamm'**
+  String get productCatalogEmpty;
+
+  /// No description provided for @productCatalogEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege deinen ersten Artikel an.'**
+  String get productCatalogEmptyHint;
+
+  /// No description provided for @productLinkLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Verknüpfter Stammartikel'**
+  String get productLinkLabel;
+
+  /// No description provided for @productNoLink.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Stammartikel'**
+  String get productNoLink;
+
   /// No description provided for @productDetailTitle.
   ///
   /// In de, this message translates to:
@@ -6301,6 +6493,252 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'{sign}{qty}'**
   String productDetailMovementQuantity(Object sign, int qty);
+
+  /// No description provided for @productDetailSectionProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel (Stammdaten)'**
+  String get productDetailSectionProduct;
+
+  /// No description provided for @productDetailLabelProductUnit.
+  ///
+  /// In de, this message translates to:
+  /// **'Einheit'**
+  String get productDetailLabelProductUnit;
+
+  /// No description provided for @productDetailLabelDefaultCostPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-EK'**
+  String get productDetailLabelDefaultCostPrice;
+
+  /// No description provided for @productDetailLabelDefaultSalePrice.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-VK'**
+  String get productDetailLabelDefaultSalePrice;
+
+  /// No description provided for @productDetailLabelMinStockProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestbestand (Produkt)'**
+  String get productDetailLabelMinStockProduct;
+
+  /// No description provided for @productDetailLabelTaxRate.
+  ///
+  /// In de, this message translates to:
+  /// **'MwSt-Satz'**
+  String get productDetailLabelTaxRate;
+
+  /// No description provided for @productDetailSectionAggregatedStock.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamtbestand'**
+  String get productDetailSectionAggregatedStock;
+
+  /// No description provided for @productDetailLabelTotalQty.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamt (alle Lager)'**
+  String get productDetailLabelTotalQty;
+
+  /// No description provided for @productDetailLabelWarehouseQty.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager {warehouse}'**
+  String productDetailLabelWarehouseQty(Object warehouse);
+
+  /// No description provided for @productDetailLabelNoWarehouse.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Lager zugeordnet'**
+  String get productDetailLabelNoWarehouse;
+
+  /// No description provided for @productDetailMovementsAllProduct.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Bewegungen dieses Produkts (alle Bestands-Rows).'**
+  String get productDetailMovementsAllProduct;
+
+  /// No description provided for @productDetailLoadMoreMovements.
+  ///
+  /// In de, this message translates to:
+  /// **'Weitere {count} laden'**
+  String productDetailLoadMoreMovements(int count);
+
+  /// No description provided for @productDetailAllMovementsShown.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Bewegungen angezeigt'**
+  String get productDetailAllMovementsShown;
+
+  /// No description provided for @stockGroupItemCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count,plural, =1{1 Position} other{{count} Positionen}}'**
+  String stockGroupItemCount(int count);
+
+  /// No description provided for @stockGroupTotalQuantity.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamt: {qty} Stk.'**
+  String stockGroupTotalQuantity(int qty);
+
+  /// No description provided for @categoriesTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppen'**
+  String get categoriesTitle;
+
+  /// No description provided for @categoriesEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Warengruppen'**
+  String get categoriesEmpty;
+
+  /// No description provided for @categoriesEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege deine erste Warengruppe an.'**
+  String get categoriesEmptyHint;
+
+  /// No description provided for @categoriesLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppen konnten nicht geladen werden.'**
+  String get categoriesLoadError;
+
+  /// No description provided for @categoryNew.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Warengruppe'**
+  String get categoryNew;
+
+  /// No description provided for @categoryEdit.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppe bearbeiten'**
+  String get categoryEdit;
+
+  /// No description provided for @categoryDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppe löschen'**
+  String get categoryDelete;
+
+  /// No description provided for @categoryDeletePrompt.
+  ///
+  /// In de, this message translates to:
+  /// **'„{name}\" wirklich löschen?'**
+  String categoryDeletePrompt(Object name);
+
+  /// No description provided for @categoryParent.
+  ///
+  /// In de, this message translates to:
+  /// **'Übergeordnet'**
+  String get categoryParent;
+
+  /// No description provided for @categoryParentNone.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine (Hauptgruppe)'**
+  String get categoryParentNone;
+
+  /// No description provided for @categoryFieldName.
+  ///
+  /// In de, this message translates to:
+  /// **'Name'**
+  String get categoryFieldName;
+
+  /// No description provided for @categoryFieldSortOrder.
+  ///
+  /// In de, this message translates to:
+  /// **'Sortierung'**
+  String get categoryFieldSortOrder;
+
+  /// No description provided for @categoryMaxDepthError.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur 2 Ebenen erlaubt. Bitte eine Hauptgruppe wählen.'**
+  String get categoryMaxDepthError;
+
+  /// No description provided for @categorySortOrderHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Zahl, niedrig = zuerst'**
+  String get categorySortOrderHint;
+
+  /// No description provided for @supplierAddress.
+  ///
+  /// In de, this message translates to:
+  /// **'Adresse'**
+  String get supplierAddress;
+
+  /// No description provided for @supplierAddressStreet.
+  ///
+  /// In de, this message translates to:
+  /// **'Straße'**
+  String get supplierAddressStreet;
+
+  /// No description provided for @supplierAddressZip.
+  ///
+  /// In de, this message translates to:
+  /// **'PLZ'**
+  String get supplierAddressZip;
+
+  /// No description provided for @supplierAddressCity.
+  ///
+  /// In de, this message translates to:
+  /// **'Ort'**
+  String get supplierAddressCity;
+
+  /// No description provided for @supplierAddressCountry.
+  ///
+  /// In de, this message translates to:
+  /// **'Land'**
+  String get supplierAddressCountry;
+
+  /// No description provided for @supplierVatId.
+  ///
+  /// In de, this message translates to:
+  /// **'USt-IdNr'**
+  String get supplierVatId;
+
+  /// No description provided for @supplierCustomerNumber.
+  ///
+  /// In de, this message translates to:
+  /// **'Kundennummer'**
+  String get supplierCustomerNumber;
+
+  /// No description provided for @supplierPaymentTerms.
+  ///
+  /// In de, this message translates to:
+  /// **'Zahlungsziel (Tage)'**
+  String get supplierPaymentTerms;
+
+  /// No description provided for @supplierLeadTime.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferzeit (Tage)'**
+  String get supplierLeadTime;
+
+  /// No description provided for @supplierMinOrderValue.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestbestellwert'**
+  String get supplierMinOrderValue;
+
+  /// No description provided for @supplierAdvancedSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Erweiterte Angaben'**
+  String get supplierAdvancedSection;
+
+  /// No description provided for @commonDaysUnit.
+  ///
+  /// In de, this message translates to:
+  /// **'Tage'**
+  String get commonDaysUnit;
 }
 
 class _AppLocalizationsDelegate

@@ -1,8 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management/models/deal.dart';
 import 'package:inventory_management/models/inventory_item.dart';
+import 'package:inventory_management/models/product.dart';
 import 'package:inventory_management/providers/inventory_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
+
+// ignore_for_file: avoid_redundant_argument_values
 
 // ── Fake-Repository ──────────────────────────────────────────────────────────
 
@@ -22,6 +25,29 @@ class _FakeRepository extends SupabaseRepository {
   // Letztes Item, das per insert/update gespeichert wurde
   InventoryItem? lastInsertedItem;
   InventoryItem? lastUpdatedItem;
+
+  // Produkte, die per insertProduct eingebracht wurden
+  final List<Product> insertedProducts = [];
+
+  // Produkte, die via loadAll() in den Provider-State vorgeladen werden.
+  List<Product> seedProducts = [];
+
+  // Wenn gesetzt, wirft insertProduct diese Exception (simuliert Race/Fehler).
+  Object? insertProductError;
+
+  // ── Snapshot-Load ──
+
+  @override
+  Future<CloudSnapshot> loadAll() async => CloudSnapshot(
+        deals: const [],
+        buyers: const [],
+        shops: const [],
+        suppliers: const [],
+        inventoryItems: const [],
+        movements: const [],
+        activities: const [],
+        products: List.of(seedProducts),
+      );
 
   // ── Item-CRUD ──
 
@@ -47,6 +73,27 @@ class _FakeRepository extends SupabaseRepository {
   Future<InventoryMovement> insertMovement(InventoryMovement movement) async {
     insertedMovements.add(movement);
     return movement;
+  }
+
+  // ── Product-Insert ──
+
+  @override
+  Future<Product> insertProduct(Product product) async {
+    final err = insertProductError;
+    if (err != null) throw err;
+    final now = DateTime.now().toUtc();
+    final saved = Product(
+      id: 'product-${insertedProducts.length + 1}',
+      workspaceId: activeWorkspaceId ?? 'ws-test',
+      userId: 'user-test',
+      name: product.name,
+      sku: product.sku,
+      ean: product.ean,
+      createdAt: now,
+      updatedAt: now,
+    );
+    insertedProducts.add(saved);
+    return saved;
   }
 }
 
@@ -81,6 +128,23 @@ Deal _makeDeal({
       orderDate: DateTime(2026, 5, 20),
       ekBrutto: ekBrutto,
     );
+
+Product _makeProduct({
+  String id = 'prod-1',
+  String name = 'Deal-Artikel',
+  String? sku,
+}) {
+  final now = DateTime(2026, 1, 1);
+  return Product(
+    id: id,
+    workspaceId: 'ws-test',
+    userId: 'user-test',
+    name: name,
+    sku: sku,
+    createdAt: now,
+    updatedAt: now,
+  );
+}
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -285,6 +349,99 @@ void main() {
       await provider.checkInDeal(deal);
 
       expect(repo.insertedMovements.first.unitCost, isNull);
+    });
+  });
+
+  // ── checkInDeal — Produkt-Matching ────────────────────────────────────────
+
+  group('checkInDeal — Produkt-Matching', () {
+    /// Lädt einen Seed-Produkt-State in den Provider (via loadData).
+    Future<void> seedWithProducts(List<Product> products) async {
+      repo.seedProducts = products;
+      await provider.loadData();
+      repo.insertedMovements.clear();
+    }
+
+    test('kein bestehendes Produkt → neues Produkt wird angelegt', () async {
+      final deal = _makeDeal(product: 'Neuer Artikel');
+      await provider.checkInDeal(deal);
+
+      // insertProduct wurde aufgerufen
+      expect(repo.insertedProducts, hasLength(1));
+      expect(repo.insertedProducts.first.name, equals('Neuer Artikel'));
+    });
+
+    test('neues Produkt: Item und Movement tragen die productId', () async {
+      final deal = _makeDeal(product: 'Neuer Artikel');
+      await provider.checkInDeal(deal);
+
+      final savedProductId = repo.insertedProducts.first.id;
+      expect(repo.lastInsertedItem?.productId, equals(savedProductId));
+      expect(repo.insertedMovements.first.productId, equals(savedProductId));
+    });
+
+    test('Treffer per Name (case-insensitiv) → kein insertProduct', () async {
+      final existing = _makeProduct(id: 'prod-existing', name: 'Deal-Artikel');
+      await seedWithProducts([existing]);
+
+      final deal = _makeDeal(product: 'deal-artikel'); // Kleinbuchstaben
+      await provider.checkInDeal(deal);
+
+      // Kein neues Produkt angelegt
+      expect(repo.insertedProducts, isEmpty);
+      // Bestehende productId verknüpft
+      expect(repo.lastInsertedItem?.productId, equals('prod-existing'));
+      expect(repo.insertedMovements.first.productId, equals('prod-existing'));
+    });
+
+    test('Treffer per SKU (case-insensitiv) hat Vorrang vor Name', () async {
+      // Produkt mit SKU-ABC123 aber anderem Namen
+      final existing = _makeProduct(
+        id: 'prod-sku',
+        name: 'Anderer Name',
+        sku: 'ABC123',
+      );
+      // Weiteres Produkt mit passendem Namen aber ohne SKU
+      final byName = _makeProduct(
+        id: 'prod-name',
+        name: 'Deal-Artikel',
+      );
+      await seedWithProducts([existing, byName]);
+
+      // Deal mit SKU, die auf prod-sku matcht
+      final deal = _makeDeal(product: 'Deal-Artikel');
+      await provider.checkInDeal(deal, sku: 'abc123'); // case-insensitiv
+
+      // SKU-Treffer hat Vorrang
+      expect(repo.lastInsertedItem?.productId, equals('prod-sku'));
+    });
+
+    test(
+        'insertProduct-Fehler → defensiv: Item wird ohne productId eingebucht',
+        () async {
+      repo.insertProductError = Exception('UNIQUE Violation SKU');
+      final deal = _makeDeal(product: 'Fehler-Artikel');
+      // Kein throw — checkInDeal schlägt nicht fehl
+      await expectLater(provider.checkInDeal(deal), completes);
+
+      // Item wurde eingebucht, aber ohne productId
+      expect(repo.lastInsertedItem?.productId, isNull);
+      // Movement trotzdem vorhanden
+      expect(repo.insertedMovements, hasLength(1));
+      expect(repo.insertedMovements.first.productId, isNull);
+    });
+
+    test('checkInDeal: product_id liegt VOR der Movement-Erzeugung am Item',
+        () async {
+      // Stellt sicher, dass savedItem.productId zur Zeit der Movement-Erstellung
+      // bereits gesetzt ist (AF7b-Anforderung).
+      final deal = _makeDeal(product: 'Reihenfolge-Test');
+      await provider.checkInDeal(deal);
+
+      // insertProduct liefert eine ID; diese muss im Movement stehen.
+      expect(repo.insertedProducts, hasLength(1));
+      final productId = repo.insertedProducts.first.id;
+      expect(repo.insertedMovements.first.productId, equals(productId));
     });
   });
 }

@@ -202,5 +202,80 @@ void main() {
       expect(m.movementType, equals(InventoryMovementType.correction));
       expect(m.unitCost, isNull);
     });
+
+    test('productId Default ist null', () {
+      final m = InventoryMovement(
+        id: 'x',
+        itemId: 'y',
+        date: DateTime.utc(2026, 1, 1),
+        quantityChange: 1,
+        reason: 'test',
+      );
+      expect(m.productId, isNull);
+    });
+  });
+
+  // ── productId Round-Trip ───────────────────────────────────────────────────
+
+  group('InventoryMovement productId', () {
+    test('productId null: product_id fehlt in toSupabaseInsert', () {
+      final m = makeBase();
+      final row = m.toSupabaseInsert();
+      expect(row.containsKey('product_id'), isFalse);
+    });
+
+    test('productId non-null: product_id ist in toSupabaseInsert enthalten', () {
+      final m = makeBase().copyWith(productId: 'prod-uuid-1');
+      final row = m.toSupabaseInsert();
+      expect(row['product_id'], equals('prod-uuid-1'));
+    });
+
+    test('fromSupabase liest productId korrekt', () {
+      final row = makeBase().toSupabaseInsert()
+        ..['product_id'] = 'prod-uuid-2';
+      final restored = InventoryMovement.fromSupabase(row);
+      expect(restored.productId, equals('prod-uuid-2'));
+    });
+
+    test('fromSupabase: product_id fehlt → null', () {
+      final row = makeBase().toSupabaseInsert();
+      // key nicht vorhanden
+      row.remove('product_id');
+      final restored = InventoryMovement.fromSupabase(row);
+      expect(restored.productId, isNull);
+    });
+
+    test('fromSupabase: product_id null → null', () {
+      final row = makeBase().toSupabaseInsert();
+      row['product_id'] = null;
+      final restored = InventoryMovement.fromSupabase(row);
+      expect(restored.productId, isNull);
+    });
+
+    test('Round-Trip: productId gesetzt', () {
+      final original = makeBase().copyWith(productId: 'prod-round-trip');
+      final row = original.toSupabaseInsert();
+      final restored = InventoryMovement.fromSupabase(row);
+      expect(restored.productId, equals('prod-round-trip'));
+    });
+
+    test('copyWith setzt productId auf neuen Wert', () {
+      final original = makeBase();
+      final copy = original.copyWith(productId: 'new-prod-id');
+      expect(copy.productId, equals('new-prod-id'));
+      expect(original.productId, isNull);
+    });
+
+    test('copyWith kann productId explizit auf null setzen (Sentinel)', () {
+      final original = makeBase().copyWith(productId: 'some-prod-id');
+      final copy = original.copyWith(productId: null);
+      expect(copy.productId, isNull);
+    });
+
+    test('copyWith lässt productId unverändert wenn nicht übergeben', () {
+      final original = makeBase().copyWith(productId: 'keep-prod-id');
+      final copy = original.copyWith(reason: 'anderer Grund');
+      expect(copy.productId, equals('keep-prod-id'));
+    });
   });
 }

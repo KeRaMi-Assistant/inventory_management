@@ -981,60 +981,60 @@ anbietet.
 
 ### Epic B — Kategorien + Lieferanten (P1)
 
-- [ ] **B1** — Migration `product_categories` (Schema + 4-Policy-RLS +
+- [x] **B1** — Migration `product_categories` (Schema + 4-Policy-RLS +
   Indexe + FK-Cross-Workspace-Trigger für `parent_id`); `suppliers` um
   Adress-/Kreditoren-Spalten erweitern; Down-Migrationen.
   `agent:db-migrator` · `model:Opus` · `depends:AL1`
-- [ ] **B2** — Models `ProductCategory` NEU; `Supplier`-Model um neue
+- [x] **B2** — Models `ProductCategory` NEU; `Supplier`-Model um neue
   Felder erweitern + Round-Trip-Tests. `agent:flutter-coder` ·
   `model:Sonnet` · `depends:B1`
-- [ ] **B3** — `SupabaseRepository` + `InventoryProvider`: CRUD Kategorien;
+- [x] **B3** — `SupabaseRepository` + `InventoryProvider`: CRUD Kategorien;
   `product_categories` + `warehouses` in `loadAll()`-Snapshot vorbereiten
   (Snapshot-Feld). `agent:flutter-coder` · `model:Sonnet` · `depends:B2`
-- [ ] **B4** — `categories_screen.dart` NEU (Sub-Route Warenwirtschaft-Hub,
+- [x] **B4** — `categories_screen.dart` NEU (Sub-Route Warenwirtschaft-Hub,
   States + A11y-Keys); `add_edit_supplier_dialog.dart` um „Erweitert"-
   Abschnitt erweitern (Formular-Mobile-Checkliste).
   `agent:ui-builder` · `model:Sonnet` · `depends:B3,AF6`
   *(depends auf AF6 wegen Hub-Screen — Sub-Route braucht den Hub)*
-- [ ] **B5** — l10n-Keys Epic B + Unit-Tests + `/check-l10n`.
+- [x] **B5** — l10n-Keys Epic B + Unit-Tests + `/check-l10n`.
   `agent:ui-builder` · `model:Sonnet` · `depends:B4`
 
 ### Epic A-full — Produkt-Stammkatalog (P1)
 
-- [ ] **AF1** — Migration `products` (Schema + 4-Policy-RLS + Indexe +
+- [x] **AF1** — Migration `products` (Schema + 4-Policy-RLS + Indexe +
   partial-UNIQUE auf `sku`); FK-Cross-Workspace-Trigger für `category_id`
   + `default_supplier_id`; Down-Migration. `agent:db-migrator` ·
   `model:Opus` · `depends:B1`
-- [ ] **AF2** — Migration: `inventory_items.product_id` (**dauerhaft
+- [x] **AF2** — Migration: `inventory_items.product_id` (**dauerhaft
   nullable**, `ON DELETE SET NULL`) + `warehouse_id` (nullable);
   `inventory_movements.product_id` (nullable) + Index
   `(workspace_id, product_id)`; FK-Cross-Workspace-Trigger für
   `inventory_items.product_id`. **Kein NOT-NULL, kein Backfill.**
   Down-Migration. `agent:db-migrator` · `model:Opus` · `depends:AF1`
-- [ ] **AF3** — Migration: `product_stock`-View (`security_invoker = true`,
+- [x] **AF3** — Migration: `product_stock`-View (`security_invoker = true`,
   `GROUP BY workspace_id, product_id, warehouse_id`); Migration
   `product_suppliers`-Tabelle (Schema + 4-Policy-RLS + partial-UNIQUE
   `is_preferred` + FK-Cross-Workspace-Trigger `product_id`/`supplier_id`);
   Down-Migration. `agent:db-migrator` · `model:Opus` · `depends:AF2`
-- [ ] **AF4** — `seed-demo-workspace` + `demo_data_service.dart`: optional
+- [x] **AF4** — `seed-demo-workspace` + `demo_data_service.dart`: optional
   `products` mitanlegen + Demo-`inventory_items` über `product_id`
   verlinken. `agent:edge-fn-coder` · `model:Sonnet` · `depends:AF2`
-- [ ] **AF5** — Models `Product`, `ProductSupplier` NEU (`toSupabaseInsert`/
+- [x] **AF5** — Models `Product`, `ProductSupplier` NEU (`toSupabaseInsert`/
   `fromSupabase`/`copyWith` + Round-Trip-Tests); `InventoryMovement` um
   `productId` erweitern. `agent:flutter-coder` · `model:Sonnet` ·
   `depends:AF1,AF3`
-- [ ] **AF6** — `SupabaseRepository`: `loadProducts`/`insertProduct`/
+- [x] **AF6** — `SupabaseRepository`: `loadProducts`/`insertProduct`/
   `updateProduct`/`deleteProduct` + `product_suppliers`-CRUD (lazy pro
   Detail-Screen) + `product_stock`-Read; `loadAll()`/`CloudSnapshot` um
   `products` erweitern. `agent:flutter-coder` · `model:Sonnet` ·
   `depends:AF5`
-- [ ] **AF7a** — `InventoryProvider`: Produkt-State + Produkt-CRUD-Methoden.
+- [x] **AF7a** — `InventoryProvider`: Produkt-State + Produkt-CRUD-Methoden.
   `agent:flutter-coder` · `model:Sonnet` · `depends:AF6`
-- [ ] **AF7b** — `InventoryProvider`: `movement_type`-Schreiben aller 4
+- [x] **AF7b** — `InventoryProvider`: `movement_type`-Schreiben aller 4
   Schreibmethoden um `product_id`-Verknüpfung erweitern (sofern Bestands-
   Row ein Produkt hat). `agent:flutter-coder` · `model:Sonnet` ·
   `depends:AF7a,AF2`
-- [ ] **AF7c** — `checkInDeal`-Produkt-Matching: matched ein Produkt per
+- [x] **AF7c** — `checkInDeal`-Produkt-Matching: matched ein Produkt per
   `name`+`sku`; existiert keins, legt es ein neues `products`-Row an und
   verlinkt. `status` bleibt auf der `inventory_items`-Row;
   `tg_check_ticket_archive_from_inventory` + `TicketSummary`-Aggregation
@@ -1042,28 +1042,28 @@ anbietet.
   `inventory_batches` bleiben an der Bestands-Row, Produkt-Detail
   aggregiert über alle Bestands-Rows des Produkts.
   `agent:flutter-coder` · `model:Sonnet` · `depends:AF7b`
-- [ ] **AF8** — KPI-Aggregation: `criticalStockCount`,
+- [x] **AF8** — KPI-Aggregation: `criticalStockCount`,
   `InventoryItem.isCritical`, `totalStockQuantity` aggregieren pro Produkt
   über alle Lager/Bestands-Rows gegen `products.min_stock` (über
   `product_stock`-View); Unit-Tests. `agent:flutter-coder` ·
   `model:Sonnet` · `depends:AF7a,AF2`
-- [ ] **AF9** — `AddEditProductDialog` NEU (Formular-Mobile-Checkliste,
+- [x] **AF9** — `AddEditProductDialog` NEU (Formular-Mobile-Checkliste,
   States, A11y-Keys); Bestands-/Wareneingangs-Dialog optional auf
   `product_id`-Referenz erweitern. `agent:ui-builder` · `model:Sonnet` ·
   `depends:AF7a`
-- [ ] **AF10** — `inventory_screen.dart`: Stock-Tab zeigt Produkte
+- [x] **AF10** — `inventory_screen.dart`: Stock-Tab zeigt Produkte
   gruppiert (+ „Ohne Artikel"-Gruppe für nicht-verknüpfte Rows).
   `agent:ui-builder` · `model:Sonnet` · `depends:AF9`
-- [ ] **AF11** — `warehouse_hub_screen.dart` NEU; genau EIN neuer `MainTab`
+- [x] **AF11** — `warehouse_hub_screen.dart` NEU; genau EIN neuer `MainTab`
   `warehouse` in `main_screen.dart` (`_navIcons`/`_navLabels`/
   `_navVisibility`/`_bottomNavTabs` einmalig erweitern). Hub verlinkt auf
   die Sub-Routen. `agent:ui-builder` · `model:Sonnet` · `depends:AF10`
-- [ ] **AF12** — `product_detail_screen.dart` auf Produkt-Aggregation
+- [x] **AF12** — `product_detail_screen.dart` auf Produkt-Aggregation
   erweitern (Bestand über alle Bestands-Rows, Movement-History paginiert).
   `agent:ui-builder` · `model:Sonnet` · `depends:AF11`
-- [ ] **AF13** — l10n-Keys Epic A-full; `/check-l10n` grün.
+- [x] **AF13** — l10n-Keys Epic A-full; `/check-l10n` grün.
   `agent:ui-builder` · `model:Sonnet` · `depends:AF9`
-- [ ] **AF14** — Unit-Tests Model + Provider (A-full) + KPI-Aggregations-
+- [x] **AF14** — Unit-Tests Model + Provider (A-full) + KPI-Aggregations-
   Test + `smoke-full-app-audit`; `_page-registry.md`: Top-Level
   `warehouse_hub` (Pflicht-Tests `smoke-theme, mobile-overflow`) +
   Sub-Route `categories`, `AddEditProductDialog` namentlich ergänzen.
