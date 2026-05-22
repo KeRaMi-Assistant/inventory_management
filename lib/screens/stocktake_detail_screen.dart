@@ -390,7 +390,7 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
                   child: Text(
                     _filterUncounted
                         ? l10n.stocktakeAllCounted
-                        : l10n.stocktakeEmpty,
+                        : l10n.stocktakeNoItems,
                     style: TextStyle(
                       fontSize: 14,
                       color: AppTheme.textMutedOf(context),

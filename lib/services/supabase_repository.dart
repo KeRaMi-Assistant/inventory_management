@@ -150,6 +150,45 @@ class SupabaseRepository {
 
   // ── Bulk load ─────────────────────────────────────────────────────────────
 
+  /// Führt eine einzelne Tabellen-Query aus und wiederholt den Versuch bei
+  /// einem PostgREST-Schema-Cache-Fehler (`PGRST205` / `PGRST204` —
+  /// Tabelle/View kurzzeitig nicht im Schema-Cache des kalt gestarteten
+  /// Edge-Nodes).
+  ///
+  /// Retry-Strategie: bis zu 3 Versuche nach dem ersten Fehler mit
+  /// ansteigendem Delay (300 ms → 800 ms → 1 500 ms). Alle anderen
+  /// Fehlertypen (RLS-Deny, Netzwerk, Auth) werden sofort durchgereicht —
+  /// keine stille Unterdrückung.
+  ///
+  /// Überschreibbar in Testsubklassen (kein `_`-Prefix absichtlich), um
+  /// Schema-Cache-Retry-Szenarien ohne echten Supabase-Client zu simulieren.
+  Future<List<dynamic>> loadWithSchemaRetry(
+    Future<List<dynamic>> Function() query,
+  ) async {
+    const schemaCacheErrorCodes = {'PGRST205', 'PGRST204'};
+    const retryDelays = [
+      Duration(milliseconds: 300),
+      Duration(milliseconds: 800),
+      Duration(milliseconds: 1500),
+    ];
+
+    for (var attempt = 0; attempt <= retryDelays.length; attempt++) {
+      try {
+        return await query();
+      } on PostgrestException catch (e) {
+        final isSchemaError = schemaCacheErrorCodes.contains(e.code);
+        if (!isSchemaError || attempt == retryDelays.length) {
+          // Kein Schema-Cache-Fehler oder alle Retries erschöpft → durchreichen.
+          rethrow;
+        }
+        await Future<void>.delayed(retryDelays[attempt]);
+      }
+    }
+    // Dieser Zweig ist durch die Schleife nicht erreichbar, aber Dart braucht
+    // einen Rückgabewert.
+    throw StateError('loadWithSchemaRetry: unreachable');
+  }
+
   Future<CloudSnapshot> loadAll() async {
     final ws = _workspaceId;
     if (ws == null) {
@@ -169,99 +208,102 @@ class SupabaseRepository {
         stocktakes: [],
       );
     }
+    // Alle Queries laufen parallel (Future.wait — kein Performance-Regress).
+    // Jede einzelne Query ist durch _loadWithSchemaRetry gegen den PostgREST-
+    // Schema-Cache-Race abgesichert, der auf kalt gestarteten Edge-Nodes in
+    // ~2 von 3 Cold-Reloads HTTP 404 / PGRST205 produziert.
     final results = await Future.wait([
-      _client
+      loadWithSchemaRetry(() => _client
           .from('deals')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('id', ascending: true),
-      _client
+          .order('id', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('buyers')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('sort_order', ascending: true),
-      _client
+          .order('sort_order', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('shops')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('name', ascending: true),
-      _client
+          .order('name', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('suppliers')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('name', ascending: true),
-      _client
+          .order('name', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('inventory_items')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('created_at', ascending: true),
-      _client
+          .order('created_at', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('inventory_movements')
           .select()
           .eq('workspace_id', ws)
-          .order('date', ascending: false),
-      _client
+          .order('date', ascending: false)),
+      loadWithSchemaRetry(() => _client
           .from('activity_log')
           .select()
           .eq('workspace_id', ws)
           .order('date', ascending: false)
-          .limit(50),
-      _client
+          .limit(50)),
+      loadWithSchemaRetry(() => _client
           .from('tickets')
           .select()
           .eq('workspace_id', ws)
-          .order('created_at', ascending: false),
-      _client
+          .order('created_at', ascending: false)),
+      loadWithSchemaRetry(() => _client
           .from('product_categories')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('sort_order', ascending: true),
-      _client
+          .order('sort_order', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('products')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('name', ascending: true),
-      _client
+          .order('name', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('purchase_orders')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('created_at', ascending: false),
-      _client
+          .order('created_at', ascending: false)),
+      loadWithSchemaRetry(() => _client
           .from('warehouses')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('name', ascending: true),
-      _client
+          .order('name', ascending: true)),
+      loadWithSchemaRetry(() => _client
           .from('stocktakes')
           .select()
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
-          .order('created_at', ascending: false),
+          .order('created_at', ascending: false)),
     ]);
 
-    final dealRows = (results[0] as List).cast<Map<String, dynamic>>();
-    final buyerRows = (results[1] as List).cast<Map<String, dynamic>>();
-    final shopRows = (results[2] as List).cast<Map<String, dynamic>>();
-    final supplierRows = (results[3] as List).cast<Map<String, dynamic>>();
-    final itemRows = (results[4] as List).cast<Map<String, dynamic>>();
-    final movementRows = (results[5] as List).cast<Map<String, dynamic>>();
-    final activityRows = (results[6] as List).cast<Map<String, dynamic>>();
-    final ticketRows = (results[7] as List).cast<Map<String, dynamic>>();
-    final categoryRows = (results[8] as List).cast<Map<String, dynamic>>();
-    final productRows = (results[9] as List).cast<Map<String, dynamic>>();
-    final purchaseOrderRows =
-        (results[10] as List).cast<Map<String, dynamic>>();
-    final warehouseRows = (results[11] as List).cast<Map<String, dynamic>>();
-    final stocktakeRows = (results[12] as List).cast<Map<String, dynamic>>();
+    final dealRows = results[0].cast<Map<String, dynamic>>();
+    final buyerRows = results[1].cast<Map<String, dynamic>>();
+    final shopRows = results[2].cast<Map<String, dynamic>>();
+    final supplierRows = results[3].cast<Map<String, dynamic>>();
+    final itemRows = results[4].cast<Map<String, dynamic>>();
+    final movementRows = results[5].cast<Map<String, dynamic>>();
+    final activityRows = results[6].cast<Map<String, dynamic>>();
+    final ticketRows = results[7].cast<Map<String, dynamic>>();
+    final categoryRows = results[8].cast<Map<String, dynamic>>();
+    final productRows = results[9].cast<Map<String, dynamic>>();
+    final purchaseOrderRows = results[10].cast<Map<String, dynamic>>();
+    final warehouseRows = results[11].cast<Map<String, dynamic>>();
+    final stocktakeRows = results[12].cast<Map<String, dynamic>>();
 
     final inventoryItems =
         itemRows.map(InventoryItem.fromSupabase).toList();

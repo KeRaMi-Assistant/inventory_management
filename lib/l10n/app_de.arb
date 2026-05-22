@@ -1424,6 +1424,9 @@
   "productGroupWithoutProduct": "Ohne Artikel",
   "productCatalogEmpty": "Kein Artikelstamm",
   "productCatalogEmptyHint": "Lege deinen ersten Artikel an.",
+  "productCatalogLoadError": "Artikelstamm konnte nicht geladen werden.",
+  "productCatalogNoPermission": "Du hast keine Berechtigung, den Artikelstamm zu bearbeiten.",
+  "productCatalogViewerHint": "Du siehst den Artikelstamm im Lesemodus.",
   "productLinkLabel": "Verknüpfter Stammartikel",
   "productNoLink": "Kein Stammartikel",
   "productDetailTitle": "Artikeldetails",
@@ -1710,5 +1713,6 @@
   "stocktakeCloseError": "Inventur konnte nicht abgeschlossen werden.",
   "stocktakeAllCounted": "Alle Positionen gezählt.",
   "stocktakeDiffReportTitle": "Differenz-Report",
-  "stocktakeDiffReportNoDiff": "Keine Differenzen — Bestand ist korrekt."
+  "stocktakeDiffReportNoDiff": "Keine Differenzen — Bestand ist korrekt.",
+  "stocktakeNoItems": "Keine Positionen"
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import 'categories_screen.dart';
+import 'product_catalog_screen.dart';
 import 'purchase_orders_screen.dart';
 import 'statistics_screen.dart';
 import 'stocktake_screen.dart';
@@ -13,14 +14,6 @@ import 'warehouses_screen.dart';
 /// Zeigt Kacheln für alle Sub-Bereiche der Warenwirtschaft.
 /// Sub-Routen werden per [Navigator.push] geöffnet — kein eigener
 /// [MainTab] pro Bereich.
-///
-/// PLACEHOLDER-STATUS:
-/// - Artikelstamm     → PLATZHALTER (kommt in Epic A-full)
-/// - Bestellungen     → PLATZHALTER (kommt in Epic C, Task C5)
-/// - Lager            → PLATZHALTER (kommt in Epic D, Task D3)
-/// - Warengruppen     → PLATZHALTER (kommt in Epic B, Task B4)
-/// - Inventur         → PLATZHALTER (kommt in Epic E, Task E3)
-/// - Reporting        → zeigt bestehenden [StatisticsScreen]
 class WarehouseHubScreen extends StatelessWidget {
   const WarehouseHubScreen({super.key});
 
@@ -42,13 +35,17 @@ class WarehouseHubScreen extends StatelessWidget {
 
   List<Widget> _buildTiles(BuildContext context, AppLocalizations l10n) => [
         // ── Artikelstamm ─────────────────────────────────────────────
-        // TODO(AF-full): ersetze onTap durch Navigator.push(ProductCatalogScreen)
         _HubTile(
           key: const Key('hubTileProductCatalog'),
           icon: Icons.inventory_2_outlined,
           title: l10n.warehouseHubTileProductCatalog,
-          isPlaceholder: true, // Epic A-full
-          onTap: () => _showComingSoon(context, l10n),
+          isPlaceholder: false,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const ProductCatalogScreen(),
+            ),
+          ),
         ),
 
         // ── Bestellungen (Epic C) ─────────────────────────────────────
@@ -128,21 +125,6 @@ class WarehouseHubScreen extends StatelessWidget {
         ),
       ];
 
-  void _showComingSoon(BuildContext context, AppLocalizations l10n) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.warehouseHubComingSoon),
-        content: Text(l10n.warehouseHubComingSoonHint),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.actionOk),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ─── Hub Tile ──────────────────────────────────────────────────────────────────

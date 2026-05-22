@@ -1424,6 +1424,9 @@
   "productGroupWithoutProduct": "Without product",
   "productCatalogEmpty": "Empty product catalog",
   "productCatalogEmptyHint": "Create your first product.",
+  "productCatalogLoadError": "Could not load product catalog.",
+  "productCatalogNoPermission": "You do not have permission to edit the product catalog.",
+  "productCatalogViewerHint": "You are viewing the product catalog in read-only mode.",
   "productLinkLabel": "Linked product",
   "productNoLink": "No linked product",
   "productDetailTitle": "Product details",
@@ -1710,5 +1713,6 @@
   "stocktakeCloseError": "Could not close stocktake.",
   "stocktakeAllCounted": "All positions counted.",
   "stocktakeDiffReportTitle": "Difference report",
-  "stocktakeDiffReportNoDiff": "No differences — stock is correct."
+  "stocktakeDiffReportNoDiff": "No differences — stock is correct.",
+  "stocktakeNoItems": "No items"
 }

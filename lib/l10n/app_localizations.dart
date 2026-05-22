@@ -6710,6 +6710,24 @@ abstract class AppLocalizations {
   /// **'Lege deinen ersten Artikel an.'**
   String get productCatalogEmptyHint;
 
+  /// No description provided for @productCatalogLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelstamm konnte nicht geladen werden.'**
+  String get productCatalogLoadError;
+
+  /// No description provided for @productCatalogNoPermission.
+  ///
+  /// In de, this message translates to:
+  /// **'Du hast keine Berechtigung, den Artikelstamm zu bearbeiten.'**
+  String get productCatalogNoPermission;
+
+  /// No description provided for @productCatalogViewerHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Du siehst den Artikelstamm im Lesemodus.'**
+  String get productCatalogViewerHint;
+
   /// No description provided for @productLinkLabel.
   ///
   /// In de, this message translates to:
@@ -8059,6 +8077,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Keine Differenzen — Bestand ist korrekt.'**
   String get stocktakeDiffReportNoDiff;
+
+  /// No description provided for @stocktakeNoItems.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Positionen'**
+  String get stocktakeNoItems;
 }
 
 class _AppLocalizationsDelegate

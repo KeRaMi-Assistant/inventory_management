@@ -3703,6 +3703,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get productCatalogEmptyHint => 'Create your first product.';
 
   @override
+  String get productCatalogLoadError => 'Could not load product catalog.';
+
+  @override
+  String get productCatalogNoPermission =>
+      'You do not have permission to edit the product catalog.';
+
+  @override
+  String get productCatalogViewerHint =>
+      'You are viewing the product catalog in read-only mode.';
+
+  @override
   String get productLinkLabel => 'Linked product';
 
   @override
@@ -4415,4 +4426,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stocktakeDiffReportNoDiff => 'No differences — stock is correct.';
+
+  @override
+  String get stocktakeNoItems => 'No items';
 }

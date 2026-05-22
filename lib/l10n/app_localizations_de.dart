@@ -3711,6 +3711,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get productCatalogEmptyHint => 'Lege deinen ersten Artikel an.';
 
   @override
+  String get productCatalogLoadError =>
+      'Artikelstamm konnte nicht geladen werden.';
+
+  @override
+  String get productCatalogNoPermission =>
+      'Du hast keine Berechtigung, den Artikelstamm zu bearbeiten.';
+
+  @override
+  String get productCatalogViewerHint =>
+      'Du siehst den Artikelstamm im Lesemodus.';
+
+  @override
   String get productLinkLabel => 'Verknüpfter Stammartikel';
 
   @override
@@ -4441,4 +4453,7 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get stocktakeDiffReportNoDiff =>
       'Keine Differenzen — Bestand ist korrekt.';
+
+  @override
+  String get stocktakeNoItems => 'Keine Positionen';
 }
