@@ -61,6 +61,121 @@ Deno.test('DHL adapter returns null for empty shipments', () => {
   assertEquals(dhlAdapter.parseResponse(null), null)
 })
 
+// ── DHL Parcel DE Tracking (Post & Parcel Germany) ──────────────────────
+// Schema: { pieceshipmentlist: { pieceshipment: <obj|array> } }
+// Status-Quellen: delivery-event-flag, standard-event-code, event-status,
+// event-text. Wird nach dem Migrations-Switch von "Shipment Tracking –
+// Unified" auf "Parcel DE Tracking" erkannt (PR mit dem Adapter-Update).
+
+Deno.test('DHL adapter parses Parcel-DE delivered via delivery-event-flag', () => {
+  const payload = {
+    pieceshipmentlist: {
+      pieceshipment: {
+        'piece-code': '00340434161094012345',
+        'status': 'Die Sendung wurde zugestellt.',
+        'status-timestamp': '2026-05-21T10:30:00Z',
+        'delivery-event-flag': '1',
+        pieceeventlist: {
+          pieceevent: [
+            {
+              'event-timestamp': '2026-05-20T08:15:00Z',
+              'event-status': 'In Zustellung',
+              'standard-event-code': 'IZ',
+              'event-text': 'In Zustellung',
+            },
+            {
+              'event-timestamp': '2026-05-21T10:30:00Z',
+              'event-status': 'Zugestellt',
+              'standard-event-code': 'ZU',
+              'event-text': 'Zugestellt — Empfänger',
+            },
+          ],
+        },
+      },
+    },
+  }
+  const parsed = dhlAdapter.parseResponse(payload)
+  assertExists(parsed)
+  assertEquals(parsed!.status, 'delivered')
+  assertEquals(parsed!.deliveredAt, '2026-05-21T10:30:00.000Z')
+  assertEquals(parsed!.lastEvent, 'Zugestellt — Empfänger')
+  assertEquals(parsed!.rawStatusCode, 'zu')
+})
+
+Deno.test('DHL adapter parses Parcel-DE in-transit', () => {
+  const payload = {
+    pieceshipmentlist: {
+      pieceshipment: {
+        'piece-code': '00340434161094012345',
+        'status-timestamp': '2026-05-20T08:15:00Z',
+        'delivery-event-flag': '0',
+        pieceeventlist: {
+          pieceevent: {
+            'event-timestamp': '2026-05-20T08:15:00Z',
+            'event-status': 'In Zustellung',
+            'standard-event-code': 'IZ',
+            'event-text': 'In Zustellung',
+          },
+        },
+      },
+    },
+  }
+  const parsed = dhlAdapter.parseResponse(payload)
+  assertExists(parsed)
+  assertEquals(parsed!.status, 'in_transit')
+  assertEquals(parsed!.deliveredAt, undefined)
+  assertEquals(parsed!.lastEvent, 'In Zustellung')
+})
+
+Deno.test('DHL adapter Parcel-DE: array of shipments → uses first', () => {
+  const payload = {
+    pieceshipmentlist: {
+      pieceshipment: [
+        {
+          'piece-code': '00340434161094012345',
+          'delivery-event-flag': '1',
+          'status-timestamp': '2026-05-21T10:30:00Z',
+          pieceeventlist: {
+            pieceevent: { 'event-status': 'Zugestellt', 'standard-event-code': 'ZU' },
+          },
+        },
+      ],
+    },
+  }
+  const parsed = dhlAdapter.parseResponse(payload)
+  assertExists(parsed)
+  assertEquals(parsed!.status, 'delivered')
+})
+
+Deno.test('DHL adapter Parcel-DE: text fallback when no event-code', () => {
+  const payload = {
+    pieceshipmentlist: {
+      pieceshipment: {
+        'piece-code': '00340434161094012345',
+        'status-timestamp': '2026-05-21T10:30:00Z',
+        pieceeventlist: {
+          pieceevent: {
+            'event-timestamp': '2026-05-21T10:30:00Z',
+            'event-text': 'Die Sendung wurde zugestellt.',
+          },
+        },
+      },
+    },
+  }
+  const parsed = dhlAdapter.parseResponse(payload)
+  assertExists(parsed)
+  assertEquals(parsed!.status, 'delivered')
+  assertEquals(parsed!.deliveredAt, '2026-05-21T10:30:00.000Z')
+})
+
+Deno.test('DHL adapter Parcel-DE returns null for empty list', () => {
+  assertEquals(
+    dhlAdapter.parseResponse({ pieceshipmentlist: { pieceshipment: [] } }),
+    null,
+  )
+  assertEquals(dhlAdapter.parseResponse({ pieceshipmentlist: {} }), null)
+})
+
 // ── DPD ─────────────────────────────────────────────────────────────────
 Deno.test('DPD adapter parses delivered from latest statusInfo', () => {
   const payload = {
