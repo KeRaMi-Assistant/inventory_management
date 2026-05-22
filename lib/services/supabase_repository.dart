@@ -18,6 +18,7 @@ import '../models/purchase_order_item.dart';
 import '../models/shop.dart';
 import '../models/supplier.dart';
 import '../models/ticket.dart';
+import '../models/warehouse.dart';
 
 /// Snapshot of all data for the currently signed-in user, used to seed the
 /// in-memory provider after login.
@@ -42,6 +43,10 @@ class CloudSnapshot {
   /// Empfehlung 1, analog `loadBatchesForItem`).
   final List<PurchaseOrder> purchaseOrders;
 
+  /// Lager (Epic D — Mehrlager). Klein und workspace-weit relevant, daher
+  /// im globalen Snapshot (Committee-Empfehlung 1). Analog `productCategories`.
+  final List<Warehouse> warehouses;
+
   const CloudSnapshot({
     required this.deals,
     required this.buyers,
@@ -54,6 +59,7 @@ class CloudSnapshot {
     this.productCategories = const [],
     this.products = const [],
     this.purchaseOrders = const [],
+    this.warehouses = const [],
   });
 
   bool get isEmpty =>
@@ -67,7 +73,8 @@ class CloudSnapshot {
       tickets.isEmpty &&
       productCategories.isEmpty &&
       products.isEmpty &&
-      purchaseOrders.isEmpty;
+      purchaseOrders.isEmpty &&
+      warehouses.isEmpty;
 }
 
 /// Single point of contact with the Supabase backend. All RLS-scoped tables
@@ -147,6 +154,7 @@ class SupabaseRepository {
         productCategories: [],
         products: [],
         purchaseOrders: [],
+        warehouses: [],
       );
     }
     final results = await Future.wait([
@@ -214,6 +222,12 @@ class SupabaseRepository {
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
           .order('created_at', ascending: false),
+      _client
+          .from('warehouses')
+          .select()
+          .eq('workspace_id', ws)
+          .filter('deleted_at', 'is', null)
+          .order('name', ascending: true),
     ]);
 
     final dealRows = (results[0] as List).cast<Map<String, dynamic>>();
@@ -228,6 +242,7 @@ class SupabaseRepository {
     final productRows = (results[9] as List).cast<Map<String, dynamic>>();
     final purchaseOrderRows =
         (results[10] as List).cast<Map<String, dynamic>>();
+    final warehouseRows = (results[11] as List).cast<Map<String, dynamic>>();
 
     final inventoryItems =
         itemRows.map(InventoryItem.fromSupabase).toList();
@@ -262,6 +277,7 @@ class SupabaseRepository {
       products: productRows.map(Product.fromSupabase).toList(),
       purchaseOrders:
           purchaseOrderRows.map(PurchaseOrder.fromSupabase).toList(),
+      warehouses: warehouseRows.map(Warehouse.fromSupabase).toList(),
     );
   }
 
@@ -941,6 +957,56 @@ class SupabaseRepository {
           'increment_po_item_received returned no row for item $itemId');
     }
     return PurchaseOrderItem.fromSupabase(list.first);
+  }
+
+  // ── Warehouses (Mehrlager — Epic D) ──────────────────────────────────────
+
+  /// Lädt alle aktiven Lager des Workspaces, sortiert nach Name.
+  /// Analog `loadProductCategories` — filtert `deleted_at IS NULL`.
+  Future<List<Warehouse>> loadWarehouses(String workspaceId) async {
+    final rows = await _client
+        .from('warehouses')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .filter('deleted_at', 'is', null)
+        .order('name', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(Warehouse.fromSupabase)
+        .toList();
+  }
+
+  Future<Warehouse> insertWarehouse(Warehouse warehouse) async {
+    final payload = warehouse.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('warehouses')
+        .insert(payload)
+        .select()
+        .single();
+    return Warehouse.fromSupabase(row);
+  }
+
+  Future<Warehouse> updateWarehouse(Warehouse warehouse) async {
+    final payload = warehouse.toSupabaseInsert();
+    final row = await _client
+        .from('warehouses')
+        .update(payload)
+        .eq('id', warehouse.id)
+        .select()
+        .single();
+    return Warehouse.fromSupabase(row);
+  }
+
+  /// Soft-Delete: setzt `deleted_at` auf die aktuelle UTC-Zeit (konsistent
+  /// mit dem Pattern aller anderen workspace-scoped Entitäten in diesem
+  /// Repository — kein Hard-Delete).
+  Future<void> deleteWarehouse(String id) async {
+    await _client
+        .from('warehouses')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
   }
 
   // ── Inventory items ───────────────────────────────────────────────────────

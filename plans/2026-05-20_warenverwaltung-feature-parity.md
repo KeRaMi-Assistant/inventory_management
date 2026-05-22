@@ -1103,33 +1103,33 @@ anbietet.
 
 ### Epic D — Mehrlager + Alerts (P1)
 
-- [ ] **D1** — Migration `warehouses` (Schema + 4-Policy-RLS +
+- [x] **D1** — Migration `warehouses` (Schema + 4-Policy-RLS +
   partial-UNIQUE `is_default`); `inventory_items.warehouse_id`-Nutzung
   aktivieren (Index); FK-Cross-Workspace-Trigger für
   `inventory_items.warehouse_id`; Down-Migration. `agent:db-migrator` ·
   `model:Opus` · `depends:AF2`
-- [ ] **D2** — Migration: `notifications_sent.ref_kind`-CHECK um
+- [x] **D2** — Migration: `notifications_sent.ref_kind`-CHECK um
   `'low_stock'` erweitern (DROP+ADD CONSTRAINT) + optional `workspace_id`-
   Spalte; als „irreversibel ab Merge" dokumentiert. `agent:db-migrator` ·
   `model:Opus` · `depends:D1`
-- [ ] **D3** — `Warehouse`-Model NEU; Repository + Provider CRUD +
+- [x] **D3** — `Warehouse`-Model NEU; Repository + Provider CRUD +
   Default-Lager-Bootstrap App-seitig; `warehouses` im `loadAll()`-Snapshot.
   `agent:flutter-coder` · `model:Sonnet` · `depends:D1`
-- [ ] **D4** — `warehouses_screen.dart` NEU als **Sub-Route des
+- [x] **D4** — `warehouses_screen.dart` NEU als **Sub-Route des
   Warenwirtschaft-Hubs** (KEIN neuer `MainTab`); Lager-Dropdown im
   Bestands-Dialog; States + A11y-Keys. `agent:ui-builder` ·
   `model:Sonnet` · `depends:D3,AF11`
-- [ ] **D5** — `send-notifications` Edge-Function um `low_stock`-Alert
+- [x] **D5** — `send-notifications` Edge-Function um `low_stock`-Alert
   erweitern: aggregiert `GROUP BY workspace_id, product_id` gegen
   `product_stock` vs. `products.min_stock`; ein Sammel-Push pro Workspace
   an aktive `workspace_members` mit Preference; PII-armer Body
   („X Artikel unter Mindestbestand"); Dedup via `notifications_sent`
   (`ref_kind='low_stock'`); kein `console.log` von Produktdaten.
   `agent:edge-fn-coder` · `model:Sonnet` · `depends:D2`
-- [ ] **D6** — `dashboard_screen.dart`: aktiver Low-Stock-Alert-Block mit
+- [x] **D6** — `dashboard_screen.dart`: aktiver Low-Stock-Alert-Block mit
   „Jetzt bestellen"-Aktion → öffnet PO-Dialog vorbefüllt.
   `agent:ui-builder` · `model:Sonnet` · `depends:C5,D3`
-- [ ] **D7** — l10n-Keys Epic D + Tests + `smoke-full-app-audit`;
+- [x] **D7** — l10n-Keys Epic D + Tests + `smoke-full-app-audit`;
   `_page-registry.md`: Sub-Route `warehouses` + Lager-Dialog namentlich
   ergänzen. `agent:ui-builder` · `model:Sonnet` · `depends:D4,D6`
   · *(Registry-schreibend — seriell mergen)*

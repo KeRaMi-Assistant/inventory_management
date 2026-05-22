@@ -1529,5 +1529,34 @@
   "poPdfColUnitPrice": "Unit price",
   "poPdfColLineTotal": "Line total",
   "poPdfTotalNetLabel": "Net total",
-  "poPdfNoteLabel": "Note"
+  "poPdfNoteLabel": "Note",
+
+  "warehousesTitle": "Warehouses",
+  "warehousesEmpty": "No warehouses",
+  "warehousesEmptyHint": "Create your first warehouse.",
+  "warehousesLoadError": "Could not load warehouses.",
+  "warehouseNew": "New warehouse",
+  "warehouseDefault": "Main warehouse",
+  "warehouseEdit": "Edit warehouse",
+  "warehouseNameLabel": "Name",
+  "warehouseAddressLabel": "Address",
+  "warehouseIsDefaultLabel": "Default warehouse",
+  "warehouseIsActiveLabel": "Active",
+  "warehouseInactiveBadge": "Inactive",
+  "warehouseDeletePrompt": "Delete warehouse \"{name}\"?",
+  "@warehouseDeletePrompt": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "inventoryWarehouseLabel": "Warehouse",
+  "inventoryNoWarehouse": "No warehouse",
+  "lowStockAlertTitle": "Low stock",
+  "lowStockAlertBody": "{count} items below minimum stock",
+  "@lowStockAlertBody": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "lowStockReorderAction": "Reorder now"
 }

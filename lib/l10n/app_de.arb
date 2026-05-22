@@ -1529,5 +1529,34 @@
   "poPdfColUnitPrice": "Einzelpreis",
   "poPdfColLineTotal": "Zeilensumme",
   "poPdfTotalNetLabel": "Nettosumme",
-  "poPdfNoteLabel": "Notiz"
+  "poPdfNoteLabel": "Notiz",
+
+  "warehousesTitle": "Lager",
+  "warehousesEmpty": "Keine Lager",
+  "warehousesEmptyHint": "Lege dein erstes Lager an.",
+  "warehousesLoadError": "Lager konnten nicht geladen werden.",
+  "warehouseNew": "Neues Lager",
+  "warehouseDefault": "Hauptlager",
+  "warehouseEdit": "Lager bearbeiten",
+  "warehouseNameLabel": "Name",
+  "warehouseAddressLabel": "Adresse",
+  "warehouseIsDefaultLabel": "Standardlager",
+  "warehouseIsActiveLabel": "Aktiv",
+  "warehouseInactiveBadge": "Inaktiv",
+  "warehouseDeletePrompt": "Lager \"{name}\" wirklich löschen?",
+  "@warehouseDeletePrompt": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "inventoryWarehouseLabel": "Lager",
+  "inventoryNoWarehouse": "Kein Lager",
+  "lowStockAlertTitle": "Niedriger Bestand",
+  "lowStockAlertBody": "{count} Artikel unter Mindestbestand",
+  "@lowStockAlertBody": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "lowStockReorderAction": "Jetzt bestellen"
 }

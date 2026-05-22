@@ -3924,4 +3924,62 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get poPdfNoteLabel => 'Note';
+
+  @override
+  String get warehousesTitle => 'Warehouses';
+
+  @override
+  String get warehousesEmpty => 'No warehouses';
+
+  @override
+  String get warehousesEmptyHint => 'Create your first warehouse.';
+
+  @override
+  String get warehousesLoadError => 'Could not load warehouses.';
+
+  @override
+  String get warehouseNew => 'New warehouse';
+
+  @override
+  String get warehouseDefault => 'Main warehouse';
+
+  @override
+  String get warehouseEdit => 'Edit warehouse';
+
+  @override
+  String get warehouseNameLabel => 'Name';
+
+  @override
+  String get warehouseAddressLabel => 'Address';
+
+  @override
+  String get warehouseIsDefaultLabel => 'Default warehouse';
+
+  @override
+  String get warehouseIsActiveLabel => 'Active';
+
+  @override
+  String get warehouseInactiveBadge => 'Inactive';
+
+  @override
+  String warehouseDeletePrompt(Object name) {
+    return 'Delete warehouse \"$name\"?';
+  }
+
+  @override
+  String get inventoryWarehouseLabel => 'Warehouse';
+
+  @override
+  String get inventoryNoWarehouse => 'No warehouse';
+
+  @override
+  String get lowStockAlertTitle => 'Low stock';
+
+  @override
+  String lowStockAlertBody(Object count) {
+    return '$count items below minimum stock';
+  }
+
+  @override
+  String get lowStockReorderAction => 'Reorder now';
 }

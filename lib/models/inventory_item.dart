@@ -23,6 +23,10 @@ class InventoryItem {
   /// Nullable — bestehende Items ohne Produkt-Bezug bleiben gültig.
   final String? productId;
 
+  /// Optionale Verknüpfung auf `warehouses.id` (Epic D — Mehrlager).
+  /// Nullable — bestehende Items ohne Lager-Zuweisung bleiben gültig.
+  final String? warehouseId;
+
   const InventoryItem({
     required this.id,
     required this.name,
@@ -44,6 +48,7 @@ class InventoryItem {
     this.publicPrice,
     this.publicDescription,
     this.productId,
+    this.warehouseId,
   });
 
   /// Gibt an, ob die Bestandsmenge dieser einzelnen Row unter dem
@@ -86,6 +91,7 @@ class InventoryItem {
         'publicPrice': publicPrice,
         'publicDescription': publicDescription,
         'productId': productId,
+        'warehouseId': warehouseId,
       };
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) => InventoryItem(
@@ -114,6 +120,7 @@ class InventoryItem {
         publicPrice: (json['publicPrice'] as num?)?.toDouble(),
         publicDescription: json['publicDescription'] as String?,
         productId: json['productId'] as String?,
+        warehouseId: json['warehouseId'] as String?,
       );
 
   // ── Supabase (snake_case) ─────────────────────────────────────────────────
@@ -139,6 +146,7 @@ class InventoryItem {
         'public_price': publicPrice,
         'public_description': publicDescription,
         if (productId != null) 'product_id': productId,
+        if (warehouseId != null) 'warehouse_id': warehouseId,
       };
 
   factory InventoryItem.fromSupabase(Map<String, dynamic> row) {
@@ -167,6 +175,7 @@ class InventoryItem {
       publicPrice: (row['public_price'] as num?)?.toDouble(),
       publicDescription: row['public_description'] as String?,
       productId: row['product_id'] as String?,
+      warehouseId: row['warehouse_id'] as String?,
     );
   }
 
@@ -191,6 +200,7 @@ class InventoryItem {
     Object? publicPrice = _sentinel,
     Object? publicDescription = _sentinel,
     Object? productId = _sentinel,
+    Object? warehouseId = _sentinel,
   }) =>
       InventoryItem(
         id: id ?? this.id,
@@ -227,6 +237,8 @@ class InventoryItem {
             : publicDescription as String?,
         productId:
             productId == _sentinel ? this.productId : productId as String?,
+        warehouseId:
+            warehouseId == _sentinel ? this.warehouseId : warehouseId as String?,
       );
 }
 

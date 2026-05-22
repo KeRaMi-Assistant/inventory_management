@@ -1271,6 +1271,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
   String _selectedTicketNumber = '';
   String? _supplierId;
   String? _productId;
+  String? _warehouseId;
   List<String> _attachmentPaths = const [];
 
   @override
@@ -1283,6 +1284,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
       _ean.text = item.ean ?? '';
       _supplierId = item.supplierId;
       _productId = item.productId;
+      _warehouseId = item.warehouseId;
       _quantity.text = '${item.quantity}';
       _min.text = '${item.minStock}';
       _location.text = item.location ?? '';
@@ -1701,6 +1703,38 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     ],
                     onChanged: (v) => setState(() => _productId = v),
                   ),
+                // ── Lager-Zuweisung (optional, nur wenn Lager vorhanden) ──
+                if (provider.warehouses.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String?>(
+                    key: const Key('warehouseDropdown'),
+                    initialValue: _warehouseId,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: l10n.inventoryWarehouseLabel,
+                      prefixIcon:
+                          const Icon(Icons.warehouse_outlined, size: 18),
+                    ),
+                    items: [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text(l10n.inventoryNoWarehouse),
+                      ),
+                      ...provider.warehouses
+                          .where((w) => w.isActive)
+                          .map(
+                            (w) => DropdownMenuItem<String?>(
+                              value: w.id,
+                              child: Text(
+                                w.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                    ],
+                    onChanged: (v) => setState(() => _warehouseId = v),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 _sectionLabel(l10n.inventorySectionAttachments),
                 const SizedBox(height: 12),
@@ -1790,6 +1824,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                         status: _status,
                         attachmentPaths: _attachmentPaths,
                         productId: _productId,
+                        warehouseId: _warehouseId,
                       );
                       if (widget.item == null) {
                         await prov.addInventoryItem(item);

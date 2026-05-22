@@ -19,6 +19,7 @@ import '../models/shop.dart';
 import '../models/supplier.dart';
 import '../models/ticket.dart';
 import '../models/ticket_summary.dart';
+import '../models/warehouse.dart';
 import '../services/carrier_service.dart';
 import '../services/csv_service.dart';
 import '../services/supabase_repository.dart';
@@ -48,6 +49,10 @@ class InventoryProvider extends ChangeNotifier {
   /// gehalten — sie werden lazy pro Detail-Screen geladen (Committee-
   /// Empfehlung 1, analog `loadBatchesForItem`).
   List<PurchaseOrder> _purchaseOrders = [];
+
+  /// Lager (Epic D — Mehrlager). Klein und workspace-weit relevant, daher
+  /// global gehalten (Committee-Empfehlung 1, analog `_productCategories`).
+  List<Warehouse> _warehouses = [];
 
   /// Aggregierter Lagerbestand aus dem DB-View `product_stock` (Epic A-full,
   /// read-only). Jede Row = Bestand eines Produkts pro Lager. Wird in
@@ -80,6 +85,14 @@ class InventoryProvider extends ChangeNotifier {
   /// Bestellköpfe, absteigend nach Erstellungsdatum sortiert.
   List<PurchaseOrder> get purchaseOrders =>
       List.unmodifiable(_purchaseOrders);
+
+  /// Lager des aktiven Workspaces, alphabetisch nach Name sortiert.
+  /// Das Default-Lager (falls vorhanden) ist via `w.isDefault` erkennbar.
+  List<Warehouse> get warehouses => List.unmodifiable(_warehouses);
+
+  /// Gibt das Default-Lager zurück, oder `null` falls keins vorhanden.
+  Warehouse? get defaultWarehouse =>
+      _warehouses.where((w) => w.isDefault).firstOrNull;
 
   /// Aggregierter Lagerbestand pro Produkt/Lager aus dem View `product_stock`.
   /// Nur Rows mit `product_id IS NOT NULL` — nicht-verknüpfte Items fehlen
@@ -318,6 +331,28 @@ class InventoryProvider extends ChangeNotifier {
       final snapshot = await _repository.loadAll();
       _hydrateFrom(snapshot);
 
+      // Default-Lager-Bootstrap: Wenn der Workspace noch kein Lager hat,
+      // wird automatisch ein "Hauptlager" angelegt. Runs defensiv — ein
+      // Fehler (z. B. Race zwischen zwei Clients oder fehlende DB-Tabelle
+      // vor D1-Migration) bricht den Load nicht ab.
+      // Name: "Hauptlager" ist ein fester String (kein l10n), da der
+      // Provider keinen BuildContext hat und l10n hier nicht nutzbar ist.
+      // Der Name ist umbenenbar; er dient nur als sinnvoller Startwert.
+      // Dokumentierte Entscheidung: Provider-seitig kein BuildContext
+      // verfügbar → statischer Bootstrap-Name. (Plan D3, §Bootstrap)
+      if (_warehouses.isEmpty && wsId != null) {
+        try {
+          await _bootstrapDefaultWarehouse();
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint(
+              'InventoryProvider: Default-Lager-Bootstrap fehlgeschlagen '
+              '(non-fatal): $e',
+            );
+          }
+        }
+      }
+
       // product_stock separat laden — read-only View, kann defensiv fehlschlagen.
       // Fehler (z. B. fehlende Implementierung in Test-Fakes oder Netzwerkfehler)
       // fallen auf einen leeren Cache zurück; die App bleibt nutzbar, nur die
@@ -358,6 +393,7 @@ class InventoryProvider extends ChangeNotifier {
     _productCategories = [];
     _products = [];
     _purchaseOrders = [];
+    _warehouses = [];
     _productStock = [];
     _lastError = null;
     _activeWorkspaceId = null;
@@ -385,6 +421,64 @@ class InventoryProvider extends ChangeNotifier {
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     _purchaseOrders = List.of(snapshot.purchaseOrders)
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _warehouses = List.of(snapshot.warehouses)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  }
+
+  /// Legt beim ersten Workspace-Touch ein Default-Lager an, falls noch keins
+  /// existiert. Wird defensiv aufgerufen — Fehler werden geloggt, nicht
+  /// geworfen.
+  ///
+  /// **Name:** "Hauptlager" ist ein fester Bootstrap-String ohne l10n, da
+  /// der Provider keinen `BuildContext` hat und `AppLocalizations` hier nicht
+  /// nutzbar ist. Der Plan (D3) erlaubt das explizit und dokumentiert die
+  /// Entscheidung: der User kann den Namen nach dem Anlegen umbenennen.
+  /// Das DB-Partial-UNIQUE-Constraint garantiert, dass auch bei einem Race
+  /// zwischen zwei Clients maximal ein Default-Lager entsteht — ein zweiter
+  /// Insert würde mit 23505 fehlschlagen und wird hier silently ignoriert.
+  Future<void> _bootstrapDefaultWarehouse() async {
+    // Doppelter Guard: nur wenn die lokale Liste wirklich leer ist.
+    if (_warehouses.isNotEmpty) return;
+    final ws = _repository.activeWorkspaceId;
+    if (ws == null) return;
+
+    final defaultWarehouse = Warehouse(
+      id: _uuid.v4(),
+      workspaceId: ws,
+      userId: '', // wird im Repository durch _userId ersetzt
+      name: 'Hauptlager',
+      isDefault: true,
+      isActive: true,
+      createdAt: DateTime.now().toUtc(),
+      updatedAt: DateTime.now().toUtc(),
+    );
+    try {
+      final saved = await _repository.insertWarehouse(defaultWarehouse);
+      _warehouses.add(saved);
+      _warehouses
+          .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      _log('Standard-Lager angelegt: ${saved.name}', 'warehouse');
+      notifyListeners();
+    } catch (e) {
+      // Race (23505 Unique-Violation auf is_default) oder fehlende Tabelle
+      // (vor D1-Migration) — beide Fälle sind nicht-fatal.
+      if (kDebugMode) {
+        debugPrint(
+          'InventoryProvider._bootstrapDefaultWarehouse: $e',
+        );
+      }
+      // Versuch, das bereits existierende Lager zu laden (falls Race).
+      try {
+        final existing = await _repository.loadWarehouses(ws);
+        _warehouses = existing;
+        _warehouses.sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        notifyListeners();
+      } catch (_) {
+        // Auch der Fallback-Load schlägt fehl (z. B. Tabelle existiert
+        // noch nicht) — ignorieren, App bleibt ohne Lager nutzbar.
+      }
+    }
   }
 
   // ── TICKETS ───────────────────────────────────────────────────────────────
@@ -1060,6 +1154,38 @@ class InventoryProvider extends ChangeNotifier {
     );
     notifyListeners();
     return updatedItem;
+  }
+
+  // ── WAREHOUSES ────────────────────────────────────────────────────────────
+
+  Future<void> addWarehouse(Warehouse warehouse) async {
+    final saved = await _repository.insertWarehouse(warehouse);
+    _warehouses.add(saved);
+    _warehouses
+        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _log('Lager hinzugefügt: ${saved.name}', 'warehouse');
+    notifyListeners();
+  }
+
+  Future<void> updateWarehouse(Warehouse warehouse) async {
+    final saved = await _repository.updateWarehouse(warehouse);
+    final idx = _warehouses.indexWhere((w) => w.id == saved.id);
+    if (idx == -1) return;
+    _warehouses[idx] = saved;
+    _warehouses
+        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _log('Lager aktualisiert: ${saved.name}', 'warehouse');
+    notifyListeners();
+  }
+
+  Future<void> deleteWarehouse(String id) async {
+    final warehouse = _warehouses.where((w) => w.id == id).firstOrNull;
+    await _repository.deleteWarehouse(id);
+    _warehouses.removeWhere((w) => w.id == id);
+    if (warehouse != null) {
+      _log('Lager gelöscht: ${warehouse.name}', 'warehouse');
+    }
+    notifyListeners();
   }
 
   // ── INVENTORY ITEMS ───────────────────────────────────────────────────────

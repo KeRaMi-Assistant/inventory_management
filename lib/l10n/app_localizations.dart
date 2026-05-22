@@ -7171,6 +7171,114 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Notiz'**
   String get poPdfNoteLabel;
+
+  /// No description provided for @warehousesTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager'**
+  String get warehousesTitle;
+
+  /// No description provided for @warehousesEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Lager'**
+  String get warehousesEmpty;
+
+  /// No description provided for @warehousesEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege dein erstes Lager an.'**
+  String get warehousesEmptyHint;
+
+  /// No description provided for @warehousesLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager konnten nicht geladen werden.'**
+  String get warehousesLoadError;
+
+  /// No description provided for @warehouseNew.
+  ///
+  /// In de, this message translates to:
+  /// **'Neues Lager'**
+  String get warehouseNew;
+
+  /// No description provided for @warehouseDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Hauptlager'**
+  String get warehouseDefault;
+
+  /// No description provided for @warehouseEdit.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager bearbeiten'**
+  String get warehouseEdit;
+
+  /// No description provided for @warehouseNameLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Name'**
+  String get warehouseNameLabel;
+
+  /// No description provided for @warehouseAddressLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Adresse'**
+  String get warehouseAddressLabel;
+
+  /// No description provided for @warehouseIsDefaultLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Standardlager'**
+  String get warehouseIsDefaultLabel;
+
+  /// No description provided for @warehouseIsActiveLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiv'**
+  String get warehouseIsActiveLabel;
+
+  /// No description provided for @warehouseInactiveBadge.
+  ///
+  /// In de, this message translates to:
+  /// **'Inaktiv'**
+  String get warehouseInactiveBadge;
+
+  /// No description provided for @warehouseDeletePrompt.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager \"{name}\" wirklich löschen?'**
+  String warehouseDeletePrompt(Object name);
+
+  /// No description provided for @inventoryWarehouseLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager'**
+  String get inventoryWarehouseLabel;
+
+  /// No description provided for @inventoryNoWarehouse.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Lager'**
+  String get inventoryNoWarehouse;
+
+  /// No description provided for @lowStockAlertTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Niedriger Bestand'**
+  String get lowStockAlertTitle;
+
+  /// No description provided for @lowStockAlertBody.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Artikel unter Mindestbestand'**
+  String lowStockAlertBody(Object count);
+
+  /// No description provided for @lowStockReorderAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Jetzt bestellen'**
+  String get lowStockReorderAction;
 }
 
 class _AppLocalizationsDelegate

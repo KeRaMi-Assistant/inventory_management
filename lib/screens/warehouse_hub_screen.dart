@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import 'categories_screen.dart';
 import 'purchase_orders_screen.dart';
 import 'statistics_screen.dart';
+import 'warehouses_screen.dart';
 
 /// Hub-Screen für die Warenwirtschaft (AF11).
 ///
@@ -63,14 +64,18 @@ class WarehouseHubScreen extends StatelessWidget {
           ),
         ),
 
-        // ── Lager (Epic D) ────────────────────────────────────────────
-        // TODO(D3): ersetze onTap durch Navigator.push(WarehousesScreen)
+        // ── Lager (Epic D, Task D4) ───────────────────────────────────
         _HubTile(
           key: const Key('hubTileWarehouses'),
           icon: Icons.warehouse_outlined,
           title: l10n.warehouseHubTileWarehouses,
-          isPlaceholder: true, // Epic D
-          onTap: () => _showComingSoon(context, l10n),
+          isPlaceholder: false,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const WarehousesScreen(),
+            ),
+          ),
         ),
 
         // ── Warengruppen / Kategorien (Epic B, Task B4) ───────────────

@@ -97,6 +97,7 @@ Dialogs müssen auf 390×844 ohne horizontalen Scroll funktionieren.
 | `/statistics` → Product-Drilldown | [`lib/widgets/statistics/product_drilldown_sheet.dart`](../../lib/widgets/statistics/product_drilldown_sheet.dart) | smoke-theme, mobile-overflow |
 | `/warehouse` → Bestellungen (Sub-Route) | [`lib/screens/purchase_orders_screen.dart`](../../lib/screens/purchase_orders_screen.dart) | smoke-theme, mobile-overflow | Liste der Bestellungen mit Status-Badges; FAB „Neue Bestellung" (`Key('poNewFab')`). Sub-Route des Warenwirtschaft-Hubs, kein eigener MainTab. Viewer → FAB ausgeblendet. Epic C (C5). |
 | `/warehouse` → Bestellungs-Detail (Sub-Route) | [`lib/screens/purchase_order_detail_screen.dart`](../../lib/screens/purchase_order_detail_screen.dart) | smoke-theme, mobile-overflow, goods-receipt-flow | Positionen, Wareneingang buchen (Soll/Ist-Stepper), Status, PDF-Export. A11y-Keys: `Key('poCard-<id>')`, `Key('goodsReceiptBookButton')`, `Key('poItemReceivedStepper-<id>')`, `Key('poPdfExportButton')`. Epic C (C6). |
+| `/warehouse` → Lager (Sub-Route) | [`lib/screens/warehouses_screen.dart`](../../lib/screens/warehouses_screen.dart) | smoke-theme, mobile-overflow | Lager verwalten (CRUD). FAB „Neues Lager" (`Key('warehouseNewFab')`). Sub-Route des Warenwirtschaft-Hubs, kein eigener MainTab. Viewer → kein FAB. A11y-Keys: `Key('warehouseRow-<id>')`, `Key('warehouseDropdown')`. Epic D (D3). |
 
 ## Pflicht-Tests-Definitionen
 

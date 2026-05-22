@@ -9,6 +9,7 @@ import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../widgets/kpi_card.dart';
+import 'purchase_orders_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -51,6 +52,7 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 if (isEmpty) const _EmptyStateCard(),
                 if (isEmpty) const SizedBox(height: 24),
+                _LowStockAlertBlock(criticalCount: provider.criticalStockCount),
                 _KpiGrid(provider: provider, fmt: fmt),
                 const SizedBox(height: 24),
                 LayoutBuilder(
@@ -80,6 +82,117 @@ class DashboardScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ─── Low-Stock-Alert-Block (D6) ───────────────────────────────────────────
+
+/// Zeigt einen deutlich sichtbaren Warn-Block, wenn Artikel unter
+/// Mindestbestand sind. Bei [criticalCount] == 0 wird der Block
+/// komplett ausgeblendet (Committee-Empfehlung D5: kein Empty-/Collapsed-State).
+class _LowStockAlertBlock extends StatelessWidget {
+  final int criticalCount;
+  const _LowStockAlertBlock({required this.criticalCount});
+
+  @override
+  Widget build(BuildContext context) {
+    if (criticalCount == 0) return const SizedBox.shrink();
+
+    final l10n = AppLocalizations.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.warningBgOf(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.warningBorderOf(context)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final phone = constraints.maxWidth < 520;
+              final info = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: AppTheme.warningTextOf(context),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.lowStockAlertTitle,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.warningTextOf(context),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.lowStockAlertBody(criticalCount),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.warningTextOf(context),
+                    ),
+                  ),
+                ],
+              );
+
+              final cta = SizedBox(
+                height: 48,
+                child: ElevatedButton.icon(
+                  key: const Key('lowStockReorderButton'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.warning,
+                    foregroundColor: AppTheme.bgSurfaceOf(context),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PurchaseOrdersScreen(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.shopping_cart_outlined, size: 18),
+                  label: Text(
+                    l10n.lowStockReorderAction,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              );
+
+              if (phone) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [info, const SizedBox(height: 12), cta],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: info),
+                  const SizedBox(width: 16),
+                  cta,
+                ],
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }
