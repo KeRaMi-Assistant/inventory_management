@@ -16,6 +16,8 @@ import '../models/product_stock.dart';
 import '../models/purchase_order.dart';
 import '../models/purchase_order_item.dart';
 import '../models/shop.dart';
+import '../models/stocktake.dart';
+import '../models/stocktake_item.dart';
 import '../models/supplier.dart';
 import '../models/ticket.dart';
 import '../models/ticket_summary.dart';
@@ -53,6 +55,11 @@ class InventoryProvider extends ChangeNotifier {
   /// Lager (Epic D — Mehrlager). Klein und workspace-weit relevant, daher
   /// global gehalten (Committee-Empfehlung 1, analog `_productCategories`).
   List<Warehouse> _warehouses = [];
+
+  /// Inventur-Sessions (Epic E). Klein und workspace-weit relevant, daher
+  /// global gehalten. `stocktake_items` werden lazy pro Detail-Screen geladen
+  /// (Pattern wie `_purchaseOrders`/`loadPurchaseOrderItems`).
+  List<Stocktake> _stocktakes = [];
 
   /// Aggregierter Lagerbestand aus dem DB-View `product_stock` (Epic A-full,
   /// read-only). Jede Row = Bestand eines Produkts pro Lager. Wird in
@@ -93,6 +100,9 @@ class InventoryProvider extends ChangeNotifier {
   /// Gibt das Default-Lager zurück, oder `null` falls keins vorhanden.
   Warehouse? get defaultWarehouse =>
       _warehouses.where((w) => w.isDefault).firstOrNull;
+
+  /// Inventur-Sessions des aktiven Workspaces, absteigend nach Erstellungsdatum.
+  List<Stocktake> get stocktakes => List.unmodifiable(_stocktakes);
 
   /// Aggregierter Lagerbestand pro Produkt/Lager aus dem View `product_stock`.
   /// Nur Rows mit `product_id IS NOT NULL` — nicht-verknüpfte Items fehlen
@@ -394,6 +404,7 @@ class InventoryProvider extends ChangeNotifier {
     _products = [];
     _purchaseOrders = [];
     _warehouses = [];
+    _stocktakes = [];
     _productStock = [];
     _lastError = null;
     _activeWorkspaceId = null;
@@ -423,6 +434,8 @@ class InventoryProvider extends ChangeNotifier {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _warehouses = List.of(snapshot.warehouses)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _stocktakes = List.of(snapshot.stocktakes)
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   /// Legt beim ersten Workspace-Touch ein Default-Lager an, falls noch keins
@@ -1184,6 +1197,267 @@ class InventoryProvider extends ChangeNotifier {
     _warehouses.removeWhere((w) => w.id == id);
     if (warehouse != null) {
       _log('Lager gelöscht: ${warehouse.name}', 'warehouse');
+    }
+    notifyListeners();
+  }
+
+  // ── STOCKTAKES (Inventur — Epic E) ───────────────────────────────────────
+
+  /// Legt eine neue Inventur-Session an und erzeugt sofort den Soll-Snapshot
+  /// als `stocktake_items`-Rows.
+  ///
+  /// Der Soll-Snapshot aggregiert den aktuellen Bestand pro Produkt aus
+  /// `_productStock`. Ist `warehouseId` gesetzt, werden nur Produkte
+  /// berücksichtigt, die in diesem Lager Bestand haben. Andernfalls werden
+  /// alle Produkte mit Bestand > 0 eingeschlossen.
+  ///
+  /// Jede `stocktake_items`-Row erhält `counted_qty = null` (noch nicht gezählt).
+  ///
+  /// Gibt die gespeicherte [Stocktake] zurück (mit server-seitig vergebenem
+  /// BIGSERIAL-`id`). Die zugehörigen [StocktakeItem]s werden **nicht** im
+  /// globalen Provider-State gehalten — sie werden lazy im Detail-Screen
+  /// verwaltet.
+  Future<Stocktake> startInventory({
+    String? warehouseId,
+    String? title,
+  }) async {
+    final ws = _repository.activeWorkspaceId;
+    if (ws == null) {
+      throw StateError(
+          'startInventory: kein aktiver Workspace gesetzt.');
+    }
+
+    final now = DateTime.now().toUtc();
+
+    // 1. Stocktake-Kopf anlegen.
+    final stocktake = Stocktake(
+      workspaceId: ws,
+      userId: '', // wird im Repository durch _userId ersetzt
+      warehouseId: warehouseId,
+      status: StocktakeStatus.counting,
+      title: title,
+      startedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    );
+    final savedStocktake = await _repository.insertStocktake(stocktake);
+    _stocktakes.insert(0, savedStocktake);
+    _stocktakes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    notifyListeners();
+
+    // 2. Soll-Snapshot als stocktake_items erzeugen.
+    //    Bestand pro Produkt aggregieren (Summe aller productStock-Rows mit
+    //    gleicher productId, optional gefiltert nach warehouseId).
+    final stockByProduct = <String, int>{};
+    for (final stock in _productStock) {
+      if (warehouseId != null && stock.warehouseId != warehouseId) continue;
+      stockByProduct.update(
+        stock.productId,
+        (existing) => existing + stock.qtyInWarehouse,
+        ifAbsent: () => stock.qtyInWarehouse,
+      );
+    }
+
+    // Nur Produkte mit Bestand > 0 einschließen.
+    final stocktakeId = savedStocktake.id;
+    if (stocktakeId != null) {
+      for (final entry in stockByProduct.entries) {
+        if (entry.value <= 0) continue;
+        final item = StocktakeItem(
+          id: _uuid.v4(),
+          workspaceId: ws,
+          stocktakeId: stocktakeId,
+          productId: entry.key,
+          expectedQty: entry.value,
+          countedQty: null,
+          createdAt: now,
+          updatedAt: now,
+        );
+        // Fehler beim Anlegen eines einzelnen Items sind nicht fatal —
+        // der Benutzer kann fehlende Items manuell ergänzen.
+        try {
+          await _repository.insertStocktakeItem(item);
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint(
+                'startInventory: StocktakeItem für Produkt ${entry.key} '
+                'konnte nicht angelegt werden: $e');
+          }
+        }
+      }
+    }
+
+    _log('Inventur gestartet: ${savedStocktake.title ?? savedStocktake.id}',
+        'stocktake');
+    return savedStocktake;
+  }
+
+  /// Setzt `counted_qty` einer Inventur-Position und persistiert sofort
+  /// (inkrementelles Speichern — kein Verbindungsabbruch verliert Daten).
+  ///
+  /// Bei einem Netzwerkfehler bleibt der lokale Wert in [item] erhalten
+  /// (der Caller hält das aktualisierte Objekt); der Fehler wird sauber
+  /// als Exception nach oben weitergegeben, damit der UI-Layer ihn anzeigen
+  /// kann. Die App crasht nicht.
+  ///
+  /// Gibt das server-seitig gespeicherte [StocktakeItem] zurück, oder
+  /// wirft bei einem dauerhaften Fehler.
+  Future<StocktakeItem> countStocktakeItem(
+    StocktakeItem item,
+    int countedQty,
+  ) async {
+    final updated = item.copyWith(countedQty: countedQty);
+    final saved = await _repository.updateStocktakeItem(updated);
+    _log('Inventur-Zählung: Produkt ${item.productId} → $countedQty', 'stocktake');
+    return saved;
+  }
+
+  /// Schließt eine Inventur-Session ab.
+  ///
+  /// Pro Position mit einer Differenz (`counted_qty != expected_qty`) wird
+  /// eine `inventory_movements`-Row mit `movement_type = stocktake`
+  /// geschrieben (append-only — nur INSERT). Die Differenzmenge ist
+  /// `counted_qty - expected_qty`.
+  ///
+  /// Außerdem wird der tatsächliche Bestand der betroffenen
+  /// `inventory_items`-Rows angeglichen: Die erste Bestands-Row des Produkts
+  /// (aus `_inventoryItems`) wird auf den gezählten Wert korrigiert.
+  ///
+  /// Positions ohne gezählte Menge (`counted_qty == null`) werden
+  /// übersprungen (noch nicht gezählt → keine Buchung).
+  ///
+  /// Setzt abschließend `stocktakes.status = 'closed'` und `closed_at`.
+  Future<Stocktake> closeStocktake(
+    Stocktake stocktake,
+    List<StocktakeItem> items,
+  ) async {
+    final stocktakeId = stocktake.id;
+    if (stocktakeId == null) {
+      throw ArgumentError('closeStocktake: Stocktake hat keine id.');
+    }
+    final ws = _repository.activeWorkspaceId;
+    if (ws == null) {
+      throw StateError('closeStocktake: kein aktiver Workspace gesetzt.');
+    }
+
+    final now = DateTime.now().toUtc();
+
+    // 1. Pro gezählte Position mit Differenz: Differenz-Movement schreiben.
+    for (final item in items) {
+      final counted = item.countedQty;
+      if (counted == null) continue; // noch nicht gezählt — überspringen
+
+      final diff = counted - item.expectedQty;
+      if (diff == 0) continue; // keine Differenz — keine Buchung nötig
+
+      // inventory_movements ist append-only (kein UPDATE/DELETE).
+      // Differenz-Movement mit movement_type='stocktake'.
+      // itemId: erste passende Bestands-Row des Produkts, oder Fallback-UUID.
+      final inventoryItemForProduct = _inventoryItems
+          .where((i) => i.productId == item.productId)
+          .firstOrNull;
+      final itemId = inventoryItemForProduct?.id ?? _uuid.v4();
+
+      final movement = InventoryMovement(
+        id: _uuid.v4(),
+        itemId: itemId,
+        date: now,
+        quantityChange: diff,
+        reason: 'Inventur-Abschluss',
+        movementType: InventoryMovementType.stocktake,
+        productId: item.productId,
+      );
+      try {
+        final savedMovement = await _repository.insertMovement(movement);
+        _movements.insert(0, savedMovement);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+              'closeStocktake: Movement für Produkt ${item.productId} '
+              'konnte nicht geschrieben werden: $e');
+        }
+        // Fehler beim Movement blockieren nicht den Abschluss —
+        // der Bestandsangleich läuft trotzdem durch.
+      }
+
+      // 2. Bestand angeleichen: inventory_item auf den gezählten Wert setzen.
+      if (inventoryItemForProduct != null) {
+        final corrected =
+            inventoryItemForProduct.copyWith(quantity: counted);
+        try {
+          final savedItem = await _repository.updateInventoryItem(corrected);
+          final idx =
+              _inventoryItems.indexWhere((i) => i.id == savedItem.id);
+          if (idx != -1) {
+            _inventoryItems[idx] = savedItem;
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint(
+                'closeStocktake: Bestandsangleich für Produkt '
+                '${item.productId} fehlgeschlagen: $e');
+          }
+        }
+      }
+    }
+
+    // 3. Stocktake auf 'closed' setzen.
+    final closed = stocktake.copyWith(
+      status: StocktakeStatus.closed,
+      closedAt: now,
+    );
+    final savedStocktake = await _repository.updateStocktake(closed);
+    final idx = _stocktakes.indexWhere((s) => s.id == savedStocktake.id);
+    if (idx != -1) {
+      _stocktakes[idx] = savedStocktake;
+    }
+
+    _log(
+      'Inventur abgeschlossen: ${savedStocktake.title ?? savedStocktake.id}',
+      'stocktake',
+    );
+    notifyListeners();
+    return savedStocktake;
+  }
+
+  /// Lädt alle Zähl-Positionen einer Inventur-Session on-demand.
+  /// Pattern analog `loadPurchaseOrderItems`: kein globaler State, der
+  /// Detail-Screen hält den State selbst.
+  Future<List<StocktakeItem>> loadStocktakeItems(int stocktakeId) {
+    final wsId = _repository.activeWorkspaceId;
+    if (wsId == null) return Future.value(const []);
+    return _repository.loadStocktakeItems(wsId, stocktakeId);
+  }
+
+  /// CRUD: neue Inventur-Session hinzufügen (direkter Weg ohne Soll-Snapshot).
+  /// Für einfache Tests / manuelle Sessions ohne Produkt-Aggregation.
+  Future<Stocktake> addStocktake(Stocktake stocktake) async {
+    final saved = await _repository.insertStocktake(stocktake);
+    _stocktakes.insert(0, saved);
+    _stocktakes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _log('Inventur hinzugefügt: ${saved.title ?? saved.id}', 'stocktake');
+    notifyListeners();
+    return saved;
+  }
+
+  Future<void> updateStocktake(Stocktake stocktake) async {
+    final saved = await _repository.updateStocktake(stocktake);
+    final idx = _stocktakes.indexWhere((s) => s.id == saved.id);
+    if (idx == -1) return;
+    _stocktakes[idx] = saved;
+    _stocktakes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _log('Inventur aktualisiert: ${saved.title ?? saved.id}', 'stocktake');
+    notifyListeners();
+  }
+
+  /// Soft-Delete. Entfernt die Inventur aus dem lokalen Cache.
+  /// `stocktake_items` werden DB-seitig durch `ON DELETE CASCADE` entfernt.
+  Future<void> deleteStocktake(int id) async {
+    final st = _stocktakes.where((s) => s.id == id).firstOrNull;
+    await _repository.deleteStocktake(id);
+    _stocktakes.removeWhere((s) => s.id == id);
+    if (st != null) {
+      _log('Inventur gelöscht: ${st.title ?? st.id}', 'stocktake');
     }
     notifyListeners();
   }

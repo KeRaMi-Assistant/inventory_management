@@ -1136,27 +1136,27 @@ anbietet.
 
 ### Epic E — Inventur + Reporting (P2)
 
-- [ ] **E1** — Migration `stocktakes` + `stocktake_items` (Schema +
+- [x] **E1** — Migration `stocktakes` + `stocktake_items` (Schema +
   4-Policy-RLS + FK-Cross-Workspace-Trigger für `stocktakes.warehouse_id`
   und `stocktake_items.product_id`/`stocktake_id`); Down-Migration.
   `agent:db-migrator` · `model:Opus` · `depends:AF1`
-- [ ] **E2** — Models `Stocktake`, `StocktakeItem` NEU; Repository +
+- [x] **E2** — Models `Stocktake`, `StocktakeItem` NEU; Repository +
   Provider: Inventur starten (Soll-Snapshot aus `product_stock`), zählen
   (inkrementelles, no-network-resilientes Speichern), abschließen
   (Differenz-Movements `movement_type='stocktake'`, append-only).
   `agent:flutter-coder` · `model:Sonnet` · `depends:E1,AF7c`
-- [ ] **E3** — `stocktake_screen.dart` + `stocktake_detail_screen.dart` NEU
+- [x] **E3** — `stocktake_screen.dart` + `stocktake_detail_screen.dart` NEU
   als **Sub-Routen des Warenwirtschaft-Hubs** (KEIN neuer `MainTab`);
   Phone-Inventur-UX (durchscrollbare 48dp-Liste, Filter „nur ungezählte",
   Fortschritts-Header, Barcode-Einsprung via `BarcodeScannerSheet`,
   Differenz-Report als vertikale Cards), States + A11y-Keys.
   `agent:ui-builder` · `model:Sonnet` · `depends:E2,AF11`
-- [ ] **E4** — `inventory_suppliers_tab.dart` um Bestandsbewertung,
+- [x] **E4** — `inventory_suppliers_tab.dart` um Bestandsbewertung,
   Lagerumschlag, ABC-Analyse erweitern (`statistics_service.dart`
   ergänzen); Phone = vertikale Kennzahl-Cards, Tabelle nur ≥ 800 px
   via `LayoutBuilder`. `agent:flutter-coder` · `model:Sonnet` ·
   `depends:AF8`
-- [ ] **E5** — l10n-Keys Epic E + Tests + `smoke-full-app-audit`;
+- [x] **E5** — l10n-Keys Epic E + Tests + `smoke-full-app-audit`;
   `_page-registry.md`: Sub-Routen `stocktake`, `stocktake_detail` +
   Stocktake-Dialoge namentlich ergänzen; neuen Pflicht-Test-Schlüssel
   `stocktake-count-flow` definieren + dem `stocktake_detail` zuweisen.

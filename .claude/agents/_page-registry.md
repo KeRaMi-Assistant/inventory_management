@@ -98,6 +98,8 @@ Dialogs müssen auf 390×844 ohne horizontalen Scroll funktionieren.
 | `/warehouse` → Bestellungen (Sub-Route) | [`lib/screens/purchase_orders_screen.dart`](../../lib/screens/purchase_orders_screen.dart) | smoke-theme, mobile-overflow | Liste der Bestellungen mit Status-Badges; FAB „Neue Bestellung" (`Key('poNewFab')`). Sub-Route des Warenwirtschaft-Hubs, kein eigener MainTab. Viewer → FAB ausgeblendet. Epic C (C5). |
 | `/warehouse` → Bestellungs-Detail (Sub-Route) | [`lib/screens/purchase_order_detail_screen.dart`](../../lib/screens/purchase_order_detail_screen.dart) | smoke-theme, mobile-overflow, goods-receipt-flow | Positionen, Wareneingang buchen (Soll/Ist-Stepper), Status, PDF-Export. A11y-Keys: `Key('poCard-<id>')`, `Key('goodsReceiptBookButton')`, `Key('poItemReceivedStepper-<id>')`, `Key('poPdfExportButton')`. Epic C (C6). |
 | `/warehouse` → Lager (Sub-Route) | [`lib/screens/warehouses_screen.dart`](../../lib/screens/warehouses_screen.dart) | smoke-theme, mobile-overflow | Lager verwalten (CRUD). FAB „Neues Lager" (`Key('warehouseNewFab')`). Sub-Route des Warenwirtschaft-Hubs, kein eigener MainTab. Viewer → kein FAB. A11y-Keys: `Key('warehouseRow-<id>')`, `Key('warehouseDropdown')`. Epic D (D3). |
+| `/warehouse` → Inventur (Sub-Route) | [`lib/screens/stocktake_screen.dart`](../../lib/screens/stocktake_screen.dart) | smoke-theme, mobile-overflow | Inventur-Sessionen auflisten; FAB „Neue Inventur" (`Key('stocktakeNewFab')`). Sub-Route des Warenwirtschaft-Hubs, kein eigener MainTab. Viewer → kein FAB. A11y-Keys: `Key('stocktakeRow-<id>')`. Epic E (E3). |
+| `/warehouse` → Inventur-Detail (Sub-Route) | [`lib/screens/stocktake_detail_screen.dart`](../../lib/screens/stocktake_detail_screen.dart) | smoke-theme, mobile-overflow, stocktake-count-flow | Inventur durchführen: durchscrollbare 48dp-Liste, Filter „nur ungezählte" (`Key('stocktakeFilterUncounted')`), Fortschritts-Header, Barcode-Einsprung, Differenz-Report als vertikale Cards, Abschließen-Button (`Key('stocktakeCloseButton')`). A11y-Keys: `Key('stocktakeCountField-<id>')`. Epic E (E3). |
 
 ## Pflicht-Tests-Definitionen
 
@@ -142,6 +144,17 @@ Tester nutzt sie als Sprungmarken in seinem System-Prompt.
   Position steigt, PO-Status wechselt auf `partially_received` oder
   `received` je nach verbleibender offener Menge. Kein Overflow,
   kein Crash auf Phone-Viewport.
+- `stocktake-count-flow` — Inventur vollständig durchführen: Inventur-
+  Übersicht öffnen → „Neue Inventur" (`Key('stocktakeNewFab')`) tippen →
+  Inventur-Detail öffnet → Positionen via `Key('stocktakeCountField-<id>')`
+  zählen (Stepper) → Filter „nur ungezählte" (`Key('stocktakeFilterUncounted')`)
+  aktivieren und verifizieren, dass gezählte Positionen ausgeblendet werden →
+  Fortschritts-Header zeigt `{counted}/{total} gezählt` korrekt → Inventur
+  abschließen (`Key('stocktakeCloseButton')`) → Differenz-Report erscheint als
+  vertikale Cards (kein horizontaler Scroll auf Phone-Viewport) → Bestand der
+  abweichenden Artikel wird angepasst → `inventory_movements` mit
+  `movement_type='stocktake'` werden geschrieben (append-only). Kein Overflow,
+  kein Crash auf 390×844.
 
 ## Pflege-Hinweise
 

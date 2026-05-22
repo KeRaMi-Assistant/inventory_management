@@ -4001,4 +4001,195 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get lowStockReorderAction => 'Jetzt bestellen';
+
+  @override
+  String get reportStockValuation => 'Bestandsbewertung';
+
+  @override
+  String get reportStockValuationSubtitle =>
+      'Gesamtwert des Lagerbestands (Einstandspreis)';
+
+  @override
+  String get reportStockValuationTotal => 'Gesamtwert';
+
+  @override
+  String get reportStockValuationUnits => 'Gesamtmenge';
+
+  @override
+  String get reportStockValuationItemName => 'Artikel';
+
+  @override
+  String get reportStockValuationQuantity => 'Menge';
+
+  @override
+  String get reportStockValuationCostPrice => 'EK';
+
+  @override
+  String get reportStockValuationValue => 'Wert';
+
+  @override
+  String get reportStockValuationEmpty =>
+      'Kein Lagerbestand zur Bewertung vorhanden.';
+
+  @override
+  String get reportInventoryTurnover => 'Lagerumschlag';
+
+  @override
+  String get reportInventoryTurnoverSubtitle =>
+      'Umschlagshäufigkeit des Lagerbestands';
+
+  @override
+  String get reportInventoryTurnoverRate => 'Umschlagshäufigkeit';
+
+  @override
+  String get reportInventoryTurnoverOutflow => 'Warenausgang (Stk.)';
+
+  @override
+  String get reportInventoryTurnoverAvgStock => 'Ø Bestand (Stk.)';
+
+  @override
+  String get reportInventoryTurnoverMovements => 'Abgangs-Buchungen';
+
+  @override
+  String get reportInventoryTurnoverNoData =>
+      'Keine Abgangs-Buchungen vorhanden.';
+
+  @override
+  String get reportInventoryTurnoverHint =>
+      'Verhältnis Warenausgang zu Ø Bestand';
+
+  @override
+  String get reportAbcAnalysis => 'ABC-Analyse';
+
+  @override
+  String get reportAbcAnalysisSubtitle =>
+      'Artikel nach Bestandswert klassifiziert';
+
+  @override
+  String get reportAbcClassA => 'A — Werttreiber (≤ 80 %)';
+
+  @override
+  String get reportAbcClassB => 'B — Mittelfeld (80–95 %)';
+
+  @override
+  String get reportAbcClassC => 'C — Restmenge (> 95 %)';
+
+  @override
+  String get reportAbcItemName => 'Artikel';
+
+  @override
+  String get reportAbcItemValue => 'Wert';
+
+  @override
+  String get reportAbcItemShare => 'Anteil kum.';
+
+  @override
+  String get reportAbcItemClass => 'Klasse';
+
+  @override
+  String get reportAbcEmpty => 'Kein Lagerbestand für ABC-Analyse vorhanden.';
+
+  @override
+  String reportAbcCountItems(int count) {
+    return '$count Artikel';
+  }
+
+  @override
+  String get stocktakeTitle => 'Inventur';
+
+  @override
+  String get stocktakeEmpty => 'Keine Inventuren';
+
+  @override
+  String get stocktakeEmptyHint => 'Starte deine erste Inventur.';
+
+  @override
+  String get stocktakeLoadError => 'Inventuren konnten nicht geladen werden.';
+
+  @override
+  String get stocktakeNew => 'Neue Inventur';
+
+  @override
+  String stocktakeProgress(int counted, int total) {
+    return '$counted/$total gezählt';
+  }
+
+  @override
+  String get stocktakeFilterUncounted => 'Nur ungezählte';
+
+  @override
+  String get stocktakeExpected => 'Soll';
+
+  @override
+  String get stocktakeCounted => 'Gezählt';
+
+  @override
+  String get stocktakeDifference => 'Differenz';
+
+  @override
+  String get stocktakeStatusOpen => 'Offen';
+
+  @override
+  String get stocktakeStatusCounting => 'Läuft';
+
+  @override
+  String get stocktakeStatusClosed => 'Abgeschlossen';
+
+  @override
+  String get stocktakeStatusCancelled => 'Storniert';
+
+  @override
+  String get stocktakeTitleLabel => 'Titel (optional)';
+
+  @override
+  String get stocktakeTitleHint => 'z. B. Jahresabschluss 2026';
+
+  @override
+  String get stocktakeSelectWarehouse => 'Lager (optional)';
+
+  @override
+  String get stocktakeAllWarehouses => 'Alle Lager';
+
+  @override
+  String get stocktakeStartAction => 'Inventur starten';
+
+  @override
+  String get stocktakeStartError => 'Inventur konnte nicht gestartet werden.';
+
+  @override
+  String get stocktakeSaveError =>
+      'Speichern fehlgeschlagen — Eingabe lokal gespeichert.';
+
+  @override
+  String get stocktakeScanBarcode => 'Barcode scannen';
+
+  @override
+  String get stocktakeScanNoMatch => 'Kein passender Artikel gefunden.';
+
+  @override
+  String get stocktakeCloseAction => 'Inventur abschließen';
+
+  @override
+  String get stocktakeCloseConfirm => 'Inventur abschließen?';
+
+  @override
+  String get stocktakeCloseConfirmHint =>
+      'Die Inventur wird abgeschlossen und die Differenzen gebucht. Diese Aktion kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get stocktakeCloseSuccess => 'Inventur erfolgreich abgeschlossen.';
+
+  @override
+  String get stocktakeCloseError =>
+      'Inventur konnte nicht abgeschlossen werden.';
+
+  @override
+  String get stocktakeAllCounted => 'Alle Positionen gezählt.';
+
+  @override
+  String get stocktakeDiffReportTitle => 'Differenz-Report';
+
+  @override
+  String get stocktakeDiffReportNoDiff =>
+      'Keine Differenzen — Bestand ist korrekt.';
 }

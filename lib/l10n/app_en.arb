@@ -1558,5 +1558,79 @@
       "count": {}
     }
   },
-  "lowStockReorderAction": "Reorder now"
+  "lowStockReorderAction": "Reorder now",
+
+  "reportStockValuation": "Stock valuation",
+  "reportStockValuationSubtitle": "Total inventory value at cost price",
+  "reportStockValuationTotal": "Total value",
+  "reportStockValuationUnits": "Total units",
+  "reportStockValuationItemName": "Item",
+  "reportStockValuationQuantity": "Qty",
+  "reportStockValuationCostPrice": "Cost",
+  "reportStockValuationValue": "Value",
+  "reportStockValuationEmpty": "No inventory available for valuation.",
+
+  "reportInventoryTurnover": "Inventory turnover",
+  "reportInventoryTurnoverSubtitle": "How often stock is sold and replaced",
+  "reportInventoryTurnoverRate": "Turnover rate",
+  "reportInventoryTurnoverOutflow": "Outflow (units)",
+  "reportInventoryTurnoverAvgStock": "Avg. stock (units)",
+  "reportInventoryTurnoverMovements": "Outflow entries",
+  "reportInventoryTurnoverNoData": "No outflow movements available.",
+  "reportInventoryTurnoverHint": "Ratio of outflow to average stock",
+
+  "reportAbcAnalysis": "ABC analysis",
+  "reportAbcAnalysisSubtitle": "Items classified by stock value",
+  "reportAbcClassA": "A — High value (≤ 80 %)",
+  "reportAbcClassB": "B — Medium value (80–95 %)",
+  "reportAbcClassC": "C — Low value (> 95 %)",
+  "reportAbcItemName": "Item",
+  "reportAbcItemValue": "Value",
+  "reportAbcItemShare": "Cum. share",
+  "reportAbcItemClass": "Class",
+  "reportAbcEmpty": "No inventory available for ABC analysis.",
+  "reportAbcCountItems": "{count} items",
+  "@reportAbcCountItems": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "stocktakeTitle": "Stocktake",
+  "stocktakeEmpty": "No stocktakes",
+  "stocktakeEmptyHint": "Start your first stocktake.",
+  "stocktakeLoadError": "Could not load stocktakes.",
+  "stocktakeNew": "New stocktake",
+  "stocktakeProgress": "{counted}/{total} counted",
+  "@stocktakeProgress": {
+    "placeholders": {
+      "counted": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "stocktakeFilterUncounted": "Uncounted only",
+  "stocktakeExpected": "Expected",
+  "stocktakeCounted": "Counted",
+  "stocktakeDifference": "Difference",
+  "stocktakeStatusOpen": "Open",
+  "stocktakeStatusCounting": "Counting",
+  "stocktakeStatusClosed": "Closed",
+  "stocktakeStatusCancelled": "Cancelled",
+  "stocktakeTitleLabel": "Title (optional)",
+  "stocktakeTitleHint": "e.g. Year-end 2026",
+  "stocktakeSelectWarehouse": "Warehouse (optional)",
+  "stocktakeAllWarehouses": "All warehouses",
+  "stocktakeStartAction": "Start stocktake",
+  "stocktakeStartError": "Could not start stocktake.",
+  "stocktakeSaveError": "Save failed — input kept locally.",
+  "stocktakeScanBarcode": "Scan barcode",
+  "stocktakeScanNoMatch": "No matching product found.",
+  "stocktakeCloseAction": "Close stocktake",
+  "stocktakeCloseConfirm": "Close stocktake?",
+  "stocktakeCloseConfirmHint": "The stocktake will be closed and differences will be posted. This action cannot be undone.",
+  "stocktakeCloseSuccess": "Stocktake closed successfully.",
+  "stocktakeCloseError": "Could not close stocktake.",
+  "stocktakeAllCounted": "All positions counted.",
+  "stocktakeDiffReportTitle": "Difference report",
+  "stocktakeDiffReportNoDiff": "No differences — stock is correct."
 }

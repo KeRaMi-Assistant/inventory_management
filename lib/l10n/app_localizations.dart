@@ -7279,6 +7279,360 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Jetzt bestellen'**
   String get lowStockReorderAction;
+
+  /// No description provided for @reportStockValuation.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestandsbewertung'**
+  String get reportStockValuation;
+
+  /// No description provided for @reportStockValuationSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamtwert des Lagerbestands (Einstandspreis)'**
+  String get reportStockValuationSubtitle;
+
+  /// No description provided for @reportStockValuationTotal.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamtwert'**
+  String get reportStockValuationTotal;
+
+  /// No description provided for @reportStockValuationUnits.
+  ///
+  /// In de, this message translates to:
+  /// **'Gesamtmenge'**
+  String get reportStockValuationUnits;
+
+  /// No description provided for @reportStockValuationItemName.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel'**
+  String get reportStockValuationItemName;
+
+  /// No description provided for @reportStockValuationQuantity.
+  ///
+  /// In de, this message translates to:
+  /// **'Menge'**
+  String get reportStockValuationQuantity;
+
+  /// No description provided for @reportStockValuationCostPrice.
+  ///
+  /// In de, this message translates to:
+  /// **'EK'**
+  String get reportStockValuationCostPrice;
+
+  /// No description provided for @reportStockValuationValue.
+  ///
+  /// In de, this message translates to:
+  /// **'Wert'**
+  String get reportStockValuationValue;
+
+  /// No description provided for @reportStockValuationEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Lagerbestand zur Bewertung vorhanden.'**
+  String get reportStockValuationEmpty;
+
+  /// No description provided for @reportInventoryTurnover.
+  ///
+  /// In de, this message translates to:
+  /// **'Lagerumschlag'**
+  String get reportInventoryTurnover;
+
+  /// No description provided for @reportInventoryTurnoverSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Umschlagshäufigkeit des Lagerbestands'**
+  String get reportInventoryTurnoverSubtitle;
+
+  /// No description provided for @reportInventoryTurnoverRate.
+  ///
+  /// In de, this message translates to:
+  /// **'Umschlagshäufigkeit'**
+  String get reportInventoryTurnoverRate;
+
+  /// No description provided for @reportInventoryTurnoverOutflow.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenausgang (Stk.)'**
+  String get reportInventoryTurnoverOutflow;
+
+  /// No description provided for @reportInventoryTurnoverAvgStock.
+  ///
+  /// In de, this message translates to:
+  /// **'Ø Bestand (Stk.)'**
+  String get reportInventoryTurnoverAvgStock;
+
+  /// No description provided for @reportInventoryTurnoverMovements.
+  ///
+  /// In de, this message translates to:
+  /// **'Abgangs-Buchungen'**
+  String get reportInventoryTurnoverMovements;
+
+  /// No description provided for @reportInventoryTurnoverNoData.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Abgangs-Buchungen vorhanden.'**
+  String get reportInventoryTurnoverNoData;
+
+  /// No description provided for @reportInventoryTurnoverHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Verhältnis Warenausgang zu Ø Bestand'**
+  String get reportInventoryTurnoverHint;
+
+  /// No description provided for @reportAbcAnalysis.
+  ///
+  /// In de, this message translates to:
+  /// **'ABC-Analyse'**
+  String get reportAbcAnalysis;
+
+  /// No description provided for @reportAbcAnalysisSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel nach Bestandswert klassifiziert'**
+  String get reportAbcAnalysisSubtitle;
+
+  /// No description provided for @reportAbcClassA.
+  ///
+  /// In de, this message translates to:
+  /// **'A — Werttreiber (≤ 80 %)'**
+  String get reportAbcClassA;
+
+  /// No description provided for @reportAbcClassB.
+  ///
+  /// In de, this message translates to:
+  /// **'B — Mittelfeld (80–95 %)'**
+  String get reportAbcClassB;
+
+  /// No description provided for @reportAbcClassC.
+  ///
+  /// In de, this message translates to:
+  /// **'C — Restmenge (> 95 %)'**
+  String get reportAbcClassC;
+
+  /// No description provided for @reportAbcItemName.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel'**
+  String get reportAbcItemName;
+
+  /// No description provided for @reportAbcItemValue.
+  ///
+  /// In de, this message translates to:
+  /// **'Wert'**
+  String get reportAbcItemValue;
+
+  /// No description provided for @reportAbcItemShare.
+  ///
+  /// In de, this message translates to:
+  /// **'Anteil kum.'**
+  String get reportAbcItemShare;
+
+  /// No description provided for @reportAbcItemClass.
+  ///
+  /// In de, this message translates to:
+  /// **'Klasse'**
+  String get reportAbcItemClass;
+
+  /// No description provided for @reportAbcEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Lagerbestand für ABC-Analyse vorhanden.'**
+  String get reportAbcEmpty;
+
+  /// No description provided for @reportAbcCountItems.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Artikel'**
+  String reportAbcCountItems(int count);
+
+  /// No description provided for @stocktakeTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur'**
+  String get stocktakeTitle;
+
+  /// No description provided for @stocktakeEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Inventuren'**
+  String get stocktakeEmpty;
+
+  /// No description provided for @stocktakeEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Starte deine erste Inventur.'**
+  String get stocktakeEmptyHint;
+
+  /// No description provided for @stocktakeLoadError.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventuren konnten nicht geladen werden.'**
+  String get stocktakeLoadError;
+
+  /// No description provided for @stocktakeNew.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Inventur'**
+  String get stocktakeNew;
+
+  /// No description provided for @stocktakeProgress.
+  ///
+  /// In de, this message translates to:
+  /// **'{counted}/{total} gezählt'**
+  String stocktakeProgress(int counted, int total);
+
+  /// No description provided for @stocktakeFilterUncounted.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur ungezählte'**
+  String get stocktakeFilterUncounted;
+
+  /// No description provided for @stocktakeExpected.
+  ///
+  /// In de, this message translates to:
+  /// **'Soll'**
+  String get stocktakeExpected;
+
+  /// No description provided for @stocktakeCounted.
+  ///
+  /// In de, this message translates to:
+  /// **'Gezählt'**
+  String get stocktakeCounted;
+
+  /// No description provided for @stocktakeDifference.
+  ///
+  /// In de, this message translates to:
+  /// **'Differenz'**
+  String get stocktakeDifference;
+
+  /// No description provided for @stocktakeStatusOpen.
+  ///
+  /// In de, this message translates to:
+  /// **'Offen'**
+  String get stocktakeStatusOpen;
+
+  /// No description provided for @stocktakeStatusCounting.
+  ///
+  /// In de, this message translates to:
+  /// **'Läuft'**
+  String get stocktakeStatusCounting;
+
+  /// No description provided for @stocktakeStatusClosed.
+  ///
+  /// In de, this message translates to:
+  /// **'Abgeschlossen'**
+  String get stocktakeStatusClosed;
+
+  /// No description provided for @stocktakeStatusCancelled.
+  ///
+  /// In de, this message translates to:
+  /// **'Storniert'**
+  String get stocktakeStatusCancelled;
+
+  /// No description provided for @stocktakeTitleLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Titel (optional)'**
+  String get stocktakeTitleLabel;
+
+  /// No description provided for @stocktakeTitleHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z. B. Jahresabschluss 2026'**
+  String get stocktakeTitleHint;
+
+  /// No description provided for @stocktakeSelectWarehouse.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager (optional)'**
+  String get stocktakeSelectWarehouse;
+
+  /// No description provided for @stocktakeAllWarehouses.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Lager'**
+  String get stocktakeAllWarehouses;
+
+  /// No description provided for @stocktakeStartAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur starten'**
+  String get stocktakeStartAction;
+
+  /// No description provided for @stocktakeStartError.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur konnte nicht gestartet werden.'**
+  String get stocktakeStartError;
+
+  /// No description provided for @stocktakeSaveError.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen — Eingabe lokal gespeichert.'**
+  String get stocktakeSaveError;
+
+  /// No description provided for @stocktakeScanBarcode.
+  ///
+  /// In de, this message translates to:
+  /// **'Barcode scannen'**
+  String get stocktakeScanBarcode;
+
+  /// No description provided for @stocktakeScanNoMatch.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein passender Artikel gefunden.'**
+  String get stocktakeScanNoMatch;
+
+  /// No description provided for @stocktakeCloseAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur abschließen'**
+  String get stocktakeCloseAction;
+
+  /// No description provided for @stocktakeCloseConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur abschließen?'**
+  String get stocktakeCloseConfirm;
+
+  /// No description provided for @stocktakeCloseConfirmHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Inventur wird abgeschlossen und die Differenzen gebucht. Diese Aktion kann nicht rückgängig gemacht werden.'**
+  String get stocktakeCloseConfirmHint;
+
+  /// No description provided for @stocktakeCloseSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur erfolgreich abgeschlossen.'**
+  String get stocktakeCloseSuccess;
+
+  /// No description provided for @stocktakeCloseError.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur konnte nicht abgeschlossen werden.'**
+  String get stocktakeCloseError;
+
+  /// No description provided for @stocktakeAllCounted.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Positionen gezählt.'**
+  String get stocktakeAllCounted;
+
+  /// No description provided for @stocktakeDiffReportTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Differenz-Report'**
+  String get stocktakeDiffReportTitle;
+
+  /// No description provided for @stocktakeDiffReportNoDiff.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Differenzen — Bestand ist korrekt.'**
+  String get stocktakeDiffReportNoDiff;
 }
 
 class _AppLocalizationsDelegate

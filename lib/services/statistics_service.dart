@@ -16,6 +16,7 @@ class StatisticsService {
     required this.suppliers,
     required this.batches,
     required this.filter,
+    this.allMovements = const [],
     this.monthlyProfitGoal = 1000,
     this.lowStockThreshold = 5,
   });
@@ -25,6 +26,11 @@ class StatisticsService {
   final List<Supplier> suppliers;
   final List<InventoryBatch> batches;
   final StatisticsFilterProvider filter;
+
+  /// Alle Lager-Bewegungen des Workspaces. Wird für Lagerumschlag-Berechnung
+  /// benötigt. Leer = Lagerumschlag kann nicht berechnet werden (ergibt 0.0).
+  final List<InventoryMovement> allMovements;
+
   final double monthlyProfitGoal;
   final int lowStockThreshold;
 
@@ -440,6 +446,162 @@ class StatisticsService {
     return map;
   }();
 
+  // ── Reporting: Bestandsbewertung ─────────────────────────────────────────
+
+  /// Gesamtwert des aktuellen Lagerbestands (Bestandsbewertung).
+  ///
+  /// Formel: Σ (item.quantity × item.costPrice) über alle Artikel.
+  /// Artikel ohne `costPrice` (null oder 0) werden mit 0 bewertet.
+  /// Das Ergebnis entspricht dem Einstandspreis-basierten Lagerwert (EK).
+  late final StockValuationReport reportStockValuation = () {
+    double totalValue = 0;
+    int totalUnits = 0;
+    final List<ItemValuation> items = [];
+    for (final item in allItems) {
+      final value = item.stockValue; // quantity * costPrice (0 falls null)
+      totalValue += value;
+      totalUnits += item.quantity;
+      items.add(ItemValuation(
+        name: item.name,
+        sku: item.sku,
+        quantity: item.quantity,
+        costPrice: item.costPrice ?? 0.0,
+        totalValue: value,
+      ));
+    }
+    // Absteigend nach Wert sortieren (höchster Wert zuerst)
+    items.sort((a, b) => b.totalValue.compareTo(a.totalValue));
+    return StockValuationReport(
+      totalValue: totalValue,
+      totalUnits: totalUnits,
+      items: items,
+      calculatedAt: DateTime.now(),
+    );
+  }();
+
+  // ── Reporting: Lagerumschlag ──────────────────────────────────────────────
+
+  /// Lagerumschlagshäufigkeit (Inventory Turnover Rate).
+  ///
+  /// Formel: Warenausgang-Menge / Ø Bestand
+  /// - Warenausgang-Menge = Summe der |quantityChange| aller Movements mit
+  ///   `movementType` ∈ {goodsOut, sale} (negative Buchungen = Abgang).
+  /// - Ø Bestand = Summe aller `item.quantity` / Anzahl Artikel (≥ 1).
+  ///
+  /// Bedeutung: 2.0 bedeutet, der Bestand schlägt sich 2× pro Zeitraum um.
+  /// Wenn keine passenden Movements vorhanden sind, ist der Wert 0.0.
+  late final InventoryTurnoverReport reportInventoryTurnover = () {
+    // Warenausgang: Movements mit negativer Richtung (goods_out, sale)
+    int totalOutflow = 0;
+    for (final m in allMovements) {
+      if (m.movementType == InventoryMovementType.goodsOut ||
+          m.movementType == InventoryMovementType.sale) {
+        totalOutflow += m.quantityChange.abs();
+      }
+    }
+
+    // Ø Bestand: Durchschnitt der item.quantity aller Artikel
+    final itemCount = allItems.length;
+    final totalStock = allItems.fold<int>(0, (s, i) => s + i.quantity);
+    final avgStock = itemCount == 0 ? 0.0 : totalStock / itemCount;
+
+    final turnoverRate = avgStock == 0 ? 0.0 : totalOutflow / avgStock;
+
+    return InventoryTurnoverReport(
+      totalOutflowUnits: totalOutflow,
+      avgStockUnits: avgStock,
+      turnoverRate: turnoverRate,
+      movementCount: allMovements
+          .where((m) =>
+              m.movementType == InventoryMovementType.goodsOut ||
+              m.movementType == InventoryMovementType.sale)
+          .length,
+    );
+  }();
+
+  // ── Reporting: ABC-Analyse ────────────────────────────────────────────────
+
+  /// ABC-Analyse: Artikel nach Bestandswert klassifizieren.
+  ///
+  /// Vorgehen:
+  /// 1. Bestandswert pro Artikel berechnen: quantity × costPrice.
+  /// 2. Absteigend nach Bestandswert sortieren.
+  /// 3. Kumulierten Anteil am Gesamtwert bilden.
+  /// 4. Klasse A: kumulierter Anteil ≤ 80 % (Vital Few, hoher Wert).
+  ///    Klasse B: kumulierter Anteil 80–95 % (mittlerer Wert).
+  ///    Klasse C: kumulierter Anteil > 95 % (Trivial Many, geringer Wert).
+  ///
+  /// Artikel mit Bestandswert 0 landen immer in Klasse C.
+  late final AbcAnalysisReport reportAbcAnalysis = () {
+    final totalValue = reportStockValuation.totalValue;
+
+    if (totalValue <= 0) {
+      // Kein Bestandswert — alle Artikel sind C
+      final items = reportStockValuation.items
+          .map((v) => AbcItem(
+                name: v.name,
+                sku: v.sku,
+                quantity: v.quantity,
+                stockValue: v.totalValue,
+                cumulativeSharePct: 0.0,
+                abcClass: AbcClass.c,
+              ))
+          .toList();
+      return AbcAnalysisReport(
+        items: items,
+        countA: 0,
+        countB: 0,
+        countC: items.length,
+        valueA: 0,
+        valueB: 0,
+        valueC: 0,
+      );
+    }
+
+    double cumulative = 0;
+    final List<AbcItem> items = [];
+    for (final v in reportStockValuation.items) {
+      cumulative += v.totalValue;
+      final cumulativePct = (cumulative / totalValue) * 100;
+      final AbcClass cls;
+      if (cumulativePct <= 80.0) {
+        cls = AbcClass.a;
+      } else if (cumulativePct <= 95.0) {
+        cls = AbcClass.b;
+      } else {
+        cls = AbcClass.c;
+      }
+      items.add(AbcItem(
+        name: v.name,
+        sku: v.sku,
+        quantity: v.quantity,
+        stockValue: v.totalValue,
+        cumulativeSharePct: cumulativePct,
+        abcClass: cls,
+      ));
+    }
+
+    final countA = items.where((i) => i.abcClass == AbcClass.a).length;
+    final countB = items.where((i) => i.abcClass == AbcClass.b).length;
+    final countC = items.where((i) => i.abcClass == AbcClass.c).length;
+    final valueA =
+        items.where((i) => i.abcClass == AbcClass.a).fold<double>(0, (s, i) => s + i.stockValue);
+    final valueB =
+        items.where((i) => i.abcClass == AbcClass.b).fold<double>(0, (s, i) => s + i.stockValue);
+    final valueC =
+        items.where((i) => i.abcClass == AbcClass.c).fold<double>(0, (s, i) => s + i.stockValue);
+
+    return AbcAnalysisReport(
+      items: items,
+      countA: countA,
+      countB: countB,
+      countC: countC,
+      valueA: valueA,
+      valueB: valueB,
+      valueC: valueC,
+    );
+  }();
+
   // ── Drilldown: Daten für einen einzelnen Produkt-Namen ───────────────────
 
   ProductDrilldown drillDown(String product) {
@@ -674,4 +836,110 @@ class ProductDrilldown {
     required this.topBuyerName,
     required this.topShopName,
   });
+}
+
+// ── Reporting-Datenklassen ────────────────────────────────────────────────────
+
+/// Bestandsbewertung: Gesamtwert des Lagerbestands zum Einstandspreis.
+class StockValuationReport {
+  final double totalValue;
+  final int totalUnits;
+  final List<ItemValuation> items;
+  final DateTime calculatedAt;
+
+  const StockValuationReport({
+    required this.totalValue,
+    required this.totalUnits,
+    required this.items,
+    required this.calculatedAt,
+  });
+}
+
+/// Einzelner Artikel in der Bestandsbewertung.
+class ItemValuation {
+  final String name;
+  final String? sku;
+  final int quantity;
+  final double costPrice;
+  final double totalValue;
+
+  const ItemValuation({
+    required this.name,
+    this.sku,
+    required this.quantity,
+    required this.costPrice,
+    required this.totalValue,
+  });
+}
+
+/// Lagerumschlag-Kennzahl.
+class InventoryTurnoverReport {
+  /// Summe aller Warenausgangs-/Verkaufs-Bewegungen (in Stück).
+  final int totalOutflowUnits;
+
+  /// Durchschnittlicher Bestand in Stück (Σ quantity / Anzahl Items).
+  final double avgStockUnits;
+
+  /// Umschlagshäufigkeit = totalOutflowUnits / avgStockUnits.
+  /// 0.0 wenn kein Bestand oder keine Abgänge.
+  final double turnoverRate;
+
+  /// Anzahl der berücksichtigten Abgangs-Movements (goods_out + sale).
+  final int movementCount;
+
+  const InventoryTurnoverReport({
+    required this.totalOutflowUnits,
+    required this.avgStockUnits,
+    required this.turnoverRate,
+    required this.movementCount,
+  });
+}
+
+/// ABC-Klassifizierung: A = top 80 % des Werts, B = 80–95 %, C = Rest.
+enum AbcClass { a, b, c }
+
+/// Einzelner Artikel in der ABC-Analyse.
+class AbcItem {
+  final String name;
+  final String? sku;
+  final int quantity;
+  final double stockValue;
+
+  /// Kumulierter prozentualer Anteil am Gesamtwert (nach Sortierung).
+  final double cumulativeSharePct;
+
+  final AbcClass abcClass;
+
+  const AbcItem({
+    required this.name,
+    this.sku,
+    required this.quantity,
+    required this.stockValue,
+    required this.cumulativeSharePct,
+    required this.abcClass,
+  });
+}
+
+/// Ergebnis der ABC-Analyse.
+class AbcAnalysisReport {
+  final List<AbcItem> items;
+  final int countA;
+  final int countB;
+  final int countC;
+  final double valueA;
+  final double valueB;
+  final double valueC;
+
+  const AbcAnalysisReport({
+    required this.items,
+    required this.countA,
+    required this.countB,
+    required this.countC,
+    required this.valueA,
+    required this.valueB,
+    required this.valueC,
+  });
+
+  int get totalCount => countA + countB + countC;
+  double get totalValue => valueA + valueB + valueC;
 }

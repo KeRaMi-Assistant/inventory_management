@@ -16,6 +16,8 @@ import '../models/product_supplier.dart';
 import '../models/purchase_order.dart';
 import '../models/purchase_order_item.dart';
 import '../models/shop.dart';
+import '../models/stocktake.dart';
+import '../models/stocktake_item.dart';
 import '../models/supplier.dart';
 import '../models/ticket.dart';
 import '../models/warehouse.dart';
@@ -47,6 +49,13 @@ class CloudSnapshot {
   /// im globalen Snapshot (Committee-Empfehlung 1). Analog `productCategories`.
   final List<Warehouse> warehouses;
 
+  /// Inventur-Sessions (Epic E — Inventur). Klein und workspace-weit relevant
+  /// (laufende Sessions, max. wenige), daher im globalen Snapshot
+  /// (Committee-Empfehlung 1, analog `purchaseOrders`).
+  /// `stocktake_items` sind NICHT im globalen Snapshot — sie werden lazy
+  /// pro Detail-Screen geladen (Pattern wie `loadPurchaseOrderItems`).
+  final List<Stocktake> stocktakes;
+
   const CloudSnapshot({
     required this.deals,
     required this.buyers,
@@ -60,6 +69,7 @@ class CloudSnapshot {
     this.products = const [],
     this.purchaseOrders = const [],
     this.warehouses = const [],
+    this.stocktakes = const [],
   });
 
   bool get isEmpty =>
@@ -74,7 +84,8 @@ class CloudSnapshot {
       productCategories.isEmpty &&
       products.isEmpty &&
       purchaseOrders.isEmpty &&
-      warehouses.isEmpty;
+      warehouses.isEmpty &&
+      stocktakes.isEmpty;
 }
 
 /// Single point of contact with the Supabase backend. All RLS-scoped tables
@@ -155,6 +166,7 @@ class SupabaseRepository {
         products: [],
         purchaseOrders: [],
         warehouses: [],
+        stocktakes: [],
       );
     }
     final results = await Future.wait([
@@ -228,6 +240,12 @@ class SupabaseRepository {
           .eq('workspace_id', ws)
           .filter('deleted_at', 'is', null)
           .order('name', ascending: true),
+      _client
+          .from('stocktakes')
+          .select()
+          .eq('workspace_id', ws)
+          .filter('deleted_at', 'is', null)
+          .order('created_at', ascending: false),
     ]);
 
     final dealRows = (results[0] as List).cast<Map<String, dynamic>>();
@@ -243,6 +261,7 @@ class SupabaseRepository {
     final purchaseOrderRows =
         (results[10] as List).cast<Map<String, dynamic>>();
     final warehouseRows = (results[11] as List).cast<Map<String, dynamic>>();
+    final stocktakeRows = (results[12] as List).cast<Map<String, dynamic>>();
 
     final inventoryItems =
         itemRows.map(InventoryItem.fromSupabase).toList();
@@ -278,6 +297,7 @@ class SupabaseRepository {
       purchaseOrders:
           purchaseOrderRows.map(PurchaseOrder.fromSupabase).toList(),
       warehouses: warehouseRows.map(Warehouse.fromSupabase).toList(),
+      stocktakes: stocktakeRows.map(Stocktake.fromSupabase).toList(),
     );
   }
 
@@ -897,9 +917,9 @@ class SupabaseRepository {
 
   Future<PurchaseOrderItem> insertPurchaseOrderItem(
       PurchaseOrderItem item) async {
-    final payload = item.toSupabaseInsert()
-      ..['user_id'] = _userId
-      ..['workspace_id'] = _wsId;
+    // purchase_order_items hat KEINE user_id-Spalte (nur workspace_id) —
+    // user_id würde PostgREST mit PGRST204 ablehnen.
+    final payload = item.toSupabaseInsert()..['workspace_id'] = _wsId;
     final row = await _client
         .from('purchase_order_items')
         .insert(payload)
@@ -1007,6 +1027,107 @@ class SupabaseRepository {
         .from('warehouses')
         .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
         .eq('id', id);
+  }
+
+  // ── Stocktakes (Inventur — Epic E) ───────────────────────────────────────
+  //
+  // Inventur-Session-Heads. `stocktake_items` sind NICHT im globalen Snapshot —
+  // sie werden lazy pro `stocktake_detail_screen` on-demand geladen
+  // (Pattern analog `loadPurchaseOrderItems`).
+
+  /// Lädt alle aktiven Inventur-Sessions des Workspaces, absteigend nach
+  /// Erstellungsdatum sortiert. Nur für direkte Aufrufe außerhalb von
+  /// `loadAll()` gedacht (z. B. nach einem Workspace-Switch ohne Full-Reload).
+  Future<List<Stocktake>> loadStocktakes(String workspaceId) async {
+    final rows = await _client
+        .from('stocktakes')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .filter('deleted_at', 'is', null)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(Stocktake.fromSupabase)
+        .toList();
+  }
+
+  Future<Stocktake> insertStocktake(Stocktake stocktake) async {
+    final payload = stocktake.toSupabaseInsert()
+      ..['user_id'] = _userId
+      ..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('stocktakes')
+        .insert(payload)
+        .select()
+        .single();
+    return Stocktake.fromSupabase(row);
+  }
+
+  Future<Stocktake> updateStocktake(Stocktake stocktake) async {
+    final payload = stocktake.toSupabaseInsert();
+    final row = await _client
+        .from('stocktakes')
+        .update(payload)
+        .eq('id', stocktake.id as Object)
+        .select()
+        .single();
+    return Stocktake.fromSupabase(row);
+  }
+
+  /// Soft-Delete: setzt `deleted_at` auf die aktuelle UTC-Zeit.
+  Future<void> deleteStocktake(int id) async {
+    await _client
+        .from('stocktakes')
+        .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id);
+  }
+
+  // ── Stocktake items (lazy — nur pro Detail-Screen) ────────────────────────
+  //
+  // Pattern analog `loadPurchaseOrderItems`: die Kind-Tabelle hat eigene
+  // `workspace_id`-Spalte (RLS-sicher, auch ohne Parent-Join).
+
+  /// Lädt alle Zähl-Positionen einer Inventur-Session.
+  /// Lazy: wird pro `stocktake_detail_screen` on-demand aufgerufen.
+  Future<List<StocktakeItem>> loadStocktakeItems(
+    String workspaceId,
+    int stocktakeId,
+  ) async {
+    final rows = await _client
+        .from('stocktake_items')
+        .select()
+        .eq('workspace_id', workspaceId)
+        .eq('stocktake_id', stocktakeId)
+        .order('created_at', ascending: true);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(StocktakeItem.fromSupabase)
+        .toList();
+  }
+
+  Future<StocktakeItem> insertStocktakeItem(StocktakeItem item) async {
+    // stocktake_items hat KEINE user_id-Spalte (nur workspace_id) —
+    // user_id würde PostgREST mit PGRST204 ablehnen.
+    final payload = item.toSupabaseInsert()..['workspace_id'] = _wsId;
+    final row = await _client
+        .from('stocktake_items')
+        .insert(payload)
+        .select()
+        .single();
+    return StocktakeItem.fromSupabase(row);
+  }
+
+  /// Aktualisiert eine Zähl-Position. Primärer Anwendungsfall: `counted_qty`
+  /// inkrementell setzen (jede Zähl-Eingabe sofort persistieren).
+  Future<StocktakeItem> updateStocktakeItem(StocktakeItem item) async {
+    final payload = item.toSupabaseInsert();
+    final row = await _client
+        .from('stocktake_items')
+        .update(payload)
+        .eq('id', item.id)
+        .select()
+        .single();
+    return StocktakeItem.fromSupabase(row);
   }
 
   // ── Inventory items ───────────────────────────────────────────────────────

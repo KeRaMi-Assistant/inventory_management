@@ -3982,4 +3982,189 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lowStockReorderAction => 'Reorder now';
+
+  @override
+  String get reportStockValuation => 'Stock valuation';
+
+  @override
+  String get reportStockValuationSubtitle =>
+      'Total inventory value at cost price';
+
+  @override
+  String get reportStockValuationTotal => 'Total value';
+
+  @override
+  String get reportStockValuationUnits => 'Total units';
+
+  @override
+  String get reportStockValuationItemName => 'Item';
+
+  @override
+  String get reportStockValuationQuantity => 'Qty';
+
+  @override
+  String get reportStockValuationCostPrice => 'Cost';
+
+  @override
+  String get reportStockValuationValue => 'Value';
+
+  @override
+  String get reportStockValuationEmpty =>
+      'No inventory available for valuation.';
+
+  @override
+  String get reportInventoryTurnover => 'Inventory turnover';
+
+  @override
+  String get reportInventoryTurnoverSubtitle =>
+      'How often stock is sold and replaced';
+
+  @override
+  String get reportInventoryTurnoverRate => 'Turnover rate';
+
+  @override
+  String get reportInventoryTurnoverOutflow => 'Outflow (units)';
+
+  @override
+  String get reportInventoryTurnoverAvgStock => 'Avg. stock (units)';
+
+  @override
+  String get reportInventoryTurnoverMovements => 'Outflow entries';
+
+  @override
+  String get reportInventoryTurnoverNoData => 'No outflow movements available.';
+
+  @override
+  String get reportInventoryTurnoverHint => 'Ratio of outflow to average stock';
+
+  @override
+  String get reportAbcAnalysis => 'ABC analysis';
+
+  @override
+  String get reportAbcAnalysisSubtitle => 'Items classified by stock value';
+
+  @override
+  String get reportAbcClassA => 'A — High value (≤ 80 %)';
+
+  @override
+  String get reportAbcClassB => 'B — Medium value (80–95 %)';
+
+  @override
+  String get reportAbcClassC => 'C — Low value (> 95 %)';
+
+  @override
+  String get reportAbcItemName => 'Item';
+
+  @override
+  String get reportAbcItemValue => 'Value';
+
+  @override
+  String get reportAbcItemShare => 'Cum. share';
+
+  @override
+  String get reportAbcItemClass => 'Class';
+
+  @override
+  String get reportAbcEmpty => 'No inventory available for ABC analysis.';
+
+  @override
+  String reportAbcCountItems(int count) {
+    return '$count items';
+  }
+
+  @override
+  String get stocktakeTitle => 'Stocktake';
+
+  @override
+  String get stocktakeEmpty => 'No stocktakes';
+
+  @override
+  String get stocktakeEmptyHint => 'Start your first stocktake.';
+
+  @override
+  String get stocktakeLoadError => 'Could not load stocktakes.';
+
+  @override
+  String get stocktakeNew => 'New stocktake';
+
+  @override
+  String stocktakeProgress(int counted, int total) {
+    return '$counted/$total counted';
+  }
+
+  @override
+  String get stocktakeFilterUncounted => 'Uncounted only';
+
+  @override
+  String get stocktakeExpected => 'Expected';
+
+  @override
+  String get stocktakeCounted => 'Counted';
+
+  @override
+  String get stocktakeDifference => 'Difference';
+
+  @override
+  String get stocktakeStatusOpen => 'Open';
+
+  @override
+  String get stocktakeStatusCounting => 'Counting';
+
+  @override
+  String get stocktakeStatusClosed => 'Closed';
+
+  @override
+  String get stocktakeStatusCancelled => 'Cancelled';
+
+  @override
+  String get stocktakeTitleLabel => 'Title (optional)';
+
+  @override
+  String get stocktakeTitleHint => 'e.g. Year-end 2026';
+
+  @override
+  String get stocktakeSelectWarehouse => 'Warehouse (optional)';
+
+  @override
+  String get stocktakeAllWarehouses => 'All warehouses';
+
+  @override
+  String get stocktakeStartAction => 'Start stocktake';
+
+  @override
+  String get stocktakeStartError => 'Could not start stocktake.';
+
+  @override
+  String get stocktakeSaveError => 'Save failed — input kept locally.';
+
+  @override
+  String get stocktakeScanBarcode => 'Scan barcode';
+
+  @override
+  String get stocktakeScanNoMatch => 'No matching product found.';
+
+  @override
+  String get stocktakeCloseAction => 'Close stocktake';
+
+  @override
+  String get stocktakeCloseConfirm => 'Close stocktake?';
+
+  @override
+  String get stocktakeCloseConfirmHint =>
+      'The stocktake will be closed and differences will be posted. This action cannot be undone.';
+
+  @override
+  String get stocktakeCloseSuccess => 'Stocktake closed successfully.';
+
+  @override
+  String get stocktakeCloseError => 'Could not close stocktake.';
+
+  @override
+  String get stocktakeAllCounted => 'All positions counted.';
+
+  @override
+  String get stocktakeDiffReportTitle => 'Difference report';
+
+  @override
+  String get stocktakeDiffReportNoDiff => 'No differences — stock is correct.';
 }

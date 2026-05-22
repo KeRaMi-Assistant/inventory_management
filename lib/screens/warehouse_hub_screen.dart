@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import 'categories_screen.dart';
 import 'purchase_orders_screen.dart';
 import 'statistics_screen.dart';
+import 'stocktake_screen.dart';
 import 'warehouses_screen.dart';
 
 /// Hub-Screen für die Warenwirtschaft (AF11).
@@ -92,14 +93,18 @@ class WarehouseHubScreen extends StatelessWidget {
           ),
         ),
 
-        // ── Inventur (Epic E) ─────────────────────────────────────────
-        // TODO(E3): ersetze onTap durch Navigator.push(StocktakeScreen)
+        // ── Inventur (Epic E, Task E3) ────────────────────────────────
         _HubTile(
           key: const Key('hubTileStocktake'),
           icon: Icons.fact_check_outlined,
           title: l10n.warehouseHubTileStocktake,
-          isPlaceholder: true, // Epic E
-          onTap: () => _showComingSoon(context, l10n),
+          isPlaceholder: false,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const StocktakeScreen(),
+            ),
+          ),
         ),
 
         // ── Reporting ─────────────────────────────────────────────────

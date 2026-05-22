@@ -136,6 +136,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
               allItems: inv.inventoryItems,
               suppliers: inv.suppliers,
               batches: batches,
+              allMovements: inv.movements,
               filter: filter,
               monthlyProfitGoal: prefs.monthlyProfitGoal,
               lowStockThreshold: prefs.lowStockThreshold,

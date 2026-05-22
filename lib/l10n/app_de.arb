@@ -1558,5 +1558,79 @@
       "count": {}
     }
   },
-  "lowStockReorderAction": "Jetzt bestellen"
+  "lowStockReorderAction": "Jetzt bestellen",
+
+  "reportStockValuation": "Bestandsbewertung",
+  "reportStockValuationSubtitle": "Gesamtwert des Lagerbestands (Einstandspreis)",
+  "reportStockValuationTotal": "Gesamtwert",
+  "reportStockValuationUnits": "Gesamtmenge",
+  "reportStockValuationItemName": "Artikel",
+  "reportStockValuationQuantity": "Menge",
+  "reportStockValuationCostPrice": "EK",
+  "reportStockValuationValue": "Wert",
+  "reportStockValuationEmpty": "Kein Lagerbestand zur Bewertung vorhanden.",
+
+  "reportInventoryTurnover": "Lagerumschlag",
+  "reportInventoryTurnoverSubtitle": "Umschlagshäufigkeit des Lagerbestands",
+  "reportInventoryTurnoverRate": "Umschlagshäufigkeit",
+  "reportInventoryTurnoverOutflow": "Warenausgang (Stk.)",
+  "reportInventoryTurnoverAvgStock": "Ø Bestand (Stk.)",
+  "reportInventoryTurnoverMovements": "Abgangs-Buchungen",
+  "reportInventoryTurnoverNoData": "Keine Abgangs-Buchungen vorhanden.",
+  "reportInventoryTurnoverHint": "Verhältnis Warenausgang zu Ø Bestand",
+
+  "reportAbcAnalysis": "ABC-Analyse",
+  "reportAbcAnalysisSubtitle": "Artikel nach Bestandswert klassifiziert",
+  "reportAbcClassA": "A — Werttreiber (≤ 80 %)",
+  "reportAbcClassB": "B — Mittelfeld (80–95 %)",
+  "reportAbcClassC": "C — Restmenge (> 95 %)",
+  "reportAbcItemName": "Artikel",
+  "reportAbcItemValue": "Wert",
+  "reportAbcItemShare": "Anteil kum.",
+  "reportAbcItemClass": "Klasse",
+  "reportAbcEmpty": "Kein Lagerbestand für ABC-Analyse vorhanden.",
+  "reportAbcCountItems": "{count} Artikel",
+  "@reportAbcCountItems": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "stocktakeTitle": "Inventur",
+  "stocktakeEmpty": "Keine Inventuren",
+  "stocktakeEmptyHint": "Starte deine erste Inventur.",
+  "stocktakeLoadError": "Inventuren konnten nicht geladen werden.",
+  "stocktakeNew": "Neue Inventur",
+  "stocktakeProgress": "{counted}/{total} gezählt",
+  "@stocktakeProgress": {
+    "placeholders": {
+      "counted": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "stocktakeFilterUncounted": "Nur ungezählte",
+  "stocktakeExpected": "Soll",
+  "stocktakeCounted": "Gezählt",
+  "stocktakeDifference": "Differenz",
+  "stocktakeStatusOpen": "Offen",
+  "stocktakeStatusCounting": "Läuft",
+  "stocktakeStatusClosed": "Abgeschlossen",
+  "stocktakeStatusCancelled": "Storniert",
+  "stocktakeTitleLabel": "Titel (optional)",
+  "stocktakeTitleHint": "z. B. Jahresabschluss 2026",
+  "stocktakeSelectWarehouse": "Lager (optional)",
+  "stocktakeAllWarehouses": "Alle Lager",
+  "stocktakeStartAction": "Inventur starten",
+  "stocktakeStartError": "Inventur konnte nicht gestartet werden.",
+  "stocktakeSaveError": "Speichern fehlgeschlagen — Eingabe lokal gespeichert.",
+  "stocktakeScanBarcode": "Barcode scannen",
+  "stocktakeScanNoMatch": "Kein passender Artikel gefunden.",
+  "stocktakeCloseAction": "Inventur abschließen",
+  "stocktakeCloseConfirm": "Inventur abschließen?",
+  "stocktakeCloseConfirmHint": "Die Inventur wird abgeschlossen und die Differenzen gebucht. Diese Aktion kann nicht rückgängig gemacht werden.",
+  "stocktakeCloseSuccess": "Inventur erfolgreich abgeschlossen.",
+  "stocktakeCloseError": "Inventur konnte nicht abgeschlossen werden.",
+  "stocktakeAllCounted": "Alle Positionen gezählt.",
+  "stocktakeDiffReportTitle": "Differenz-Report",
+  "stocktakeDiffReportNoDiff": "Keine Differenzen — Bestand ist korrekt."
 }
