@@ -3422,6 +3422,426 @@ abstract class AppLocalizations {
   /// **'Diese Meldung erscheint, wenn du einen Carrier-API-Key speichern willst, aber das Backend keinen Master-Schlüssel hat, mit dem es deinen Key verschlüsselt ablegen kann. Das ist kein Fehler in deinem Account, sondern ein einmaliger Backend-Setup-Schritt:\n• Hosted-Variante (Standard-Nutzer): kurz warten und nochmal versuchen — wir setzen den Master-Key zentral, normalerweise innerhalb weniger Stunden.\n• Self-Hoster / Admin der Supabase-Instanz: die Migration `20260516000000_carrier_master_key_bootstrap.sql` muss eingespielt sein und der `CARRIER_MASTER_KEY`-Secret auf der Supabase-Projektebene gesetzt sein. Details für Admins liegen im Repo unter `supabase/functions/tracking-poll/SETUP.md`.\nBis das gefixt ist, kannst du deine Sendungen weiter manuell pflegen — nur der automatische Live-Status pro Carrier ist solange aus.'**
   String get helpTroubleCarrierSetupDesc;
 
+  /// No description provided for @helpTroubleLowStockPushTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Low-Stock-Push kommt nicht an'**
+  String get helpTroubleLowStockPushTitle;
+
+  /// No description provided for @helpTroubleLowStockPushDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Prüfe zuerst, ob Push-Mitteilungen generell zugestellt werden (OS-Einstellungen → Mitteilungen → Lager-App). Dann: Einstellungen → Push → Kategorie „Mindestbestand\" aktiviert? Wichtig: Low-Stock-Pushes werden pro Workspace zusammengefasst — der Push enthält nur eine Zahl, keine Produktnamen. Wenn das Dashboard bereits die betroffenen Artikel zeigt, ist die Benachrichtigung inhaltlich korrekt, nur der Push fehlt — einmal ausloggen und wieder einloggen, damit der Push-Token neu registriert wird.'**
+  String get helpTroubleLowStockPushDesc;
+
+  /// No description provided for @helpWarenwirtschaftSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft-Hub'**
+  String get helpWarenwirtschaftSection;
+
+  /// No description provided for @helpWarenwirtschaftIntroTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Was ist der Warenwirtschaft-Tab?'**
+  String get helpWarenwirtschaftIntroTitle;
+
+  /// No description provided for @helpWarenwirtschaftIntroDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Tab „Warenwirtschaft\" ist der zentrale Einstieg für alles rund um deinen Artikelstamm, Lager, Bestellungen und Inventur. Von dort erreichst du alle Unterbereiche mit einem Tipp.'**
+  String get helpWarenwirtschaftIntroDesc;
+
+  /// No description provided for @helpWarenwirtschaftSubroutesTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Unterbereiche auf einen Blick'**
+  String get helpWarenwirtschaftSubroutesTitle;
+
+  /// No description provided for @helpWarenwirtschaftSubroutesDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'• Artikelstamm — wiederverwendbare Artikel anlegen und verwalten\n• Warengruppen — Kategorien für deine Artikel\n• Bestellungen — Nachbestellungen an Lieferanten\n• Lager — mehrere physische Lagerorte\n• Inventur — Bestände zählen und abgleichen\n• Berichte — Bestandsbewertung, Lagerumschlag, ABC-Analyse'**
+  String get helpWarenwirtschaftSubroutesDesc;
+
+  /// No description provided for @helpProductCatalogSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelstamm & Warengruppen'**
+  String get helpProductCatalogSection;
+
+  /// No description provided for @helpProductCatalogWhatTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Was ist der Artikelstamm?'**
+  String get helpProductCatalogWhatTitle;
+
+  /// No description provided for @helpProductCatalogWhatDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Im Artikelstamm legst du Produkte einmalig als Vorlage an — mit Name, Artikelnummer (SKU), EAN, Einheit, Einkaufspreis und Mindestbestand. Sobald du Ware einbuchst oder eine Bestellung eingehst, verknüpft die App den Lagerbestand automatisch mit dem passenden Stammartikel.'**
+  String get helpProductCatalogWhatDesc;
+
+  /// No description provided for @helpProductCatalogNewTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Neuen Artikel anlegen'**
+  String get helpProductCatalogNewTitle;
+
+  /// No description provided for @helpProductCatalogNewDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft → Artikelstamm → „+\"-Button. Pflicht: Name. Optional: SKU, EAN, Warengruppe, Lieferant, Standard-Einkaufspreis, Mindestbestand, Mengeneinheit. SKU muss innerhalb des Workspaces eindeutig sein.'**
+  String get helpProductCatalogNewDesc;
+
+  /// No description provided for @helpProductCatalogCategoryTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppen'**
+  String get helpProductCatalogCategoryTitle;
+
+  /// No description provided for @helpProductCatalogCategoryDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppen (Kategorien) helfen dir, deinen Artikelstamm zu strukturieren — z. B. „Elektronik\", „Bekleidung\", „Zubehör\". Du kannst bis zu zwei Ebenen anlegen (Gruppe → Untergruppe). Warenwirtschaft → Warengruppen → „+\"-Button.'**
+  String get helpProductCatalogCategoryDesc;
+
+  /// No description provided for @helpProductCatalogDetailTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel-Detailseite'**
+  String get helpProductCatalogDetailTitle;
+
+  /// No description provided for @helpProductCatalogDetailDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Tippe einen Artikel an, um die 360°-Ansicht zu öffnen: aktueller Bestand über alle Lager, Buchungshistorie (getypt nach Wareneingang, Verkauf, Korrektur, Inventur, Umlagerung), Chargen und verknüpfte Lieferanten.'**
+  String get helpProductCatalogDetailDesc;
+
+  /// No description provided for @helpProductCatalogMovementsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Buchungsarten'**
+  String get helpProductCatalogMovementsTitle;
+
+  /// No description provided for @helpProductCatalogMovementsDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Jede Bestandsveränderung wird mit einer Buchungsart protokolliert:\n• Wareneingang — Ware kommt ins Lager (z. B. Lieferung)\n• Warenausgang — Ware verlässt das Lager\n• Korrektur — manuelle Mengenanpassung\n• Inventur — Differenz aus einer Inventurzählung\n• Umlagerung — Wechsel zwischen Lagerorten\n• Verkauf — Deal abgeschlossen'**
+  String get helpProductCatalogMovementsDesc;
+
+  /// No description provided for @helpPurchaseOrdersSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellwesen'**
+  String get helpPurchaseOrdersSection;
+
+  /// No description provided for @helpPurchaseOrdersWhatTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Was sind Bestellungen?'**
+  String get helpPurchaseOrdersWhatTitle;
+
+  /// No description provided for @helpPurchaseOrdersWhatDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Wenn dein Bestand zur Neige geht, legst du eine Bestellung (Purchase Order) an einen Lieferanten an. Die App verwaltet Bestellpositionen, Mengen und den Status der Lieferung — von Entwurf bis Vollständig erhalten.'**
+  String get helpPurchaseOrdersWhatDesc;
+
+  /// No description provided for @helpPurchaseOrdersNewTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Bestellung anlegen'**
+  String get helpPurchaseOrdersNewTitle;
+
+  /// No description provided for @helpPurchaseOrdersNewDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft → Bestellungen → „+\"-Button → Lieferanten wählen → Artikel und Mengen eintragen → Speichern. Die App vergilt automatisch eine Bestellnummer (z. B. PO-2026-0001).'**
+  String get helpPurchaseOrdersNewDesc;
+
+  /// No description provided for @helpPurchaseOrdersStatusTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellstatus'**
+  String get helpPurchaseOrdersStatusTitle;
+
+  /// No description provided for @helpPurchaseOrdersStatusDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'• Entwurf — noch nicht abgeschickt\n• Bestellt — beim Lieferanten aufgegeben\n• Teilweise erhalten — erste Teillieferung eingegangen\n• Erhalten — vollständig geliefert\n• Storniert — Bestellung wurde abgebrochen'**
+  String get helpPurchaseOrdersStatusDesc;
+
+  /// No description provided for @helpPurchaseOrdersReceiveTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wareneingang buchen'**
+  String get helpPurchaseOrdersReceiveTitle;
+
+  /// No description provided for @helpPurchaseOrdersReceiveDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Öffne die Bestelldetails → „Wareneingang buchen\". Du siehst pro Position die bestellte und bereits erhaltene Menge und gibst die neu eingegangene Menge ein. Die App aktualisiert den Bestand und setzt den Bestellstatus automatisch auf „Teilweise erhalten\" oder „Erhalten\".'**
+  String get helpPurchaseOrdersReceiveDesc;
+
+  /// No description provided for @helpPurchaseOrdersPdfTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellbeleg als PDF'**
+  String get helpPurchaseOrdersPdfTitle;
+
+  /// No description provided for @helpPurchaseOrdersPdfDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Öffne eine Bestellung → PDF-Icon oben rechts. Die App erstellt einen Bestellbeleg mit allen Positionen, den du teilen oder drucken kannst.'**
+  String get helpPurchaseOrdersPdfDesc;
+
+  /// No description provided for @helpPurchaseOrdersReorderTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Schnell nachbestellen'**
+  String get helpPurchaseOrdersReorderTitle;
+
+  /// No description provided for @helpPurchaseOrdersReorderDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Im Dashboard erscheint ein Hinweis, wenn Artikel unter den Mindestbestand fallen. Tippe auf „Jetzt bestellen\", um direkt eine vorausgefüllte Bestellung für die betroffenen Artikel zu öffnen.'**
+  String get helpPurchaseOrdersReorderDesc;
+
+  /// No description provided for @helpWarehousesSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager verwalten'**
+  String get helpWarehousesSection;
+
+  /// No description provided for @helpWarehousesWhatTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Mehrere Lager nutzen'**
+  String get helpWarehousesWhatTitle;
+
+  /// No description provided for @helpWarehousesWhatDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Du kannst mehrere physische Lagerorte anlegen — z. B. „Hauptlager\", „Außenlager\" oder „Büro\". Beim Einbuchen von Ware wählst du, in welches Lager die Menge geht. Warenwirtschaft → Lager.'**
+  String get helpWarehousesWhatDesc;
+
+  /// No description provided for @helpWarehousesNewTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Neues Lager anlegen'**
+  String get helpWarehousesNewTitle;
+
+  /// No description provided for @helpWarehousesNewDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft → Lager → „+\"-Button → Name eingeben (z. B. „Hauptlager\") → optional Adresse → Speichern. Das erste Lager wird automatisch als Hauptlager markiert.'**
+  String get helpWarehousesNewDesc;
+
+  /// No description provided for @helpWarehousesDefaultTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Hauptlager'**
+  String get helpWarehousesDefaultTitle;
+
+  /// No description provided for @helpWarehousesDefaultDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Das als Hauptlager markierte Lager ist vorausgewählt, wenn du Ware einbuchst. Pro Workspace kann genau ein Lager das Hauptlager sein. Du kannst das Hauptlager jederzeit wechseln.'**
+  String get helpWarehousesDefaultDesc;
+
+  /// No description provided for @helpWarehousesStockTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestand pro Lager sehen'**
+  String get helpWarehousesStockTitle;
+
+  /// No description provided for @helpWarehousesStockDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'In der Artikel-Detailseite (Warenwirtschaft → Artikelstamm → Artikel antippen) siehst du den Bestand aufgeteilt nach Lager. Gesamtbestand und Mindestbestand werden über alle Lager zusammengerechnet.'**
+  String get helpWarehousesStockDesc;
+
+  /// No description provided for @helpStocktakeSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur'**
+  String get helpStocktakeSection;
+
+  /// No description provided for @helpStocktakeWhatTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Was ist eine Inventur?'**
+  String get helpStocktakeWhatTitle;
+
+  /// No description provided for @helpStocktakeWhatDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Bei einer Inventur zählst du den tatsächlichen Bestand deiner Artikel und vergleichst ihn mit dem in der App gespeicherten Soll-Bestand. Differenzen werden als Korrekturbuchungen automatisch eingetragen.'**
+  String get helpStocktakeWhatDesc;
+
+  /// No description provided for @helpStocktakeStartTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur starten'**
+  String get helpStocktakeStartTitle;
+
+  /// No description provided for @helpStocktakeStartDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft → Inventur → „+\"-Button → optional Lager und Titel wählen → „Inventur starten\". Die App legt einen Soll-Bestand-Snapshot aus den aktuellen Lagermengen an.'**
+  String get helpStocktakeStartDesc;
+
+  /// No description provided for @helpStocktakeCountTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel zählen'**
+  String get helpStocktakeCountTitle;
+
+  /// No description provided for @helpStocktakeCountDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Gib für jeden Artikel die tatsächlich gezählte Menge ein. Der Filter „Nur ungezählte\" blendet bereits bearbeitete Artikel aus. Du kannst per Barcode-Scan direkt zum passenden Artikel springen. Eingaben werden sofort gespeichert — auch wenn die App zwischendurch offline ist.'**
+  String get helpStocktakeCountDesc;
+
+  /// No description provided for @helpStocktakeCloseTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur abschließen'**
+  String get helpStocktakeCloseTitle;
+
+  /// No description provided for @helpStocktakeCloseDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Wenn alle Positionen gezählt sind (Fortschrittsanzeige oben zeigt 100 %), tippe auf „Inventur abschließen\". Die App bucht alle Differenzen als Inventur-Korrekturen und erstellt einen Differenz-Report. Diese Aktion kann nicht rückgängig gemacht werden.'**
+  String get helpStocktakeCloseDesc;
+
+  /// No description provided for @helpStocktakeDiffTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Differenz-Report'**
+  String get helpStocktakeDiffTitle;
+
+  /// No description provided for @helpStocktakeDiffDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Nach dem Abschluss siehst du eine Liste aller Artikel mit Soll-/Ist-Vergleich und der gebuchten Differenz. Positiv = mehr gezählt als erwartet, Negativ = weniger. Der Report bleibt in der Inventur-Liste abrufbar.'**
+  String get helpStocktakeDiffDesc;
+
+  /// No description provided for @helpWwReportingSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Berichte & Auswertungen'**
+  String get helpWwReportingSection;
+
+  /// No description provided for @helpWwReportingWhatTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Welche Berichte gibt es?'**
+  String get helpWwReportingWhatTitle;
+
+  /// No description provided for @helpWwReportingWhatDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Im Statistiken-Tab → Lager/Lieferanten findest du drei Auswertungen:\n• Bestandsbewertung — Lagerwert zum Stichtag (Menge × Einkaufspreis)\n• Lagerumschlag — wie oft dreht sich dein Lager pro Zeitraum\n• ABC-Analyse — welche Artikel machen den größten Wertanteil aus'**
+  String get helpWwReportingWhatDesc;
+
+  /// No description provided for @helpWwReportingValuationTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestandsbewertung'**
+  String get helpWwReportingValuationTitle;
+
+  /// No description provided for @helpWwReportingValuationDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeigt den Gesamtwert deines Lagers (Menge × Einkaufspreis aller Artikel mit hinterlegtem Preis). Artikel ohne Einkaufspreis werden mit 0 bewertet — pflege fehlende Preise nach, damit der Wert stimmt.'**
+  String get helpWwReportingValuationDesc;
+
+  /// No description provided for @helpWwReportingTurnoverTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Lagerumschlag'**
+  String get helpWwReportingTurnoverTitle;
+
+  /// No description provided for @helpWwReportingTurnoverDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Lagerumschlag zeigt, wie oft dein Durchschnittsbestand im gewählten Zeitraum umgeschlagen wurde. Ein hoher Wert bedeutet schnellen Abverkauf; ein niedriger Wert kann auf Ladenhüter hinweisen.'**
+  String get helpWwReportingTurnoverDesc;
+
+  /// No description provided for @helpWwReportingAbcTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'ABC-Analyse'**
+  String get helpWwReportingAbcTitle;
+
+  /// No description provided for @helpWwReportingAbcDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel werden nach ihrem Wertanteil am Gesamtbestand klassifiziert:\n• A-Artikel — ca. 70–80 % des Wertes, meist wenige Produkte\n• B-Artikel — ca. 15–25 % des Wertes\n• C-Artikel — ca. 5–10 % des Wertes, viele Produkte\nDie Klassifizierung hilft dir zu entscheiden, wo sich enger Einkauf und genauere Planung lohnen.'**
+  String get helpWwReportingAbcDesc;
+
+  /// No description provided for @helpFaqQ20.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie verknüpfe ich einen bestehenden Lagerartikel mit dem Artikelstamm?'**
+  String get helpFaqQ20;
+
+  /// No description provided for @helpFaqA20.
+  ///
+  /// In de, this message translates to:
+  /// **'Öffne den Artikel im Lager-Tab → Bearbeiten → „Produkt verknüpfen\" → Artikel aus dem Stamm suchen und auswählen. Nicht verknüpfte Lagerartikel erscheinen weiterhin in einer eigenen Gruppe „Ohne Artikel\".'**
+  String get helpFaqA20;
+
+  /// No description provided for @helpFaqQ21.
+  ///
+  /// In de, this message translates to:
+  /// **'Was passiert beim Wareneingang mit dem Bestand?'**
+  String get helpFaqQ21;
+
+  /// No description provided for @helpFaqA21.
+  ///
+  /// In de, this message translates to:
+  /// **'Wenn du in einer Bestellung „Wareneingang buchen\" tippst, erhöht die App den Lagerbestand des verknüpften Artikels um die eingebuchte Menge und schreibt eine Buchung vom Typ „Wareneingang\" in die Buchungshistorie. Der Bestellstatus aktualisiert sich automatisch.'**
+  String get helpFaqA21;
+
+  /// No description provided for @helpFaqQ22.
+  ///
+  /// In de, this message translates to:
+  /// **'Kann ich einen Artikel in mehrere Lager aufteilen?'**
+  String get helpFaqQ22;
+
+  /// No description provided for @helpFaqA22.
+  ///
+  /// In de, this message translates to:
+  /// **'Ja. Lege mehrere Lagerartikel für dasselbe Produkt an und weise sie verschiedenen Lagern zu. Die Artikel-Detailseite aggregiert den Gesamtbestand über alle Lager und zeigt ihn aufgeteilt.'**
+  String get helpFaqA22;
+
+  /// No description provided for @helpFaqQ23.
+  ///
+  /// In de, this message translates to:
+  /// **'Warum fehlen Artikel in der Inventur-Liste?'**
+  String get helpFaqQ23;
+
+  /// No description provided for @helpFaqA23.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Inventur erfasst nur Artikel, die mit einem Stammartikel verknüpft sind. Lagerartikel ohne Produktverknüpfung (Gruppe „Ohne Artikel\") tauchen nicht auf. Verknüpfe den Artikel zuerst im Lager-Tab → Artikel bearbeiten → „Produkt verknüpfen\".'**
+  String get helpFaqA23;
+
+  /// No description provided for @helpFaqQ24.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie deaktiviere ich den Low-Stock-Push?'**
+  String get helpFaqQ24;
+
+  /// No description provided for @helpFaqA24.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstellungen → Push → Kategorie „Mindestbestand\" deaktivieren. Der Push wird dann nicht mehr verschickt; die gelbe Warnung im Dashboard und im Lager-Tab bleibt als stiller Hinweis sichtbar.'**
+  String get helpFaqA24;
+
   /// No description provided for @helpPrivacySection.
   ///
   /// In de, this message translates to:

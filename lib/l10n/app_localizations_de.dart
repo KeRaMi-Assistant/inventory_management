@@ -1893,6 +1893,251 @@ class AppLocalizationsDe extends AppLocalizations {
       'Diese Meldung erscheint, wenn du einen Carrier-API-Key speichern willst, aber das Backend keinen Master-Schlüssel hat, mit dem es deinen Key verschlüsselt ablegen kann. Das ist kein Fehler in deinem Account, sondern ein einmaliger Backend-Setup-Schritt:\n• Hosted-Variante (Standard-Nutzer): kurz warten und nochmal versuchen — wir setzen den Master-Key zentral, normalerweise innerhalb weniger Stunden.\n• Self-Hoster / Admin der Supabase-Instanz: die Migration `20260516000000_carrier_master_key_bootstrap.sql` muss eingespielt sein und der `CARRIER_MASTER_KEY`-Secret auf der Supabase-Projektebene gesetzt sein. Details für Admins liegen im Repo unter `supabase/functions/tracking-poll/SETUP.md`.\nBis das gefixt ist, kannst du deine Sendungen weiter manuell pflegen — nur der automatische Live-Status pro Carrier ist solange aus.';
 
   @override
+  String get helpTroubleLowStockPushTitle => 'Low-Stock-Push kommt nicht an';
+
+  @override
+  String get helpTroubleLowStockPushDesc =>
+      'Prüfe zuerst, ob Push-Mitteilungen generell zugestellt werden (OS-Einstellungen → Mitteilungen → Lager-App). Dann: Einstellungen → Push → Kategorie „Mindestbestand\" aktiviert? Wichtig: Low-Stock-Pushes werden pro Workspace zusammengefasst — der Push enthält nur eine Zahl, keine Produktnamen. Wenn das Dashboard bereits die betroffenen Artikel zeigt, ist die Benachrichtigung inhaltlich korrekt, nur der Push fehlt — einmal ausloggen und wieder einloggen, damit der Push-Token neu registriert wird.';
+
+  @override
+  String get helpWarenwirtschaftSection => 'Warenwirtschaft-Hub';
+
+  @override
+  String get helpWarenwirtschaftIntroTitle =>
+      'Was ist der Warenwirtschaft-Tab?';
+
+  @override
+  String get helpWarenwirtschaftIntroDesc =>
+      'Der Tab „Warenwirtschaft\" ist der zentrale Einstieg für alles rund um deinen Artikelstamm, Lager, Bestellungen und Inventur. Von dort erreichst du alle Unterbereiche mit einem Tipp.';
+
+  @override
+  String get helpWarenwirtschaftSubroutesTitle =>
+      'Unterbereiche auf einen Blick';
+
+  @override
+  String get helpWarenwirtschaftSubroutesDesc =>
+      '• Artikelstamm — wiederverwendbare Artikel anlegen und verwalten\n• Warengruppen — Kategorien für deine Artikel\n• Bestellungen — Nachbestellungen an Lieferanten\n• Lager — mehrere physische Lagerorte\n• Inventur — Bestände zählen und abgleichen\n• Berichte — Bestandsbewertung, Lagerumschlag, ABC-Analyse';
+
+  @override
+  String get helpProductCatalogSection => 'Artikelstamm & Warengruppen';
+
+  @override
+  String get helpProductCatalogWhatTitle => 'Was ist der Artikelstamm?';
+
+  @override
+  String get helpProductCatalogWhatDesc =>
+      'Im Artikelstamm legst du Produkte einmalig als Vorlage an — mit Name, Artikelnummer (SKU), EAN, Einheit, Einkaufspreis und Mindestbestand. Sobald du Ware einbuchst oder eine Bestellung eingehst, verknüpft die App den Lagerbestand automatisch mit dem passenden Stammartikel.';
+
+  @override
+  String get helpProductCatalogNewTitle => 'Neuen Artikel anlegen';
+
+  @override
+  String get helpProductCatalogNewDesc =>
+      'Warenwirtschaft → Artikelstamm → „+\"-Button. Pflicht: Name. Optional: SKU, EAN, Warengruppe, Lieferant, Standard-Einkaufspreis, Mindestbestand, Mengeneinheit. SKU muss innerhalb des Workspaces eindeutig sein.';
+
+  @override
+  String get helpProductCatalogCategoryTitle => 'Warengruppen';
+
+  @override
+  String get helpProductCatalogCategoryDesc =>
+      'Warengruppen (Kategorien) helfen dir, deinen Artikelstamm zu strukturieren — z. B. „Elektronik\", „Bekleidung\", „Zubehör\". Du kannst bis zu zwei Ebenen anlegen (Gruppe → Untergruppe). Warenwirtschaft → Warengruppen → „+\"-Button.';
+
+  @override
+  String get helpProductCatalogDetailTitle => 'Artikel-Detailseite';
+
+  @override
+  String get helpProductCatalogDetailDesc =>
+      'Tippe einen Artikel an, um die 360°-Ansicht zu öffnen: aktueller Bestand über alle Lager, Buchungshistorie (getypt nach Wareneingang, Verkauf, Korrektur, Inventur, Umlagerung), Chargen und verknüpfte Lieferanten.';
+
+  @override
+  String get helpProductCatalogMovementsTitle => 'Buchungsarten';
+
+  @override
+  String get helpProductCatalogMovementsDesc =>
+      'Jede Bestandsveränderung wird mit einer Buchungsart protokolliert:\n• Wareneingang — Ware kommt ins Lager (z. B. Lieferung)\n• Warenausgang — Ware verlässt das Lager\n• Korrektur — manuelle Mengenanpassung\n• Inventur — Differenz aus einer Inventurzählung\n• Umlagerung — Wechsel zwischen Lagerorten\n• Verkauf — Deal abgeschlossen';
+
+  @override
+  String get helpPurchaseOrdersSection => 'Bestellwesen';
+
+  @override
+  String get helpPurchaseOrdersWhatTitle => 'Was sind Bestellungen?';
+
+  @override
+  String get helpPurchaseOrdersWhatDesc =>
+      'Wenn dein Bestand zur Neige geht, legst du eine Bestellung (Purchase Order) an einen Lieferanten an. Die App verwaltet Bestellpositionen, Mengen und den Status der Lieferung — von Entwurf bis Vollständig erhalten.';
+
+  @override
+  String get helpPurchaseOrdersNewTitle => 'Neue Bestellung anlegen';
+
+  @override
+  String get helpPurchaseOrdersNewDesc =>
+      'Warenwirtschaft → Bestellungen → „+\"-Button → Lieferanten wählen → Artikel und Mengen eintragen → Speichern. Die App vergilt automatisch eine Bestellnummer (z. B. PO-2026-0001).';
+
+  @override
+  String get helpPurchaseOrdersStatusTitle => 'Bestellstatus';
+
+  @override
+  String get helpPurchaseOrdersStatusDesc =>
+      '• Entwurf — noch nicht abgeschickt\n• Bestellt — beim Lieferanten aufgegeben\n• Teilweise erhalten — erste Teillieferung eingegangen\n• Erhalten — vollständig geliefert\n• Storniert — Bestellung wurde abgebrochen';
+
+  @override
+  String get helpPurchaseOrdersReceiveTitle => 'Wareneingang buchen';
+
+  @override
+  String get helpPurchaseOrdersReceiveDesc =>
+      'Öffne die Bestelldetails → „Wareneingang buchen\". Du siehst pro Position die bestellte und bereits erhaltene Menge und gibst die neu eingegangene Menge ein. Die App aktualisiert den Bestand und setzt den Bestellstatus automatisch auf „Teilweise erhalten\" oder „Erhalten\".';
+
+  @override
+  String get helpPurchaseOrdersPdfTitle => 'Bestellbeleg als PDF';
+
+  @override
+  String get helpPurchaseOrdersPdfDesc =>
+      'Öffne eine Bestellung → PDF-Icon oben rechts. Die App erstellt einen Bestellbeleg mit allen Positionen, den du teilen oder drucken kannst.';
+
+  @override
+  String get helpPurchaseOrdersReorderTitle => 'Schnell nachbestellen';
+
+  @override
+  String get helpPurchaseOrdersReorderDesc =>
+      'Im Dashboard erscheint ein Hinweis, wenn Artikel unter den Mindestbestand fallen. Tippe auf „Jetzt bestellen\", um direkt eine vorausgefüllte Bestellung für die betroffenen Artikel zu öffnen.';
+
+  @override
+  String get helpWarehousesSection => 'Lager verwalten';
+
+  @override
+  String get helpWarehousesWhatTitle => 'Mehrere Lager nutzen';
+
+  @override
+  String get helpWarehousesWhatDesc =>
+      'Du kannst mehrere physische Lagerorte anlegen — z. B. „Hauptlager\", „Außenlager\" oder „Büro\". Beim Einbuchen von Ware wählst du, in welches Lager die Menge geht. Warenwirtschaft → Lager.';
+
+  @override
+  String get helpWarehousesNewTitle => 'Neues Lager anlegen';
+
+  @override
+  String get helpWarehousesNewDesc =>
+      'Warenwirtschaft → Lager → „+\"-Button → Name eingeben (z. B. „Hauptlager\") → optional Adresse → Speichern. Das erste Lager wird automatisch als Hauptlager markiert.';
+
+  @override
+  String get helpWarehousesDefaultTitle => 'Hauptlager';
+
+  @override
+  String get helpWarehousesDefaultDesc =>
+      'Das als Hauptlager markierte Lager ist vorausgewählt, wenn du Ware einbuchst. Pro Workspace kann genau ein Lager das Hauptlager sein. Du kannst das Hauptlager jederzeit wechseln.';
+
+  @override
+  String get helpWarehousesStockTitle => 'Bestand pro Lager sehen';
+
+  @override
+  String get helpWarehousesStockDesc =>
+      'In der Artikel-Detailseite (Warenwirtschaft → Artikelstamm → Artikel antippen) siehst du den Bestand aufgeteilt nach Lager. Gesamtbestand und Mindestbestand werden über alle Lager zusammengerechnet.';
+
+  @override
+  String get helpStocktakeSection => 'Inventur';
+
+  @override
+  String get helpStocktakeWhatTitle => 'Was ist eine Inventur?';
+
+  @override
+  String get helpStocktakeWhatDesc =>
+      'Bei einer Inventur zählst du den tatsächlichen Bestand deiner Artikel und vergleichst ihn mit dem in der App gespeicherten Soll-Bestand. Differenzen werden als Korrekturbuchungen automatisch eingetragen.';
+
+  @override
+  String get helpStocktakeStartTitle => 'Inventur starten';
+
+  @override
+  String get helpStocktakeStartDesc =>
+      'Warenwirtschaft → Inventur → „+\"-Button → optional Lager und Titel wählen → „Inventur starten\". Die App legt einen Soll-Bestand-Snapshot aus den aktuellen Lagermengen an.';
+
+  @override
+  String get helpStocktakeCountTitle => 'Artikel zählen';
+
+  @override
+  String get helpStocktakeCountDesc =>
+      'Gib für jeden Artikel die tatsächlich gezählte Menge ein. Der Filter „Nur ungezählte\" blendet bereits bearbeitete Artikel aus. Du kannst per Barcode-Scan direkt zum passenden Artikel springen. Eingaben werden sofort gespeichert — auch wenn die App zwischendurch offline ist.';
+
+  @override
+  String get helpStocktakeCloseTitle => 'Inventur abschließen';
+
+  @override
+  String get helpStocktakeCloseDesc =>
+      'Wenn alle Positionen gezählt sind (Fortschrittsanzeige oben zeigt 100 %), tippe auf „Inventur abschließen\". Die App bucht alle Differenzen als Inventur-Korrekturen und erstellt einen Differenz-Report. Diese Aktion kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get helpStocktakeDiffTitle => 'Differenz-Report';
+
+  @override
+  String get helpStocktakeDiffDesc =>
+      'Nach dem Abschluss siehst du eine Liste aller Artikel mit Soll-/Ist-Vergleich und der gebuchten Differenz. Positiv = mehr gezählt als erwartet, Negativ = weniger. Der Report bleibt in der Inventur-Liste abrufbar.';
+
+  @override
+  String get helpWwReportingSection => 'Berichte & Auswertungen';
+
+  @override
+  String get helpWwReportingWhatTitle => 'Welche Berichte gibt es?';
+
+  @override
+  String get helpWwReportingWhatDesc =>
+      'Im Statistiken-Tab → Lager/Lieferanten findest du drei Auswertungen:\n• Bestandsbewertung — Lagerwert zum Stichtag (Menge × Einkaufspreis)\n• Lagerumschlag — wie oft dreht sich dein Lager pro Zeitraum\n• ABC-Analyse — welche Artikel machen den größten Wertanteil aus';
+
+  @override
+  String get helpWwReportingValuationTitle => 'Bestandsbewertung';
+
+  @override
+  String get helpWwReportingValuationDesc =>
+      'Zeigt den Gesamtwert deines Lagers (Menge × Einkaufspreis aller Artikel mit hinterlegtem Preis). Artikel ohne Einkaufspreis werden mit 0 bewertet — pflege fehlende Preise nach, damit der Wert stimmt.';
+
+  @override
+  String get helpWwReportingTurnoverTitle => 'Lagerumschlag';
+
+  @override
+  String get helpWwReportingTurnoverDesc =>
+      'Der Lagerumschlag zeigt, wie oft dein Durchschnittsbestand im gewählten Zeitraum umgeschlagen wurde. Ein hoher Wert bedeutet schnellen Abverkauf; ein niedriger Wert kann auf Ladenhüter hinweisen.';
+
+  @override
+  String get helpWwReportingAbcTitle => 'ABC-Analyse';
+
+  @override
+  String get helpWwReportingAbcDesc =>
+      'Artikel werden nach ihrem Wertanteil am Gesamtbestand klassifiziert:\n• A-Artikel — ca. 70–80 % des Wertes, meist wenige Produkte\n• B-Artikel — ca. 15–25 % des Wertes\n• C-Artikel — ca. 5–10 % des Wertes, viele Produkte\nDie Klassifizierung hilft dir zu entscheiden, wo sich enger Einkauf und genauere Planung lohnen.';
+
+  @override
+  String get helpFaqQ20 =>
+      'Wie verknüpfe ich einen bestehenden Lagerartikel mit dem Artikelstamm?';
+
+  @override
+  String get helpFaqA20 =>
+      'Öffne den Artikel im Lager-Tab → Bearbeiten → „Produkt verknüpfen\" → Artikel aus dem Stamm suchen und auswählen. Nicht verknüpfte Lagerartikel erscheinen weiterhin in einer eigenen Gruppe „Ohne Artikel\".';
+
+  @override
+  String get helpFaqQ21 => 'Was passiert beim Wareneingang mit dem Bestand?';
+
+  @override
+  String get helpFaqA21 =>
+      'Wenn du in einer Bestellung „Wareneingang buchen\" tippst, erhöht die App den Lagerbestand des verknüpften Artikels um die eingebuchte Menge und schreibt eine Buchung vom Typ „Wareneingang\" in die Buchungshistorie. Der Bestellstatus aktualisiert sich automatisch.';
+
+  @override
+  String get helpFaqQ22 => 'Kann ich einen Artikel in mehrere Lager aufteilen?';
+
+  @override
+  String get helpFaqA22 =>
+      'Ja. Lege mehrere Lagerartikel für dasselbe Produkt an und weise sie verschiedenen Lagern zu. Die Artikel-Detailseite aggregiert den Gesamtbestand über alle Lager und zeigt ihn aufgeteilt.';
+
+  @override
+  String get helpFaqQ23 => 'Warum fehlen Artikel in der Inventur-Liste?';
+
+  @override
+  String get helpFaqA23 =>
+      'Die Inventur erfasst nur Artikel, die mit einem Stammartikel verknüpft sind. Lagerartikel ohne Produktverknüpfung (Gruppe „Ohne Artikel\") tauchen nicht auf. Verknüpfe den Artikel zuerst im Lager-Tab → Artikel bearbeiten → „Produkt verknüpfen\".';
+
+  @override
+  String get helpFaqQ24 => 'Wie deaktiviere ich den Low-Stock-Push?';
+
+  @override
+  String get helpFaqA24 =>
+      'Einstellungen → Push → Kategorie „Mindestbestand\" deaktivieren. Der Push wird dann nicht mehr verschickt; die gelbe Warnung im Dashboard und im Lager-Tab bleibt als stiller Hinweis sichtbar.';
+
+  @override
   String get helpPrivacySection => 'Datenschutz & Kontakt';
 
   @override

@@ -384,6 +384,11 @@ class _HelpScreenState extends State<HelpScreen> {
           _HelpItem.text(l10n.helpFaqQ17, l10n.helpFaqA17),
           _HelpItem.text(l10n.helpFaqQ18, l10n.helpFaqA18),
           _HelpItem.text(l10n.helpFaqQ19, l10n.helpFaqA19),
+          _HelpItem.text(l10n.helpFaqQ20, l10n.helpFaqA20),
+          _HelpItem.text(l10n.helpFaqQ21, l10n.helpFaqA21),
+          _HelpItem.text(l10n.helpFaqQ22, l10n.helpFaqA22),
+          _HelpItem.text(l10n.helpFaqQ23, l10n.helpFaqA23),
+          _HelpItem.text(l10n.helpFaqQ24, l10n.helpFaqA24),
         ],
       ),
       _HelpSection(
@@ -420,6 +425,156 @@ class _HelpScreenState extends State<HelpScreen> {
             l10n.helpTroubleUploadFailedDesc,
           ),
           _HelpItem.text(l10n.helpTroubleSlowTitle, l10n.helpTroubleSlowDesc),
+          _HelpItem.text(
+            l10n.helpTroubleLowStockPushTitle,
+            l10n.helpTroubleLowStockPushDesc,
+          ),
+        ],
+      ),
+      _HelpSection(
+        id: 'warenwirtschaft',
+        title: l10n.helpWarenwirtschaftSection,
+        icon: Icons.warehouse_outlined,
+        items: [
+          _HelpItem.text(
+            l10n.helpWarenwirtschaftIntroTitle,
+            l10n.helpWarenwirtschaftIntroDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpWarenwirtschaftSubroutesTitle,
+            l10n.helpWarenwirtschaftSubroutesDesc,
+          ),
+        ],
+      ),
+      _HelpSection(
+        id: 'product-catalog',
+        title: l10n.helpProductCatalogSection,
+        icon: Icons.inventory_outlined,
+        items: [
+          _HelpItem.text(
+            l10n.helpProductCatalogWhatTitle,
+            l10n.helpProductCatalogWhatDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpProductCatalogNewTitle,
+            l10n.helpProductCatalogNewDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpProductCatalogCategoryTitle,
+            l10n.helpProductCatalogCategoryDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpProductCatalogDetailTitle,
+            l10n.helpProductCatalogDetailDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpProductCatalogMovementsTitle,
+            l10n.helpProductCatalogMovementsDesc,
+          ),
+        ],
+      ),
+      _HelpSection(
+        id: 'purchase-orders',
+        title: l10n.helpPurchaseOrdersSection,
+        icon: Icons.shopping_cart_outlined,
+        items: [
+          _HelpItem.text(
+            l10n.helpPurchaseOrdersWhatTitle,
+            l10n.helpPurchaseOrdersWhatDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpPurchaseOrdersNewTitle,
+            l10n.helpPurchaseOrdersNewDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpPurchaseOrdersStatusTitle,
+            l10n.helpPurchaseOrdersStatusDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpPurchaseOrdersReceiveTitle,
+            l10n.helpPurchaseOrdersReceiveDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpPurchaseOrdersPdfTitle,
+            l10n.helpPurchaseOrdersPdfDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpPurchaseOrdersReorderTitle,
+            l10n.helpPurchaseOrdersReorderDesc,
+          ),
+        ],
+      ),
+      _HelpSection(
+        id: 'warehouses',
+        title: l10n.helpWarehousesSection,
+        icon: Icons.store_outlined,
+        items: [
+          _HelpItem.text(
+            l10n.helpWarehousesWhatTitle,
+            l10n.helpWarehousesWhatDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpWarehousesNewTitle,
+            l10n.helpWarehousesNewDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpWarehousesDefaultTitle,
+            l10n.helpWarehousesDefaultDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpWarehousesStockTitle,
+            l10n.helpWarehousesStockDesc,
+          ),
+        ],
+      ),
+      _HelpSection(
+        id: 'stocktake',
+        title: l10n.helpStocktakeSection,
+        icon: Icons.checklist_outlined,
+        items: [
+          _HelpItem.text(
+            l10n.helpStocktakeWhatTitle,
+            l10n.helpStocktakeWhatDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpStocktakeStartTitle,
+            l10n.helpStocktakeStartDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpStocktakeCountTitle,
+            l10n.helpStocktakeCountDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpStocktakeCloseTitle,
+            l10n.helpStocktakeCloseDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpStocktakeDiffTitle,
+            l10n.helpStocktakeDiffDesc,
+          ),
+        ],
+      ),
+      _HelpSection(
+        id: 'ww-reporting',
+        title: l10n.helpWwReportingSection,
+        icon: Icons.bar_chart_outlined,
+        items: [
+          _HelpItem.text(
+            l10n.helpWwReportingWhatTitle,
+            l10n.helpWwReportingWhatDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpWwReportingValuationTitle,
+            l10n.helpWwReportingValuationDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpWwReportingTurnoverTitle,
+            l10n.helpWwReportingTurnoverDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpWwReportingAbcTitle,
+            l10n.helpWwReportingAbcDesc,
+          ),
         ],
       ),
       _HelpSection(

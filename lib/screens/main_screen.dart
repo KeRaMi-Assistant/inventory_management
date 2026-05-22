@@ -76,6 +76,14 @@ class _MainScreenState extends State<MainScreen> {
       List.from(provider.buyers),
       List.from(provider.inventoryItems),
       suppliers: List.from(provider.suppliers),
+      categories: List.from(provider.productCategories),
+      products: List.from(provider.products),
+      warehouses: List.from(provider.warehouses),
+      purchaseOrders: List.from(provider.purchaseOrders),
+      // PO items are not held in the global cache (lazy-loaded per detail
+      // screen), so we export an empty list for now. A future task can wire
+      // up a global PO-items cache when the use case warrants it.
+      purchaseOrderItems: const [],
     );
     if (!context.mounted) return;
     if (err != null) {
@@ -103,7 +111,19 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    final (result, err) = await CsvService.importAll(provider.nextDealId);
+
+    // workspaceId and userId are required by the new section parsers so that
+    // imported entities carry the correct context (not taken from the CSV).
+    final workspaceId =
+        context.read<ActiveWorkspaceProvider>().active?.id ?? '';
+    final userId =
+        context.read<AuthProvider>().currentUser?.id ?? '';
+
+    final (result, err) = await CsvService.importAll(
+      provider.nextDealId,
+      workspaceId: workspaceId,
+      userId: userId,
+    );
     if (!context.mounted) return;
     if (err != null) {
       _showSnack(context, l10n.errorPrefix(err), isError: true);

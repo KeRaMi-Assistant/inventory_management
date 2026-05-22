@@ -1,6 +1,6 @@
 # 07 — Edge Functions
 
-Die App hat **sechs** Supabase Edge Functions in
+Die App hat **sechs** Supabase Edge Functions und eine SECURITY-DEFINER-RPC in
 [`supabase/functions/`](../../supabase/functions/). Sie laufen auf Deno und
 sind in TypeScript geschrieben. Dieses Kapitel beschreibt jede Function:
 Trigger, Auth, Inputs, Outputs, Secrets und das Deploy-Kommando.
@@ -251,6 +251,13 @@ Cron-Secret oder service_role.
    - **Delivery** — Deals, die heute zugestellt wurden.
    - **Payment-overdue** — Deals mit `internal_invoice_paid=false` und
      Rechnung älter als N Tage.
+   - **Low-Stock** (Epic D / Task D5) — Produkte, deren Bestand laut
+     `product_stock`-View unter `products.min_stock` liegt. Dedup:
+     max. ein Push pro Workspace + Kalendertag
+     (`ref_kind='low_stock'`, `ref_id=<YYYY-MM-DD>`). Workspace-scoped
+     über die neue `notifications_sent.workspace_id`-Spalte (siehe
+     [06 — Datenbank](06-database.md#notifications_sent-erweiterung)).
+     Opt-in via bestehender `notification_preferences` (kein neues Flag).
 4. Schreibe in `notifications_sent` (Dedup pro `(ref_kind, ref_id)`).
 5. Sende FCM-Payload.
 
@@ -305,10 +312,17 @@ POST ohne Body. JWT im `Authorization`-Header.
 ```json
 {
   "ok": true,
-  "wiped": { "deals": 142, "tickets": 23, "items": 88 },
-  "seeded": { "deals": 67, "tickets": 14, "items": 33 }
+  "wiped": { "deals": 142, "tickets": 23, "items": 88, "products": 0 },
+  "seeded": { "deals": 67, "tickets": 14, "items": 33, "products": 5 }
 }
 ```
+
+Seit Epic A-full erkennt die Function via `probeTable('products')`, ob
+die Tabelle existiert, und befüllt sie mit Demo-Artikeln (je ein
+`products`-Row pro Demo-Item-Typ). `inventory_items.product_id` wird
+für die geseedeten Items entsprechend verknüpft. Die Seeding-Logik ist
+tablecheck-gated — fehlt die `products`-Tabelle (z. B. in alten
+Branches), wird das Seeding graceful übersprungen.
 
 ### Deploy
 
@@ -402,6 +416,40 @@ Nummern aus dem strict-Tracking-Pfad. Wichtige Eigenschaft seit PR #73:
 Tests: `tracking_validators_test.ts` + `tracking_disambiguation_test.ts`
 (23/23 grün).
 
+## increment_po_item_received (RPC)
+
+Keine Edge-Function, sondern eine SECURITY-DEFINER-Postgres-Funktion.
+Datei:
+[`supabase/migrations/20260522032123_po_receive_increment.sql`](../../supabase/migrations/20260522032123_po_receive_increment.sql)
+
+**Aufgabe:** Atomar `purchase_order_items.quantity_received` inkrementieren,
+ohne Client-seitiges Read-modify-write.
+
+### Warum RPC statt direktem UPDATE?
+
+Der Supabase-Dart-Client unterstützt in `.update({...})` nur literal
+values — ein `quantity_received = quantity_received + x` ist über REST
+nicht möglich. Die RPC ist der einzige sichere Pfad.
+
+### Aufruf (Dart)
+
+```dart
+await supabase.rpc('increment_po_item_received', params: {
+  'p_item_id': itemId,
+  'p_qty':     deltaQty,
+});
+```
+
+### Sicherheits-Design
+
+- `SECURITY DEFINER`, `SET search_path = public, pg_temp`.
+- Workspace-Rollen-Check im Body (mind. `member`).
+- Über-Buchungs-Schranke: `quantity_received + p_qty ≤ quantity_ordered`.
+- `GRANT EXECUTE` nur an `authenticated` (kein `anon`).
+- Nach dem UPDATE feuert `purchase_order_items_status_trg` → aktualisiert
+  `purchase_orders.status` automatisch. Kein manueller Status-Update
+  nötig. Siehe [06 — Datenbank](06-database.md#rpc-increment_po_item_received).
+
 ## Lokal testen
 
 ```bash
@@ -452,4 +500,5 @@ Keine Tokens, Mails oder PII in Logs schreiben — siehe
 - [`supabase/functions/_shared/tracking_adapters.ts`](../../supabase/functions/_shared/tracking_adapters.ts) — Carrier-Adapter
 - [`supabase/functions/tracking-poll/SETUP.md`](../../supabase/functions/tracking-poll/SETUP.md) — pg_cron-Setup
 - [`supabase/functions/send-notifications/SETUP.md`](../../supabase/functions/send-notifications/SETUP.md) — FCM-Setup
+- [`supabase/migrations/20260522032123_po_receive_increment.sql`](../../supabase/migrations/20260522032123_po_receive_increment.sql) — RPC increment_po_item_received
 - [Glossar](10-glossary.md) — Begriffsdefinitionen

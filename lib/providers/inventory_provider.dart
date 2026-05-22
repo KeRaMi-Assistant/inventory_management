@@ -677,9 +677,24 @@ class InventoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Imports all five tables from a [CsvImportResult].
-  /// Deals are always appended. Shops, buyers, suppliers and inventory items
-  /// are only added when no existing entry with the same name exists.
+  /// Imports all tables from a [CsvImportResult].
+  ///
+  /// **Legacy sections** (deals, shops, buyers, suppliers, inventory items) are
+  /// imported as before: deals always appended, the others deduped by name.
+  ///
+  /// **New sections** (categories, products, warehouses, purchase orders, PO
+  /// items) are imported in FK-dependency order:
+  ///   1. Categories (no FK deps on new tables)
+  ///   2. Warehouses (no FK deps on new tables)
+  ///   3. Suppliers already handled above
+  ///   4. Products (category_id → categories, default_supplier_id → suppliers)
+  ///   5. Purchase orders (supplier_id → suppliers)
+  ///   6. PO items (product_id → products, purchase_order_id → POs)
+  ///
+  /// After each insert the server-assigned id is recorded in a remap table so
+  /// that dependent items can use the real DB id (not the CSV-time UUID or
+  /// synthetic BIGSERIAL-style id).
+  ///
   /// Returns counts in order: (deals, shops, buyers, suppliers, items).
   Future<(int, int, int, int, int)> importCsvAll(CsvImportResult result) async {
     // Deals
@@ -764,11 +779,174 @@ class InventoryProvider extends ChangeNotifier {
     }
     _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
 
+    // ── New sections (Epic F) ────────────────────────────────────────────────
+    // FK-dependency order: categories + warehouses → products → POs → PO items.
+    // After each insert we record csv-parsed-id → db-saved-id so dependent
+    // entities can reference the real row.
+
+    // 1. Categories – skip by name; track csv-id → db-id for product FK remap
+    final importCategoryIdRemap = <String, String>{}; // csv id → db id
+    final existingCategoryByName = <String, String>{
+      for (final c in _productCategories) c.name.toLowerCase(): c.id,
+    };
+    for (final category in result.categories) {
+      final key = category.name.toLowerCase();
+      if (existingCategoryByName.containsKey(key)) {
+        // Remap csv id to the existing canonical id so products can resolve it.
+        importCategoryIdRemap[category.id] =
+            existingCategoryByName[key]!;
+        continue;
+      }
+      try {
+        final saved = await _repository.insertProductCategory(category);
+        _productCategories.add(saved);
+        existingCategoryByName[key] = saved.id;
+        importCategoryIdRemap[category.id] = saved.id;
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+              'importCsvAll: category "${category.name}" skipped – $e');
+        }
+      }
+    }
+    _productCategories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    // 2. Warehouses – skip by name; no FK deps
+    final existingWarehouseByName = <String, String>{
+      for (final w in _warehouses) w.name.toLowerCase(): w.id,
+    };
+    for (final warehouse in result.warehouses) {
+      final key = warehouse.name.toLowerCase();
+      if (existingWarehouseByName.containsKey(key)) continue;
+      try {
+        final saved = await _repository.insertWarehouse(warehouse);
+        _warehouses.add(saved);
+        existingWarehouseByName[key] = saved.id;
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+              'importCsvAll: warehouse "${warehouse.name}" skipped – $e');
+        }
+      }
+    }
+    _warehouses.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    // 3. Products – skip by name; remap category_id and default_supplier_id.
+    //    Track csv-id → db-id for PO item FK remap.
+    final importProductIdRemap = <String, String>{}; // csv id → db id
+    final existingProductByName = <String, String>{
+      for (final p in _products) p.name.toLowerCase(): p.id,
+    };
+    for (final product in result.products) {
+      final key = product.name.toLowerCase();
+      if (existingProductByName.containsKey(key)) {
+        importProductIdRemap[product.id] = existingProductByName[key]!;
+        continue;
+      }
+      // Remap FKs: category_id and default_supplier_id may carry csv-time ids
+      // that need to be translated to real DB ids.
+      final remappedCategoryId = product.categoryId == null
+          ? null
+          : (importCategoryIdRemap[product.categoryId!] ??
+              product.categoryId);
+      final remappedSupplierId = product.defaultSupplierId == null
+          ? null
+          : (importSupplierIdRemap[product.defaultSupplierId!] ??
+              product.defaultSupplierId);
+      final remapped = product.copyWith(
+        categoryId: remappedCategoryId,
+        defaultSupplierId: remappedSupplierId,
+      );
+      try {
+        final saved = await _repository.insertProduct(remapped);
+        _products.add(saved);
+        existingProductByName[key] = saved.id;
+        importProductIdRemap[product.id] = saved.id;
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('importCsvAll: product "${product.name}" skipped – $e');
+        }
+      }
+    }
+    _products.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    // 4. Purchase orders – skip by order number; remap supplier_id.
+    //    Track csv synthetic-id → db BIGSERIAL id for PO item FK remap.
+    final importPoIdRemap = <int, int>{}; // csv synthetic id → db id
+    final existingPoByNumber = <String, int>{
+      for (final po in _purchaseOrders) po.orderNumber: po.id ?? -1,
+    };
+    for (final po in result.purchaseOrders) {
+      final number = po.orderNumber;
+      if (existingPoByNumber.containsKey(number)) {
+        final existingId = existingPoByNumber[number];
+        if (po.id != null && existingId != null) {
+          importPoIdRemap[po.id!] = existingId;
+        }
+        continue;
+      }
+      final remappedSupplierId = po.supplierId == null
+          ? null
+          : (importSupplierIdRemap[po.supplierId!] ?? po.supplierId);
+      // Strip the synthetic csv-time id so the repository uses BIGSERIAL.
+      final withoutId = po.copyWith(
+        id: null,
+        supplierId: remappedSupplierId,
+      );
+      try {
+        final saved = await _repository.insertPurchaseOrder(withoutId);
+        _purchaseOrders.insert(0, saved);
+        if (saved.id != null) {
+          existingPoByNumber[number] = saved.id!;
+          if (po.id != null) importPoIdRemap[po.id!] = saved.id!;
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('importCsvAll: purchase order "$number" skipped – $e');
+        }
+      }
+    }
+    _purchaseOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    // 5. PO items – remap product_id and purchase_order_id.
+    for (final item in result.purchaseOrderItems) {
+      final remappedProductId = item.productId == null
+          ? null
+          : (importProductIdRemap[item.productId!] ?? item.productId);
+      final csvPoId = item.purchaseOrderId;
+      final remappedPoId = csvPoId == null
+          ? null
+          : (importPoIdRemap[csvPoId] ?? csvPoId);
+      if (remappedPoId == null || remappedProductId == null) {
+        // FK not resolved — skip silently (parser already reported FK errors)
+        continue;
+      }
+      final remapped = item.copyWith(
+        productId: remappedProductId,
+        purchaseOrderId: remappedPoId,
+      );
+      try {
+        await _repository.insertPurchaseOrderItem(remapped);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('importCsvAll: PO item skipped – $e');
+        }
+      }
+    }
+    // ── End new sections ─────────────────────────────────────────────────────
+
     if (dealCount > 0 ||
         shopCount > 0 ||
         buyerCount > 0 ||
         supplierCount > 0 ||
-        itemCount > 0) {
+        itemCount > 0 ||
+        result.categories.isNotEmpty ||
+        result.products.isNotEmpty ||
+        result.warehouses.isNotEmpty ||
+        result.purchaseOrders.isNotEmpty ||
+        result.purchaseOrderItems.isNotEmpty) {
       _log(
           'CSV-Import: $dealCount Deals, $shopCount Shops, $buyerCount Käufer, $supplierCount Lieferanten, $itemCount Lagerartikel',
           'import');

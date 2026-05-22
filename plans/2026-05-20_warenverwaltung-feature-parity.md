@@ -1165,18 +1165,18 @@ anbietet.
 
 ### Epic F — CSV + Doku (P1, querschnittlich)
 
-- [ ] **F1** — `csv_service.dart`: neue Sektionen Produkte/Kategorien/Lager/
+- [x] **F1** — `csv_service.dart`: neue Sektionen Produkte/Kategorien/Lager/
   Bestellungen in Export + Import; FK-Referenzen per **SKU/Name** resolven
   (keine rohen UUIDs aus der CSV); CHECK-Constraint-Felder (EAN-Regex,
   Enum-Whitelist, Mengen-Vorzeichen, Längen) client-seitig vorvalidieren;
   kein raw SQL mit String-Interpolation; Legacy-CSV bleibt importierbar;
   Tests. `agent:flutter-coder` · `model:Sonnet` · `depends:AF7c,C4,D3`
-- [ ] **F2** — Handbuch nachziehen: `06-database.md` (neue Tabellen +
+- [x] **F2** — Handbuch nachziehen: `06-database.md` (neue Tabellen +
   `product_stock`-View), `03-screens-walkthrough.md` (neue Screens),
   `05-architecture.md`, `07-edge-functions.md` (`send-notifications` +
   `seed-demo-workspace`-Änderung), `10-glossary.md`.
   `agent:flutter-coder` · `model:Sonnet` · `depends:E5`
-- [ ] **F3** — Hilfeseite (`help_screen.dart` + ARBs) um Sektionen
+- [x] **F3** — Hilfeseite (`help_screen.dart` + ARBs) um Sektionen
   Artikelstamm, Bestellwesen, Lager, Inventur erweitern.
   `agent:ui-builder` · `model:Sonnet` · `depends:E5`
 

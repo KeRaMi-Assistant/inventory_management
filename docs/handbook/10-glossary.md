@@ -28,6 +28,15 @@ Carrier wird angenommen, `isValid = false`. Beispiel: USPS-22 vs.
 DHL-20 auf `420…`-Partner-Numbers. Siehe
 [07 — Edge Functions](07-edge-functions.md#_sharedtracking_validatorsts-pr-73).
 
+### Artikelstamm (Produkt)
+
+Wiederverwendbarer Stammsatz für ein Produkt — einmal angelegt, beliebig
+oft als Bestand referenziert. Tabelle `products` (Epic A-full). Im
+Gegensatz dazu ist `inventory_items` eine konkrete physische Bestandsrow,
+die optional über `product_id` auf den Stammsatz verweist. Siehe
+[06 — Datenbank](06-database.md#products) und
+[02 — Konzepte](02-concepts.md).
+
 ### Adapter
 
 Eine Mini-Klasse pro Quell-Shop in
@@ -70,6 +79,23 @@ oder Edge-Functions geschrieben, nie direkt durch User. Siehe
 Pre-Launch-Verfahren: PRs werden nach grünen CI-Gates automatisch
 gemerged. `gh pr merge --auto --squash --delete-branch`. Setup via
 [`.claude/scripts/setup-branch-protection.sh`](../../.claude/scripts/setup-branch-protection.sh).
+
+### Bestandsbewertung
+
+Monetäre Bewertung des Lagerbestands auf Basis von Einstandspreisen.
+Grundlage: `inventory_movements.unit_cost` (nullable, seit Migration
+`20260521214855`). Eine vollständige FIFO-/Gleitender-Durchschnitt-
+Bewertung ist für P2 geplant. Siehe
+[06 — Datenbank](06-database.md#inventory_movements-erweiterung).
+
+### Buchungsart (movement_type)
+
+Getypter Enum-Wert auf `inventory_movements.movement_type` (seit Epic
+A-lite). Erlaubte Werte: `goods_in` (Wareneingang), `goods_out`
+(Warenausgang), `correction` (Korrektur), `stocktake` (Inventur),
+`transfer` (Umlagerung), `sale` (Verkauf). Ersetzt den auswertbaren
+Freitext-`reason`. Dart-seitig: Feld `movementType` in `InventoryMovement`.
+Siehe [06 — Datenbank](06-database.md#inventory_movements-erweiterung).
 
 ## B
 
@@ -136,6 +162,15 @@ periodisch gerufen.
 Versandart eines Deals: Ware geht direkt vom Shop zum Buyer, Reseller
 ist nur Vermittler. Gegenstück: [Reship](#reship).
 
+### Einkaufsbestellung (Purchase Order)
+
+Bestellung bei einem Lieferanten. Tabelle `purchase_orders` (Epic C).
+Status-Automat: `draft → ordered → partially_received → received →
+cancelled`. Positionen in `purchase_order_items`; Wareneingang via
+atomarer RPC `increment_po_item_received`. Siehe
+[06 — Datenbank](06-database.md#purchase_orders) und
+[03 — Screens](03-screens-walkthrough.md#bestellungen).
+
 ## E
 
 ### Edge Function
@@ -160,6 +195,15 @@ Verfahren, das aus dem HTML-Body einer Mail Tracking-IDs, ETA, Items,
 Versandadresse extrahiert — wo Plaintext nicht reicht. Tests in
 [`inbox_forensics_test.ts`](../../supabase/functions/_shared/inbox_forensics_test.ts).
 Siehe [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#html-forensik).
+
+## G
+
+### Gebinde-/Lagereinheit (Lagerumschlag)
+
+Kennzahl: `Jahresverbrauch / Durchschnittsbestand`. Je höher, desto
+kürzer liegt Ware im Lager. Relevant für ABC-Analyse und Reporting.
+> TODO: Notiz ergänzen — Lagerumschlag-Reporting ist für P2 geplant
+> (Plan-Lücke L12).
 
 ## H
 
@@ -187,6 +231,16 @@ ruft und ein [Backlog-Item](#backlog-headless-loop) abarbeitet. Siehe
 
 ## I
 
+### Inventur (Stocktake)
+
+Geführter Zähl-Workflow zum Abgleich von Soll- und Ist-Bestand.
+Session-Kopf in `stocktakes` (Status: `open → counting → closed /
+cancelled`), Positionen in `stocktake_items`. Beim Schließen erzeugt
+die App pro Differenz eine `inventory_movements`-Row mit
+`movement_type='stocktake'`. Siehe
+[06 — Datenbank](06-database.md#stocktakes) und
+[03 — Screens](03-screens-walkthrough.md#inventur-liste).
+
 ### IMAP
 
 Mail-Protokoll, über das die App Postfächer abfragt. Implementiert via
@@ -205,7 +259,26 @@ zeigt. Drei Sub-Tabs: Eingang, Vorschläge, Postfächer. Siehe
 Lagerbestand. Tabelle `inventory_items` + `inventory_movements` +
 `inventory_batches`. Siehe [02 — Konzepte](02-concepts.md#inventory).
 
+## K
+
+### Kategorie (Warengruppe)
+
+Hierarchische Klassifikation von Artikeln. Tabelle `product_categories`
+mit self-referenzieller `parent_id` (max. 2 Ebenen). Jeder Artikel
+(`products`) kann einer Kategorie zugeordnet sein. Verwaltung im
+[`CategoriesScreen`](03-screens-walkthrough.md#warengruppen). Siehe
+[06 — Datenbank](06-database.md#product_categories).
+
 ## L
+
+### Lager (Warehouse)
+
+Strukturierter Lagerort. Tabelle `warehouses` (Epic D). Ein Default-Lager
+pro Workspace (Partial-UNIQUE). `inventory_items.warehouse_id` verknüpft
+Items mit einem Lager. Der aggregierte Bestand pro Lager ist über die
+`product_stock`-View (`qty_in_warehouse`) abrufbar. Verwaltung im
+[`WarehousesScreen`](03-screens-walkthrough.md#lager). Siehe
+[06 — Datenbank](06-database.md#warehouses).
 
 ### Live-Status (Deal)
 
@@ -254,6 +327,16 @@ gesetzt wird. Siehe [02 — Konzepte](02-concepts.md#onboarding) bzw.
 [03 — Screens](03-screens-walkthrough.md#onboarding).
 
 ## P
+
+### product_stock (View)
+
+Postgres-View, die den aggregierten Lagerbestand pro
+`(workspace_id, product_id, warehouse_id)` aus `inventory_items`
+berechnet. `security_invoker = true` → erbt RLS des aufrufenden Users.
+Einzige offizielle Bestands-Wahrheit für Low-Stock-Alerts und
+Produkt-Detail-Aggregation. Rows ohne `product_id` sind bewusst
+ausgeschlossen. Siehe
+[06 — Datenbank](06-database.md#product_stock-view).
 
 ### parsed_messages
 
@@ -339,6 +422,20 @@ Pattern: `deleted_at`-Spalte statt `DELETE`. App-Default-Filter nimmt nur
 Rows mit `deleted_at IS NULL`. Erlaubt Wiederherstellen. Siehe
 [06 — Datenbank](06-database.md#soft-delete).
 
+### Supplier (erweitert)
+
+Seit Epic B hat `suppliers` 9 neue Kreditoren-Felder (Adresse, USt-IdNr,
+Kundennummer, Zahlungsziel, Lieferzeit, Mindestbestellwert). Zuordnung zu
+Produkten über `product_suppliers` (n:m). `is_preferred`-Flag markiert
+den bevorzugten Lieferanten pro Artikel. Siehe
+[06 — Datenbank](06-database.md#suppliers-erweiterung).
+
+### Stammkatalog
+
+Synonym für [Artikelstamm](#artikelstamm-produkt). Die Tabelle `products`
+ist der Stammkatalog — alle physischen Bestands-Rows in `inventory_items`
+können per `product_id` darauf verweisen.
+
 ### Strict-Tracking
 
 Pipeline-Modus seit Plan
@@ -415,6 +512,24 @@ Verschlüsseltes Secret-Storage in Postgres, abrufbar als
 hier. Pre-Launch-Setup: Secret im Studio anlegen.
 
 ## W
+
+### Wareneingang
+
+Buchungsvorgang, bei dem Ware physisch im Lager eintrifft und als
+`inventory_movements`-Row mit `movement_type='goods_in'` verbucht wird.
+Bei PO-basiertem Wareneingang wird zusätzlich
+`purchase_order_items.quantity_received` per RPC inkrementiert. Siehe
+[06 — Datenbank](06-database.md#purchase_order_items) und
+[03 — Screens](03-screens-walkthrough.md#bestellungs-detail).
+
+### Warenwirtschaft-Hub
+
+Neuer Top-Level-Tab (Index 10 in `MainScreen`, `MainTab.warehouse`).
+Kachel-Übersicht, die alle Warenwirtschafts-Bereiche (Bestellungen, Lager,
+Warengruppen, Inventur, Reporting) als Sub-Routen per `Navigator.push`
+aufmacht. Datei:
+[`lib/screens/warehouse_hub_screen.dart`](../../lib/screens/warehouse_hub_screen.dart).
+Siehe [03 — Screens](03-screens-walkthrough.md#warenwirtschaft-hub).
 
 ### Web-Renderer
 

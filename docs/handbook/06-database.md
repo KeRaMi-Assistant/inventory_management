@@ -36,6 +36,20 @@ Alle Tabellen liegen im `public`-Schema. Workspace-gescoped sind:
 | `workspace_carrier_credentials` | DHL/DPD/UPS-Keys | `20260508000000_workspace_carrier_credentials.sql` |
 | `billing_profiles` | Rechnungs-Stammdaten | `20260504001000_billing_profiles.sql` |
 | `public_profile` | öffentlicher Verkaufs-Slug | `20260510000000_public_profile.sql` |
+| `product_categories` | Warengruppen (hierarchisch, max. 2 Ebenen) | `20260521222920_categories_supplier_extension.sql` |
+| `products` | Artikel-Stammkatalog (1× pro SKU, n× Bestand) | `20260522000609_products_catalog.sql` |
+| `product_suppliers` | Artikel↔Lieferant n:m mit Lieferant-SKU + -Preis | `20260522001308_product_stock_and_suppliers.sql` |
+| `purchase_orders` | Bestell-Kopf (Einkaufsbestellungen) | `20260522010918_purchase_orders.sql` |
+| `purchase_order_items` | Bestell-Positionen (Kind-Tabelle) | `20260522010918_purchase_orders.sql` |
+| `warehouses` | Strukturierte Lagerorte | `20260522015018_warehouses.sql` |
+| `stocktakes` | Inventur-Sessions (Kopf) | `20260522021641_stocktakes.sql` |
+| `stocktake_items` | Inventur-Positionen (Zähl-Kind-Tabelle) | `20260522021641_stocktakes.sql` |
+
+Views (kein eigener Tabellen-Eintrag in Supabase-Studio, aber abfragbar wie eine Tabelle):
+
+| View | Zweck | Migration |
+|---|---|---|
+| `product_stock` | Bestand pro `(workspace_id, product_id, warehouse_id)` | `20260522001308_product_stock_and_suppliers.sql` |
 
 User-gescoped (nicht Workspace):
 
@@ -166,8 +180,16 @@ ticket_url    TEXT,
 note          TEXT,
 status        TEXT NOT NULL DEFAULT 'Im Lager',
 ean           TEXT,                  -- 20260503000500
+product_id    UUID REFERENCES products(id) ON DELETE SET NULL,  -- 20260522000927 (nullable, dauerhaft)
+warehouse_id  UUID REFERENCES warehouses(id) ON DELETE SET NULL, -- 20260522000927 + D1-FK
 created_at, updated_at, deleted_at TIMESTAMPTZ
 ```
+
+`product_id` ist **dauerhaft nullable** (Committee-Finding 2): bestehende
+Items ohne Stammkatalog-Bezug funktionieren unverändert; nur neue
+Wareneingänge/PO-Receipts verknüpfen auf ein `products`-Record. Der
+FK-Cross-Workspace-Trigger `inventory_items_product_id_ws_check`
+verhindert Cross-Workspace-Referenzen auch auf Service-Role-Ebene.
 
 ### `tickets`
 
@@ -184,6 +206,277 @@ archive_reason TEXT,
 created_at, updated_at TIMESTAMPTZ,
 UNIQUE (workspace_id, ticket_number)
 ```
+
+### `inventory_movements` (Erweiterung)
+
+Migration
+[`20260521214855_movement_type_typed.sql`](../../supabase/migrations/20260521214855_movement_type_typed.sql)
+ergänzt zwei neue Spalten additiv (bestehende Rows bleiben unberührt,
+kein Schema-Break):
+
+```sql
+movement_type TEXT NOT NULL DEFAULT 'correction'
+  CHECK (movement_type IN
+    ('goods_in','goods_out','correction','stocktake','transfer','sale')),
+unit_cost     NUMERIC(12,2)   -- nullable, Einstandspreis der Buchung
+```
+
+`reason` bleibt als optionale Freitext-Notiz erhalten.
+`product_id UUID REFERENCES products(id)` (nullable, Migration
+[`20260522000927`](../../supabase/migrations/20260522000927_inventory_product_link.sql))
+ermöglicht katalogweite Auswertungen in der Produkt-Detail-Ansicht.
+
+`inventory_movements` ist **append-only** — keine UPDATE/DELETE-Policy,
+keine `deleted_at`-Spalte. Korrekturbuchungen laufen über Gegenbuchungen
+mit `movement_type='correction'`. Inventurausgleiche schreiben
+`movement_type='stocktake'`.
+
+### `suppliers` (Erweiterung)
+
+Migration
+[`20260521222920_categories_supplier_extension.sql`](../../supabase/migrations/20260521222920_categories_supplier_extension.sql)
+ergänzt 9 nullable Kreditoren-Stammdaten-Spalten:
+
+```sql
+address_street     TEXT,
+address_zip        TEXT,
+address_city       TEXT,
+address_country    TEXT DEFAULT 'DE',
+vat_id             TEXT,           -- USt-IdNr
+customer_number    TEXT,           -- Kundennummer beim Lieferanten
+payment_terms_days INTEGER,        -- Zahlungsziel (Tage)
+lead_time_days     INTEGER,        -- Lieferzeit (Tage)
+min_order_value    NUMERIC(12,2)   -- Mindestbestellwert
+```
+
+Kein Backfill (Pre-Launch, keine echten Daten). Alle Felder sind nullable
+und rückwärtskompatibel.
+
+### `product_categories`
+
+Datei:
+[`supabase/migrations/20260521222920_categories_supplier_extension.sql`](../../supabase/migrations/20260521222920_categories_supplier_extension.sql)
+
+```sql
+id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+user_id      UUID NOT NULL REFERENCES auth.users(id),
+name         TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),
+parent_id    UUID REFERENCES product_categories(id) ON DELETE SET NULL,
+sort_order   INTEGER NOT NULL DEFAULT 0,
+created_at, updated_at, updated_by, version TIMESTAMPTZ/INT,
+deleted_at   TIMESTAMPTZ
+```
+
+Self-referenziell über `parent_id` — max. 2 Hierarchie-Ebenen
+(App-seitig validiert). FK-Cross-Workspace-Trigger
+`product_categories_parent_id_ws_check` verhindert Cross-Workspace-
+Referenzen bei `parent_id`. Standard-4-Policy-RLS + `touch_row`-Trigger.
+
+### `products`
+
+Datei:
+[`supabase/migrations/20260522000609_products_catalog.sql`](../../supabase/migrations/20260522000609_products_catalog.sql)
+
+```sql
+id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+workspace_id        UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+user_id             UUID NOT NULL REFERENCES auth.users(id),
+name                TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 200),
+sku                 TEXT,    -- Partial-UNIQUE auf lower(sku) pro Workspace (non-NULL)
+ean                 TEXT,    -- CHECK: 8/12/13/14 Ziffern (nullable)
+category_id         UUID REFERENCES product_categories(id) ON DELETE SET NULL,
+default_supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
+unit                TEXT NOT NULL DEFAULT 'Stk',
+default_cost_price  NUMERIC(12,2),
+default_sale_price  NUMERIC(12,2),
+min_stock           INTEGER NOT NULL DEFAULT 0,
+tax_rate            NUMERIC(5,2),
+note                TEXT,
+is_active           BOOLEAN NOT NULL DEFAULT TRUE,
+is_demo             BOOLEAN NOT NULL DEFAULT FALSE,
+created_at, updated_at, updated_by, version TIMESTAMPTZ/INT,
+deleted_at          TIMESTAMPTZ
+```
+
+Standard-4-Policy-RLS + `touch_row`-Trigger. FK-Cross-Workspace-Trigger
+`products_fks_ws_check` deckt `category_id` + `default_supplier_id` ab.
+Partial-UNIQUE `products_workspace_sku_uidx` auf `lower(sku)` sichert
+SKU-Eindeutigkeit pro Workspace (nur für gesetzte + nicht gelöschte SKUs).
+
+### `product_suppliers`
+
+Datei:
+[`supabase/migrations/20260522001308_product_stock_and_suppliers.sql`](../../supabase/migrations/20260522001308_product_stock_and_suppliers.sql)
+
+n:m-Verknüpfung zwischen `products` und `suppliers`:
+
+```sql
+id             UUID PRIMARY KEY,
+workspace_id   UUID NOT NULL,
+user_id        UUID NOT NULL,
+product_id     UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+supplier_id    UUID NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
+supplier_sku   TEXT,
+supplier_price NUMERIC(12,2),
+is_preferred   BOOLEAN NOT NULL DEFAULT FALSE,
+created_at, updated_at, updated_by, version TIMESTAMPTZ/INT,
+deleted_at     TIMESTAMPTZ
+```
+
+Zwei Partial-UNIQUE-Indexe: eindeutige `(product_id, supplier_id)`-Kombi
+und maximal ein `is_preferred`-Lieferant pro Produkt.
+
+### `product_stock` (View)
+
+Datei:
+[`supabase/migrations/20260522001308_product_stock_and_suppliers.sql`](../../supabase/migrations/20260522001308_product_stock_and_suppliers.sql)
+
+```sql
+CREATE VIEW public.product_stock
+WITH (security_invoker = true) AS
+SELECT workspace_id, product_id, warehouse_id,
+       SUM(quantity) AS qty_in_warehouse
+FROM inventory_items
+WHERE deleted_at IS NULL AND product_id IS NOT NULL
+GROUP BY workspace_id, product_id, warehouse_id;
+```
+
+**Die einzige Bestands-Wahrheit** für Low-Stock-Alerts und
+Produkt-Detail-Aggregation. `security_invoker = true` (PG 15+) sorgt
+dafür, dass die `inventory_items_ws_read`-RLS des aufrufenden Users
+greift — die View erbt die Workspace-Isolation implizit.
+Rows ohne `product_id` fallen bewusst raus (kein Mindestbestand-Ziel).
+
+### `purchase_orders`
+
+Datei:
+[`supabase/migrations/20260522010918_purchase_orders.sql`](../../supabase/migrations/20260522010918_purchase_orders.sql)
+
+```sql
+id            BIGSERIAL PRIMARY KEY,
+workspace_id  UUID NOT NULL,
+user_id       UUID NOT NULL,
+supplier_id   UUID NOT NULL REFERENCES suppliers(id) ON DELETE RESTRICT,
+order_number  TEXT NOT NULL,  -- Partial-UNIQUE pro Workspace (non-deleted)
+status        TEXT NOT NULL DEFAULT 'draft'
+  CHECK (status IN ('draft','ordered','partially_received','received','cancelled')),
+order_date    TIMESTAMPTZ,
+expected_date TIMESTAMPTZ,
+note          TEXT,
+total_net     NUMERIC(12,2),
+created_at, updated_at, updated_by, version TIMESTAMPTZ/INT,
+deleted_at    TIMESTAMPTZ
+```
+
+Status-Automat: `draft → ordered → partially_received / received →
+cancelled`. Statuswechsel auf `partially_received`/`received` erfolgt
+automatisch per DB-Trigger (`purchase_order_items_status_trg`), der
+auf UPDATE von `purchase_order_items.quantity_received` feuert — die
+App setzt den Status **nicht** manuell.
+
+### `purchase_order_items`
+
+Kind-Tabelle zu `purchase_orders` (gleiche Migration):
+
+```sql
+id                UUID PRIMARY KEY,
+workspace_id      UUID NOT NULL,
+purchase_order_id BIGINT NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+product_id        UUID REFERENCES products(id) ON DELETE RESTRICT,
+description       TEXT NOT NULL,
+quantity_ordered  INTEGER NOT NULL DEFAULT 1,
+quantity_received INTEGER NOT NULL DEFAULT 0,
+unit_price        NUMERIC(12,2),
+created_at, updated_at, updated_by, version TIMESTAMPTZ/INT
+```
+
+`quantity_received` wird atomar via der SECURITY-DEFINER-RPC
+`increment_po_item_received(p_item_id, p_qty)` inkrementiert — kein
+Client-seitiges Read-modify-write. Über-Buchungs-Schranke im
+RPC-Body: `quantity_received + p_qty ≤ quantity_ordered`.
+
+### `warehouses`
+
+Datei:
+[`supabase/migrations/20260522015018_warehouses.sql`](../../supabase/migrations/20260522015018_warehouses.sql)
+
+```sql
+id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+user_id      UUID NOT NULL,
+name         TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),
+address      TEXT,
+is_default   BOOLEAN NOT NULL DEFAULT FALSE,
+is_active    BOOLEAN NOT NULL DEFAULT TRUE,
+created_at, updated_at, updated_by, version TIMESTAMPTZ/INT,
+deleted_at   TIMESTAMPTZ
+```
+
+Partial-UNIQUE auf `(workspace_id) WHERE is_default`: maximal **ein**
+Default-Lager pro Workspace. Das erste Lager wird App-seitig beim
+ersten Workspace-Touch angelegt (kein DB-Trigger). Standard-4-Policy-RLS
++ `touch_row`-Trigger.
+
+### `notifications_sent` (Erweiterung)
+
+Migration
+[`20260522015347_low_stock_notification_kind.sql`](../../supabase/migrations/20260522015347_low_stock_notification_kind.sql)
+erweitert den `ref_kind`-CHECK-Constraint und ergänzt eine nullable
+`workspace_id`-Spalte:
+
+```sql
+-- CHECK-Constraint (ALT):
+ref_kind IN ('mhd','delivery','payment')
+-- CHECK-Constraint (NEU):
+ref_kind IN ('mhd','delivery','payment','low_stock')
+
+-- Neue Spalte (additiv, nullable):
+workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE
+```
+
+`workspace_id` ermöglicht Workspace-gescoped Dedup des
+`low_stock`-Alerts (max. ein Push pro Workspace + Kalender-Tag). Der
+PK `(user_id, ref_kind, ref_id)` bleibt unverändert.
+
+### `stocktakes`
+
+Datei:
+[`supabase/migrations/20260522021641_stocktakes.sql`](../../supabase/migrations/20260522021641_stocktakes.sql)
+
+```sql
+id           BIGSERIAL PRIMARY KEY,
+workspace_id UUID NOT NULL,
+user_id      UUID NOT NULL,
+warehouse_id UUID REFERENCES warehouses(id) ON DELETE SET NULL,
+status       TEXT NOT NULL DEFAULT 'open'
+  CHECK (status IN ('open','counting','closed','cancelled')),
+title        TEXT,
+started_at   TIMESTAMPTZ,
+closed_at    TIMESTAMPTZ,
+created_at, updated_at, updated_by, version TIMESTAMPTZ/INT,
+deleted_at   TIMESTAMPTZ
+```
+
+### `stocktake_items`
+
+Kind-Tabelle zu `stocktakes` (gleiche Migration):
+
+```sql
+id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+workspace_id UUID NOT NULL,
+stocktake_id BIGINT NOT NULL REFERENCES stocktakes(id) ON DELETE CASCADE,
+product_id   UUID REFERENCES products(id) ON DELETE RESTRICT,
+item_id      UUID REFERENCES inventory_items(id) ON DELETE SET NULL,
+qty_expected INTEGER NOT NULL DEFAULT 0,  -- Soll-Bestand
+qty_counted  INTEGER,                     -- Ist-Bestand (NULL = noch ungezählt)
+note         TEXT,
+created_at, updated_at, updated_by, version TIMESTAMPTZ/INT
+```
+
+Beim Schließen einer Inventur erzeugt die App pro Differenz
+(`qty_counted ≠ qty_expected`) eine `inventory_movements`-Row mit
+`movement_type='stocktake'` (append-only).
 
 ### `mailbox_accounts` & `mailbox_credentials`
 
@@ -323,6 +616,43 @@ Beispiele:
 | `mailbox_accounts_set_updated_at` | `updated_at` aktualisieren |
 | `archive_triggers.sql` | Tickets autom. archivieren wenn alle Deals "Done" |
 | `set_updated_at` (mehrfach) | Standard-Touch-Trigger |
+| `trg_touch_product_categories` | `touch_row` auf `product_categories` |
+| `trg_touch_products` | `touch_row` auf `products` |
+| `trg_touch_product_suppliers` | `touch_row` auf `product_suppliers` |
+| `trg_touch_purchase_orders` | `touch_row` auf `purchase_orders` |
+| `trg_touch_purchase_order_items` | `touch_row` auf `purchase_order_items` |
+| `purchase_order_items_status_trg` | Status `purchase_orders` bei Wareneingang automatisch setzen (`partially_received`/`received`) |
+| `trg_touch_warehouses` | `touch_row` auf `warehouses` |
+| `trg_touch_stocktakes` | `touch_row` auf `stocktakes` |
+| `trg_touch_stocktake_items` | `touch_row` auf `stocktake_items` |
+| `inventory_items_product_id_ws_check` | Cross-Workspace-Schutz für `inventory_items.product_id` |
+| `inventory_movements_product_id_ws_check` | Cross-Workspace-Schutz für `inventory_movements.product_id` |
+| `products_fks_ws_check` | Cross-Workspace-Schutz für `products.category_id` + `.default_supplier_id` |
+| `product_suppliers_fks_ws_check` | Cross-Workspace-Schutz für `product_suppliers.product_id` + `.supplier_id` |
+
+### RPC `increment_po_item_received`
+
+Datei:
+[`supabase/migrations/20260522032123_po_receive_increment.sql`](../../supabase/migrations/20260522032123_po_receive_increment.sql)
+
+```sql
+public.increment_po_item_received(p_item_id UUID, p_qty INTEGER)
+RETURNS SETOF public.purchase_order_items
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+```
+
+Atomar-Increment von `purchase_order_items.quantity_received` ohne
+Client-seitiges Read-modify-write. Checks im Body:
+
+1. Workspace-Rollen-Check: Caller muss `owner`/`admin`/`member` sein.
+2. Über-Buchungs-Schranke: `quantity_received + p_qty ≤ quantity_ordered`.
+
+Auf das UPDATE feuert `purchase_order_items_status_trg` → aktualisiert
+`purchase_orders.status` automatisch. `GRANT EXECUTE` nur an
+`authenticated` (nicht `anon`/`public`). Siehe
+[07 — Edge Functions](07-edge-functions.md) für den UI-Aufrufpfad.
 
 ## Cron-Jobs (pg_cron)
 
