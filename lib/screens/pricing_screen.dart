@@ -6,14 +6,21 @@ import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
 import '../models/pricing_plan.dart';
 import '../providers/billing_provider.dart';
-import '../widgets/app_screen_scaffold.dart';
 import 'billing_profile_screen.dart';
 
-/// Pricing-/Plan-Übersicht. Aktuell rein "Dummy" — keine Anbindung an
+/// Pricing-/Plan-Übersicht. Aktuell rein „Dummy" — keine Anbindung an
 /// Stripe/Paddle, sondern nur clientseitiger Plan-Switch via [BillingProvider].
 /// Bei Upgrade auf einen kostenpflichtigen Plan wird zuerst die
 /// Rechnungsadresse abgefragt, damit ab dem ersten Cent zahlende Kunden
 /// vollständige Stammdaten hinterlegt haben.
+///
+/// Layout: TabBar mit zwei Kategorien — **links Privat** (B2C, brutto-Preise
+/// inkl. MwSt) und **rechts Enterprise** (B2B, netto-Preise zzgl. MwSt).
+/// Free liegt im Privat-Tab.
+///
+/// Yearly-Toggle: der Preis-Block zeigt im Yearly-Modus den effektiven
+/// Monatspreis groß (psychologisch günstiger) und den tatsächlichen
+/// Jahres-Total klein ausgegraut darunter („49,90 € jährlich abgerechnet").
 class PricingScreen extends StatefulWidget {
   const PricingScreen({super.key});
 
@@ -21,27 +28,49 @@ class PricingScreen extends StatefulWidget {
   State<PricingScreen> createState() => _PricingScreenState();
 }
 
-class _PricingScreenState extends State<PricingScreen> {
+class _PricingScreenState extends State<PricingScreen>
+    with SingleTickerProviderStateMixin {
   BillingCycle _cycle = BillingCycle.monthly;
   bool _activating = false;
+  late final TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     final billing = context.read<BillingProvider>();
     if (billing.profile == null && !billing.isLoading) {
       WidgetsBinding.instance.addPostFrameCallback((_) => billing.load());
     }
+    // Wenn der User aktuell auf einem Enterprise-Tier ist, direkt
+    // den Enterprise-Tab vorauswählen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final currentPlan = context.read<BillingProvider>().currentPlan;
+      final isEnterprise = PricingPlan.forBillingPlan(currentPlan).category ==
+          PricingCategory.enterprise;
+      if (isEnterprise) _tabController.index = 1;
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final billing = context.watch<BillingProvider>();
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
-    return AppScreenScaffold(
+    final personalTiers = PricingPlan.forCategory(PricingCategory.personal);
+    final enterpriseTiers = PricingPlan.forCategory(PricingCategory.enterprise);
+
+    return Scaffold(
       appBar: AppBar(
-        title: const Text('Pläne & Preise'),
+        title: Text(l10n.pricingTitle),
       ),
       body: billing.isLoading && billing.profile == null
           ? const Center(child: CircularProgressIndicator())
@@ -51,14 +80,13 @@ class _PricingScreenState extends State<PricingScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 children: [
                   Text(
-                    'Wähle den Plan, der zu dir passt',
+                    l10n.pricingHeadline,
                     style: theme.textTheme.headlineSmall
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Free bleibt dauerhaft kostenlos. Upgrades schalten Quotas, '
-                    'Team-Plätze und Analyse-Features frei.',
+                    l10n.pricingIntro,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: AppTheme.textMutedOf(context),
                     ),
@@ -68,17 +96,44 @@ class _PricingScreenState extends State<PricingScreen> {
                     cycle: _cycle,
                     onChanged: (c) => setState(() => _cycle = c),
                   ),
-                  const SizedBox(height: 20),
-                  for (final plan in PricingPlan.all) ...[
-                    _PlanCard(
-                      plan: plan,
-                      cycle: _cycle,
-                      isCurrent: plan.plan == billing.currentPlan,
-                      busy: _activating,
-                      onSelect: () => _onSelect(plan),
+                  const SizedBox(height: 16),
+
+                  // ── Kategorie-Tabs ─────────────────────────────────
+                  _CategoryTabs(controller: _tabController),
+                  const SizedBox(height: 8),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: AnimatedBuilder(
+                      animation: _tabController,
+                      builder: (context, _) {
+                        final isPersonal = _tabController.index == 0;
+                        final tiers =
+                            isPersonal ? personalTiers : enterpriseTiers;
+                        return Column(
+                          key: ValueKey(
+                              'pricing-tab-${isPersonal ? "personal" : "enterprise"}'),
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: 12),
+                            _CategoryHint(isPersonal: isPersonal),
+                            const SizedBox(height: 14),
+                            for (final plan in tiers) ...[
+                              _PlanCard(
+                                plan: plan,
+                                cycle: _cycle,
+                                isCurrent: plan.plan == billing.currentPlan,
+                                busy: _activating,
+                                onSelect: () => _onSelect(plan),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                          ],
+                        );
+                      },
                     ),
-                    const SizedBox(height: 16),
-                  ],
+                  ),
                   const SizedBox(height: 8),
                   const _LegalFootnote(),
                 ],
@@ -148,12 +203,12 @@ class _PricingScreenState extends State<PricingScreen> {
               onPressed: () => Navigator.pop(ctx, false),
               child: Text(l10n.actionCancel),
             ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(isDowngradeToFree ? 'Wechseln' : 'Plan aktivieren'),
-          ),
-        ],
-      );
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(isDowngradeToFree ? 'Wechseln' : 'Plan aktivieren'),
+            ),
+          ],
+        );
       },
     );
     if (ok != true || !mounted) return;
@@ -176,7 +231,101 @@ class _PricingScreenState extends State<PricingScreen> {
       if (mounted) setState(() => _activating = false);
     }
   }
+}
 
+/// TabBar im „Pill-Toggle"-Look (statt Material-Default-Underline).
+/// Material-Underline würde mit dem Cycle-Toggle darüber visuell kollidieren —
+/// die Pill-Form macht klar: das hier ist ein primärer Filter.
+class _CategoryTabs extends StatelessWidget {
+  final TabController controller;
+  const _CategoryTabs({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppTheme.bgSubtleOf(context),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: TabBar(
+        controller: controller,
+        labelPadding: EdgeInsets.zero,
+        indicator: BoxDecoration(
+          color: AppTheme.bgSurfaceOf(context),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(20),
+              blurRadius: 6,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        labelColor: AppTheme.textPrimaryOf(context),
+        unselectedLabelColor: AppTheme.textMutedOf(context),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+        unselectedLabelStyle:
+            const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        splashFactory: NoSplash.splashFactory,
+        overlayColor:
+            WidgetStateProperty.all<Color>(Colors.transparent),
+        tabs: [
+          Tab(
+            height: 44,
+            iconMargin: EdgeInsets.zero,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.person_outline_rounded, size: 18),
+                const SizedBox(width: 8),
+                Text(l10n.pricingCategoryPersonal),
+              ],
+            ),
+          ),
+          Tab(
+            height: 44,
+            iconMargin: EdgeInsets.zero,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.business_rounded, size: 18),
+                const SizedBox(width: 8),
+                Text(l10n.pricingCategoryEnterprise),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Kleiner Subtitle unter dem aktiven Tab. Erklärt VAT-Handling der
+/// jeweiligen Kategorie ohne Section-Header-Wiederholung.
+class _CategoryHint extends StatelessWidget {
+  final bool isPersonal;
+  const _CategoryHint({required this.isPersonal});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final text = isPersonal
+        ? l10n.pricingCategoryPersonalHint
+        : l10n.pricingCategoryEnterpriseHint;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.textMutedOf(context),
+            ),
+      ),
+    );
+  }
 }
 
 class _BillingCycleToggle extends StatelessWidget {
@@ -283,15 +432,52 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final accent = theme.colorScheme.primary;
-    final price = cycle == BillingCycle.yearly
-        ? plan.yearlyPriceEur
-        : plan.monthlyPriceEur;
-    final priceLabel = plan.isFree
-        ? '0 €'
-        : cycle == BillingCycle.yearly
-            ? '${_fmtEur(price)} / Jahr'
-            : '${_fmtEur(price)} / Monat';
+    final isYearly = cycle == BillingCycle.yearly;
+
+    // Haupt-Preis: bei Yearly zeigen wir den **effektiven Monatspreis**
+    // (psychologisch günstiger), bei Monthly den Monatspreis direkt.
+    // Free: konstant „0 €".
+    final String primaryPriceLabel;
+    if (plan.isFree) {
+      primaryPriceLabel = '0 €';
+    } else if (isYearly) {
+      final effectiveMonthly = plan.yearlyPriceEur / 12;
+      primaryPriceLabel = '${_fmtEur(effectiveMonthly)} / Monat';
+    } else {
+      primaryPriceLabel = '${_fmtEur(plan.monthlyPriceEur)} / Monat';
+    }
+
+    // VAT-Hinweis je nach Kategorie. Free hat keinen Hinweis.
+    final vatHint = plan.isFree
+        ? null
+        : plan.vatIncluded
+            ? l10n.pricingVatIncluded   // „inkl. MwSt"
+            : l10n.pricingVatExcluded;  // „zzgl. MwSt"
+
+    // Yearly-Subtitle: Jahres-Total klein ausgegraut darunter.
+    final String? yearlyTotalLabel = (!plan.isFree && isYearly)
+        ? l10n.pricingYearlyBilled(_fmtEur(plan.yearlyPriceEur))
+        : null;
+
+    // Brutto-Anzeige als Hilfsinformation für Enterprise-Tiers,
+    // damit der User direkt sieht, was effektiv auf der Rechnung steht.
+    // Bei Yearly auf den effektiven Monatspreis brutto umgerechnet.
+    final showGrossHint = !plan.isFree && !plan.vatIncluded;
+    final String? grossHintLabel;
+    if (showGrossHint) {
+      if (isYearly) {
+        final effectiveMonthlyGross = plan.yearlyPriceGross / 12;
+        grossHintLabel =
+            '≈ ${_fmtEur(effectiveMonthlyGross)} / Monat brutto';
+      } else {
+        grossHintLabel =
+            '≈ ${_fmtEur(plan.monthlyPriceGross)} / Monat brutto';
+      }
+    } else {
+      grossHintLabel = null;
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -351,16 +537,45 @@ class _PlanCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            Text(
-              priceLabel,
-              style: theme.textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w700),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  primaryPriceLabel,
+                  style: theme.textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                if (vatHint != null) ...[
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      vatHint,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textMutedOf(context),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
-            if (cycle == BillingCycle.yearly && !plan.isFree)
+            // Yearly-Subtitle: Jahres-Total klein + ausgegraut.
+            if (yearlyTotalLabel != null)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
-                  '≈ ${_fmtEur(price / 12)} / Monat',
+                  yearlyTotalLabel,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textDisabledOf(context),
+                  ),
+                ),
+              ),
+            if (grossHintLabel != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  grossHintLabel,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppTheme.textMutedOf(context),
                   ),
@@ -453,11 +668,9 @@ class _LegalFootnote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Text(
-      'Alle Preise verstehen sich zzgl. der gesetzlichen Mehrwertsteuer. '
-      'Der Wechsel auf einen kostenpflichtigen Plan erfordert eine '
-      'vollständige Rechnungsadresse. Diese kann unter „Rechnungsdaten" '
-      'jederzeit aktualisiert werden.',
+      l10n.pricingLegalFootnote,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: AppTheme.textMutedOf(context),
           ),
