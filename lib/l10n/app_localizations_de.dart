@@ -215,6 +215,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get warehouseHubTileReporting => 'Reporting';
 
   @override
+  String get warehouseHubDetailPaneEmpty => 'Wähle links einen Bereich aus.';
+
+  @override
   String get fieldEmail => 'E-Mail';
 
   @override
@@ -4456,4 +4459,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get stocktakeNoItems => 'Keine Positionen';
+
+  @override
+  String get detailPaneNoSelection => 'Kein Eintrag ausgewählt';
+
+  @override
+  String get detailPaneNoSelectionHint =>
+      'Wähle links einen Artikel aus, um Details zu sehen.';
 }

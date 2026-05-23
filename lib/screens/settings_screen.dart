@@ -107,9 +107,28 @@ class SettingsScreen extends StatelessWidget {
     );
 
     if (embedded) return tabs;
+
+    // Non-embedded: use AppScreenScaffold for the maxWidth container on
+    // desktop/tablet. The AppBar and TabBar are embedded inside [tabs]
+    // (a DefaultTabController > Column), so we pass no [appBar] slot here
+    // and let the inner Column own the AppBar. The [body] is a LayoutBuilder
+    // wrapper that applies the maxWidth constraint on wider screens while
+    // filling the full width on phone — identical to AppScreenScaffold's
+    // container logic, but without a separate Scaffold nesting.
     return Scaffold(
       backgroundColor: AppTheme.bgAppOf(context),
-      body: tabs,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = !isCompact(constraints.maxWidth);
+          if (!isWide) return tabs;
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1200),
+              child: tabs,
+            ),
+          );
+        },
+      ),
     );
   }
 }

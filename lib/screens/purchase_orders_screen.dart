@@ -21,9 +21,21 @@ import 'purchase_order_detail_screen.dart';
 /// Sub-Route des Warenwirtschaft-Hubs — kein eigener [MainTab].
 /// Navigiert per [Navigator.push] zu [PurchaseOrderDetailScreen].
 ///
+/// **Zwei Modi (additiv, rückwärtskompatibel):**
+/// - `embedded == false` (Default): eigener [Scaffold] + [AppBar] für den
+///   Vollbild-Push-Pfad (Phone-Hub-Verhalten).
+/// - `embedded == true` (T3.4): kein [AppBar] — nur ein [Scaffold] mit FAB
+///   und Body, damit der Screen in einer Master-Detail-Detail-Spalte
+///   gerendert werden kann (Desktop-Warehouse-Hub).
+///
 /// A11y-Keys: `poNewFab`, `poCard-<id>`.
 class PurchaseOrdersScreen extends StatelessWidget {
-  const PurchaseOrdersScreen({super.key});
+  /// Wenn `true`, wird kein [AppBar] gerendert — geeignet für
+  /// Master-Detail-Embeds (T3.4 Warehouse-Hub-Desktop). Default `false`
+  /// (rückwärtskompatibel mit allen bisherigen Aufrufern).
+  final bool embedded;
+
+  const PurchaseOrdersScreen({super.key, this.embedded = false});
 
   @override
   Widget build(BuildContext context) {
@@ -36,9 +48,11 @@ class PurchaseOrdersScreen extends StatelessWidget {
             .toList();
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text(l10n.purchaseOrdersTitle),
-          ),
+          appBar: embedded
+              ? null
+              : AppBar(
+                  title: Text(l10n.purchaseOrdersTitle),
+                ),
           floatingActionButton: canEdit
               ? FloatingActionButton.extended(
                   key: const Key('poNewFab'),

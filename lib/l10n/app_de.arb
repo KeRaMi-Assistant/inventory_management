@@ -76,6 +76,10 @@
   "warehouseHubTileCategories": "Warengruppen",
   "warehouseHubTileStocktake": "Inventur",
   "warehouseHubTileReporting": "Reporting",
+  "warehouseHubDetailPaneEmpty": "Wähle links einen Bereich aus.",
+  "@warehouseHubDetailPaneEmpty": {
+    "description": "Placeholder im Detail-Pane des Warehouse-Hubs (Desktop-Master-Detail), wenn noch keine Kachel ausgewählt wurde. T3.4."
+  },
 
   "fieldEmail": "E-Mail",
   "fieldPassword": "Passwort",
@@ -1714,5 +1718,7 @@
   "stocktakeAllCounted": "Alle Positionen gezählt.",
   "stocktakeDiffReportTitle": "Differenz-Report",
   "stocktakeDiffReportNoDiff": "Keine Differenzen — Bestand ist korrekt.",
-  "stocktakeNoItems": "Keine Positionen"
+  "stocktakeNoItems": "Keine Positionen",
+  "detailPaneNoSelection": "Kein Eintrag ausgewählt",
+  "detailPaneNoSelectionHint": "Wähle links einen Artikel aus, um Details zu sehen."
 }

@@ -745,7 +745,7 @@ Atomar geschnitten, in 4 Epics. Jeder Task = 1 PR-fähiges Increment.
   Grid auf großen Viewports begrenzen (keine ultrabreiten Karten). Nutzt die
   Container-Achse (`widthClassOf` aus `LayoutBuilder`) — keine `MediaQuery`. —
   `agent:ui-builder` `model:Sonnet` `depends:T1.5a`
-- [ ] **T3.3a** **Selektions-State + embeddable `product_detail`**:
+- [x] **T3.3a** **Selektions-State + embeddable `product_detail`**:
   - `InventoryScreen`-Selektions-State (`_selectedItemId`) auf Owner-Widget
     oberhalb des `LayoutBuilder`-Switches liften — überlebt Resize Phone↔Desktop.
   - `product_detail_screen.dart` so refaktorieren, dass es **embeddable** ist
@@ -759,14 +759,14 @@ Atomar geschnitten, in 4 Epics. Jeder Task = 1 PR-fähiges Increment.
     UX-inkonsistent.
   - `PageStorageKey` auf der Master-Liste; Scroll- + Such-State bleibt.
   — `agent:flutter-coder` `model:Opus` `depends:T1.1,T1.4a`
-- [ ] **T3.3b** **Master-Detail-Split-Layout `inventory_screen`**:
+- [x] **T3.3b** **Master-Detail-Split-Layout `inventory_screen`**:
   - Desktop (`isExpanded(constraints.maxWidth)` bzw. `>= Breakpoints.master`):
     Liste links (z.B. 360px), Detail rechts (`Expanded`); Tap pusht **nicht**.
   - Phone: unverändert — Tap pusht Vollbild-`ProductDetailScreen`.
   - 5-State-Matrix (§5.5) implementiert mit Keys `Key('detailPane')`,
     `Key('detailPaneEmpty')`. — `agent:flutter-coder` `model:Opus`
   `depends:T3.3a`
-- [ ] **T3.4** `warehouse_hub_screen.dart`: Desktop zeigt Hub als Master +
+- [x] **T3.4** `warehouse_hub_screen.dart`: Desktop zeigt Hub als Master +
   Sub-Bereich als Detail-Spalte (kein Vollbild-Push); Phone behält Push.
   Sub-Screens (`purchase_orders`, `warehouses`, `categories`, `stocktake`,
   `product_catalog`) embeddable machen (Pattern wie T3.3a). **Reporting-Tile
@@ -782,7 +782,7 @@ Atomar geschnitten, in 4 Epics. Jeder Task = 1 PR-fähiges Increment.
   `pricing_screen.dart`: `maxWidth`-Container auf Desktop via
   `AppScreenScaffold`. — `agent:ui-builder` `model:Sonnet`
   `depends:T3.1,T1.5a`
-- [ ] **T3.6** `_page-registry.md` + `docs/handbook/03-screens-walkthrough.md`
+- [x] **T3.6** `_page-registry.md` + `docs/handbook/03-screens-walkthrough.md`
   aktualisieren — `/inventory` und `/warehouse` mit Master-Detail-Pattern,
   neue A11y-Keys (`detailPane`, `detailPaneEmpty`). —
   `agent:flutter-coder` `model:Sonnet` `depends:T3.3b,T3.4`

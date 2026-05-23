@@ -476,6 +476,12 @@ abstract class AppLocalizations {
   /// **'Reporting'**
   String get warehouseHubTileReporting;
 
+  /// Placeholder im Detail-Pane des Warehouse-Hubs (Desktop-Master-Detail), wenn noch keine Kachel ausgewählt wurde. T3.4.
+  ///
+  /// In de, this message translates to:
+  /// **'Wähle links einen Bereich aus.'**
+  String get warehouseHubDetailPaneEmpty;
+
   /// No description provided for @fieldEmail.
   ///
   /// In de, this message translates to:
@@ -8083,6 +8089,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Keine Positionen'**
   String get stocktakeNoItems;
+
+  /// No description provided for @detailPaneNoSelection.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Eintrag ausgewählt'**
+  String get detailPaneNoSelection;
+
+  /// No description provided for @detailPaneNoSelectionHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Wähle links einen Artikel aus, um Details zu sehen.'**
+  String get detailPaneNoSelectionHint;
 }
 
 class _AppLocalizationsDelegate

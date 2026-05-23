@@ -1,8 +1,9 @@
 # 03 — Screens-Walkthrough
 
-Die App rendert eine handvoll Top-Level-Screens. Auf Phone (`width < 800`)
-werden sie über einen Drawer + AppBar erreicht, auf Desktop über eine
-Sidebar. Die Reihenfolge wird in
+Die App rendert eine handvoll Top-Level-Screens. Auf Phone
+(`Breakpoints.navRail` = 900px Viewport-Schwelle, seit T1.3b) wird die
+Bottom-Navigation angezeigt, auf Desktop eine Sidebar / `NavigationRail`.
+Die Reihenfolge wird in
 [`lib/screens/main_screen.dart`](../../lib/screens/main_screen.dart) als
 Index-Liste definiert — siehe Konstanten `_navIcons`, `_navLabels`,
 `_navVisibility`. Das Switch-Statement `_buildBody()` mappt den Index auf
@@ -23,17 +24,25 @@ den jeweiligen Screen.
 | 10 | [Warenwirtschaft-Hub](#warenwirtschaft-hub) | `warehouse_hub_screen.dart` |
 
 Sub-Screens der Warenwirtschaft (kein eigener MainTab, per
-`Navigator.push` erreichbar):
+`Navigator.push` auf Phone erreichbar — auf Desktop als eingebettete
+Detail-Spalte im Hub-Master-Detail, siehe [Warenwirtschaft-Hub](#warenwirtschaft-hub)):
 
-| Sub-Screen | Datei | Erreichbar via |
-|---|---|---|
-| [Produktdetail](#produktdetail) | `product_detail_screen.dart` | Inventory → Item-Tap |
-| [Warengruppen](#warengruppen) | `categories_screen.dart` | Warenwirtschaft-Hub |
-| [Bestellungen](#bestellungen) | `purchase_orders_screen.dart` | Warenwirtschaft-Hub |
-| [Bestellungs-Detail](#bestellungs-detail) | `purchase_order_detail_screen.dart` | Bestellungen → Tap |
-| [Lager](#lager) | `warehouses_screen.dart` | Warenwirtschaft-Hub |
-| [Inventur-Liste](#inventur-liste) | `stocktake_screen.dart` | Warenwirtschaft-Hub |
-| [Inventur-Detail](#inventur-detail) | `stocktake_detail_screen.dart` | Inventur-Liste → Tap |
+| Sub-Screen | Datei | Erreichbar via | Embedded-fähig (seit T3.x) |
+|---|---|---|---|
+| [Produktdetail](#produktdetail) | `product_detail_screen.dart` | Inventory → Item-Tap | Ja — `ProductDetailScreen(embedded: true)` (seit T3.3a) |
+| [Warengruppen](#warengruppen) | `categories_screen.dart` | Warenwirtschaft-Hub | Ja — `CategoriesScreen(embedded: true)` (seit T3.4) |
+| [Bestellungen](#bestellungen) | `purchase_orders_screen.dart` | Warenwirtschaft-Hub | Ja — `PurchaseOrdersScreen(embedded: true)` (seit T3.4) |
+| [Bestellungs-Detail](#bestellungs-detail) | `purchase_order_detail_screen.dart` | Bestellungen → Tap | Nein |
+| [Lager](#lager) | `warehouses_screen.dart` | Warenwirtschaft-Hub | Ja — `WarehousesScreen(embedded: true)` (seit T3.4) |
+| [Inventur-Liste](#inventur-liste) | `stocktake_screen.dart` | Warenwirtschaft-Hub | Ja — `StocktakeScreen(embedded: true)` (seit T3.4) |
+| [Inventur-Detail](#inventur-detail) | `stocktake_detail_screen.dart` | Inventur-Liste → Tap | Nein |
+
+> **`embedded: bool`-Parameter-Pattern:** Screens mit `embedded: true`
+> rendern ohne eigenes `Scaffold` und ohne `AppBar`. Sie werden als reine
+> Content-Widgets in die Detail-Spalte des Hub-Master-Detail-Layouts
+> eingebettet. Das Pattern folgt dem bestehenden `SettingsScreen(embedded: true)`
+> (vgl. `help_screen.dart`). Wenn `embedded: false` (Default), verhält sich
+> der Screen wie gehabt (eigener `Scaffold`, eigene `AppBar`, Push-Navigation).
 
 Auth-/System-Screens (Login, Register, Forgot, Reset, Splash, Onboarding,
 Pricing, BillingProfile, PublicProfile) werden separat über den
@@ -228,8 +237,8 @@ Liste aller Items. Pro Card: Name, SKU, Menge, Lagerort, Status. Aktionen:
 - **Bewegung erfassen** — `+` / `-` schreibt einen `inventory_movement`-Eintrag
   mit typisierter `movement_type`-Spalte (seit Epic A-lite).
 - **Artikel-Detail** — Tap auf Item-Card öffnet den
-  [`ProductDetailScreen`](#produktdetail) als Push-Route (360°-Sicht,
-  Bewegungshistorie mit Buchungsart-Badges, Chargen, Lieferant).
+  [`ProductDetailScreen`](#produktdetail). Verhalten ist viewportabhängig
+  (siehe Master-Detail-Note unten).
 
 Filter: Status, Lagerort, MHD-Frist, Suchtext.
 
@@ -237,27 +246,54 @@ CSV-Export/Import passiert über
 [`csv_service.dart`](../../lib/services/csv_service.dart) und ist im
 [`MainScreen._import` / `_export`](#main) verkabelt.
 
+> **Master-Detail-Split (seit T3.3b):** Ab Container-Breite ≥ 1200px
+> (gemessen via `LayoutBuilder.constraints.maxWidth`, **nicht** via
+> `MediaQuery`) zeigt der Screen ein zweigeteiltes Layout: Master-Liste
+> links (380px, scrollbar), Detail-Spalte rechts (`Expanded`) mit
+> eingebettetem `ProductDetailScreen(embedded: true)`. Ein Tap auf eine
+> Item-Card setzt die Selektion — es wird kein `Navigator.push` ausgelöst.
+> Phone-Verhalten (Vollbild-Push) bleibt unverändert. Der Selektions-State
+> (`_selectedItemId`) lebt im Owner-Widget oberhalb des `LayoutBuilder`-
+> Switches und überlebt einen Resize Phone↔Desktop. A11y-Keys für die
+> Detail-Spalte: `Key('detailPane')` (wenn Item gewählt) und
+> `Key('detailPaneEmpty')` (Placeholder, wenn kein Item gewählt).
+
 ## Warenwirtschaft-Hub
 
 Datei:
 [`lib/screens/warehouse_hub_screen.dart`](../../lib/screens/warehouse_hub_screen.dart)
 
 Neuer Top-Level-Tab (MainTab-Index 10, Epic A-full AF11).
-Kachel-Übersicht der Warenwirtschafts-Bereiche. Pro Kachel ein
-`Navigator.push` in die jeweilige Sub-Route:
+Kachel-Übersicht der Warenwirtschafts-Bereiche. Das Navigationsverhalten
+ist viewportabhängig — siehe Master-Detail-Note unten.
 
-| Kachel | Ziel-Screen | A11y-Key |
-|---|---|---|
-| Artikelstamm (Placeholder) | — | `Key('hubTileProductCatalog')` |
-| Bestellungen | [`PurchaseOrdersScreen`](#bestellungen) | `Key('hubTilePurchaseOrders')` |
-| Lager | [`WarehousesScreen`](#lager) | `Key('hubTileWarehouses')` |
-| Warengruppen | [`CategoriesScreen`](#warengruppen) | `Key('hubTileCategories')` |
-| Inventur | [`StocktakeScreen`](#inventur-liste) | `Key('hubTileStocktake')` |
-| Reporting | bestehender `StatisticsScreen` | `Key('hubTileReporting')` |
+| Kachel | Ziel-Screen | A11y-Key | Embeddable |
+|---|---|---|---|
+| Artikelstamm | [`ProductCatalogScreen`](#artikelstamm) | `Key('hubTileProductCatalog')` | Ja (seit T3.4) |
+| Bestellungen | [`PurchaseOrdersScreen`](#bestellungen) | `Key('hubTilePurchaseOrders')` | Ja (seit T3.4) |
+| Lager | [`WarehousesScreen`](#lager) | `Key('hubTileWarehouses')` | Ja (seit T3.4) |
+| Warengruppen | [`CategoriesScreen`](#warengruppen) | `Key('hubTileCategories')` | Ja (seit T3.4) |
+| Inventur | [`StocktakeScreen`](#inventur-liste) | `Key('hubTileStocktake')` | Ja (seit T3.4) |
+| Reporting | bestehender `StatisticsScreen` | `Key('hubTileReporting')` | **Nein** — bleibt Vollbild-Push |
 
-> Die Artikelstamm-Kachel ist noch ein Placeholder — der dedizierte
-> Produktkatalog-Screen ist für Epic A-full geplant, der Hub-Eintrag
-> zeigt das bereits an.
+> **Master-Detail-Split auf Desktop (seit T3.4):** Ab Container-Breite
+> ≥ 1200px (via `LayoutBuilder.constraints.maxWidth`) wird der Hub zum
+> zweispaltigen Layout: Kachel-Übersicht links (Master), gewählter
+> Sub-Bereich rechts als eingebetteter Screen (`embedded: true`). Die 5
+> embeddable Sub-Screens (`product_catalog`, `purchase_orders`, `warehouses`,
+> `categories`, `stocktake`) zeigen sich ohne eigenes `Scaffold`/`AppBar`
+> in der Detail-Spalte. Kachel-Tap setzt die Selektion ohne
+> `Navigator.push`. A11y-Keys: `Key('detailPane')` (Detail-Root wenn
+> Sub-Bereich gewählt), `Key('detailPaneEmpty')` (Placeholder wenn kein
+> Sub-Bereich aktiv).
+>
+> **Ausnahme Reporting-Tile:** Das Reporting-Tile pusht auch auf Desktop
+> weiterhin als Vollbild-Screen (inline-`Scaffold` mit eigenem `AppBar` ist
+> aktuell nicht embeddable — akzeptierter Trade-off, dokumentierte
+> Inkonsistenz aus T3.4).
+>
+> **Phone-Verhalten unverändert:** Alle Kacheln öffnen per `Navigator.push`
+> als Vollbild-Screen.
 
 ## Produktdetail
 
@@ -265,8 +301,7 @@ Datei:
 [`lib/screens/product_detail_screen.dart`](../../lib/screens/product_detail_screen.dart)
 
 360°-Sicht auf eine bestehende `inventory_items`-Row (Epic A-lite AL5).
-Kein eigener Tab — wird per `Navigator.push` aus dem Inventory-Screen
-geöffnet. Zeigt:
+Kein eigener Tab. Zeigt:
 
 - Stammdaten (Name, SKU, EAN, Lagerort, Status, Mindestbestand).
 - Aktueller Bestand + ggf. Produkt-Link auf den Stammkatalog.
@@ -277,6 +312,12 @@ geöffnet. Zeigt:
 
 A11y-Keys: `Key('productDetailScrollView')`, `Key('movementHistoryList')`,
 `Key('movementRow-<id>')`.
+
+> **Embedded-Modus (seit T3.3a):** `ProductDetailScreen(embedded: true)`
+> rendert ohne eigenes `Scaffold` und ohne `AppBar` — für die Nutzung als
+> rechte Detail-Spalte im Inventory-Master-Detail-Layout. Im Default-Modus
+> (`embedded: false`) wird der Screen wie bisher per `Navigator.push` als
+> Vollbild-Screen geöffnet (Phone-Pfad unverändert).
 
 ## Warengruppen
 

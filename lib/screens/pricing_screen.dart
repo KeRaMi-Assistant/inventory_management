@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
 import '../models/pricing_plan.dart';
 import '../providers/billing_provider.dart';
+import '../widgets/app_screen_scaffold.dart';
 import 'billing_profile_screen.dart';
 
 /// Pricing-/Plan-Übersicht. Aktuell rein "Dummy" — keine Anbindung an
@@ -38,7 +39,7 @@ class _PricingScreenState extends State<PricingScreen> {
     final billing = context.watch<BillingProvider>();
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return AppScreenScaffold(
       appBar: AppBar(
         title: const Text('Pläne & Preise'),
       ),

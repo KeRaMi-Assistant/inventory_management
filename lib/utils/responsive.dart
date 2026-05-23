@@ -117,16 +117,10 @@ class Breakpoints {
   /// Wird in Phase B gegen [phone] (600) geprüft.
   static const double legacyDashboardCompact = 520;
 
-  /// @deprecated Magic Number aus `dashboard_screen.dart` KPI-Grid —
-  /// unter dieser Breite 2 Spalten statt 3.
-  /// Wird in Phase B gegen [phone] (600) geprüft.
-  static const double legacyKpiCompact = 500;
-
-  /// @deprecated Magic Number aus `dashboard_screen.dart` KPI-Grid —
-  /// unter dieser Breite 3 Spalten statt 4. Semantisch anders als
-  /// [navRail] (Shell-Switch) — nicht zusammenführen ohne Audit.
-  /// Wird in Phase B geprüft.
-  static const double legacyKpiMedium = 900;
+  // legacyKpiCompact (500) und legacyKpiMedium (900) wurden in T3.2 entfernt.
+  // Das KPI-Grid nutzt jetzt eine formelbasierte Spaltenanzahl:
+  //   cols = (containerWidth / 320).floor().clamp(2, 4)
+  // Damit entfällt die Notwendigkeit für benannte Schwellen.
 
   // Settings ------------------------------------------------------------------
 

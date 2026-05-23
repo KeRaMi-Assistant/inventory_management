@@ -28,16 +28,48 @@ class _InventoryScreenState extends State<InventoryScreen>
   String _search = '';
   late final TabController _tabController;
 
+  /// Aktuell selektiertes Item (für Master-Detail-Split in T3.3b).
+  ///
+  /// State lebt **oberhalb** des `LayoutBuilder`-Switches, damit ein Resize
+  /// Phone↔Desktop die Selektion nicht verliert (Plan §5.5 State-Erhalt).
+  /// In T3.3a (diesem Task) noch nicht im UI sichtbar — Phone-Tap pusht
+  /// weiterhin vollbild. T3.3b führt den Layout-Switch ein und konsumiert
+  /// diesen State auf Desktop.
+  String? _selectedItemId;
+
+  /// Setzt die aktuelle Selektion (oder löscht sie via `null`).
+  void _selectItem(InventoryItem? item) {
+    if (_selectedItemId == item?.id) return;
+    setState(() {
+      _selectedItemId = item?.id;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // TabBar-Entscheidung (Plan T3.3a): Selektion lebt über beiden Tabs,
+    // aber Stock/Sold sind verschiedene Item-Pools — beim Tab-Wechsel
+    // wird die Selektion zurückgesetzt.
+    _tabController.addListener(_onTabChanged);
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _onTabChanged() {
+    // Reagiere nur am Ende eines Wechsels (nicht während der Animation).
+    if (_tabController.indexIsChanging) return;
+    if (_selectedItemId != null) {
+      setState(() {
+        _selectedItemId = null;
+      });
+    }
   }
 
   static bool _isSold(InventoryItem i) =>
@@ -50,82 +82,185 @@ class _InventoryScreenState extends State<InventoryScreen>
       builder: (context, provider, _) {
         return LayoutBuilder(
           builder: (context, constraints) {
-            // Phase A (T1.4a): Magic Number 700 → Breakpoints.legacyListNarrow.
-            // Verhalten identisch; Phase-B-Konsolidierung in T1.4b.
-            final isNarrow =
-                constraints.maxWidth < Breakpoints.legacyListNarrow;
-            final localeTag =
-                Localizations.localeOf(context).toLanguageTag();
-            final money =
-                NumberFormat.currency(locale: localeTag, symbol: '€');
-            final query = _search.trim().toLowerCase();
-            List<InventoryItem> applySearch(List<InventoryItem> src) =>
-                query.isEmpty
-                    ? src
-                    : src
-                        .where((i) =>
-                            i.name.toLowerCase().contains(query) ||
-                            (i.sku?.toLowerCase().contains(query) ?? false))
-                        .toList();
-            final allStock = provider.inventoryItems
-                .where((i) => !_isSold(i))
-                .toList();
-            final allSold =
-                provider.inventoryItems.where(_isSold).toList();
-            final stockItems = applySearch(allStock);
-            final soldItems = applySearch(allSold);
+            // T3.3b — Layout-Switch (Plan §5.5):
+            // - Container ≥ Breakpoints.master (1200): Master-Detail-Split
+            //   (Liste links, ProductDetailScreen embedded rechts). Tap pusht
+            //   NICHT — setzt nur `_selectedItemId`.
+            // - Container < 1200: unverändertes Phone-/Tablet-Layout —
+            //   Tap pusht weiterhin Vollbild-`ProductDetailScreen`.
+            final isMasterDetail = isLarge(constraints.maxWidth);
 
-            return Column(
-              children: [
-                Material(
-                  color: Theme.of(context).colorScheme.surface,
-                  child: TabBar(
-                    controller: _tabController,
-                    tabs: [
-                      Tab(
-                        icon: const Icon(Icons.inventory_2_outlined, size: 18),
-                        text: l10n.inventoryTabStock,
-                      ),
-                      Tab(
-                        icon: const Icon(Icons.sell_outlined, size: 18),
-                        text: l10n.inventoryTabSold,
-                      ),
-                    ],
+            if (isMasterDetail) {
+              // Master-Detail-Split: feste Master-Breite (380 px) reicht für
+              // CardList mit 48-dp-Action-Buttons; eigener LayoutBuilder im
+              // Master damit `isNarrow`-Logik relativ zur Spalten-Breite gilt.
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: 380,
+                    child: _buildMasterColumn(
+                      context: context,
+                      provider: provider,
+                      l10n: l10n,
+                      isMasterDetail: true,
+                    ),
                   ),
-                ),
-                _buildSearchBar(),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildStockTab(
-                        context: context,
-                        provider: provider,
-                        items: stockItems,
-                        allStockEmpty: allStock.isEmpty,
-                        isNarrow: isNarrow,
-                        money: money,
-                        width: constraints.maxWidth,
-                        l10n: l10n,
-                      ),
-                      _buildSoldTab(
-                        context: context,
-                        provider: provider,
-                        items: soldItems,
-                        allSoldEmpty: allSold.isEmpty,
-                        isNarrow: isNarrow,
-                        money: money,
-                        width: constraints.maxWidth,
-                        l10n: l10n,
-                      ),
-                    ],
+                  Expanded(
+                    child: _buildDetailPane(
+                      context: context,
+                      provider: provider,
+                      l10n: l10n,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              );
+            }
+
+            // Phone/Tablet — unverändertes Verhalten (Tap pusht Vollbild).
+            return _buildMasterColumn(
+              context: context,
+              provider: provider,
+              l10n: l10n,
+              isMasterDetail: false,
+              outerWidth: constraints.maxWidth,
             );
           },
         );
       },
+    );
+  }
+
+  /// Renders TabBar + SearchBar + TabBarView. Wird in beiden Layout-Modi
+  /// verwendet (Phone-Vollbild + Desktop-Master-Spalte). Eigener LayoutBuilder
+  /// damit `isNarrow` relativ zur Master-Spalte (380 px) statt zum
+  /// Gesamt-Container berechnet wird.
+  Widget _buildMasterColumn({
+    required BuildContext context,
+    required InventoryProvider provider,
+    required AppLocalizations l10n,
+    required bool isMasterDetail,
+    double? outerWidth,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Phase A (T1.4a): Magic Number 700 → Breakpoints.legacyListNarrow.
+        final width = outerWidth ?? constraints.maxWidth;
+        final isNarrow = width < Breakpoints.legacyListNarrow;
+        final localeTag = Localizations.localeOf(context).toLanguageTag();
+        final money = NumberFormat.currency(locale: localeTag, symbol: '€');
+        final query = _search.trim().toLowerCase();
+        List<InventoryItem> applySearch(List<InventoryItem> src) =>
+            query.isEmpty
+                ? src
+                : src
+                    .where((i) =>
+                        i.name.toLowerCase().contains(query) ||
+                        (i.sku?.toLowerCase().contains(query) ?? false))
+                    .toList();
+        final allStock =
+            provider.inventoryItems.where((i) => !_isSold(i)).toList();
+        final allSold = provider.inventoryItems.where(_isSold).toList();
+        final stockItems = applySearch(allStock);
+        final soldItems = applySearch(allSold);
+
+        return Column(
+          children: [
+            Material(
+              color: Theme.of(context).colorScheme.surface,
+              child: TabBar(
+                controller: _tabController,
+                tabs: [
+                  Tab(
+                    icon: const Icon(Icons.inventory_2_outlined, size: 18),
+                    text: l10n.inventoryTabStock,
+                  ),
+                  Tab(
+                    icon: const Icon(Icons.sell_outlined, size: 18),
+                    text: l10n.inventoryTabSold,
+                  ),
+                ],
+              ),
+            ),
+            _buildSearchBar(),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildStockTab(
+                    context: context,
+                    provider: provider,
+                    items: stockItems,
+                    allStockEmpty: allStock.isEmpty,
+                    isNarrow: isNarrow,
+                    money: money,
+                    width: width,
+                    l10n: l10n,
+                    isMasterDetail: isMasterDetail,
+                  ),
+                  _buildSoldTab(
+                    context: context,
+                    provider: provider,
+                    items: soldItems,
+                    allSoldEmpty: allSold.isEmpty,
+                    isNarrow: isNarrow,
+                    money: money,
+                    width: width,
+                    l10n: l10n,
+                    isMasterDetail: isMasterDetail,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Renders the right-hand Detail-Pane in the Desktop-Master-Detail layout
+  /// (Plan §5.5 State-Matrix).
+  ///
+  /// States:
+  /// - `empty` (`_selectedItemId == null`) → Placeholder with `detailPaneEmpty`
+  ///   key + l10n key `detailPaneNoSelection`.
+  /// - `success` (selected item lookup hits) → embedded `ProductDetailScreen`
+  ///   (no own Scaffold/AppBar, `embedded: true`).
+  /// - `loading`/`error`/`no-permission` are handled inside
+  ///   `ProductDetailScreen` (live-Item lookup from provider; `_ViewerHintBanner`
+  ///   renders in embedded mode too).
+  /// - If the selected item disappears from the provider (deleted), we fall
+  ///   back to the empty placeholder.
+  Widget _buildDetailPane({
+    required BuildContext context,
+    required InventoryProvider provider,
+    required AppLocalizations l10n,
+  }) {
+    final selectedId = _selectedItemId;
+    final InventoryItem? selectedItem = selectedId == null
+        ? null
+        : provider.inventoryItems
+            .where((i) => i.id == selectedId)
+            .firstOrNull;
+
+    final dividerColor = AppTheme.borderOf(context);
+    final bg = AppTheme.bgSubtleOf(context);
+
+    return Container(
+      key: const Key('detailPane'),
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border(left: BorderSide(color: dividerColor)),
+      ),
+      child: selectedItem == null
+          ? _DetailPaneEmpty(l10n: l10n)
+          : ProductDetailScreen(
+              // Key auf das embedded Widget, damit ein Selection-Wechsel
+              // einen frischen State erzeugt (Pagination-Reset etc.).
+              key: ValueKey('detailPane-${selectedItem.id}'),
+              item: selectedItem,
+              embedded: true,
+            ),
     );
   }
 
@@ -180,6 +315,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     required NumberFormat money,
     required double width,
     required AppLocalizations l10n,
+    required bool isMasterDetail,
   }) {
     return Column(
       children: [
@@ -194,8 +330,10 @@ class _InventoryScreenState extends State<InventoryScreen>
                       : Text(l10n.dealsEmpty),
                 )
               : isNarrow
-                  ? _buildGroupedCardList(context, provider, money, items, l10n)
-                  : _buildGroupedTable(context, provider, money, items, l10n),
+                  ? _buildGroupedCardList(
+                      context, provider, money, items, l10n, isMasterDetail)
+                  : _buildGroupedTable(
+                      context, provider, money, items, l10n),
         ),
       ],
     );
@@ -210,6 +348,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     required NumberFormat money,
     required double width,
     required AppLocalizations l10n,
+    required bool isMasterDetail,
   }) {
     return Column(
       children: [
@@ -225,7 +364,8 @@ class _InventoryScreenState extends State<InventoryScreen>
                   ),
                 )
               : isNarrow
-                  ? _buildCardList(context, provider, money, items)
+                  ? _buildCardList(
+                      context, provider, money, items, isMasterDetail)
                   : _buildTable(context, provider, money, items),
         ),
       ],
@@ -240,6 +380,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     NumberFormat money,
     List<InventoryItem> items,
     AppLocalizations l10n,
+    bool isMasterDetail,
   ) {
     final groups = _groupByProduct(
       items,
@@ -250,10 +391,13 @@ class _InventoryScreenState extends State<InventoryScreen>
     // Wenn alle Items ohne Produkt-Verknüpfung sind UND keine Produkte im
     // Katalog existieren → flache Liste wie bisher (keine leere Gruppe-Wrapper).
     if (groups.length == 1 && groups.first.productId == null && provider.products.isEmpty) {
-      return _buildCardList(context, provider, money, items);
+      return _buildCardList(context, provider, money, items, isMasterDetail);
     }
 
     return ListView.builder(
+      // T3.3a: PageStorageKey damit Scroll-Position einen Resize
+      // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
+      key: const PageStorageKey<String>('inventoryStockGroupedList'),
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
       itemCount: groups.length,
       itemBuilder: (context, gi) {
@@ -275,7 +419,8 @@ class _InventoryScreenState extends State<InventoryScreen>
               isOrphaned: group.productId == null,
               l10n: l10n,
               children: group.items.map((item) {
-                return _buildItemRow(context, provider, money, item, l10n);
+                return _buildItemRow(
+                    context, provider, money, item, l10n, isMasterDetail);
               }).toList(),
             ),
           ),
@@ -291,19 +436,30 @@ class _InventoryScreenState extends State<InventoryScreen>
     NumberFormat money,
     InventoryItem item,
     AppLocalizations l10n,
+    bool isMasterDetail,
   ) {
     final color = item.quantity < item.minStock
         ? const Color(0xFFDC2626)
         : item.quantity == item.minStock
             ? const Color(0xFFD97706)
             : const Color(0xFF059669);
+    final isSelected = isMasterDetail && _selectedItemId == item.id;
     return InkWell(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => ProductDetailScreen(item: item),
-        ),
-      ),
-      child: Padding(
+      onTap: () {
+        // T3.3b: Im Master-Detail-Layout NICHT pushen — Detail-Spalte
+        // re-rendert sich anhand `_selectedItemId`. Sonst (Phone/Tablet):
+        // Vollbild-Push wie bisher.
+        _selectItem(item);
+        if (!isMasterDetail) {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ProductDetailScreen(item: item),
+            ),
+          );
+        }
+      },
+      child: Container(
+        color: isSelected ? AppTheme.accentLightOf(context) : null,
         padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -461,6 +617,10 @@ class _InventoryScreenState extends State<InventoryScreen>
 
   // ─── Grouped Desktop-Table ────────────────────────────────────────────────
 
+  /// Renders the grouped DataTable for the Stock tab. Only used when the
+  /// container is wide (≥ 700 px) and not in Master-Detail mode (the 380-px
+  /// master column always falls into the CardList path), so this method does
+  /// not need to know about `isMasterDetail`.
   Widget _buildGroupedTable(
     BuildContext context,
     InventoryProvider provider,
@@ -480,6 +640,9 @@ class _InventoryScreenState extends State<InventoryScreen>
     }
 
     return SingleChildScrollView(
+      // T3.3a: PageStorageKey damit Scroll-Position einen Resize
+      // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
+      key: const PageStorageKey<String>('inventoryStockGroupedTable'),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -954,8 +1117,12 @@ class _InventoryScreenState extends State<InventoryScreen>
     );
   }
 
-  Widget _buildCardList(BuildContext context, InventoryProvider provider, NumberFormat money, List<InventoryItem> items) {
+  Widget _buildCardList(BuildContext context, InventoryProvider provider,
+      NumberFormat money, List<InventoryItem> items, bool isMasterDetail) {
     return ListView.separated(
+      // T3.3a: PageStorageKey damit Scroll-Position einen Resize
+      // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
+      key: const PageStorageKey<String>('inventoryCardList'),
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
       itemCount: items.length,
       separatorBuilder: (context, index) => const SizedBox(height: 8),
@@ -966,14 +1133,25 @@ class _InventoryScreenState extends State<InventoryScreen>
             : item.quantity == item.minStock
                 ? const Color(0xFFD97706)
                 : const Color(0xFF059669);
+        final isSelected = isMasterDetail && _selectedItemId == item.id;
         return Card(
+          color:
+              isSelected ? AppTheme.accentLightOf(context) : null,
           child: InkWell(
             borderRadius: BorderRadius.circular(8),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => ProductDetailScreen(item: item),
-              ),
-            ),
+            onTap: () {
+              // T3.3b: Im Master-Detail-Layout NICHT pushen — Detail-Spalte
+              // re-rendert sich anhand `_selectedItemId`. Sonst (Phone/Tablet):
+              // Vollbild-Push wie bisher.
+              _selectItem(item);
+              if (!isMasterDetail) {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ProductDetailScreen(item: item),
+                  ),
+                );
+              }
+            },
             child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -1093,6 +1271,9 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget _buildTable(BuildContext context, InventoryProvider provider, NumberFormat money, List<InventoryItem> items) {
     final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
+      // T3.3a: PageStorageKey damit Scroll-Position einen Resize
+      // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
+      key: const PageStorageKey<String>('inventoryTable'),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Card(
         child: SingleChildScrollView(
@@ -2084,6 +2265,53 @@ class _EmptyInventoryState extends StatelessWidget {
               color: AppTheme.textMutedOf(context), fontSize: 12),
         ),
       ],
+    );
+  }
+}
+
+/// Empty-state placeholder for the Master-Detail Detail-Pane (Plan §5.5).
+///
+/// Rendered when no inventory item is selected (`_selectedItemId == null`).
+/// Carries `Key('detailPaneEmpty')` so smoke tests can target it.
+class _DetailPaneEmpty extends StatelessWidget {
+  const _DetailPaneEmpty({required this.l10n});
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      key: const Key('detailPaneEmpty'),
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 48,
+              color: AppTheme.textDisabledOf(context),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.detailPaneNoSelection,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimaryOf(context),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              l10n.detailPaneNoSelectionHint,
+              style: TextStyle(
+                color: AppTheme.textMutedOf(context),
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

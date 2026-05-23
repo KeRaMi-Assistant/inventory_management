@@ -76,6 +76,10 @@
   "warehouseHubTileCategories": "Categories",
   "warehouseHubTileStocktake": "Stocktake",
   "warehouseHubTileReporting": "Reporting",
+  "warehouseHubDetailPaneEmpty": "Select an area on the left.",
+  "@warehouseHubDetailPaneEmpty": {
+    "description": "Placeholder in the warehouse hub detail pane (desktop master-detail) when no tile has been selected yet. T3.4."
+  },
 
   "fieldEmail": "Email",
   "fieldPassword": "Password",
@@ -1714,5 +1718,7 @@
   "stocktakeAllCounted": "All positions counted.",
   "stocktakeDiffReportTitle": "Difference report",
   "stocktakeDiffReportNoDiff": "No differences — stock is correct.",
-  "stocktakeNoItems": "No items"
+  "stocktakeNoItems": "No items",
+  "detailPaneNoSelection": "No item selected",
+  "detailPaneNoSelectionHint": "Pick an item from the list to see its details."
 }

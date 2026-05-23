@@ -12,6 +12,12 @@ import '../utils/responsive.dart';
 import '../widgets/kpi_card.dart';
 import 'purchase_orders_screen.dart';
 
+/// Maximale Inhaltsbreite des Dashboards auf großen Viewports (Desktop,
+/// Ultrawide). Stellt sicher, dass KPI-Karten und Panels nicht übermäßig
+/// breit werden. Auf Phone/Tablet ist der Viewport schmaler als dieser Wert,
+/// sodass `Center + ConstrainedBox` dort keine visuelle Wirkung hat.
+const double _kDashboardMaxWidth = 1400;
+
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
@@ -48,37 +54,44 @@ class DashboardScreen extends StatelessWidget {
           enableSwitchAnimation: false,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (isEmpty) const _EmptyStateCard(),
-                if (isEmpty) const SizedBox(height: 24),
-                _LowStockAlertBlock(criticalCount: provider.criticalStockCount),
-                _KpiGrid(provider: provider, fmt: fmt),
-                const SizedBox(height: 24),
-                LayoutBuilder(
-                  builder: (context, c) {
-                    final wide = c.maxWidth > Breakpoints.legacyDashboardWide;
-                    if (wide) {
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(flex: 2, child: _BuyerOverview(fmt: fmt)),
-                          const SizedBox(width: 16),
-                          const Expanded(child: _ActivityFeed()),
-                        ],
-                      );
-                    }
-                    return Column(
-                      children: [
-                        _BuyerOverview(fmt: fmt),
-                        const SizedBox(height: 16),
-                        const _ActivityFeed(),
-                      ],
-                    );
-                  },
+            child: Center(
+              child: ConstrainedBox(
+                // Begrenzt den Dashboard-Inhalt auf Desktop auf _kDashboardMaxWidth —
+                // auf Phone/Tablet kein visueller Unterschied (Viewport < MaxWidth).
+                constraints: const BoxConstraints(maxWidth: _kDashboardMaxWidth),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (isEmpty) const _EmptyStateCard(),
+                    if (isEmpty) const SizedBox(height: 24),
+                    _LowStockAlertBlock(criticalCount: provider.criticalStockCount),
+                    _KpiGrid(provider: provider, fmt: fmt),
+                    const SizedBox(height: 24),
+                    LayoutBuilder(
+                      builder: (context, c) {
+                        final wide = c.maxWidth > Breakpoints.legacyDashboardWide;
+                        if (wide) {
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 2, child: _BuyerOverview(fmt: fmt)),
+                              const SizedBox(width: 16),
+                              const Expanded(child: _ActivityFeed()),
+                            ],
+                          );
+                        }
+                        return Column(
+                          children: [
+                            _BuyerOverview(fmt: fmt),
+                            const SizedBox(height: 16),
+                            const _ActivityFeed(),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );
@@ -335,7 +348,16 @@ class _KpiGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final cols = width < Breakpoints.legacyKpiCompact ? 2 : width < Breakpoints.legacyKpiMedium ? 3 : width < Breakpoints.master ? 4 : 7;
+        // Spaltenanzahl: Ziel-Kartenbreite ~320 px, maximal 4 Spalten (auch
+        // auf Ultrawide), mindestens 2 Spalten (auch auf kleinen Phones).
+        // Formel: (availableWidth / 320).floor().clamp(2, 4)
+        // Beispiele:  360 px → 1,12 → clamp → 2
+        //             640 px → 2,00 → clamp → 2
+        //             900 px → 2,81 → clamp → 2 … (floor=2)
+        //             960 px → 3,00 → clamp → 3
+        //            1280 px → 4,00 → clamp → 4
+        //            2560 px → 8,00 → clamp → 4  ← Ultrawide-Begrenzung
+        final cols = (width / 320).floor().clamp(2, 4);
         return Wrap(
           spacing: 12,
           runSpacing: 12,
