@@ -134,6 +134,10 @@ export const dhlAdapter: TrackingAdapter = {
   },
 
   parseResponse(payload) {
+    // String → XML-Pfad (Parcel-DE-Public-Query liefert XML).
+    if (typeof payload === 'string') {
+      return parseDhlAnyResponse(payload)
+    }
     if (!isObject(payload)) return null
 
     // Variante A — Unified-style JSON: `{ shipments: [{ status: {...} }] }`.
@@ -149,10 +153,18 @@ export const dhlAdapter: TrackingAdapter = {
   },
 }
 
-/// Innerer Helper: ein DHL-Endpoint probieren mit klassifizierter Outcome.
-/// Logs den HTTP-Status + Body-Snippet bei Fehlern (Edge-Function-Logs),
-/// damit der Stakeholder bei „Polling klappt nicht"-Reports direkt im
-/// Supabase-Log nachschauen kann.
+/// Innerer Helper: Parcel-DE-Tracking-Endpoint mit XML-Public-Query
+/// probieren. Logs den HTTP-Status + Body-Snippet bei Fehlern (Edge-
+/// Function-Logs), damit der Stakeholder bei „Polling klappt nicht"-
+/// Reports direkt im Supabase-Log nachschauen kann.
+///
+/// **Auth-Setup laut DHL-Doku (2026-05-23):**
+/// Die Parcel-DE-Tracking-API erwartet:
+///   1. `DHL-API-Key`-Header mit dem App-Consumer-Key (App-Gateway-Auth).
+///   2. Einen **XML-Payload als Query-String** unter dem Parameter `xml=`.
+///      Wir nutzen die **Public Query** (`request="get-status-for-public-user"`),
+///      die KEIN DHL-Geschäftskunden-Login (appname/password) erfordert —
+///      gleiche Daten wie das öffentliche Tracking auf dhl.de.
 async function _probeDhlEndpoint(
   baseUrl: string,
   tracking: string,
@@ -160,10 +172,22 @@ async function _probeDhlEndpoint(
   variant: 'parcel-de' | 'unified',
 ): Promise<ProbeOutcome> {
   const url = new URL(baseUrl)
-  // Beide Parameter-Namen mitgeben — Unified spricht `trackingNumber`,
-  // Parcel-DE spricht historisch `piece-code`. Doppel-Set ist safe.
-  url.searchParams.set('trackingNumber', tracking)
-  url.searchParams.set('piece-code', tracking)
+  if (variant === 'parcel-de') {
+    // XML-Public-Query als ?xml=... — DHL erwartet das so für die
+    // Parcel-DE-Tracking-API. `appname=""` + `password=""` reichen,
+    // weil `request="get-status-for-public-user"` keine Business-
+    // Credentials braucht.
+    const xmlPayload =
+      `<?xml version="1.0" encoding="UTF-8"?>` +
+      `<data appname="" password="" ` +
+      `request="get-status-for-public-user" ` +
+      `language-code="de" ` +
+      `piece-code="${escapeXml(tracking)}"/>`
+    url.searchParams.set('xml', xmlPayload)
+  } else {
+    // Unified/Legacy-Pfad: einfacher trackingNumber-Query (JSON-Response).
+    url.searchParams.set('trackingNumber', tracking)
+  }
 
   let res: Response
   try {
@@ -171,7 +195,8 @@ async function _probeDhlEndpoint(
       method: 'GET',
       headers: {
         'DHL-API-Key': apiKey,
-        'Accept': 'application/json',
+        // Parcel-DE liefert XML, Unified liefert JSON. Beides akzeptieren.
+        'Accept': 'application/json, application/xml;q=0.9, text/xml;q=0.9',
       },
     })
   } catch (e) {
@@ -187,8 +212,9 @@ async function _probeDhlEndpoint(
   }
 
   if (res.status === 200) {
-    const json = await res.json().catch(() => null)
-    const parsed = parseDhlResponseUnion(json)
+    const text = await res.text().catch(() => '')
+    // Erst JSON probieren, dann XML.
+    const parsed = parseDhlAnyResponse(text)
     if (parsed) return { kind: 'hit', parsed }
     // 200 OK aber Body unparsbar / leer → DHL hat Nummer akzeptiert
     // aber kein Shipment-Objekt geliefert. Klassifizieren als miss.
@@ -201,7 +227,7 @@ async function _probeDhlEndpoint(
   let bodySnippet: string | null = null
   try {
     const text = await res.text()
-    bodySnippet = text.slice(0, 200)
+    bodySnippet = text.slice(0, 300)
   } catch {
     bodySnippet = null
   }
@@ -221,6 +247,33 @@ async function _probeDhlEndpoint(
   return { kind: 'miss' }
 }
 
+/// XML-Escape für Tracking-Nummern (defensiv — Trackings sind eigentlich
+/// `[A-Z0-9]+`, aber `<>&"'` werden trotzdem escapt um XML-Injection
+/// vorzubeugen).
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+/// Versucht JSON, dann XML. Gibt ParsedTracking zurück oder null.
+function parseDhlAnyResponse(text: string): ParsedTracking | null {
+  if (!text || text.length === 0) return null
+  // 1) JSON probieren.
+  try {
+    const json = JSON.parse(text)
+    const fromJson = parseDhlResponseUnion(json)
+    if (fromJson) return fromJson
+  } catch {
+    // not JSON — try XML next.
+  }
+  // 2) XML — Parcel-DE-Format heuristisch parsen (kein xml-dom Import).
+  return parseDhlParcelDeXml(text)
+}
+
 /// Aus DHL-Tracking-Nr letzte 4 Zeichen behalten, Rest mit `*` maskieren.
 /// Verhindert PII-Log-Leak (Tracking-Nummern dürfen nicht im Klartext im
 /// Log liegen — siehe CLAUDE.md §Sicherheit).
@@ -238,6 +291,149 @@ function parseDhlResponseUnion(payload: unknown): ParsedTracking | null {
   const parcelDe = parseDhlParcelDe(payload)
   if (parcelDe) return parcelDe
   return null
+}
+
+/// Parser für die XML-Response der Parcel-DE-Tracking-API.
+///
+/// Erwartetes Format (Public Query):
+/// ```xml
+/// <?xml version="1.0" encoding="UTF-8"?>
+/// <data name="pieceshipmentlist" request-id="..." code="0">
+///   <data name="pieceshipment" error-status="0" piece-id="..."
+///         piece-code="00340..." delivery-event-flag="1"
+///         status="Zugestellt" status-timestamp="2026-05-22T10:30:00">
+///     <data name="pieceeventlist" piece-id="...">
+///       <data name="pieceevent" event-timestamp="2026-05-22T10:30:00"
+///             event-status="Zugestellt" event-text="Zugestellt"
+///             standard-event-code="ZU"/>
+///       <!-- ... mehr Events ... -->
+///     </data>
+///   </data>
+/// </data>
+/// ```
+///
+/// Wir parsen heuristisch über Regex — robuster als XML-DOM weil DHL
+/// die Attribute teils einzeilig, teils mehrzeilig schickt. Keine
+/// External-DOM-Library nötig.
+function parseDhlParcelDeXml(xml: string): ParsedTracking | null {
+  // Schnelle Sanity-Checks: enthält das Response überhaupt
+  // pieceshipment/pieceevent? Wenn nicht, return null.
+  if (!xml.includes('pieceshipment') && !xml.includes('pieceevent')) {
+    return null
+  }
+
+  // Top-Level pieceshipment-Tag: nimm das ERSTE Vorkommen.
+  // Pattern: <data name="pieceshipment" ...attr="value"... > oder <... />
+  const shipmentMatch = xml.match(
+    /<data\s+name="pieceshipment"\s+([^>]*?)\/?>/i,
+  )
+  const shipmentAttrs = shipmentMatch ? parseXmlAttrs(shipmentMatch[1]) : {}
+
+  // Alle pieceevent-Tags collecten (kann mehrere geben).
+  const eventTags = xml.match(/<data\s+name="pieceevent"\s+[^>]*?\/?>/gi) ?? []
+  const events: Record<string, string>[] = []
+  for (const tag of eventTags) {
+    const attrMatch = tag.match(/<data\s+name="pieceevent"\s+([^>]*?)\/?>/i)
+    if (attrMatch) events.push(parseXmlAttrs(attrMatch[1]))
+  }
+
+  // Jüngstes Event per `event-timestamp` ermitteln. Wenn alle Timestamps
+  // fehlen, nimm das letzte (DHL liefert üblicherweise chronologisch).
+  let latestEvent: Record<string, string> | null = null
+  let latestTs = -Infinity
+  for (const ev of events) {
+    const ts = ev['event-timestamp']
+    const t = ts ? Date.parse(ts) : NaN
+    if (!Number.isNaN(t) && t > latestTs) {
+      latestTs = t
+      latestEvent = ev
+    }
+  }
+  if (!latestEvent && events.length > 0) latestEvent = events[events.length - 1]
+
+  // Status-Inference: Priorität wie im JSON-Parcel-DE-Parser
+  //   1. `delivery-event-flag="1"` → delivered (sicherstes Signal)
+  //   2. `standard-event-code` (ZU/AZ = delivered, IZ/ES/AB/BA = transit,
+  //      RT/ZF = exception)
+  //   3. Text-Fallback in `event-text`/`status`
+  const deliveryFlag = shipmentAttrs['delivery-event-flag']
+  const eventCode = (
+    latestEvent?.['standard-event-code'] ?? latestEvent?.['event-status']
+  )?.toLowerCase()
+  const eventText =
+    latestEvent?.['event-text'] ??
+    latestEvent?.['event-status'] ??
+    shipmentAttrs['status']
+  const eventTs =
+    latestEvent?.['event-timestamp'] ?? shipmentAttrs['status-timestamp']
+
+  let normalized: TrackingDeliveryStatus = 'unknown'
+  if (deliveryFlag === '1') {
+    normalized = 'delivered'
+  } else if (eventCode) {
+    if (eventCode === 'zu' || eventCode === 'az') normalized = 'delivered'
+    else if (
+      eventCode === 'iz' || eventCode === 'es' || eventCode === 'ab' ||
+      eventCode === 'ba' || eventCode === 'transit' ||
+      eventCode === 'pre-transit' || eventCode === 'out-for-delivery'
+    ) {
+      normalized = 'in_transit'
+    } else if (
+      eventCode === 'rt' || eventCode === 'zf' ||
+      eventCode === 'failure' || eventCode === 'exception'
+    ) {
+      normalized = 'exception'
+    } else {
+      const txt = (eventText ?? '').toLowerCase()
+      if (txt.includes('zugestellt') || txt.includes('delivered')) {
+        normalized = 'delivered'
+      }
+    }
+  } else if (eventText) {
+    const txt = eventText.toLowerCase()
+    if (txt.includes('zugestellt') || txt.includes('delivered')) {
+      normalized = 'delivered'
+    } else if (txt.includes('zustellung') || txt.includes('transit')) {
+      normalized = 'in_transit'
+    }
+  }
+
+  // Wenn weder Shipment noch Events erkannt wurden → kein Match.
+  if (
+    Object.keys(shipmentAttrs).length === 0 &&
+    events.length === 0
+  ) {
+    return null
+  }
+
+  return {
+    status: normalized,
+    deliveredAt: normalized === 'delivered' ? toIso(eventTs) : undefined,
+    lastEvent: eventText,
+    rawStatusCode: eventCode,
+  }
+}
+
+/// Mini-XML-Attribut-Parser: aus `attr1="value" attr2="value"` ein
+/// Record<string, string>. Robust gegen multiple Whitespaces und
+/// Tab/Newline; entitäten (`&amp;`, `&lt;` etc.) werden dekodiert.
+function parseXmlAttrs(s: string): Record<string, string> {
+  const out: Record<string, string> = {}
+  const re = /([a-zA-Z_:-][a-zA-Z0-9_.:-]*)\s*=\s*"([^"]*)"/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(s)) !== null) {
+    out[m[1]] = decodeXmlEntities(m[2])
+  }
+  return out
+}
+
+function decodeXmlEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
 }
 
 /// Parser für das Unified-/Shipment-Tracking-Schema:

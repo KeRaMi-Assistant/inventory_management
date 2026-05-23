@@ -176,6 +176,88 @@ Deno.test('DHL adapter Parcel-DE returns null for empty list', () => {
   assertEquals(dhlAdapter.parseResponse({ pieceshipmentlist: {} }), null)
 })
 
+// ── DHL Parcel DE Tracking — XML-Response (Public Query) ───────────────
+// Die Parcel-DE-Tracking-API liefert nach einem `?xml=<request/>`-Probe
+// **XML zurück**, kein JSON. Adapter muss das via parseResponse(string)
+// erkennen können.
+
+Deno.test('DHL adapter parses Parcel-DE XML response — delivered', () => {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<data name="pieceshipmentlist" request-id="abc" code="0">
+  <data name="pieceshipment" error-status="0"
+        piece-code="00340434161094012345"
+        delivery-event-flag="1"
+        status="Zugestellt"
+        status-timestamp="2026-05-22T10:30:00Z">
+    <data name="pieceeventlist" piece-id="abc">
+      <data name="pieceevent"
+            event-timestamp="2026-05-21T08:15:00Z"
+            event-status="In Zustellung"
+            standard-event-code="IZ"
+            event-text="In Zustellung"/>
+      <data name="pieceevent"
+            event-timestamp="2026-05-22T10:30:00Z"
+            event-status="Zugestellt"
+            standard-event-code="ZU"
+            event-text="Zugestellt"/>
+    </data>
+  </data>
+</data>`
+  const parsed = dhlAdapter.parseResponse(xml)
+  assertExists(parsed)
+  assertEquals(parsed!.status, 'delivered')
+  assertEquals(parsed!.deliveredAt, '2026-05-22T10:30:00.000Z')
+  assertEquals(parsed!.lastEvent, 'Zugestellt')
+  assertEquals(parsed!.rawStatusCode, 'zu')
+})
+
+Deno.test('DHL adapter parses Parcel-DE XML — in_transit', () => {
+  const xml = `<data name="pieceshipmentlist" code="0">
+  <data name="pieceshipment"
+        piece-code="00340434161094012345"
+        delivery-event-flag="0"
+        status-timestamp="2026-05-21T08:15:00Z">
+    <data name="pieceeventlist">
+      <data name="pieceevent"
+            event-timestamp="2026-05-21T08:15:00Z"
+            standard-event-code="IZ"
+            event-text="In Zustellung"/>
+    </data>
+  </data>
+</data>`
+  const parsed = dhlAdapter.parseResponse(xml)
+  assertExists(parsed)
+  assertEquals(parsed!.status, 'in_transit')
+  assertEquals(parsed!.deliveredAt, undefined)
+})
+
+Deno.test('DHL adapter parses Parcel-DE XML — text-only fallback', () => {
+  // Self-closing pieceevent ohne standard-event-code — Adapter
+  // soll trotzdem über event-text="Zugestellt" auf delivered fallen.
+  const xml = `<data name="pieceshipmentlist" code="0">
+  <data name="pieceshipment" piece-code="X"
+        status-timestamp="2026-05-22T10:30:00Z">
+    <data name="pieceeventlist">
+      <data name="pieceevent"
+            event-timestamp="2026-05-22T10:30:00Z"
+            event-text="Sendung wurde zugestellt."/>
+    </data>
+  </data>
+</data>`
+  const parsed = dhlAdapter.parseResponse(xml)
+  assertExists(parsed)
+  assertEquals(parsed!.status, 'delivered')
+})
+
+Deno.test('DHL adapter returns null for empty XML / unrelated text', () => {
+  assertEquals(dhlAdapter.parseResponse(''), null)
+  assertEquals(dhlAdapter.parseResponse('not xml'), null)
+  assertEquals(
+    dhlAdapter.parseResponse('<?xml version="1.0"?><error>no data</error>'),
+    null,
+  )
+})
+
 // ── DPD ─────────────────────────────────────────────────────────────────
 Deno.test('DPD adapter parses delivered from latest statusInfo', () => {
   const payload = {
