@@ -215,6 +215,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get warehouseHubTileReporting => 'Reporting';
 
   @override
+  String get warehouseHubDetailPaneEmpty => 'Select an area on the left.';
+
+  @override
   String get fieldEmail => 'Email';
 
   @override
@@ -2164,6 +2167,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ticketsEmpty => 'No tickets found';
 
   @override
+  String get ticketsEmptyHint => 'Adjust filters or create a new ticket.';
+
+  @override
   String get ticketsNoTicket => 'No ticket';
 
   @override
@@ -2395,6 +2401,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ticketsArchiveEmpty => 'No archived tickets';
 
   @override
+  String get ticketsArchiveEmptyHint =>
+      'Completed tickets will be archived here.';
+
+  @override
   String get ticketsArchiveReopen => 'Reopen ticket';
 
   @override
@@ -2530,6 +2540,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inventorySoldEmpty => 'No sold items yet.';
+
+  @override
+  String get inventorySoldEmptyHint =>
+      'Items you mark as sold will appear here.';
 
   @override
   String get inventorySoldKpiCount => 'Items sold';
@@ -3606,6 +3620,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inboxOpenTicketLabel => 'Open ticket';
 
   @override
+  String get inboxSuggestionsEmpty => 'No open suggestions';
+
+  @override
+  String get inboxSuggestionsEmptyHint =>
+      'New mails are analysed automatically and will appear here.';
+
+  @override
+  String get inboxUpdatedEmpty => 'No automatically updated deals';
+
+  @override
+  String get inboxUpdatedEmptyHint =>
+      'Deals whose shipping status was automatically updated appear here.';
+
+  @override
+  String get inboxUnclassifiedEmpty => 'No unclassified mails';
+
+  @override
+  String get inboxUnclassifiedEmptyHint =>
+      'Mails without a matching deal or carrier are collected here.';
+
+  @override
   String get inventoryDiscordTooltip => 'Open Discord ticket';
 
   @override
@@ -4429,4 +4464,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stocktakeNoItems => 'No items';
+
+  @override
+  String get detailPaneNoSelection => 'No item selected';
+
+  @override
+  String get detailPaneNoSelectionHint =>
+      'Pick an item from the list to see its details.';
 }

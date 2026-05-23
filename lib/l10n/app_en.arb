@@ -76,6 +76,10 @@
   "warehouseHubTileCategories": "Categories",
   "warehouseHubTileStocktake": "Stocktake",
   "warehouseHubTileReporting": "Reporting",
+  "warehouseHubDetailPaneEmpty": "Select an area on the left.",
+  "@warehouseHubDetailPaneEmpty": {
+    "description": "Placeholder in the warehouse hub detail pane (desktop master-detail) when no tile has been selected yet. T3.4."
+  },
 
   "fieldEmail": "Email",
   "fieldPassword": "Password",
@@ -836,6 +840,7 @@
   "helpPrivacyNoteDesc": "The app does not replace bookkeeping or tax advice — statistics are estimates. Before your first quarterly close please consult a tax advisor.",
 
   "ticketsEmpty": "No tickets found",
+  "ticketsEmptyHint": "Adjust filters or create a new ticket.",
   "ticketsNoTicket": "No ticket",
 
   "inventoryEmpty": "Inventory is empty.",
@@ -919,6 +924,7 @@
   "ticketsTabActive": "Active",
   "ticketsTabArchive": "Archive",
   "ticketsArchiveEmpty": "No archived tickets",
+  "ticketsArchiveEmptyHint": "Completed tickets will be archived here.",
   "ticketsArchiveReopen": "Reopen ticket",
   "ticketsArchiveReopenConfirm": "Reopen this ticket? Archive timestamp and reason will be cleared.",
   "ticketsArchiveMonthProfit": "Profit: {profit}",
@@ -966,6 +972,7 @@
   "inventoryTabStock": "Stock",
   "inventoryTabSold": "Sold",
   "inventorySoldEmpty": "No sold items yet.",
+  "inventorySoldEmptyHint": "Items you mark as sold will appear here.",
   "inventorySoldKpiCount": "Items sold",
   "inventorySoldKpiProfit": "Total profit",
   "inventorySoldKpiTopBuyers": "Top 3 buyers",
@@ -1379,6 +1386,12 @@
   "inboxOpenMailInBrowserMenuItem": "Open mail in browser",
   "inboxOpenMailLabel": "Open mail",
   "inboxOpenTicketLabel": "Open ticket",
+  "inboxSuggestionsEmpty": "No open suggestions",
+  "inboxSuggestionsEmptyHint": "New mails are analysed automatically and will appear here.",
+  "inboxUpdatedEmpty": "No automatically updated deals",
+  "inboxUpdatedEmptyHint": "Deals whose shipping status was automatically updated appear here.",
+  "inboxUnclassifiedEmpty": "No unclassified mails",
+  "inboxUnclassifiedEmptyHint": "Mails without a matching deal or carrier are collected here.",
   "inventoryDiscordTooltip": "Open Discord ticket",
   "inventoryProductHelperText": "Select from ticket or type freely",
   "settingsAddAmazonShops": "Add Amazon shops",
@@ -1714,5 +1727,7 @@
   "stocktakeAllCounted": "All positions counted.",
   "stocktakeDiffReportTitle": "Difference report",
   "stocktakeDiffReportNoDiff": "No differences — stock is correct.",
-  "stocktakeNoItems": "No items"
+  "stocktakeNoItems": "No items",
+  "detailPaneNoSelection": "No item selected",
+  "detailPaneNoSelectionHint": "Pick an item from the list to see its details."
 }

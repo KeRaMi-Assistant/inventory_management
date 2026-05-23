@@ -476,6 +476,12 @@ abstract class AppLocalizations {
   /// **'Reporting'**
   String get warehouseHubTileReporting;
 
+  /// Placeholder im Detail-Pane des Warehouse-Hubs (Desktop-Master-Detail), wenn noch keine Kachel ausgewählt wurde. T3.4.
+  ///
+  /// In de, this message translates to:
+  /// **'Wähle links einen Bereich aus.'**
+  String get warehouseHubDetailPaneEmpty;
+
   /// No description provided for @fieldEmail.
   ///
   /// In de, this message translates to:
@@ -3890,6 +3896,12 @@ abstract class AppLocalizations {
   /// **'Keine Tickets gefunden'**
   String get ticketsEmpty;
 
+  /// No description provided for @ticketsEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Filter anpassen oder ein neues Ticket anlegen.'**
+  String get ticketsEmptyHint;
+
   /// No description provided for @ticketsNoTicket.
   ///
   /// In de, this message translates to:
@@ -4340,6 +4352,12 @@ abstract class AppLocalizations {
   /// **'Keine archivierten Tickets'**
   String get ticketsArchiveEmpty;
 
+  /// No description provided for @ticketsArchiveEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Abgeschlossene Tickets werden hier archiviert.'**
+  String get ticketsArchiveEmptyHint;
+
   /// No description provided for @ticketsArchiveReopen.
   ///
   /// In de, this message translates to:
@@ -4603,6 +4621,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Noch keine verkauften Artikel.'**
   String get inventorySoldEmpty;
+
+  /// No description provided for @inventorySoldEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel, die du als verkauft markierst, erscheinen hier.'**
+  String get inventorySoldEmptyHint;
 
   /// No description provided for @inventorySoldKpiCount.
   ///
@@ -6524,6 +6548,42 @@ abstract class AppLocalizations {
   /// **'Ticket öffnen'**
   String get inboxOpenTicketLabel;
 
+  /// No description provided for @inboxSuggestionsEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine offenen Vorschläge'**
+  String get inboxSuggestionsEmpty;
+
+  /// No description provided for @inboxSuggestionsEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Mails werden automatisch analysiert und erscheinen hier.'**
+  String get inboxSuggestionsEmptyHint;
+
+  /// No description provided for @inboxUpdatedEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine aktualisierten Deals'**
+  String get inboxUpdatedEmpty;
+
+  /// No description provided for @inboxUpdatedEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Deals, bei denen der Versandstatus automatisch aktualisiert wurde, erscheinen hier.'**
+  String get inboxUpdatedEmptyHint;
+
+  /// No description provided for @inboxUnclassifiedEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine unklassifizierten Mails'**
+  String get inboxUnclassifiedEmpty;
+
+  /// No description provided for @inboxUnclassifiedEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Mails ohne zuordenbaren Deal oder Carrier werden hier gesammelt.'**
+  String get inboxUnclassifiedEmptyHint;
+
   /// No description provided for @inventoryDiscordTooltip.
   ///
   /// In de, this message translates to:
@@ -8083,6 +8143,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Keine Positionen'**
   String get stocktakeNoItems;
+
+  /// No description provided for @detailPaneNoSelection.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Eintrag ausgewählt'**
+  String get detailPaneNoSelection;
+
+  /// No description provided for @detailPaneNoSelectionHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Wähle links einen Artikel aus, um Details zu sehen.'**
+  String get detailPaneNoSelectionHint;
 }
 
 class _AppLocalizationsDelegate

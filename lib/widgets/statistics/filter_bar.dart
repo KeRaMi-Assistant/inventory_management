@@ -6,6 +6,7 @@ import '../../app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/inventory_provider.dart';
 import '../../providers/statistics_filter_provider.dart';
+import '../../utils/responsive.dart';
 
 /// Filter-Toolbar oben in der Statistik. Adaptiv: auf schmalen Bildschirmen
 /// in zwei Reihen, auf breiten in einer.
@@ -30,7 +31,7 @@ class StatisticsFilterBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: LayoutBuilder(
         builder: (context, c) {
-          final wide = c.maxWidth > 900;
+          final wide = c.maxWidth > Breakpoints.legacyStatsWide;
           final children = <Widget>[
             _PresetGroup(
               selected: filter.preset,

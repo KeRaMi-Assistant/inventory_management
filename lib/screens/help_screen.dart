@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/inventory_provider.dart';
+import '../widgets/app_screen_scaffold.dart';
 
 /// Hilfe-/Onboarding-Seite. Zeigt eine durchsuchbare Sammlung an
 /// Sektionen (Quick-Start, Postfach, Deals, Inventory, FAQ, Troubleshooting,
@@ -48,66 +49,72 @@ class _HelpScreenState extends State<HelpScreen> {
         ? sections
         : sections.where((s) => s.matches(q)).toList(growable: false);
 
-    final body = SafeArea(
-      top: !widget.embedded,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: _HelpSearchField(
-              controller: _searchCtrl,
-              hintText: l10n.helpSearchHint,
-              onChanged: _onChanged,
-              onClear: _clear,
-            ),
+    // Inner content column — shared between embedded and non-embedded paths.
+    // SafeArea is NOT included here; embedded path adds it explicitly and
+    // AppScreenScaffold handles it for the non-embedded path.
+    final contentColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: _HelpSearchField(
+            controller: _searchCtrl,
+            hintText: l10n.helpSearchHint,
+            onChanged: _onChanged,
+            onClear: _clear,
           ),
-          if (q.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  l10n.helpResultsLabel(filtered.length),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textMutedOf(context),
-                    fontWeight: FontWeight.w600,
-                  ),
+        ),
+        if (q.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                l10n.helpResultsLabel(filtered.length),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textMutedOf(context),
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-          Expanded(
-            child: filtered.isEmpty
-                ? _HelpEmptyState(
-                    title: l10n.helpSearchEmptyTitle,
-                    body: l10n.helpSearchEmptyDesc,
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
-                    itemCount: filtered.length,
-                    itemBuilder: (_, i) {
-                      final s = filtered[i];
-                      return _HelpSectionCard(
-                        section: s,
-                        forceExpanded: q.isNotEmpty,
-                        defaultExpanded: i == 0,
-                        query: q,
-                      );
-                    },
-                  ),
           ),
-        ],
-      ),
+        Expanded(
+          child: filtered.isEmpty
+              ? _HelpEmptyState(
+                  title: l10n.helpSearchEmptyTitle,
+                  body: l10n.helpSearchEmptyDesc,
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                  itemCount: filtered.length,
+                  itemBuilder: (_, i) {
+                    final s = filtered[i];
+                    return _HelpSectionCard(
+                      section: s,
+                      forceExpanded: q.isNotEmpty,
+                      defaultExpanded: i == 0,
+                      query: q,
+                    );
+                  },
+                ),
+        ),
+      ],
     );
 
     if (widget.embedded) {
-      return Container(color: AppTheme.bgAppOf(context), child: body);
+      // Embedded: no AppBar, SafeArea only for bottom/sides (top handled by
+      // parent scaffold's AppBar).
+      return Container(
+        color: AppTheme.bgAppOf(context),
+        child: SafeArea(top: false, child: contentColumn),
+      );
     }
-    return Scaffold(
-      backgroundColor: AppTheme.bgAppOf(context),
+
+    // Non-embedded: AppScreenScaffold provides SafeArea + maxWidth container.
+    return AppScreenScaffold(
       appBar: AppBar(title: Text(l10n.helpTitle)),
-      body: body,
+      body: contentColumn,
     );
   }
 

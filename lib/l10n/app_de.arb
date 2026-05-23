@@ -76,6 +76,10 @@
   "warehouseHubTileCategories": "Warengruppen",
   "warehouseHubTileStocktake": "Inventur",
   "warehouseHubTileReporting": "Reporting",
+  "warehouseHubDetailPaneEmpty": "Wähle links einen Bereich aus.",
+  "@warehouseHubDetailPaneEmpty": {
+    "description": "Placeholder im Detail-Pane des Warehouse-Hubs (Desktop-Master-Detail), wenn noch keine Kachel ausgewählt wurde. T3.4."
+  },
 
   "fieldEmail": "E-Mail",
   "fieldPassword": "Passwort",
@@ -836,6 +840,7 @@
   "helpPrivacyNoteDesc": "Die App ersetzt keine Buchhaltung oder Steuerberatung — die Statistiken sind Schätzungen. Vor dem ersten Quartalsabschluss bitte mit einem Steuerberater sprechen.",
 
   "ticketsEmpty": "Keine Tickets gefunden",
+  "ticketsEmptyHint": "Filter anpassen oder ein neues Ticket anlegen.",
   "ticketsNoTicket": "Kein Ticket",
 
   "inventoryEmpty": "Lager ist leer.",
@@ -919,6 +924,7 @@
   "ticketsTabActive": "Aktiv",
   "ticketsTabArchive": "Archiv",
   "ticketsArchiveEmpty": "Keine archivierten Tickets",
+  "ticketsArchiveEmptyHint": "Abgeschlossene Tickets werden hier archiviert.",
   "ticketsArchiveReopen": "Wieder öffnen",
   "ticketsArchiveReopenConfirm": "Dieses Ticket wieder öffnen? Archiv-Zeitpunkt und Grund werden zurückgesetzt.",
   "ticketsArchiveMonthProfit": "Profit: {profit}",
@@ -966,6 +972,7 @@
   "inventoryTabStock": "Lager",
   "inventoryTabSold": "Verkauft",
   "inventorySoldEmpty": "Noch keine verkauften Artikel.",
+  "inventorySoldEmptyHint": "Artikel, die du als verkauft markierst, erscheinen hier.",
   "inventorySoldKpiCount": "Verkaufte Items",
   "inventorySoldKpiProfit": "Gesamt-Profit",
   "inventorySoldKpiTopBuyers": "Top 3 Käufer",
@@ -1379,6 +1386,12 @@
   "inboxOpenMailInBrowserMenuItem": "Mail im Browser öffnen",
   "inboxOpenMailLabel": "Mail öffnen",
   "inboxOpenTicketLabel": "Ticket öffnen",
+  "inboxSuggestionsEmpty": "Keine offenen Vorschläge",
+  "inboxSuggestionsEmptyHint": "Neue Mails werden automatisch analysiert und erscheinen hier.",
+  "inboxUpdatedEmpty": "Keine aktualisierten Deals",
+  "inboxUpdatedEmptyHint": "Deals, bei denen der Versandstatus automatisch aktualisiert wurde, erscheinen hier.",
+  "inboxUnclassifiedEmpty": "Keine unklassifizierten Mails",
+  "inboxUnclassifiedEmptyHint": "Mails ohne zuordenbaren Deal oder Carrier werden hier gesammelt.",
   "inventoryDiscordTooltip": "Discord-Ticket öffnen",
   "inventoryProductHelperText": "Aus Ticket auswählen oder frei eingeben",
   "settingsAddAmazonShops": "Amazon-Shops hinzufügen",
@@ -1714,5 +1727,7 @@
   "stocktakeAllCounted": "Alle Positionen gezählt.",
   "stocktakeDiffReportTitle": "Differenz-Report",
   "stocktakeDiffReportNoDiff": "Keine Differenzen — Bestand ist korrekt.",
-  "stocktakeNoItems": "Keine Positionen"
+  "stocktakeNoItems": "Keine Positionen",
+  "detailPaneNoSelection": "Kein Eintrag ausgewählt",
+  "detailPaneNoSelectionHint": "Wähle links einen Artikel aus, um Details zu sehen."
 }

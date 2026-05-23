@@ -9,6 +9,7 @@ import '../models/product_category.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/validators.dart';
+import '../widgets/app_screen_scaffold.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CategoriesScreen
@@ -22,9 +23,21 @@ import '../utils/validators.dart';
 ///
 /// Sub-Route des Warenwirtschaft-Hubs — wird per [Navigator.push] geöffnet.
 ///
+/// **Zwei Modi (additiv, rückwärtskompatibel):**
+/// - `embedded == false` (Default): eigener [Scaffold] + [AppBar] für den
+///   Vollbild-Push-Pfad (Phone-Hub-Verhalten).
+/// - `embedded == true` (T3.4): kein [AppBar] — nur ein [Scaffold] mit FAB
+///   und Body, damit der Screen in einer Master-Detail-Detail-Spalte
+///   gerendert werden kann (Desktop-Warehouse-Hub).
+///
 /// A11y-Keys: `categoryNewFab`, `categoryRow-<id>`.
 class CategoriesScreen extends StatelessWidget {
-  const CategoriesScreen({super.key});
+  /// Wenn `true`, wird kein [AppBar] gerendert — geeignet für
+  /// Master-Detail-Embeds (T3.4 Warehouse-Hub-Desktop). Default `false`
+  /// (rückwärtskompatibel mit allen bisherigen Aufrufern).
+  final bool embedded;
+
+  const CategoriesScreen({super.key, this.embedded = false});
 
   Future<void> _confirmDelete(
     BuildContext context,
@@ -76,36 +89,42 @@ class CategoriesScreen extends StatelessWidget {
         // Sort: top-level first by sortOrder, then children under their parent.
         final sorted = _buildSortedList(categories);
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(l10n.categoriesTitle),
-          ),
-          floatingActionButton: canEdit
-              ? FloatingActionButton.extended(
-                  key: const Key('categoryNewFab'),
-                  onPressed: () => _openAddDialog(context),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(l10n.categoryNew),
-                )
-              : null,
-          body: SafeArea(
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : provider.lastError != null
-                    ? _ErrorState(
-                        message: l10n.categoriesLoadError,
-                        onRetry: () => provider.loadData(),
-                      )
-                    : sorted.isEmpty
-                        ? _EmptyState(canEdit: canEdit)
-                        : _CategoryList(
-                            items: sorted,
-                            canEdit: canEdit,
-                            onEdit: (c) => _openAddDialog(context, category: c),
-                            onDelete: (c) =>
-                                _confirmDelete(context, provider, c),
-                          ),
-          ),
+        final fab = canEdit
+            ? FloatingActionButton.extended(
+                key: const Key('categoryNewFab'),
+                onPressed: () => _openAddDialog(context),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(l10n.categoryNew),
+              )
+            : null;
+
+        final bodyContent = provider.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : provider.lastError != null
+                ? _ErrorState(
+                    message: l10n.categoriesLoadError,
+                    onRetry: () => provider.loadData(),
+                  )
+                : sorted.isEmpty
+                    ? _EmptyState(canEdit: canEdit)
+                    : _CategoryList(
+                        items: sorted,
+                        canEdit: canEdit,
+                        onEdit: (c) => _openAddDialog(context, category: c),
+                        onDelete: (c) => _confirmDelete(context, provider, c),
+                      );
+
+        if (embedded) {
+          return Scaffold(
+            floatingActionButton: fab,
+            body: SafeArea(child: bodyContent),
+          );
+        }
+
+        return AppScreenScaffold(
+          appBar: AppBar(title: Text(l10n.categoriesTitle)),
+          floatingActionButton: fab,
+          body: bodyContent,
         );
       },
     );

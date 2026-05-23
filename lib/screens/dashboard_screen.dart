@@ -8,8 +8,16 @@ import '../l10n/app_localizations.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
-import '../widgets/kpi_card.dart';
+import '../utils/responsive.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/statistics/kpi_card.dart';
 import 'purchase_orders_screen.dart';
+
+/// Maximale Inhaltsbreite des Dashboards auf großen Viewports (Desktop,
+/// Ultrawide). Stellt sicher, dass KPI-Karten und Panels nicht übermäßig
+/// breit werden. Auf Phone/Tablet ist der Viewport schmaler als dieser Wert,
+/// sodass `Center + ConstrainedBox` dort keine visuelle Wirkung hat.
+const double _kDashboardMaxWidth = 1400;
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -47,37 +55,44 @@ class DashboardScreen extends StatelessWidget {
           enableSwitchAnimation: false,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (isEmpty) const _EmptyStateCard(),
-                if (isEmpty) const SizedBox(height: 24),
-                _LowStockAlertBlock(criticalCount: provider.criticalStockCount),
-                _KpiGrid(provider: provider, fmt: fmt),
-                const SizedBox(height: 24),
-                LayoutBuilder(
-                  builder: (context, c) {
-                    final wide = c.maxWidth > 960;
-                    if (wide) {
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(flex: 2, child: _BuyerOverview(fmt: fmt)),
-                          const SizedBox(width: 16),
-                          const Expanded(child: _ActivityFeed()),
-                        ],
-                      );
-                    }
-                    return Column(
-                      children: [
-                        _BuyerOverview(fmt: fmt),
-                        const SizedBox(height: 16),
-                        const _ActivityFeed(),
-                      ],
-                    );
-                  },
+            child: Center(
+              child: ConstrainedBox(
+                // Begrenzt den Dashboard-Inhalt auf Desktop auf _kDashboardMaxWidth —
+                // auf Phone/Tablet kein visueller Unterschied (Viewport < MaxWidth).
+                constraints: const BoxConstraints(maxWidth: _kDashboardMaxWidth),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (isEmpty) const _EmptyStateCard(),
+                    if (isEmpty) const SizedBox(height: 24),
+                    _LowStockAlertBlock(criticalCount: provider.criticalStockCount),
+                    _KpiGrid(provider: provider, fmt: fmt),
+                    const SizedBox(height: 24),
+                    LayoutBuilder(
+                      builder: (context, c) {
+                        final wide = c.maxWidth > Breakpoints.legacyDashboardWide;
+                        if (wide) {
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 2, child: _BuyerOverview(fmt: fmt)),
+                              const SizedBox(width: 16),
+                              const Expanded(child: _ActivityFeed()),
+                            ],
+                          );
+                        }
+                        return Column(
+                          children: [
+                            _BuyerOverview(fmt: fmt),
+                            const SizedBox(height: 16),
+                            const _ActivityFeed(),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );
@@ -113,7 +128,7 @@ class _LowStockAlertBlock extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final phone = constraints.maxWidth < 520;
+              final phone = constraints.maxWidth < Breakpoints.legacyDashboardCompact;
               final info = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -199,6 +214,12 @@ class _LowStockAlertBlock extends StatelessWidget {
 
 // ─── Empty-State (Erst-Login ohne Daten) ──────────────────────────────────
 
+/// Onboarding-Panel, das auf dem Dashboard erscheint, wenn noch keine Daten
+/// vorhanden sind. Nutzt [EmptyState] mit `cardStyle: true` für die
+/// Card-Optik und übergibt den Demo-Daten-Button als `action`-Slot.
+///
+/// Stateful nur wegen des `_loading`-Zustands während des async [_loadDemo]-
+/// Calls — das UI-Skeleton kommt von [EmptyState].
 class _EmptyStateCard extends StatefulWidget {
   const _EmptyStateCard();
 
@@ -242,70 +263,25 @@ class _EmptyStateCardState extends State<_EmptyStateCard> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.bgSurfaceOf(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.borderOf(context)),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final phone = constraints.maxWidth < 520;
-          final info = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.lightbulb_outline,
-                      color: AppTheme.accent),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      l10n.dashboardEmptyTitle,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 16),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.dashboardEmptySubtitle,
-                style: TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.textMutedOf(context)),
-              ),
-            ],
-          );
-          final cta = SizedBox(
-            height: 48,
-            child: ElevatedButton.icon(
-              onPressed: _loading ? null : _loadDemo,
-              icon: _loading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.dataset_outlined),
-              label: Text(l10n.dashboardEmptyLoadDemo),
-            ),
-          );
-          if (phone) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [info, const SizedBox(height: 16), cta],
-            );
-          }
-          return Row(
-            children: [
-              Expanded(child: info),
-              const SizedBox(width: 16),
-              cta,
-            ],
-          );
-        },
+    return EmptyState(
+      icon: Icons.lightbulb_outline,
+      title: l10n.dashboardEmptyTitle,
+      subtitle: l10n.dashboardEmptySubtitle,
+      keySlug: 'dashboardEmpty',
+      cardStyle: true,
+      action: SizedBox(
+        height: 48,
+        child: ElevatedButton.icon(
+          onPressed: _loading ? null : _loadDemo,
+          icon: _loading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.dataset_outlined),
+          label: Text(l10n.dashboardEmptyLoadDemo),
+        ),
       ),
     );
   }
@@ -334,7 +310,16 @@ class _KpiGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final cols = width < 500 ? 2 : width < 900 ? 3 : width < 1200 ? 4 : 7;
+        // Spaltenanzahl: Ziel-Kartenbreite ~320 px, maximal 4 Spalten (auch
+        // auf Ultrawide), mindestens 2 Spalten (auch auf kleinen Phones).
+        // Formel: (availableWidth / 320).floor().clamp(2, 4)
+        // Beispiele:  360 px → 1,12 → clamp → 2
+        //             640 px → 2,00 → clamp → 2
+        //             900 px → 2,81 → clamp → 2 … (floor=2)
+        //             960 px → 3,00 → clamp → 3
+        //            1280 px → 4,00 → clamp → 4
+        //            2560 px → 8,00 → clamp → 4  ← Ultrawide-Begrenzung
+        final cols = (width / 320).floor().clamp(2, 4);
         return Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -342,7 +327,7 @@ class _KpiGrid extends StatelessWidget {
             final itemWidth = (width - (cols - 1) * 12) / cols;
             return SizedBox(
               width: itemWidth,
-              child: KpiCard(icon: k.$1, title: k.$2, value: k.$3, color: k.$4),
+              child: KpiCard(icon: k.$1, label: k.$2, value: k.$3, accent: k.$4),
             );
           }).toList(),
         );

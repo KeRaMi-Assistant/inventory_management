@@ -7,6 +7,7 @@ import '../../../app_theme.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/statistics_filter_provider.dart';
 import '../../../services/statistics_service.dart';
+import '../../../utils/responsive.dart';
 import '../sortable_table.dart';
 import '../stat_panel.dart';
 
@@ -30,9 +31,9 @@ class InventorySuppliersTab extends StatelessWidget {
           icon: Icons.health_and_safety_outlined,
           child: LayoutBuilder(
             builder: (context, c) {
-              final cols = c.maxWidth < 480
+              final cols = c.maxWidth < Breakpoints.legacyStatsNarrow
                   ? 2
-                  : c.maxWidth < 800
+                  : c.maxWidth < Breakpoints.legacyStatsFinanceWide
                       ? 3
                       : 4;
               const gap = 12.0;
@@ -225,7 +226,7 @@ class _StockValuationPanel extends StatelessWidget {
         children: [
           // KPI-Zeile: Gesamtwert + Gesamtmenge
           LayoutBuilder(builder: (context, c) {
-            final isWide = c.maxWidth >= 480;
+            final isWide = c.maxWidth >= Breakpoints.legacyStatsNarrow;
             final totalValueCard = _ReportKpiCard(
               label: l10n.reportStockValuationTotal,
               value: money.format(report.totalValue),
@@ -258,7 +259,7 @@ class _StockValuationPanel extends StatelessWidget {
           const SizedBox(height: 16),
           // Artikel-Liste (Top 10)
           LayoutBuilder(builder: (context, c) {
-            final isWide = c.maxWidth >= 800;
+            final isWide = c.maxWidth >= Breakpoints.legacyStatsFinanceWide;
             final top = report.items.take(10).toList();
             if (isWide) {
               // Tabellen-Ansicht auf Tablet/Desktop
@@ -472,7 +473,7 @@ class _InventoryTurnoverPanel extends StatelessWidget {
             )
           else
             LayoutBuilder(builder: (context, c) {
-              final isWide = c.maxWidth >= 480;
+              final isWide = c.maxWidth >= Breakpoints.legacyStatsNarrow;
               final rateCard = _ReportKpiCard(
                 label: l10n.reportInventoryTurnoverRate,
                 value: report.turnoverRate.toStringAsFixed(2),
@@ -615,7 +616,7 @@ class _AbcAnalysisPanel extends StatelessWidget {
 
           // Donut-Chart + Klassensummary
           LayoutBuilder(builder: (context, c) {
-            final isWide = c.maxWidth >= 480;
+            final isWide = c.maxWidth >= Breakpoints.legacyStatsNarrow;
             // Donut: Wert pro Klasse
             final donutData = <String, double>{};
             if (report.valueA > 0) donutData['A'] = report.valueA;
@@ -694,7 +695,7 @@ class _AbcAnalysisPanel extends StatelessWidget {
 
           // Artikel-Tabelle / Cards
           LayoutBuilder(builder: (context, c) {
-            final isWide = c.maxWidth >= 800;
+            final isWide = c.maxWidth >= Breakpoints.legacyStatsFinanceWide;
             final top = report.items.take(15).toList();
 
             if (isWide) {

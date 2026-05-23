@@ -7,6 +7,7 @@ import '../models/product.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../widgets/add_edit_product_dialog.dart';
+import '../widgets/app_screen_scaffold.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ProductCatalogScreen
@@ -22,11 +23,23 @@ import '../widgets/add_edit_product_dialog.dart';
 ///
 /// Sub-Route des Warenwirtschaft-Hubs — wird per [Navigator.push] geöffnet.
 ///
+/// **Zwei Modi (additiv, rückwärtskompatibel):**
+/// - `embedded == false` (Default): eigener [Scaffold] + [AppBar] für den
+///   Vollbild-Push-Pfad (Phone-Hub-Verhalten).
+/// - `embedded == true` (T3.4): kein [AppBar] — nur ein [Scaffold] mit FAB
+///   und Body, damit der Screen in einer Master-Detail-Detail-Spalte
+///   gerendert werden kann (Desktop-Warehouse-Hub).
+///
 /// A11y-Keys: `productNewFab`, `productCatalogCard-<id>`.
 /// Mobile-First: 360×640 + 390×844, vertikale Cards, SafeArea,
 /// Touch-Targets ≥ 48 dp, Theme-Tokens.
 class ProductCatalogScreen extends StatelessWidget {
-  const ProductCatalogScreen({super.key});
+  /// Wenn `true`, wird kein [AppBar] gerendert — geeignet für
+  /// Master-Detail-Embeds (T3.4 Warehouse-Hub-Desktop). Default `false`
+  /// (rückwärtskompatibel mit allen bisherigen Aufrufern).
+  final bool embedded;
+
+  const ProductCatalogScreen({super.key, this.embedded = false});
 
   void _openDialog(BuildContext context, {Product? product}) {
     showDialog<void>(
@@ -43,35 +56,42 @@ class ProductCatalogScreen extends StatelessWidget {
         final canEdit = wsProvider.role?.canEdit ?? false;
         final products = provider.products;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(l10n.productCatalogTitle),
-          ),
-          floatingActionButton: canEdit
-              ? FloatingActionButton.extended(
-                  key: const Key('productNewFab'),
-                  onPressed: () => _openDialog(context),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(l10n.productNew),
-                )
-              : null,
-          body: SafeArea(
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : provider.lastError != null
-                    ? _ErrorState(
-                        message: l10n.productCatalogLoadError,
-                        onRetry: () => provider.loadData(),
-                      )
-                    : products.isEmpty
-                        ? _EmptyState(canEdit: canEdit)
-                        : _ProductList(
-                            products: products,
-                            provider: provider,
-                            canEdit: canEdit,
-                            onTap: (p) => _openDialog(context, product: p),
-                          ),
-          ),
+        final fab = canEdit
+            ? FloatingActionButton.extended(
+                key: const Key('productNewFab'),
+                onPressed: () => _openDialog(context),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(l10n.productNew),
+              )
+            : null;
+
+        final bodyContent = provider.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : provider.lastError != null
+                ? _ErrorState(
+                    message: l10n.productCatalogLoadError,
+                    onRetry: () => provider.loadData(),
+                  )
+                : products.isEmpty
+                    ? _EmptyState(canEdit: canEdit)
+                    : _ProductList(
+                        products: products,
+                        provider: provider,
+                        canEdit: canEdit,
+                        onTap: (p) => _openDialog(context, product: p),
+                      );
+
+        if (embedded) {
+          return Scaffold(
+            floatingActionButton: fab,
+            body: SafeArea(child: bodyContent),
+          );
+        }
+
+        return AppScreenScaffold(
+          appBar: AppBar(title: Text(l10n.productCatalogTitle)),
+          floatingActionButton: fab,
+          body: bodyContent,
         );
       },
     );

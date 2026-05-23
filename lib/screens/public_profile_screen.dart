@@ -7,6 +7,7 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/public_profile.dart';
 import '../services/workspace_service.dart';
+import '../utils/responsive.dart';
 
 /// Öffentlich erreichbare Verkaufsseite eines Workspaces (`/u/<handle>`).
 /// Lädt Daten via SECURITY-DEFINER-RPC; benötigt keinen Login.
@@ -109,10 +110,10 @@ class _ProfileView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final width = MediaQuery.sizeOf(context).width;
-    final isPhone = width < 600;
-    final crossCount = width >= 1100
+    final isPhone = width < Breakpoints.phone;
+    final crossCount = width >= Breakpoints.legacyProfileWide
         ? 3
-        : width >= 700
+        : width >= Breakpoints.legacyProfileMedium
             ? 2
             : 1;
 
@@ -186,7 +187,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isPhone = MediaQuery.sizeOf(context).width < 600;
+    final isPhone = MediaQuery.sizeOf(context).width < Breakpoints.phone;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),

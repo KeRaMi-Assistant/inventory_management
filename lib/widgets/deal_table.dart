@@ -9,6 +9,7 @@ import '../models/shop.dart';
 import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/carrier_service.dart';
+import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import 'add_edit_deal_dialog.dart';
@@ -127,7 +128,10 @@ class _DealTableState extends State<DealTable> {
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            final isNarrow = constraints.maxWidth < 700;
+            // Phase A (T1.4a): Magic Number 700 → Breakpoints.legacyListNarrow.
+            // Verhalten identisch; Phase-B-Konsolidierung in T1.4b.
+            final isNarrow =
+                constraints.maxWidth < Breakpoints.legacyListNarrow;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

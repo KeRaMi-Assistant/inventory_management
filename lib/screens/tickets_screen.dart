@@ -8,9 +8,11 @@ import '../models/shop.dart';
 import '../models/ticket_summary.dart';
 import '../providers/inventory_provider.dart';
 import '../services/carrier_service.dart';
+import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../widgets/add_edit_deal_dialog.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/tracking_chip.dart';
 
 class TicketsScreen extends StatefulWidget {
@@ -164,7 +166,10 @@ class _ActiveTicketsView extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 650;
+        // Phase A (T1.4a): Magic Number 650 → Breakpoints.legacyTicketsNarrow.
+        // Verhalten identisch; Phase-B-Konsolidierung in T1.4b.
+        final narrow =
+            constraints.maxWidth < Breakpoints.legacyTicketsNarrow;
         if (narrow) {
           return _TicketsMobileLayout(
             tickets: tickets,
@@ -185,7 +190,13 @@ class _ActiveTicketsView extends StatelessWidget {
         return Row(
           children: [
             SizedBox(
-              width: constraints.maxWidth > 1100 ? 440 : 360,
+              // Phase B (T1.4b): Schwelle 1100 → Breakpoints.master (1200)
+              // konsolidiert. Im Band 1100–1199 px Container-Breite wird der
+              // Filter-/Listen-Pane jetzt schmaler (360 statt 440) gerendert —
+              // einheitlich mit der Master-Detail-Schwelle der App. Vorher
+              // wurde bei ≥1100 schon der breite Pane gewählt, was bei
+              // 60/40-Splits eng wirken konnte.
+              width: isLarge(constraints.maxWidth) ? 440 : 360,
               child: Column(
                 children: [
                   _TicketFilters(
@@ -201,9 +212,12 @@ class _ActiveTicketsView extends StatelessWidget {
                   ),
                   Expanded(
                     child: tickets.isEmpty
-                        ? Center(
-                            child: Text(
-                                AppLocalizations.of(context).ticketsEmpty),
+                        ? EmptyState(
+                            icon: Icons.receipt_long_outlined,
+                            title: AppLocalizations.of(context).ticketsEmpty,
+                            subtitle:
+                                AppLocalizations.of(context).ticketsEmptyHint,
+                            keySlug: 'ticketsEmpty',
                           )
                         : ListView.separated(
                             padding: const EdgeInsets.all(12),
@@ -250,7 +264,12 @@ class _ArchiveTicketsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (tickets.isEmpty) {
-      return Center(child: Text(l10n.ticketsArchiveEmpty));
+      return EmptyState(
+        icon: Icons.archive_outlined,
+        title: l10n.ticketsArchiveEmpty,
+        subtitle: l10n.ticketsArchiveEmptyHint,
+        keySlug: 'ticketsArchiveEmpty',
+      );
     }
     final groups = _groupByMonth(tickets);
     final localeTag = Localizations.localeOf(context).toLanguageTag();
@@ -599,7 +618,12 @@ class _TicketsMobileLayoutState extends State<_TicketsMobileLayout>
                   ),
                   Expanded(
                     child: widget.tickets.isEmpty
-                        ? Center(child: Text(l10n.ticketsEmpty))
+                        ? EmptyState(
+                            icon: Icons.receipt_long_outlined,
+                            title: l10n.ticketsEmpty,
+                            subtitle: l10n.ticketsEmptyHint,
+                            keySlug: 'ticketsEmpty',
+                          )
                         : ListView.separated(
                             padding: const EdgeInsets.all(12),
                             itemCount: widget.tickets.length,

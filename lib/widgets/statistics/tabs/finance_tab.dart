@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
+import '../../../utils/responsive.dart';
 import '../charts/heatmap.dart';
 import '../sortable_table.dart';
 import '../stat_panel.dart';
@@ -28,7 +29,7 @@ class FinanceTab extends StatelessWidget {
       children: [
         LayoutBuilder(
           builder: (context, c) {
-            final wide = c.maxWidth > 800;
+            final wide = c.maxWidth > Breakpoints.legacyStatsFinanceWide;
             final cashflowPanel = StatPanel(
               title: l10n.statsCashflow,
               icon: Icons.account_balance_outlined,

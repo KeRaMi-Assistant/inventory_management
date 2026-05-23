@@ -10,6 +10,7 @@ import '../models/product.dart';
 import '../models/supplier.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../widgets/app_screen_scaffold.dart';
 import 'purchase_order_detail_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,9 +22,21 @@ import 'purchase_order_detail_screen.dart';
 /// Sub-Route des Warenwirtschaft-Hubs — kein eigener [MainTab].
 /// Navigiert per [Navigator.push] zu [PurchaseOrderDetailScreen].
 ///
+/// **Zwei Modi (additiv, rückwärtskompatibel):**
+/// - `embedded == false` (Default): eigener [Scaffold] + [AppBar] für den
+///   Vollbild-Push-Pfad (Phone-Hub-Verhalten).
+/// - `embedded == true` (T3.4): kein [AppBar] — nur ein [Scaffold] mit FAB
+///   und Body, damit der Screen in einer Master-Detail-Detail-Spalte
+///   gerendert werden kann (Desktop-Warehouse-Hub).
+///
 /// A11y-Keys: `poNewFab`, `poCard-<id>`.
 class PurchaseOrdersScreen extends StatelessWidget {
-  const PurchaseOrdersScreen({super.key});
+  /// Wenn `true`, wird kein [AppBar] gerendert — geeignet für
+  /// Master-Detail-Embeds (T3.4 Warehouse-Hub-Desktop). Default `false`
+  /// (rückwärtskompatibel mit allen bisherigen Aufrufern).
+  final bool embedded;
+
+  const PurchaseOrdersScreen({super.key, this.embedded = false});
 
   @override
   Widget build(BuildContext context) {
@@ -35,33 +48,40 @@ class PurchaseOrdersScreen extends StatelessWidget {
             .where((o) => o.deletedAt == null)
             .toList();
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(l10n.purchaseOrdersTitle),
-          ),
-          floatingActionButton: canEdit
-              ? FloatingActionButton.extended(
-                  key: const Key('poNewFab'),
-                  onPressed: () => _openNewOrderDialog(context),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(l10n.purchaseOrderNew),
-                )
-              : null,
-          body: SafeArea(
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : provider.lastError != null
-                    ? _ErrorState(
-                        message: l10n.purchaseOrdersLoadError,
-                        onRetry: provider.loadData,
-                      )
-                    : orders.isEmpty
-                        ? _EmptyState(canEdit: canEdit)
-                        : _OrderList(
-                            orders: orders,
-                            suppliers: provider.suppliers,
-                          ),
-          ),
+        final fab = canEdit
+            ? FloatingActionButton.extended(
+                key: const Key('poNewFab'),
+                onPressed: () => _openNewOrderDialog(context),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(l10n.purchaseOrderNew),
+              )
+            : null;
+
+        final bodyContent = provider.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : provider.lastError != null
+                ? _ErrorState(
+                    message: l10n.purchaseOrdersLoadError,
+                    onRetry: provider.loadData,
+                  )
+                : orders.isEmpty
+                    ? _EmptyState(canEdit: canEdit)
+                    : _OrderList(
+                        orders: orders,
+                        suppliers: provider.suppliers,
+                      );
+
+        if (embedded) {
+          return Scaffold(
+            floatingActionButton: fab,
+            body: SafeArea(child: bodyContent),
+          );
+        }
+
+        return AppScreenScaffold(
+          appBar: AppBar(title: Text(l10n.purchaseOrdersTitle)),
+          floatingActionButton: fab,
+          body: bodyContent,
         );
       },
     );

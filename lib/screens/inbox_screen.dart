@@ -11,9 +11,11 @@ import '../models/mailbox_account.dart';
 import '../providers/inbox_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/mail_link.dart';
+import '../utils/responsive.dart';
 import '../utils/url_helper.dart';
 import '../widgets/add_edit_deal_dialog.dart';
 import '../widgets/deal_picker_dialog.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/inbox_message_details.dart';
 import '../widgets/tracking_banner_improved_detection.dart';
 
@@ -783,9 +785,19 @@ class _SuggestionsTab extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: suggestions.isEmpty
-          ? const _InboxEmpty(
-              icon: Icons.check_circle_outline,
-              text: 'Keine offenen Vorschläge.',
+          ? CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverFillRemaining(
+                  child: EmptyState(
+                    icon: Icons.check_circle_outline,
+                    title: AppLocalizations.of(context).inboxSuggestionsEmpty,
+                    subtitle:
+                        AppLocalizations.of(context).inboxSuggestionsEmptyHint,
+                    keySlug: 'inboxSuggestionsEmpty',
+                  ),
+                ),
+              ],
             )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
@@ -1246,7 +1258,7 @@ class _SuggestionCard extends StatelessWidget {
             const SizedBox(height: 12),
             LayoutBuilder(
               builder: (context, constraints) {
-                final narrow = constraints.maxWidth < 340;
+                final narrow = constraints.maxWidth < Breakpoints.legacyInboxNarrow;
                 final l10n = AppLocalizations.of(context);
                 return Row(
                   children: [
@@ -1343,9 +1355,19 @@ class _MatchedTab extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: messages.isEmpty
-          ? const _InboxEmpty(
-              icon: Icons.inbox_outlined,
-              text: 'Noch keine automatisch aktualisierten Deals.',
+          ? CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverFillRemaining(
+                  child: EmptyState(
+                    icon: Icons.inbox_outlined,
+                    title: AppLocalizations.of(context).inboxUpdatedEmpty,
+                    subtitle:
+                        AppLocalizations.of(context).inboxUpdatedEmptyHint,
+                    keySlug: 'inboxUpdatedEmpty',
+                  ),
+                ),
+              ],
             )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
@@ -1485,9 +1507,19 @@ class _UnclassifiedTab extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: messages.isEmpty
-          ? const _InboxEmpty(
-              icon: Icons.help_outline,
-              text: 'Alles eingeordnet — keine unklaren Mails.',
+          ? CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverFillRemaining(
+                  child: EmptyState(
+                    icon: Icons.help_outline,
+                    title: AppLocalizations.of(context).inboxUnclassifiedEmpty,
+                    subtitle:
+                        AppLocalizations.of(context).inboxUnclassifiedEmptyHint,
+                    keySlug: 'inboxUnclassifiedEmpty',
+                  ),
+                ),
+              ],
             )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
@@ -2034,26 +2066,3 @@ class _TrackingNeedsReviewBadge extends StatelessWidget {
   }
 }
 
-class _InboxEmpty extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _InboxEmpty({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: [
-        const SizedBox(height: 80),
-        Icon(icon, size: 52, color: AppTheme.textDisabledOf(context)),
-        const SizedBox(height: 12),
-        Center(
-          child: Text(
-            text,
-            style: TextStyle(color: AppTheme.textMutedOf(context)),
-          ),
-        ),
-      ],
-    );
-  }
-}

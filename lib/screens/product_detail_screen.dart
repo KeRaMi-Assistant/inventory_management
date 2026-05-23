@@ -28,7 +28,13 @@ import '../widgets/inventory_batches_sheet.dart';
 ///    - Stammdaten der Bestands-Row, Bestand der Row, Movements der Row
 ///    - Keine Aggregation, keine Produkt-Sektion
 ///
-/// Navigation: gepusht per [Navigator.push] vom [InventoryScreen].
+/// Navigation:
+/// - **Standalone** (`embedded == false`, Default): per [Navigator.push] vom
+///   [InventoryScreen] — eigener [Scaffold] + [AppBar].
+/// - **Embedded** (`embedded == true`, T3.3a): renderbar als Detail-Pane in
+///   einem Master-Detail-Split (kein eigener [Scaffold]/[AppBar]) — Body
+///   wird direkt zurückgegeben. Pattern analog `SettingsScreen(embedded: true)`.
+///
 /// A11y-Keys: `productDetailScrollView`, `movementHistoryList`, `movementRow-<id>`.
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,7 +50,19 @@ const int _kMovementPageSize = 50;
 class ProductDetailScreen extends StatefulWidget {
   final InventoryItem item;
 
-  const ProductDetailScreen({super.key, required this.item});
+  /// Wenn `true`, rendert das Widget keinen eigenen [Scaffold]/[AppBar],
+  /// sondern nur den Body-Inhalt — geeignet für Master-Detail-Embeds.
+  ///
+  /// Default `false` (rückwärtskompatibel mit allen bisherigen Aufrufern).
+  /// Vorbereitung für T3.3b (Inventory-Master-Detail-Split). Siehe
+  /// `plans/2026-05-22_ui-ux-responsive-overhaul.md` §T3.3a.
+  final bool embedded;
+
+  const ProductDetailScreen({
+    super.key,
+    required this.item,
+    this.embedded = false,
+  });
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -109,103 +127,109 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final hasMore = allMovements.length > visibleCount;
     final remainingCount = allMovements.length - visibleCount;
 
+    final scrollView = SingleChildScrollView(
+      key: const Key('productDetailScrollView'),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Viewer-Hinweis-Banner
+          if (!canEdit)
+            _ViewerHintBanner(l10n: l10n),
+
+          // ── Produkt-Stammdaten (nur im Produkt-Aggregations-Modus) ──────
+          if (product != null) ...[
+            _SectionCard(
+              title: l10n.productDetailSectionProduct,
+              icon: Icons.category_outlined,
+              child: _ProductMasterSection(
+                product: product,
+                money: money,
+                l10n: l10n,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // ── Stammdaten der Bestands-Row ─────────────────────────────────
+          _SectionCard(
+            title: l10n.productDetailSectionStammdaten,
+            icon: Icons.info_outline,
+            child: _StammdatenSection(
+              item: liveItem,
+              supplier: supplier,
+              money: money,
+              dateFormatter: dateFormatter,
+              l10n: l10n,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Bestand ─────────────────────────────────────────────────────
+          // Im Produkt-Modus: aggregierter Gesamtbestand über alle Lager.
+          // Im Single-Row-Modus: Bestand der einzelnen Row.
+          if (productId != null && productStockRows.isNotEmpty)
+            _SectionCard(
+              title: l10n.productDetailSectionAggregatedStock,
+              icon: Icons.inventory_2_outlined,
+              child: _AggregatedStockSection(
+                stockRows: productStockRows,
+                product: product,
+                l10n: l10n,
+              ),
+            )
+          else
+            _SectionCard(
+              title: l10n.productDetailSectionStock,
+              icon: Icons.inventory_2_outlined,
+              child: _StockSection(item: liveItem, l10n: l10n),
+            ),
+          const SizedBox(height: 12),
+
+          // ── Chargen ─────────────────────────────────────────────────────
+          _SectionCard(
+            title: l10n.productDetailSectionBatches,
+            icon: Icons.layers_outlined,
+            child: _BatchesSection(
+              item: liveItem,
+              l10n: l10n,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Bewegungshistorie (paginiert) ────────────────────────────────
+          _SectionCard(
+            title: l10n.movementHistoryTitle,
+            icon: Icons.history_outlined,
+            child: _MovementHistorySection(
+              movements: pagedMovements,
+              hasMore: hasMore,
+              remainingCount: remainingCount,
+              isProductScope: productId != null,
+              money: money,
+              l10n: l10n,
+              onLoadMore: () {
+                setState(() {
+                  _visibleMovements += _kMovementPageSize;
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // Embedded-Modus: nur Body zurückgeben (kein Scaffold/AppBar).
+    // Vorbereitung für Master-Detail-Split (T3.3b).
+    if (widget.embedded) {
+      return scrollView;
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.productDetailTitle),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          key: const Key('productDetailScrollView'),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Viewer-Hinweis-Banner
-              if (!canEdit)
-                _ViewerHintBanner(l10n: l10n),
-
-              // ── Produkt-Stammdaten (nur im Produkt-Aggregations-Modus) ──────
-              if (product != null) ...[
-                _SectionCard(
-                  title: l10n.productDetailSectionProduct,
-                  icon: Icons.category_outlined,
-                  child: _ProductMasterSection(
-                    product: product,
-                    money: money,
-                    l10n: l10n,
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-
-              // ── Stammdaten der Bestands-Row ─────────────────────────────────
-              _SectionCard(
-                title: l10n.productDetailSectionStammdaten,
-                icon: Icons.info_outline,
-                child: _StammdatenSection(
-                  item: liveItem,
-                  supplier: supplier,
-                  money: money,
-                  dateFormatter: dateFormatter,
-                  l10n: l10n,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // ── Bestand ─────────────────────────────────────────────────────
-              // Im Produkt-Modus: aggregierter Gesamtbestand über alle Lager.
-              // Im Single-Row-Modus: Bestand der einzelnen Row.
-              if (productId != null && productStockRows.isNotEmpty)
-                _SectionCard(
-                  title: l10n.productDetailSectionAggregatedStock,
-                  icon: Icons.inventory_2_outlined,
-                  child: _AggregatedStockSection(
-                    stockRows: productStockRows,
-                    product: product,
-                    l10n: l10n,
-                  ),
-                )
-              else
-                _SectionCard(
-                  title: l10n.productDetailSectionStock,
-                  icon: Icons.inventory_2_outlined,
-                  child: _StockSection(item: liveItem, l10n: l10n),
-                ),
-              const SizedBox(height: 12),
-
-              // ── Chargen ─────────────────────────────────────────────────────
-              _SectionCard(
-                title: l10n.productDetailSectionBatches,
-                icon: Icons.layers_outlined,
-                child: _BatchesSection(
-                  item: liveItem,
-                  l10n: l10n,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // ── Bewegungshistorie (paginiert) ────────────────────────────────
-              _SectionCard(
-                title: l10n.movementHistoryTitle,
-                icon: Icons.history_outlined,
-                child: _MovementHistorySection(
-                  movements: pagedMovements,
-                  hasMore: hasMore,
-                  remainingCount: remainingCount,
-                  isProductScope: productId != null,
-                  money: money,
-                  l10n: l10n,
-                  onLoadMore: () {
-                    setState(() {
-                      _visibleMovements += _kMovementPageSize;
-                    });
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      body: SafeArea(child: scrollView),
     );
   }
 }
