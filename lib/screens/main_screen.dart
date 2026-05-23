@@ -13,6 +13,7 @@ import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/csv_service.dart';
 import '../widgets/add_edit_deal_dialog.dart';
+import '../widgets/brand_logo.dart';
 import '../widgets/global_search_dialog.dart';
 import '../widgets/invites_bell.dart';
 import 'activity_screen.dart';
@@ -485,7 +486,6 @@ class _Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final width = extended ? 220.0 : 64.0;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -494,25 +494,25 @@ class _Sidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Branding Header
+          // Branding Header: BrandMark + optional Wordmark.
+          // Sidebar-Hintergrund ist navBg (fix dunkel), darum onDark=true.
           SizedBox(
             height: 56,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(horizontal: extended ? 14 : 10),
               child: Row(
+                mainAxisAlignment: extended
+                    ? MainAxisAlignment.start
+                    : MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.inventory_2_rounded,
-                      color: Colors.white, size: 18),
+                  const BrandMark(size: 28, withBackground: true),
                   if (extended) ...[
                     const SizedBox(width: 10),
-                    Text(
-                      l10n.appTitle,
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.1,
-                      ),
+                    const BrandWordmark(
+                      fontSize: 16,
+                      onDark: true,
+                      canColor: Colors.white,
+                      logisticsColor: Color(0xCCFFFFFF),
                     ),
                   ],
                 ],
