@@ -11,6 +11,7 @@ import '../models/mailbox_account.dart';
 import '../providers/inbox_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/mail_link.dart';
+import '../utils/responsive.dart';
 import '../utils/url_helper.dart';
 import '../widgets/add_edit_deal_dialog.dart';
 import '../widgets/deal_picker_dialog.dart';
@@ -1246,7 +1247,7 @@ class _SuggestionCard extends StatelessWidget {
             const SizedBox(height: 12),
             LayoutBuilder(
               builder: (context, constraints) {
-                final narrow = constraints.maxWidth < 340;
+                final narrow = constraints.maxWidth < Breakpoints.legacyInboxNarrow;
                 final l10n = AppLocalizations.of(context);
                 return Row(
                   children: [

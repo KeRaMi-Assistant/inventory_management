@@ -11,6 +11,7 @@ import '../models/supplier.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
+import '../utils/responsive.dart';
 
 /// First-time-user-Flow als Phone-First-PageView. 6 Steps:
 ///   1. Willkommen
@@ -184,7 +185,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           builder: (context, constraints) {
             // Auf Tablet/Desktop maximal 480px, sonst voll. PageView braucht
             // bounded-width — ohne Constraint wirkt der Carousel "zerflosen".
-            final isWide = constraints.maxWidth >= 600;
+            final isWide = constraints.maxWidth >= Breakpoints.phone;
             final content = _OnboardingBody(
               pageController: _pageController,
               index: _index,

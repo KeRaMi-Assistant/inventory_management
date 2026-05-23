@@ -5,6 +5,7 @@ import '../app_theme.dart';
 import '../models/live_tracking_status.dart';
 import '../models/tracking_confidence.dart';
 import '../utils/relative_time.dart';
+import '../utils/responsive.dart';
 
 /// Interne Enum für die 5 Display-States des Widgets.
 enum TrackingDisplayState {
@@ -598,7 +599,7 @@ class _NeedsReviewState extends StatelessWidget {
             // Action-Buttons — auf 360px Phone vertikal gestapelt
             LayoutBuilder(
               builder: (context, constraints) {
-                final isNarrow = constraints.maxWidth < 320;
+                final isNarrow = constraints.maxWidth < Breakpoints.legacyTrackingNarrow;
                 if (isNarrow) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,

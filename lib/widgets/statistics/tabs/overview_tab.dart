@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
+import '../../../utils/responsive.dart';
 import '../charts/donut_chart.dart';
 import '../charts/monthly_bar_chart.dart';
 import '../charts/profit_line_chart.dart';
@@ -113,7 +114,7 @@ class OverviewTab extends StatelessWidget {
         const SizedBox(height: 16),
         LayoutBuilder(
           builder: (context, c) {
-            final wide = c.maxWidth > 900;
+            final wide = c.maxWidth > Breakpoints.legacyStatsWide;
             final left = StatPanel(
               title: l10n.statsProfitPerBucket,
               icon: Icons.bar_chart_outlined,
@@ -145,7 +146,7 @@ class OverviewTab extends StatelessWidget {
         const SizedBox(height: 16),
         LayoutBuilder(
           builder: (context, c) {
-            final wide = c.maxWidth > 900;
+            final wide = c.maxWidth > Breakpoints.legacyStatsWide;
             final left = StatPanel(
               title: l10n.statsProfitByBuyer,
               icon: Icons.people_outline,

@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../utils/responsive.dart';
+
 /// Donut-Chart mit Legende rechts. Zeigt automatisch nur Top-N Slices,
 /// der Rest wird zu "Sonstige" zusammengefasst.
 class DonutChart extends StatefulWidget {
@@ -78,7 +80,7 @@ class _DonutChartState extends State<DonutChart> {
       height: widget.height,
       child: LayoutBuilder(
         builder: (context, c) {
-          final wide = c.maxWidth > 360;
+          final wide = c.maxWidth > Breakpoints.legacyDonutNarrow;
           final pie = SizedBox(
             width: widget.height,
             height: widget.height,

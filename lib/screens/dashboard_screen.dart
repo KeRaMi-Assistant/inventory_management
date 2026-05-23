@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
+import '../utils/responsive.dart';
 import '../widgets/kpi_card.dart';
 import 'purchase_orders_screen.dart';
 
@@ -57,7 +58,7 @@ class DashboardScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 LayoutBuilder(
                   builder: (context, c) {
-                    final wide = c.maxWidth > 960;
+                    final wide = c.maxWidth > Breakpoints.legacyDashboardWide;
                     if (wide) {
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,7 +114,7 @@ class _LowStockAlertBlock extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final phone = constraints.maxWidth < 520;
+              final phone = constraints.maxWidth < Breakpoints.legacyDashboardCompact;
               final info = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -251,7 +252,7 @@ class _EmptyStateCardState extends State<_EmptyStateCard> {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final phone = constraints.maxWidth < 520;
+          final phone = constraints.maxWidth < Breakpoints.legacyDashboardCompact;
           final info = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -334,7 +335,7 @@ class _KpiGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final cols = width < 500 ? 2 : width < 900 ? 3 : width < 1200 ? 4 : 7;
+        final cols = width < Breakpoints.legacyKpiCompact ? 2 : width < Breakpoints.legacyKpiMedium ? 3 : width < Breakpoints.master ? 4 : 7;
         return Wrap(
           spacing: 12,
           runSpacing: 12,

@@ -31,6 +31,7 @@ import '../widgets/member_remove_confirm_dialog.dart';
 import '../widgets/workspace_switcher.dart';
 import '../widgets/add_edit_mailbox_dialog.dart';
 import '../widgets/add_edit_shop_dialog.dart';
+import '../utils/responsive.dart';
 import 'billing_profile_screen.dart';
 import 'help_screen.dart';
 import 'pricing_screen.dart';
@@ -620,7 +621,7 @@ class _GeneralTab extends StatelessWidget {
                     style: const ButtonStyle(
                       visualDensity: VisualDensity.compact,
                     ),
-                    expandedInsets: constraints.maxWidth < 600
+                    expandedInsets: constraints.maxWidth < Breakpoints.phone
                         ? EdgeInsets.zero
                         : null,
                     segments: [
@@ -801,7 +802,7 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
         padding: const EdgeInsets.all(16),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final stack = constraints.maxWidth < 480;
+            final stack = constraints.maxWidth < Breakpoints.legacySettingsCompact;
             final info = Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -959,7 +960,7 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
             padding: const EdgeInsets.all(16),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final stack = constraints.maxWidth < 480;
+                final stack = constraints.maxWidth < Breakpoints.legacySettingsCompact;
                 final info = Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

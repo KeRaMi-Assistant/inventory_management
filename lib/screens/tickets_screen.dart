@@ -8,6 +8,7 @@ import '../models/shop.dart';
 import '../models/ticket_summary.dart';
 import '../providers/inventory_provider.dart';
 import '../services/carrier_service.dart';
+import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../widgets/add_edit_deal_dialog.dart';
@@ -164,7 +165,10 @@ class _ActiveTicketsView extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 650;
+        // Phase A (T1.4a): Magic Number 650 → Breakpoints.legacyTicketsNarrow.
+        // Verhalten identisch; Phase-B-Konsolidierung in T1.4b.
+        final narrow =
+            constraints.maxWidth < Breakpoints.legacyTicketsNarrow;
         if (narrow) {
           return _TicketsMobileLayout(
             tickets: tickets,
@@ -185,7 +189,11 @@ class _ActiveTicketsView extends StatelessWidget {
         return Row(
           children: [
             SizedBox(
-              width: constraints.maxWidth > 1100 ? 440 : 360,
+              // Phase A (T1.4a): Magic Number 1100 → Breakpoints.legacyShellExtended.
+              // Verhalten identisch; Phase-B-Konsolidierung in T1.4b.
+              width: constraints.maxWidth > Breakpoints.legacyShellExtended
+                  ? 440
+                  : 360,
               child: Column(
                 children: [
                   _TicketFilters(

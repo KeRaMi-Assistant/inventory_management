@@ -6,6 +6,7 @@ import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../providers/inventory_provider.dart';
 import '../services/supabase_repository.dart';
+import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../utils/validators.dart';
@@ -380,7 +381,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                 child: Form(
                   key: _formKey,
                   child: LayoutBuilder(builder: (ctx, formConstraints) {
-                    final narrow = formConstraints.maxWidth < 480;
+                    final narrow = formConstraints.maxWidth < Breakpoints.legacyStatsNarrow;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

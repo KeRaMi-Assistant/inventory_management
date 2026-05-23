@@ -28,6 +28,7 @@ import 'suppliers_screen.dart';
 import 'main_tab.dart';
 import 'tickets_screen.dart';
 import 'warehouse_hub_screen.dart';
+import '../utils/responsive.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -318,8 +319,8 @@ class _MainScreenState extends State<MainScreen> {
     return Consumer2<InventoryProvider, BillingProvider>(
       builder: (context, provider, billing, _) {
         final width = MediaQuery.of(context).size.width;
-        final narrow = width < 800;
-        final extended = width >= 1100;
+        final narrow = width < Breakpoints.legacyShellNarrow;
+        final extended = width >= Breakpoints.legacyShellExtended;
         final visibility = _navVisibility(billing);
         // Wenn der User auf einen Plan ohne Postfach downgradet, während
         // er den Inbox-Tab offen hat, automatisch zurück aufs Dashboard.

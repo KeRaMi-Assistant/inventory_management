@@ -7,6 +7,7 @@ import '../models/deal.dart';
 import '../models/inventory_item.dart';
 import '../models/product.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../utils/validators.dart';
@@ -49,7 +50,10 @@ class _InventoryScreenState extends State<InventoryScreen>
       builder: (context, provider, _) {
         return LayoutBuilder(
           builder: (context, constraints) {
-            final isNarrow = constraints.maxWidth < 700;
+            // Phase A (T1.4a): Magic Number 700 → Breakpoints.legacyListNarrow.
+            // Verhalten identisch; Phase-B-Konsolidierung in T1.4b.
+            final isNarrow =
+                constraints.maxWidth < Breakpoints.legacyListNarrow;
             final localeTag =
                 Localizations.localeOf(context).toLanguageTag();
             final money =
