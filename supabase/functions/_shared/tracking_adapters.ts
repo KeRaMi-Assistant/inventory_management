@@ -115,29 +115,22 @@ export const dhlAdapter: TrackingAdapter = {
   /// akzeptiert den Key nicht" (401/403 → auth_error, kurze TTL +
   /// last_error auf workspace_carrier_credentials).
   ///
-  /// Strategie: erst den **Parcel-DE-Endpoint** probieren (10M calls/day,
-  /// das ist seit 2026-05-22 der freigeschaltete Pfad für unsere App).
-  /// Falls der mit 401/403 antwortet, **Fallback auf den Unified-Endpoint**
-  /// — dadurch funktionieren Workspaces weiter, die ihre App-Registrierung
-  /// noch im alten Unified-Modus haben.
+  /// Strategie 2026-05-23: **Parcel-DE-Endpoint only**. Die "Shipment
+  /// Tracking - Unified" API ist für unsere App-Registrierung revoked
+  /// (siehe DHL-Developer-Portal-Screenshot vom 2026-05-22 — App-Status
+  /// "mixed", Unified ist "deaktiviert", Parcel-DE ist "aktiviert" mit
+  /// 10M/Tag). Ein Unified-Fallback bei 401/403 würde nur 5s-SPIKE-Arrest-
+  /// Wartezeit verschwenden ohne Aussicht auf Erfolg. Falls Parcel-DE
+  /// 401 zurückgibt, ist entweder der API-Key falsch (Stakeholder muss
+  /// im Portal nachschauen) oder die App-Subscription nicht durch — wir
+  /// loggen `body_snippet` damit das im Edge-Function-Log sichtbar ist.
   async probeStatus(tracking, apiKey): Promise<ProbeOutcome> {
-    const primary = await _probeDhlEndpoint(
+    return await _probeDhlEndpoint(
       'https://api-eu.dhl.com/parcel/de/tracking/v0/shipments',
       tracking,
       apiKey,
       'parcel-de',
     )
-    if (primary.kind !== 'auth_error') return primary
-
-    // Fallback auf Unified — gleicher API-Key, anderer Pfad. Wenn auch
-    // Unified 401/403 wirft, ist der Key tatsächlich nicht autorisiert.
-    const fallback = await _probeDhlEndpoint(
-      'https://api-eu.dhl.com/track/shipments',
-      tracking,
-      apiKey,
-      'unified',
-    )
-    return fallback
   },
 
   parseResponse(payload) {
