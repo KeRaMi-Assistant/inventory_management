@@ -12,6 +12,7 @@ import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../widgets/add_edit_deal_dialog.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/tracking_chip.dart';
 
 class TicketsScreen extends StatefulWidget {
@@ -211,9 +212,12 @@ class _ActiveTicketsView extends StatelessWidget {
                   ),
                   Expanded(
                     child: tickets.isEmpty
-                        ? Center(
-                            child: Text(
-                                AppLocalizations.of(context).ticketsEmpty),
+                        ? EmptyState(
+                            icon: Icons.receipt_long_outlined,
+                            title: AppLocalizations.of(context).ticketsEmpty,
+                            subtitle:
+                                AppLocalizations.of(context).ticketsEmptyHint,
+                            keySlug: 'ticketsEmpty',
                           )
                         : ListView.separated(
                             padding: const EdgeInsets.all(12),
@@ -260,7 +264,12 @@ class _ArchiveTicketsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (tickets.isEmpty) {
-      return Center(child: Text(l10n.ticketsArchiveEmpty));
+      return EmptyState(
+        icon: Icons.archive_outlined,
+        title: l10n.ticketsArchiveEmpty,
+        subtitle: l10n.ticketsArchiveEmptyHint,
+        keySlug: 'ticketsArchiveEmpty',
+      );
     }
     final groups = _groupByMonth(tickets);
     final localeTag = Localizations.localeOf(context).toLanguageTag();
@@ -609,7 +618,12 @@ class _TicketsMobileLayoutState extends State<_TicketsMobileLayout>
                   ),
                   Expanded(
                     child: widget.tickets.isEmpty
-                        ? Center(child: Text(l10n.ticketsEmpty))
+                        ? EmptyState(
+                            icon: Icons.receipt_long_outlined,
+                            title: l10n.ticketsEmpty,
+                            subtitle: l10n.ticketsEmptyHint,
+                            keySlug: 'ticketsEmpty',
+                          )
                         : ListView.separated(
                             padding: const EdgeInsets.all(12),
                             itemCount: widget.tickets.length,

@@ -20,6 +20,7 @@ Theme funktioniert, wo Localization sitzt.
 | Push | Firebase Messaging + `flutter_local_notifications` | `lib/services/push_service.dart` |
 | Lokalisierung | `flutter_localizations` + ARB | `lib/l10n/` |
 | Theme | Eigene Tokens in `app_theme.dart` | `lib/app_theme.dart` |
+| Responsive | Zentrale Breakpoints + Zwei-Achsen-API | `lib/utils/responsive.dart` |
 
 Wichtige Regel aus [CLAUDE.md](../../CLAUDE.md):
 
@@ -404,10 +405,222 @@ Web-only-Sonderfall: `publicProfileHandleFromUri(Uri.base)` parst
 ## Web vs. Mobile
 
 - **Mobile** (iOS/Android) ist Primärziel. Bottom-Navigation auf
-  `width < 600`, Sidebar auf Desktop.
+  `width < 600` (= `Breakpoints.phone`), Sidebar/NavigationRail auf Desktop.
 - **Web** läuft auf Chrome (Smoke-Tests, Public-Profile, Admin-Tools).
 - Plattform-Switch nicht über `Platform.is*`, sondern `kIsWeb` und
   `MediaQuery.sizeOf(context)`.
+
+## Responsive-Utility
+
+Datei: [`lib/utils/responsive.dart`](../../lib/utils/responsive.dart)
+
+Zentrale Breakpoint-Infrastruktur, eingeführt in Epic 1 des
+[Responsive-Overhaul-Plans](../../plans/2026-05-22_ui-ux-responsive-overhaul.md).
+Ersetzt app-weite Magic-Number-Breakpoints durch eine einzige Quelle.
+
+### Zwei-Achsen-API
+
+Das Herzstück sind **zwei bewusst getrennte Achsen**, um den
+Viewport-vs-Container-Bug zu verhindern (ein Detail-Panel, das auf
+1440-px-Viewport erscheint, obwohl die 220-px-Sidebar den nutzbaren
+Container auf 1220 px reduziert hat):
+
+**Achse 1 — Viewport (nur `main_screen.dart`)**
+
+Kapselt `MediaQuery.sizeOf(context)` und liefert die Breite des gesamten
+App-Fensters. Darf **ausschließlich in `main_screen.dart`** für den
+Shell-Switch (Bottom-Nav vs. NavigationRail) benutzt werden — überall sonst
+ist der Viewport die falsche Größe.
+
+```dart
+ScreenSize screenSizeOf(BuildContext context)  // → ScreenSize-Enum
+bool isPhoneViewport(BuildContext context)      // < 600 px
+bool isDesktopViewport(BuildContext context)    // ≥ 900 px
+```
+
+**Achse 2 — Container (für alle LayoutBuilder-Stellen)**
+
+Pure Funktionen auf `double` — nehmen **keinen** `BuildContext`. Werden mit
+`constraints.maxWidth` aus einem `LayoutBuilder` aufgerufen. Das fehlende
+`BuildContext`-Argument macht es strukturell unmöglich, versehentlich die
+Viewport-Breite zu übergeben.
+
+```dart
+WidthClass widthClassOf(double width)   // → WidthClass-Enum
+bool isCompact(double width)            // < 600
+bool isMedium(double width)             // 600–899
+bool isExpanded(double width)           // 900–1199
+bool isLarge(double width)             // ≥ 1200  → Master-Detail-Schwelle
+```
+
+Typische Verwendung im Screen-Layout:
+
+```dart
+LayoutBuilder(
+  builder: (context, constraints) {
+    return isLarge(constraints.maxWidth)
+        ? const _MasterDetailLayout()
+        : const _SingleColumnLayout();
+  },
+)
+```
+
+### Breakpoints
+
+| Konstante | Wert | Bedeutung |
+|---|---|---|
+| `Breakpoints.phone` | 600 px | Phone/nicht-Phone — CLAUDE.md-konform |
+| `Breakpoints.navRail` | 900 px | Shell-Switch Bottom-Nav→NavigationRail |
+| `Breakpoints.master` | 1200 px | Master-Detail-Split, Rail-Extended |
+| `Breakpoints.railExtended` | 1200 px | Alias für `master` — Labels sichtbar |
+
+Bewusste Abweichung von Material-3-Standard (840 px): bei 840 px Viewport
+und 220 px Sidebar verbleiben nur ~620 px Body — zu eng für einen
+komfortablen zwei-spaltigen Split.
+
+### Migration (Phase A / Phase B)
+
+Alle bestehenden Magic-Number-Breakpoints werden zweiphasig migriert:
+
+- **Phase A** — Wert identisch, nur `Breakpoints.legacyXxx`-Konstante statt
+  Zahl. Verhaltensneutral, pixel-identischer Audit.
+- **Phase B** — Wert ändert sich, Verhaltens-Diff explizit dokumentiert. Die
+  `legacy*`-Konstanten werden nach dem Cleanup entfernt.
+
+`@deprecated`-Annotationen in `responsive.dart` markieren alle noch
+ausstehenden Phase-B-Werte.
+
+### Constraint-vs-Viewport-Bug
+
+Vor dem Overhaul nutzte u. a. `deals_screen.dart:17`
+`MediaQuery.of(context).size.width` für einen Screen-internen Split-Check —
+obwohl der Screen-Body neben der 220-px-Sidebar lag. Das Ergebnis: Die
+Viewport-Breite (z. B. 1280 px) überstieg die Schwelle, der Container (1060
+px) aber nicht. Die Zwei-Achsen-API macht diese Fehlklasse strukturell
+unmöglich.
+
+## AppScreenScaffold
+
+Datei: [`lib/widgets/app_screen_scaffold.dart`](../../lib/widgets/app_screen_scaffold.dart)
+
+Gemeinsames Scaffold-Wrapper-Widget, verbindlich für alle Screens
+(eingeführt in Epic 3). Löst das Problem „Desktop = gestreckte Phone-Säule",
+indem es den Body auf Desktop horizontal zentriert und auf `maxContentWidth`
+begrenzt (Default 1200 px).
+
+**Layout-Verhalten:**
+
+| Container-Breite | Verhalten |
+|---|---|
+| `< Breakpoints.phone` (Phone) | Body füllt volle Breite |
+| `≥ Breakpoints.phone` (Tablet/Desktop) | Body zentriert, max `maxContentWidth` |
+
+Die Breitenklasse wird via `widthClassOf(constraints.maxWidth)` aus einem
+internen `LayoutBuilder` bestimmt — nie `MediaQuery`.
+
+**Slots:**
+
+```dart
+AppScreenScaffold(
+  appBar: AppBar(...),              // optional — null bei embedded-Screens
+  floatingActionButton: ...,        // optional, direkt an Scaffold
+  header: SearchBar(...),           // optional Sub-Header unter AppBar
+  isEmpty: items.isEmpty,           // true → zeigt emptyState statt body
+  emptyState: EmptyState(...),      // optional, nur wenn isEmpty true
+  body: _MyList(),                  // Pflicht
+  maxContentWidth: 1200,            // default
+)
+```
+
+`SafeArea` liegt um den gesamten Scroll-Bereich — schützt vor Notch und
+Home-Indicator. A11y-Key `Key('appScreenContent')` auf dem Content-Container.
+
+## EmptyState
+
+Datei: [`lib/widgets/empty_state.dart`](../../lib/widgets/empty_state.dart)
+
+Einheitliches Empty-State-Widget. Ersetzt die diversen lokalen
+`_EmptyStateCard`- und `_EmptyState`-Widgets, die in jedem Screen separat
+existierten (Migration läuft in Epic 4, Task T4.2 — noch nicht alle
+Screens umgestellt).
+
+```dart
+EmptyState(
+  icon: Icons.category_outlined,
+  title: l10n.categoriesEmpty,
+  subtitle: l10n.categoriesEmptyHint,
+  action: ElevatedButton(            // optional CTA
+    onPressed: _openAddDialog,
+    child: Text(l10n.categoryNew),
+  ),
+  keySlug: 'categories',             // → Key('emptyState-categories')
+)
+```
+
+Alle sichtbaren Strings kommen vom Caller via l10n — das Widget hardcodet
+keine deutschen Texte.
+
+## Master-Detail-Pattern
+
+Eingeführt in Epic 3 (Tasks T3.3, T3.4) als Standard für Listen-Screens auf
+Desktop. Phone-Verhalten bleibt in allen Fällen **unverändert**.
+
+### Implementierungen
+
+Zwei Screens nutzen das Muster:
+
+**Inventory (`lib/screens/inventory_screen.dart`):**
+
+- Desktop (`isLarge(constraints.maxWidth)` = `≥ 1200 px`): Liste links
+  (~360 px), `ProductDetailScreen` rechts als embedded Sub-Screen in einem
+  `Expanded`. Item-Tap setzt `_selectedItemId` — kein `Navigator.push`.
+- Phone: Tap pusht `ProductDetailScreen` als Vollbild-Route (alter Pfad
+  unverändert).
+- Die Detail-Spalte lebt **über beiden TabBar-Tabs** (Stock/Sold). Beim
+  Tab-Wechsel wird die Selektion zurückgesetzt, da Stock- und Sold-Items
+  verschiedene Pools sind.
+
+**Warehouse-Hub (`lib/screens/warehouse_hub_screen.dart`):**
+
+- Desktop (`isExpanded || isLarge`, ≥ 900 px): Kacheln links (280–360 px),
+  gewählter Sub-Bereich rechts als embedded Sub-Screen. `WarehouseTile`-Enum
+  steuert die Auswahl via `_selectedTile`.
+- Phone: Kachel-Tap pusht Vollbild (unverändert).
+- **Reporting-Tile-Ausnahme:** das Reporting-Tile pusht auch auf Desktop
+  Vollbild — `StatisticsScreen` ist heute nicht embeddable (eigener Sub-Task
+  offen). Dokumentierter Trade-off.
+
+### Embeddable-Pattern
+
+Detail-Screens können eingebettet werden über den `embedded: bool`-Parameter:
+
+```dart
+ProductDetailScreen(itemId: id, embedded: true)
+// → kein eigener Scaffold / AppBar im embedded-Modus
+```
+
+Dasselbe Pattern gilt für die fünf Warehouse-Hub-Sub-Screens
+(`ProductCatalogScreen`, `PurchaseOrdersScreen`, `WarehousesScreen`,
+`CategoriesScreen`, `StocktakeScreen`) — jeder prüft intern `embedded` und
+überspringt Scaffold/AppBar wenn `true`.
+
+### State-Lifting
+
+`_selectedItemId` (Inventory) und `_selectedTile` (Warehouse-Hub) leben im
+Parent-State **oberhalb** des `LayoutBuilder`-Switches. Beim Resize
+Phone↔Desktop bleibt die Selektion erhalten — der `LayoutBuilder` switcht
+nur das Layout, nicht den Zustand.
+
+`PageStorageKey` auf den Master-Listen sichert Scroll- und Suchzustand beim
+Resize.
+
+### A11y-Keys für Master-Detail
+
+| Key | Widget | Zweck |
+|---|---|---|
+| `Key('detailPane')` | Detail-Pane-Root | Browser-Tester-Anker |
+| `Key('detailPaneEmpty')` | Empty-Placeholder | kein Item gewählt |
+| `Key('hubTile<Name>')` | Hub-Kachel | Warehouse-Hub-Kacheln |
 
 ## Tests
 
@@ -512,6 +725,11 @@ User-Ideen durchlaufen seit Mai 2026 einen Council-Gate bevor sie ins Backlog wa
 - Hardcoded `'Profil bearbeiten'` o.ä. (muss in ARB).
 - `Platform.isIOS`-Branches im UI-Code.
 - `git add .` (siehe Whitelist in CLAUDE.md).
+- `MediaQuery.sizeOf(context)` für Screen-interne Layout-Entscheidungen —
+  stattdessen `widthClassOf(constraints.maxWidth)` aus einem `LayoutBuilder`
+  (Viewport-vs-Container-Bug, siehe [Responsive-Utility](#responsive-utility)).
+- Hardcoded Magic-Number-Breakpoints in neuen Screens — immer `Breakpoints.*`
+  aus `lib/utils/responsive.dart` verwenden.
 
 ## Quelle im Code
 
@@ -522,6 +740,9 @@ User-Ideen durchlaufen seit Mai 2026 einen Council-Gate bevor sie ins Backlog wa
 - [`lib/providers/`](../../lib/providers/) — Alle Provider
 - [`lib/services/`](../../lib/services/) — Alle Services
 - [`lib/models/`](../../lib/models/) — Domain-Modelle
+- [`lib/utils/responsive.dart`](../../lib/utils/responsive.dart) — Responsive-Utility (Zwei-Achsen-API)
+- [`lib/widgets/app_screen_scaffold.dart`](../../lib/widgets/app_screen_scaffold.dart) — Gemeinsames Screen-Scaffold
+- [`lib/widgets/empty_state.dart`](../../lib/widgets/empty_state.dart) — Gemeinsames Empty-State-Widget
 - [`lib/services/supabase_repository.dart`](../../lib/services/supabase_repository.dart) — Single-Point-of-Contact zum Backend
 - [`pubspec.yaml`](../../pubspec.yaml) — Dependencies
 - [`analysis_options.yaml`](../../analysis_options.yaml) — Lint-Regeln

@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
 
-/// Große KPI-Karte mit großem Wert, Label und optionalem Δ%-Vergleich.
+/// Kanonisches KPI-Karten-Widget für die gesamte App.
+///
+/// Ersetzt das frühere `lib/widgets/kpi_card.dart` (left-accent-bar Variante),
+/// das in Dashboard `_KpiGrid` genutzt wurde. Alle Screens verwenden jetzt
+/// diesen Widget — Dashboard ohne [deltaPct], Statistics mit.
+///
+/// **Verwendung:**
+/// - Dashboard (`dashboard_screen.dart`): `label`/`value`/`icon`/`accent`,
+///   kein `deltaPct` → kompakter Look ohne Trend-Zeile.
+/// - Statistics (`overview_tab.dart`): vollständige API inkl. Delta-Pfeil.
+///
+/// Das frühere `lib/widgets/kpi_card.dart` ist gelöscht (T4.1-Dedupe).
 class KpiCard extends StatelessWidget {
   final String label;
   final String value;

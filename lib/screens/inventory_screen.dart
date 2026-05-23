@@ -13,6 +13,7 @@ import '../utils/url_helper.dart';
 import '../utils/validators.dart';
 import '../widgets/attachment_gallery.dart';
 import '../widgets/barcode_scanner_sheet.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/inventory_batches_sheet.dart';
 import 'product_detail_screen.dart';
 
@@ -253,7 +254,13 @@ class _InventoryScreenState extends State<InventoryScreen>
         border: Border(left: BorderSide(color: dividerColor)),
       ),
       child: selectedItem == null
-          ? _DetailPaneEmpty(l10n: l10n)
+          ? EmptyState(
+              key: const Key('detailPaneEmpty'),
+              icon: Icons.inventory_2_outlined,
+              title: l10n.detailPaneNoSelection,
+              subtitle: l10n.detailPaneNoSelectionHint,
+              keySlug: 'inventoryDetailPane',
+            )
           : ProductDetailScreen(
               // Key auf das embedded Widget, damit ein Selection-Wechsel
               // einen frischen State erzeugt (Pagination-Reset etc.).
@@ -324,11 +331,19 @@ class _InventoryScreenState extends State<InventoryScreen>
           _LowStockBanner(count: provider.criticalStockCount),
         Expanded(
           child: items.isEmpty
-              ? Center(
-                  child: allStockEmpty
-                      ? _EmptyInventoryState(provider: provider)
-                      : Text(l10n.dealsEmpty),
-                )
+              ? allStockEmpty
+                  ? EmptyState(
+                      icon: Icons.inventory_2_outlined,
+                      title: l10n.inventoryEmpty,
+                      subtitle: l10n.inventoryEmptyHint,
+                      keySlug: 'inventoryEmpty',
+                    )
+                  : EmptyState(
+                      icon: Icons.search_off_outlined,
+                      title: l10n.dealsEmpty,
+                      subtitle: l10n.dealsEmptyHint,
+                      keySlug: 'inventoryFilterEmpty',
+                    )
               : isNarrow
                   ? _buildGroupedCardList(
                       context, provider, money, items, l10n, isMasterDetail)
@@ -355,14 +370,19 @@ class _InventoryScreenState extends State<InventoryScreen>
         _buildSoldHeader(context, provider, isNarrow, money, width),
         Expanded(
           child: items.isEmpty
-              ? Center(
-                  child: Text(
-                    allSoldEmpty
-                        ? l10n.inventorySoldEmpty
-                        : l10n.dealsEmpty,
-                    style: TextStyle(color: AppTheme.textMutedOf(context)),
-                  ),
-                )
+              ? allSoldEmpty
+                  ? EmptyState(
+                      icon: Icons.sell_outlined,
+                      title: l10n.inventorySoldEmpty,
+                      subtitle: l10n.inventorySoldEmptyHint,
+                      keySlug: 'inventorySoldEmpty',
+                    )
+                  : EmptyState(
+                      icon: Icons.search_off_outlined,
+                      title: l10n.dealsEmpty,
+                      subtitle: l10n.dealsEmptyHint,
+                      keySlug: 'inventorySoldFilterEmpty',
+                    )
               : isNarrow
                   ? _buildCardList(
                       context, provider, money, items, isMasterDetail)
@@ -2239,82 +2259,6 @@ class _LowStockBanner extends StatefulWidget {
   State<_LowStockBanner> createState() => _LowStockBannerState();
 }
 
-class _EmptyInventoryState extends StatelessWidget {
-  const _EmptyInventoryState({required this.provider});
-  final InventoryProvider provider;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.inventory_2_outlined,
-            size: 48, color: AppTheme.textDisabledOf(context)),
-        const SizedBox(height: 12),
-        Text(
-          l10n.inventoryEmpty,
-          style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimaryOf(context)),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          l10n.inventoryEmptyHint,
-          style: TextStyle(
-              color: AppTheme.textMutedOf(context), fontSize: 12),
-        ),
-      ],
-    );
-  }
-}
-
-/// Empty-state placeholder for the Master-Detail Detail-Pane (Plan §5.5).
-///
-/// Rendered when no inventory item is selected (`_selectedItemId == null`).
-/// Carries `Key('detailPaneEmpty')` so smoke tests can target it.
-class _DetailPaneEmpty extends StatelessWidget {
-  const _DetailPaneEmpty({required this.l10n});
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      key: const Key('detailPaneEmpty'),
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.inventory_2_outlined,
-              size: 48,
-              color: AppTheme.textDisabledOf(context),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.detailPaneNoSelection,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textPrimaryOf(context),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              l10n.detailPaneNoSelectionHint,
-              style: TextStyle(
-                color: AppTheme.textMutedOf(context),
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _LowStockBannerState extends State<_LowStockBanner> {
   bool _dismissed = false;

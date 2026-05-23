@@ -794,7 +794,7 @@ Atomar geschnitten, in 4 Epics. Jeder Task = 1 PR-fähiges Increment.
 
 ### Epic 4 — Konsistenz-Politur
 
-- [ ] **T4.1** KPI-Karten-Dedupe: `lib/widgets/kpi_card.dart` vs.
+- [x] **T4.1** KPI-Karten-Dedupe: `lib/widgets/kpi_card.dart` vs.
   `lib/widgets/statistics/kpi_card.dart` zusammenführen oder klar abgrenzen
   (Doku-Kommentar wenn bewusst getrennt). — `agent:flutter-coder`
   `model:Sonnet`

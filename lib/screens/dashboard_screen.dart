@@ -9,7 +9,8 @@ import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../utils/responsive.dart';
-import '../widgets/kpi_card.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/statistics/kpi_card.dart';
 import 'purchase_orders_screen.dart';
 
 /// Maximale Inhaltsbreite des Dashboards auf großen Viewports (Desktop,
@@ -213,6 +214,12 @@ class _LowStockAlertBlock extends StatelessWidget {
 
 // ─── Empty-State (Erst-Login ohne Daten) ──────────────────────────────────
 
+/// Onboarding-Panel, das auf dem Dashboard erscheint, wenn noch keine Daten
+/// vorhanden sind. Nutzt [EmptyState] mit `cardStyle: true` für die
+/// Card-Optik und übergibt den Demo-Daten-Button als `action`-Slot.
+///
+/// Stateful nur wegen des `_loading`-Zustands während des async [_loadDemo]-
+/// Calls — das UI-Skeleton kommt von [EmptyState].
 class _EmptyStateCard extends StatefulWidget {
   const _EmptyStateCard();
 
@@ -256,70 +263,25 @@ class _EmptyStateCardState extends State<_EmptyStateCard> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.bgSurfaceOf(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.borderOf(context)),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final phone = constraints.maxWidth < Breakpoints.legacyDashboardCompact;
-          final info = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.lightbulb_outline,
-                      color: AppTheme.accent),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      l10n.dashboardEmptyTitle,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 16),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.dashboardEmptySubtitle,
-                style: TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.textMutedOf(context)),
-              ),
-            ],
-          );
-          final cta = SizedBox(
-            height: 48,
-            child: ElevatedButton.icon(
-              onPressed: _loading ? null : _loadDemo,
-              icon: _loading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.dataset_outlined),
-              label: Text(l10n.dashboardEmptyLoadDemo),
-            ),
-          );
-          if (phone) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [info, const SizedBox(height: 16), cta],
-            );
-          }
-          return Row(
-            children: [
-              Expanded(child: info),
-              const SizedBox(width: 16),
-              cta,
-            ],
-          );
-        },
+    return EmptyState(
+      icon: Icons.lightbulb_outline,
+      title: l10n.dashboardEmptyTitle,
+      subtitle: l10n.dashboardEmptySubtitle,
+      keySlug: 'dashboardEmpty',
+      cardStyle: true,
+      action: SizedBox(
+        height: 48,
+        child: ElevatedButton.icon(
+          onPressed: _loading ? null : _loadDemo,
+          icon: _loading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.dataset_outlined),
+          label: Text(l10n.dashboardEmptyLoadDemo),
+        ),
       ),
     );
   }
@@ -365,7 +327,7 @@ class _KpiGrid extends StatelessWidget {
             final itemWidth = (width - (cols - 1) * 12) / cols;
             return SizedBox(
               width: itemWidth,
-              child: KpiCard(icon: k.$1, title: k.$2, value: k.$3, color: k.$4),
+              child: KpiCard(icon: k.$1, label: k.$2, value: k.$3, accent: k.$4),
             );
           }).toList(),
         );

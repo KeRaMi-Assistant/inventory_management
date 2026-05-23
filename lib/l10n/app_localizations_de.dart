@@ -2168,6 +2168,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ticketsEmpty => 'Keine Tickets gefunden';
 
   @override
+  String get ticketsEmptyHint =>
+      'Filter anpassen oder ein neues Ticket anlegen.';
+
+  @override
   String get ticketsNoTicket => 'Kein Ticket';
 
   @override
@@ -2400,6 +2404,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ticketsArchiveEmpty => 'Keine archivierten Tickets';
 
   @override
+  String get ticketsArchiveEmptyHint =>
+      'Abgeschlossene Tickets werden hier archiviert.';
+
+  @override
   String get ticketsArchiveReopen => 'Wieder öffnen';
 
   @override
@@ -2536,6 +2544,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get inventorySoldEmpty => 'Noch keine verkauften Artikel.';
+
+  @override
+  String get inventorySoldEmptyHint =>
+      'Artikel, die du als verkauft markierst, erscheinen hier.';
 
   @override
   String get inventorySoldKpiCount => 'Verkaufte Items';
@@ -3614,6 +3626,27 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get inboxOpenTicketLabel => 'Ticket öffnen';
+
+  @override
+  String get inboxSuggestionsEmpty => 'Keine offenen Vorschläge';
+
+  @override
+  String get inboxSuggestionsEmptyHint =>
+      'Neue Mails werden automatisch analysiert und erscheinen hier.';
+
+  @override
+  String get inboxUpdatedEmpty => 'Keine aktualisierten Deals';
+
+  @override
+  String get inboxUpdatedEmptyHint =>
+      'Deals, bei denen der Versandstatus automatisch aktualisiert wurde, erscheinen hier.';
+
+  @override
+  String get inboxUnclassifiedEmpty => 'Keine unklassifizierten Mails';
+
+  @override
+  String get inboxUnclassifiedEmptyHint =>
+      'Mails ohne zuordenbaren Deal oder Carrier werden hier gesammelt.';
 
   @override
   String get inventoryDiscordTooltip => 'Discord-Ticket öffnen';

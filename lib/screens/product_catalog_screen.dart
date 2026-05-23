@@ -7,6 +7,7 @@ import '../models/product.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../widgets/add_edit_product_dialog.dart';
+import '../widgets/app_screen_scaffold.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ProductCatalogScreen
@@ -55,37 +56,42 @@ class ProductCatalogScreen extends StatelessWidget {
         final canEdit = wsProvider.role?.canEdit ?? false;
         final products = provider.products;
 
-        return Scaffold(
-          appBar: embedded
-              ? null
-              : AppBar(
-                  title: Text(l10n.productCatalogTitle),
-                ),
-          floatingActionButton: canEdit
-              ? FloatingActionButton.extended(
-                  key: const Key('productNewFab'),
-                  onPressed: () => _openDialog(context),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(l10n.productNew),
-                )
-              : null,
-          body: SafeArea(
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : provider.lastError != null
-                    ? _ErrorState(
-                        message: l10n.productCatalogLoadError,
-                        onRetry: () => provider.loadData(),
-                      )
-                    : products.isEmpty
-                        ? _EmptyState(canEdit: canEdit)
-                        : _ProductList(
-                            products: products,
-                            provider: provider,
-                            canEdit: canEdit,
-                            onTap: (p) => _openDialog(context, product: p),
-                          ),
-          ),
+        final fab = canEdit
+            ? FloatingActionButton.extended(
+                key: const Key('productNewFab'),
+                onPressed: () => _openDialog(context),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(l10n.productNew),
+              )
+            : null;
+
+        final bodyContent = provider.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : provider.lastError != null
+                ? _ErrorState(
+                    message: l10n.productCatalogLoadError,
+                    onRetry: () => provider.loadData(),
+                  )
+                : products.isEmpty
+                    ? _EmptyState(canEdit: canEdit)
+                    : _ProductList(
+                        products: products,
+                        provider: provider,
+                        canEdit: canEdit,
+                        onTap: (p) => _openDialog(context, product: p),
+                      );
+
+        if (embedded) {
+          return Scaffold(
+            floatingActionButton: fab,
+            body: SafeArea(child: bodyContent),
+          );
+        }
+
+        return AppScreenScaffold(
+          appBar: AppBar(title: Text(l10n.productCatalogTitle)),
+          floatingActionButton: fab,
+          body: bodyContent,
         );
       },
     );

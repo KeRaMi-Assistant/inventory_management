@@ -9,6 +9,7 @@ import '../models/product_category.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/validators.dart';
+import '../widgets/app_screen_scaffold.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CategoriesScreen
@@ -88,38 +89,42 @@ class CategoriesScreen extends StatelessWidget {
         // Sort: top-level first by sortOrder, then children under their parent.
         final sorted = _buildSortedList(categories);
 
-        return Scaffold(
-          appBar: embedded
-              ? null
-              : AppBar(
-                  title: Text(l10n.categoriesTitle),
-                ),
-          floatingActionButton: canEdit
-              ? FloatingActionButton.extended(
-                  key: const Key('categoryNewFab'),
-                  onPressed: () => _openAddDialog(context),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(l10n.categoryNew),
-                )
-              : null,
-          body: SafeArea(
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : provider.lastError != null
-                    ? _ErrorState(
-                        message: l10n.categoriesLoadError,
-                        onRetry: () => provider.loadData(),
-                      )
-                    : sorted.isEmpty
-                        ? _EmptyState(canEdit: canEdit)
-                        : _CategoryList(
-                            items: sorted,
-                            canEdit: canEdit,
-                            onEdit: (c) => _openAddDialog(context, category: c),
-                            onDelete: (c) =>
-                                _confirmDelete(context, provider, c),
-                          ),
-          ),
+        final fab = canEdit
+            ? FloatingActionButton.extended(
+                key: const Key('categoryNewFab'),
+                onPressed: () => _openAddDialog(context),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(l10n.categoryNew),
+              )
+            : null;
+
+        final bodyContent = provider.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : provider.lastError != null
+                ? _ErrorState(
+                    message: l10n.categoriesLoadError,
+                    onRetry: () => provider.loadData(),
+                  )
+                : sorted.isEmpty
+                    ? _EmptyState(canEdit: canEdit)
+                    : _CategoryList(
+                        items: sorted,
+                        canEdit: canEdit,
+                        onEdit: (c) => _openAddDialog(context, category: c),
+                        onDelete: (c) => _confirmDelete(context, provider, c),
+                      );
+
+        if (embedded) {
+          return Scaffold(
+            floatingActionButton: fab,
+            body: SafeArea(child: bodyContent),
+          );
+        }
+
+        return AppScreenScaffold(
+          appBar: AppBar(title: Text(l10n.categoriesTitle)),
+          floatingActionButton: fab,
+          body: bodyContent,
         );
       },
     );
