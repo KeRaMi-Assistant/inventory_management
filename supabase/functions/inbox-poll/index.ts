@@ -50,30 +50,60 @@ const MAX_FETCH_PER_RUN = 100
 // wir alle UIDs der letzten N Tage rein (IMAP SEARCH SINCE). Datums-basiert
 // statt UID-basiert, weil 100 UIDs für viel-Mail-Postfächer nur ~2 Tage,
 // für sparse-Postfächer 6 Monate sind — beides war vorher kaputt.
-// 90 entspricht dem Ultimate-Plan-Inbox-Verlauf; restliche UIDs holt der
-// nächste Cron-Tick incrementell (MAX_FETCH_PER_RUN-Cap pro Lauf).
-// Override per Secret: BOOTSTRAP_LOOKBACK_DAYS=<n>.
-const DEFAULT_BOOTSTRAP_DAYS = 90
-const BOOTSTRAP_LOOKBACK_DAYS = (() => {
+//
+// 2026-05-23: Default wird PRO MAILBOX dynamisch aus dem Plan-Tier des
+// Workspace-Owners ermittelt (Team=30, Business=60, Enterprise=90 — siehe
+// `lookbackDaysForPlan` weiter unten). Das ENV-Secret `BOOTSTRAP_LOOKBACK_DAYS`
+// bleibt als manueller Override erhalten (z.B. zum Debug oder gezielten
+// Re-Bootstrap mit längerem Fenster).
+const FALLBACK_BOOTSTRAP_DAYS = 90
+const BOOTSTRAP_LOOKBACK_DAYS_OVERRIDE: number | null = (() => {
   const raw = Deno.env.get('BOOTSTRAP_LOOKBACK_DAYS')
-  if (!raw) return DEFAULT_BOOTSTRAP_DAYS
+  if (!raw) return null
   const n = Number.parseInt(raw, 10)
-  if (!Number.isFinite(n) || n < 1 || n > 365) return DEFAULT_BOOTSTRAP_DAYS
+  if (!Number.isFinite(n) || n < 1 || n > 365) return null
   return n
 })()
 
-// Plan 2026-05-16 (User-Feedback): beim Bootstrap (last_uid=NULL, z.B. nach
-// Hard-Reset) nur die NEUESTEN N Mails einziehen statt alle aus dem
-// Lookback-Fenster. Begruendung: DHL-API-Validation kostet 5.1s pro Call
-// (Free-Tier-Spike-Arrest). 80 Mails × ~1-3 Kandidaten = 80-240 API-Calls
-// = ~7-20 Min linear. Realistisch fertig. Spaeter hochschraubbar via
-// BOOTSTRAP_NEWEST_LIMIT-Secret.
-const DEFAULT_BOOTSTRAP_NEWEST_LIMIT = 80
+/// Plan-spezifischer Inbox-Verlauf in Tagen. Spiegelt
+/// `lib/models/pricing_plan.dart#inboxVisibilityDays` 1:1.
+/// Mailboxen von Workspaces mit `inboxVisibilityDays === 0` (Free/Solo/
+/// Solo Pro — Postfach ist Premium-Feature) sollten in der App gar nicht
+/// erst angelegt werden können. Falls doch (z.B. weil der User vom
+/// Enterprise auf Solo downgegradet hat und seine Mailbox stehengeblieben
+/// ist), fallen wir auf 30 Tage — sonst würde der Bootstrap exakt 0
+/// Mails ziehen und das Postfach wirkt kaputt.
+function lookbackDaysForPlan(plan: string | null | undefined): number {
+  switch (plan) {
+    case 'team':
+      return 30
+    case 'business':
+      return 60
+    case 'enterprise':
+      return 90
+    // Legacy / unbekannte Werte → ergibt 90 (Maximum unter den
+    // bezahlten Tiers, sicherer Default damit nichts verschluckt wird).
+    default:
+      return FALLBACK_BOOTSTRAP_DAYS
+  }
+}
+
+// 2026-05-23: Default für BOOTSTRAP_NEWEST_LIMIT massiv erhöht — der alte
+// 80-Cap stammt aus dem DHL-Free-Tier (1 Call/5s = 17 280 Calls/Tag). Seit
+// dem Switch auf die Parcel-DE-Tracking-API (PR #103, 10 000 000 Calls/Tag)
+// ist der Spike-Arrest der einzige Bottleneck, und der ist linear in der
+// Anzahl Kandidaten — kein Grund mehr, das Bootstrap auf 80 zu deckeln.
+// 10 000 entspricht effektiv „alles im Lookback-Fenster nehmen" für
+// realistische Postfächer; der Hard-Cap pro Lauf (MAX_FETCH_PER_RUN=100)
+// drosselt sowieso noch.
+const DEFAULT_BOOTSTRAP_NEWEST_LIMIT = 10000
 const BOOTSTRAP_NEWEST_LIMIT = (() => {
   const raw = Deno.env.get('BOOTSTRAP_NEWEST_LIMIT')
   if (!raw) return DEFAULT_BOOTSTRAP_NEWEST_LIMIT
   const n = Number.parseInt(raw, 10)
-  if (!Number.isFinite(n) || n < 1 || n > 1000) return DEFAULT_BOOTSTRAP_NEWEST_LIMIT
+  if (!Number.isFinite(n) || n < 1 || n > 100000) {
+    return DEFAULT_BOOTSTRAP_NEWEST_LIMIT
+  }
   return n
 })()
 
@@ -238,6 +268,32 @@ async function pollAccount(
     logger: false,
   })
 
+  // Lookback-Days: Override-Secret first, sonst Plan-spezifisch via
+  // billing_profiles.plan des Workspace-Owners. Workspace-Owner-Lookup
+  // via workspaces.owner_id → billing_profiles.plan.
+  let lookbackDays = BOOTSTRAP_LOOKBACK_DAYS_OVERRIDE ?? FALLBACK_BOOTSTRAP_DAYS
+  if (BOOTSTRAP_LOOKBACK_DAYS_OVERRIDE === null) {
+    try {
+      const { data: wsRow } = await admin
+        .from('workspaces')
+        .select('owner_id')
+        .eq('id', account.workspace_id)
+        .maybeSingle()
+      const ownerId = (wsRow as { owner_id?: string } | null)?.owner_id
+      if (ownerId) {
+        const { data: bpRow } = await admin
+          .from('billing_profiles')
+          .select('plan')
+          .eq('user_id', ownerId)
+          .maybeSingle()
+        const plan = (bpRow as { plan?: string } | null)?.plan
+        lookbackDays = lookbackDaysForPlan(plan)
+      }
+    } catch (_e) {
+      // Plan-Lookup-Fehler → Fallback bleibt 90 Tage.
+    }
+  }
+
   try {
     await client.connect()
     const lock = await client.getMailboxLock(account.folder)
@@ -254,7 +310,7 @@ async function pollAccount(
       let bootstrapped = false
       if (account.last_uid === null) {
         const sinceDate = new Date(
-          Date.now() - BOOTSTRAP_LOOKBACK_DAYS * 86_400_000,
+          Date.now() - lookbackDays * 86_400_000,
         )
         let bootstrapUids: number[] = []
         try {
