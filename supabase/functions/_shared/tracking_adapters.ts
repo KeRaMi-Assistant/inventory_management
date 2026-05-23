@@ -114,40 +114,30 @@ export const dhlAdapter: TrackingAdapter = {
   /// "DHL kennt die Nummer nicht" (404 → invalid, 30d Cache) und "DHL
   /// akzeptiert den Key nicht" (401/403 → auth_error, kurze TTL +
   /// last_error auf workspace_carrier_credentials).
+  ///
+  /// Strategie: erst den **Parcel-DE-Endpoint** probieren (10M calls/day,
+  /// das ist seit 2026-05-22 der freigeschaltete Pfad für unsere App).
+  /// Falls der mit 401/403 antwortet, **Fallback auf den Unified-Endpoint**
+  /// — dadurch funktionieren Workspaces weiter, die ihre App-Registrierung
+  /// noch im alten Unified-Modus haben.
   async probeStatus(tracking, apiKey): Promise<ProbeOutcome> {
-    const url = new URL(
+    const primary = await _probeDhlEndpoint(
       'https://api-eu.dhl.com/parcel/de/tracking/v0/shipments',
+      tracking,
+      apiKey,
+      'parcel-de',
     )
-    // Beide Parameter-Namen mitgeben — die Unified-API kannte
-    // `trackingNumber`, die Parcel-DE-API spricht historisch `piece-code`.
-    // Doppel-Set ist safe: der jeweils nicht verstandene Param wird ignoriert.
-    url.searchParams.set('trackingNumber', tracking)
-    url.searchParams.set('piece-code', tracking)
-    let res: Response
-    try {
-      res = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'DHL-API-Key': apiKey,
-          'Accept': 'application/json',
-        },
-      })
-    } catch (e) {
-      return { kind: 'network_error', message: (e as Error).message ?? 'fetch failed' }
-    }
-    if (res.status === 200) {
-      const json = await res.json().catch(() => null)
-      const parsed = this.parseResponse(json)
-      if (parsed) return { kind: 'hit', parsed }
-      // 200 OK aber Body unparsbar / leer → DHL hat Nummer akzeptiert
-      // aber kein Shipment-Objekt geliefert. Klassifizieren als miss.
-      return { kind: 'miss' }
-    }
-    if (res.status === 401 || res.status === 403) return { kind: 'auth_error' }
-    if (res.status === 429) return { kind: 'rate_limited' }
-    if (res.status >= 500) return { kind: 'server_error' }
-    // 4xx (404, 400, 422, ...): Tracking-Nr ist DHL nicht bekannt.
-    return { kind: 'miss' }
+    if (primary.kind !== 'auth_error') return primary
+
+    // Fallback auf Unified — gleicher API-Key, anderer Pfad. Wenn auch
+    // Unified 401/403 wirft, ist der Key tatsächlich nicht autorisiert.
+    const fallback = await _probeDhlEndpoint(
+      'https://api-eu.dhl.com/track/shipments',
+      tracking,
+      apiKey,
+      'unified',
+    )
+    return fallback
   },
 
   parseResponse(payload) {
@@ -164,6 +154,97 @@ export const dhlAdapter: TrackingAdapter = {
 
     return null
   },
+}
+
+/// Innerer Helper: ein DHL-Endpoint probieren mit klassifizierter Outcome.
+/// Logs den HTTP-Status + Body-Snippet bei Fehlern (Edge-Function-Logs),
+/// damit der Stakeholder bei „Polling klappt nicht"-Reports direkt im
+/// Supabase-Log nachschauen kann.
+async function _probeDhlEndpoint(
+  baseUrl: string,
+  tracking: string,
+  apiKey: string,
+  variant: 'parcel-de' | 'unified',
+): Promise<ProbeOutcome> {
+  const url = new URL(baseUrl)
+  // Beide Parameter-Namen mitgeben — Unified spricht `trackingNumber`,
+  // Parcel-DE spricht historisch `piece-code`. Doppel-Set ist safe.
+  url.searchParams.set('trackingNumber', tracking)
+  url.searchParams.set('piece-code', tracking)
+
+  let res: Response
+  try {
+    res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'DHL-API-Key': apiKey,
+        'Accept': 'application/json',
+      },
+    })
+  } catch (e) {
+    const msg = (e as Error).message ?? 'fetch failed'
+    // deno-lint-ignore no-console
+    console.warn(JSON.stringify({
+      event: 'dhl_probe_network_error',
+      variant,
+      tracking_redacted: redactTracking(tracking),
+      message: msg.slice(0, 200),
+    }))
+    return { kind: 'network_error', message: msg }
+  }
+
+  if (res.status === 200) {
+    const json = await res.json().catch(() => null)
+    const parsed = parseDhlResponseUnion(json)
+    if (parsed) return { kind: 'hit', parsed }
+    // 200 OK aber Body unparsbar / leer → DHL hat Nummer akzeptiert
+    // aber kein Shipment-Objekt geliefert. Klassifizieren als miss.
+    return { kind: 'miss' }
+  }
+
+  // Bei Fehler-Status: kompakten Body-Snippet ins Log schreiben, damit
+  // wir beim Debug sehen, was die API moniert (z.B. „App not subscribed",
+  // „API key revoked", „Invalid tracking format").
+  let bodySnippet: string | null = null
+  try {
+    const text = await res.text()
+    bodySnippet = text.slice(0, 200)
+  } catch {
+    bodySnippet = null
+  }
+  // deno-lint-ignore no-console
+  console.warn(JSON.stringify({
+    event: 'dhl_probe_error',
+    variant,
+    status: res.status,
+    tracking_redacted: redactTracking(tracking),
+    body_snippet: bodySnippet,
+  }))
+
+  if (res.status === 401 || res.status === 403) return { kind: 'auth_error' }
+  if (res.status === 429) return { kind: 'rate_limited' }
+  if (res.status >= 500) return { kind: 'server_error' }
+  // 4xx (404, 400, 422, ...): Tracking-Nr ist DHL nicht bekannt.
+  return { kind: 'miss' }
+}
+
+/// Aus DHL-Tracking-Nr letzte 4 Zeichen behalten, Rest mit `*` maskieren.
+/// Verhindert PII-Log-Leak (Tracking-Nummern dürfen nicht im Klartext im
+/// Log liegen — siehe CLAUDE.md §Sicherheit).
+function redactTracking(value: string): string {
+  if (value.length <= 4) return '*'.repeat(value.length)
+  return '*'.repeat(value.length - 4) + value.slice(-4)
+}
+
+/// Vereinigt parseDhlUnified + parseDhlParcelDe. Wird vom inneren Probe
+/// und vom externen `dhlAdapter.parseResponse` benutzt.
+function parseDhlResponseUnion(payload: unknown): ParsedTracking | null {
+  if (!isObject(payload)) return null
+  const unified = parseDhlUnified(payload)
+  if (unified) return unified
+  const parcelDe = parseDhlParcelDe(payload)
+  if (parcelDe) return parcelDe
+  return null
 }
 
 /// Parser für das Unified-/Shipment-Tracking-Schema:
