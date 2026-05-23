@@ -642,7 +642,7 @@ Atomar geschnitten, in 4 Epics. Jeder Task = 1 PR-fähiges Increment.
   **identische Schwellen** (800/1100 als temporäre `_legacyShellNarrow`/
   `_legacyShellExtended`-Konstanten in `responsive.dart`). Pixel-identisches
   Verhalten. — `agent:flutter-coder` `model:Sonnet` `depends:T1.1`
-- [ ] **T1.3b** _Phase B_ — `main_screen.dart`: Shell-Switch auf
+- [x] **T1.3b** _Phase B_ — `main_screen.dart`: Shell-Switch auf
   `Breakpoints.navRail` (900) und Rail-Extended auf
   `Breakpoints.railExtended` (1200) umstellen. **Verhaltensändernd**:
   Band 800–899 und Band 1100–1199 ändern ihr Layout. Vorher/Nachher-
@@ -655,7 +655,7 @@ Atomar geschnitten, in 4 Epics. Jeder Task = 1 PR-fähiges Increment.
   `tickets_screen.dart` (Z. 167 + Z. 188), `deal_table.dart` (Z. 130).
   Magic Numbers → benannte Konstanten in `responsive.dart`, **Werte
   identisch**. — `agent:flutter-coder` `model:Sonnet` `depends:T1.1`
-- [ ] **T1.4b** _Phase B_ — Cluster A konsolidieren: `deals_screen` +
+- [x] **T1.4b** _Phase B_ — Cluster A konsolidieren: `deals_screen` +
   `tickets_screen` Detail-Schwelle 1100 → `Breakpoints.master` (1200).
   Verhaltens-Diff (Band 1100–1199 verliert Detail-Panel) im PR. —
   `agent:flutter-coder` `model:Opus` `depends:T1.4a,T1.7a`
@@ -887,3 +887,31 @@ Size-Classes-Referenz, State-Erhalt-Strategie, Keyboard-Tests) ebenfalls
 übernommen.
 
 **Header-Wechsel** `[DRAFT — Pending Committee Review]` → `[Committee-Approved 2026-05-23]`.
+
+### T1.3b Phase B — Verhaltens-Diff (2026-05-23)
+
+`main_screen.dart` Shell-Switch-Schwellen aktiv umgestellt:
+
+| Viewport | Vorher (Phase A: `legacyShellNarrow` 800 / `legacyShellExtended` 1100) | Nachher (Phase B: `navRail` 900 / `railExtended` 1200) | Diff |
+|---|---|---|---|
+| 760 px  | Bottom-Nav (Phone-Shell)            | Bottom-Nav (Phone-Shell)            | identisch |
+| 820 px  | Sidebar (Desktop-Shell), collapsed  | **Bottom-Nav (Phone-Shell)**        | **Shell wechselt** — Band 800–899 ist jetzt Phone-Shell |
+| 900 px  | Sidebar collapsed                   | Sidebar collapsed                   | identisch (Schwelle exakt erreicht) |
+| 1100 px | Sidebar **extended** (Labels)       | **Sidebar collapsed (Icons only)**  | **Rail-Modus wechselt** — Band 1100–1199 ist jetzt kompakte Rail |
+| 1180 px | Sidebar extended                    | **Sidebar collapsed**               | siehe oben |
+| 1220 px | Sidebar extended                    | Sidebar extended                    | identisch (über neuer Schwelle 1200) |
+
+Diese Viewports sind Test-Anker für T1.7b (Browser-Audit Grenz-Viewports).
+
+**Cleanup in `lib/utils/responsive.dart`:**
+- `Breakpoints.legacyShellNarrow` (800) **entfernt** — wurde nur in
+  `main_screen.dart` referenziert (per `grep` verifiziert).
+- `Breakpoints.legacyShellExtended` (1100) **ebenfalls entfernt** — T1.4b
+  lief parallel und hat alle Verwendungen in `deals_screen.dart` und
+  `tickets_screen.dart` auf `Breakpoints.master` (1200) umgestellt; die
+  Konstante ist damit endgültig tot.
+
+**Tests:** Keine Tests prüften das alte 800-/1100-Verhalten konkret
+(`test/responsive_test.dart` arbeitet entweder mit Container-Achse oder
+testet gegen `Breakpoints.navRail` / `master` direkt). `flutter test`
+durchgelaufen, keine Test-Anpassung nötig.

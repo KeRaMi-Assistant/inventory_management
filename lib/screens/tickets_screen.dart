@@ -189,11 +189,13 @@ class _ActiveTicketsView extends StatelessWidget {
         return Row(
           children: [
             SizedBox(
-              // Phase A (T1.4a): Magic Number 1100 → Breakpoints.legacyShellExtended.
-              // Verhalten identisch; Phase-B-Konsolidierung in T1.4b.
-              width: constraints.maxWidth > Breakpoints.legacyShellExtended
-                  ? 440
-                  : 360,
+              // Phase B (T1.4b): Schwelle 1100 → Breakpoints.master (1200)
+              // konsolidiert. Im Band 1100–1199 px Container-Breite wird der
+              // Filter-/Listen-Pane jetzt schmaler (360 statt 440) gerendert —
+              // einheitlich mit der Master-Detail-Schwelle der App. Vorher
+              // wurde bei ≥1100 schon der breite Pane gewählt, was bei
+              // 60/40-Splits eng wirken konnte.
+              width: isLarge(constraints.maxWidth) ? 440 : 360,
               child: Column(
                 children: [
                   _TicketFilters(

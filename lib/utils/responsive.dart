@@ -65,23 +65,16 @@ class Breakpoints {
   /// Identisch mit [master] — beide Eigenschaften treten bei 1200 px ein.
   static const double railExtended = 1200;
 
-  // ── Legacy-Konstanten (Phase A — verhaltensneutrale Indirektion) ──────────
+  // ── Legacy-Shell-Konstanten (Phase B — Cleanup abgeschlossen) ───────────
   //
-  // Diese Konstanten spiegeln die heutigen Magic Numbers in `main_screen.dart`
-  // (narrow = 800, extended = 1100) exakt wider, damit Phase-A-Migration
-  // pixel-identisch ist. Sie werden in Phase B durch [navRail] / [railExtended]
-  // ersetzt und anschließend aus dieser Datei entfernt.
-  //
-  // NICHT in neuen Screens verwenden — nur für die direkte Phase-A-Migration
-  // von `main_screen.dart`.
-
-  /// @deprecated Wird in Phase B durch [navRail] (900) ersetzt und entfernt.
-  /// Nur für Phase-A-Migration von `main_screen.dart` Z. 321.
-  static const double legacyShellNarrow = 800;
-
-  /// @deprecated Wird in Phase B durch [railExtended] (1200) ersetzt und
-  /// entfernt. Nur für Phase-A-Migration von `main_screen.dart` Z. 322.
-  static const double legacyShellExtended = 1100;
+  // Historie:
+  // - `legacyShellNarrow` (800) hat in Phase A `main_screen.dart` Z. 321
+  //   gespiegelt. Mit T1.3b ist die Shell-Schwelle auf [navRail] (900)
+  //   migriert; `legacyShellNarrow` wurde entfernt.
+  // - `legacyShellExtended` (1100) wurde in T1.3b in `main_screen.dart` durch
+  //   [railExtended] (1200) und in T1.4b in `deals_screen.dart`/
+  //   `tickets_screen.dart` durch [master] (1200) ersetzt. Die Konstante ist
+  //   damit komplett tot und wurde entfernt.
 
   // ── Legacy-Konstanten Cluster A (Phase A — T1.4a) ─────────────────────────
   //
@@ -151,7 +144,8 @@ class Breakpoints {
 
   /// @deprecated Magic Number aus `public_profile_screen.dart` —
   /// Produkt-Grid wechselt von 2 auf 3 Spalten ab dieser Viewport-Breite.
-  /// Semantisch verschieden von [legacyShellExtended] (Rail-Labels).
+  /// Semantisch verschieden von der alten Rail-Labels-Schwelle (1100) —
+  /// daher nicht beim T1.4b-Cleanup mitentfernt.
   /// Wird in Phase B konsolidiert.
   static const double legacyProfileWide = 1100;
 

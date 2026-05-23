@@ -318,9 +318,17 @@ class _MainScreenState extends State<MainScreen> {
     final labels = _navLabels(l10n);
     return Consumer2<InventoryProvider, BillingProvider>(
       builder: (context, provider, billing, _) {
+        // T1.3b (Phase B): Shell-Switch-Schwellen aktiv geändert.
+        // - narrow:   800 → 900 (Breakpoints.navRail).
+        //   Verhalten: Viewports 800–899 px wechseln von Desktop-Sidebar auf
+        //   Phone-Bottom-Nav. M3-Window-Size-Class "Expanded" beginnt bei 840;
+        //   wir wählen 900 (vgl. Plan §5.1).
+        // - extended: 1100 → 1200 (Breakpoints.railExtended).
+        //   Verhalten: Viewports 1100–1199 px zeigen die Rail künftig kompakt
+        //   (Icons only) statt expanded (Labels). Entspricht M3 Large-Beginn.
         final width = MediaQuery.of(context).size.width;
-        final narrow = width < Breakpoints.legacyShellNarrow;
-        final extended = width >= Breakpoints.legacyShellExtended;
+        final narrow = width < Breakpoints.navRail;
+        final extended = width >= Breakpoints.railExtended;
         final visibility = _navVisibility(billing);
         // Wenn der User auf einen Plan ohne Postfach downgradet, während
         // er den Inbox-Tab offen hat, automatisch zurück aufs Dashboard.

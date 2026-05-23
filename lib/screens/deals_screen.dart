@@ -11,23 +11,25 @@ class DealsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Phase A (T1.4a) — Bug-Fix: vorher `MediaQuery.of(context).size.width`
-    // (Viewport-Breite inkl. Sidebar), jetzt `LayoutBuilder` mit
-    // `constraints.maxWidth` (Container-Breite des Body ohne Sidebar).
+    // Phase B (T1.4b): Detail-Panel-Schwelle auf `Breakpoints.master` (1200)
+    // konsolidiert. Im Band 1100–1199 px Body-Breite verschwindet das
+    // Summary-Panel jetzt — die alte 1100-Schwelle war eng für ein 60/40-Split
+    // (660/440); 1200 erlaubt 720/480 und entspricht M3-Window-Size-Class
+    // „Large".
     //
-    // Verhaltensänderung (bewusst, Bug-Fix): Bei einem 1300-px-Viewport mit
-    // 220-px-Sidebar → 1080-px-Body verschwindet das Summary-Panel jetzt
-    // korrekt, weil 1080 < Breakpoints.legacyShellExtended (1100).
-    // Vorher erschien es fälschlicherweise, da 1300 >= 1100 (Viewport).
-    // Schwelle bleibt identisch (1100 via legacyShellExtended) — Konsolidierung
-    // auf Breakpoints.master (1200) erfolgt in Phase B / T1.4b.
+    // Bug-Fix aus Phase A (T1.4a) bleibt: `LayoutBuilder.constraints.maxWidth`
+    // statt `MediaQuery.of(context).size.width` — sonst würde die Viewport-
+    // Breite (inkl. Sidebar) statt der Body-Breite geprüft.
+    //
+    // Verhaltens-Diff zu T1.4a (Plan §5.2): Body-Breite 1100–1199 zeigte
+    // vorher das Panel, jetzt erst ab ≥1200.
     return LayoutBuilder(
       builder: (context, constraints) {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: DealTable(onOpenTicket: onOpenTicket)),
-            if (constraints.maxWidth >= Breakpoints.legacyShellExtended)
+            if (isLarge(constraints.maxWidth))
               Container(
                 width: 292,
                 decoration: BoxDecoration(
