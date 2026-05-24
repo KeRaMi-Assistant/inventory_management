@@ -15,6 +15,7 @@ import '../widgets/attachment_gallery.dart';
 import '../widgets/barcode_scanner_sheet.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/inventory_batches_sheet.dart';
+import '../widgets/skeletons/list_skeleton.dart';
 import 'product_detail_screen.dart';
 
 class InventoryScreen extends StatefulWidget {
@@ -324,31 +325,64 @@ class _InventoryScreenState extends State<InventoryScreen>
     required AppLocalizations l10n,
     required bool isMasterDetail,
   }) {
+    // B2: Skeleton-Loader for first load.
+    //
+    // `shouldShowSkeleton` returns true when:
+    //   - cold-start race: `initialLoadAttempted == false` AND no data yet, OR
+    //   - still loading AND no data (covers re-load edge case too).
+    //
+    // Once the first load completes:
+    //   - with data → skeleton hides, list shows.
+    //   - without data → skeleton hides, EmptyState shows (no race flash).
+    final showSkeleton = shouldShowSkeleton(
+      isLoading: provider.isLoading,
+      hasData: provider.inventoryItems.isNotEmpty,
+      initialLoadAttempted: provider.initialLoadAttempted,
+    );
+
+    // Determine the actual list content (used when skeleton is NOT shown).
+    Widget listContent;
+    if (items.isEmpty) {
+      listContent = allStockEmpty
+          ? EmptyState(
+              key: const ValueKey('inventoryStockEmpty'),
+              icon: Icons.inventory_2_outlined,
+              title: l10n.inventoryEmpty,
+              subtitle: l10n.inventoryEmptyHint,
+              keySlug: 'inventoryEmpty',
+            )
+          : EmptyState(
+              key: const ValueKey('inventoryStockFilterEmpty'),
+              icon: Icons.search_off_outlined,
+              title: l10n.dealsEmpty,
+              subtitle: l10n.dealsEmptyHint,
+              keySlug: 'inventoryFilterEmpty',
+            );
+    } else {
+      listContent = isNarrow
+          ? _buildGroupedCardList(
+              context, provider, money, items, l10n, isMasterDetail)
+          : _buildGroupedTable(context, provider, money, items, l10n);
+    }
+
     return Column(
       children: [
         _buildHeader(context, provider, isNarrow, money, width),
         if (provider.criticalStockCount > 0)
           _LowStockBanner(count: provider.criticalStockCount),
         Expanded(
-          child: items.isEmpty
-              ? allStockEmpty
-                  ? EmptyState(
-                      icon: Icons.inventory_2_outlined,
-                      title: l10n.inventoryEmpty,
-                      subtitle: l10n.inventoryEmptyHint,
-                      keySlug: 'inventoryEmpty',
-                    )
-                  : EmptyState(
-                      icon: Icons.search_off_outlined,
-                      title: l10n.dealsEmpty,
-                      subtitle: l10n.dealsEmptyHint,
-                      keySlug: 'inventoryFilterEmpty',
-                    )
-              : isNarrow
-                  ? _buildGroupedCardList(
-                      context, provider, money, items, l10n, isMasterDetail)
-                  : _buildGroupedTable(
-                      context, provider, money, items, l10n),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: showSkeleton
+                ? const ListSkeleton(
+                    key: ValueKey('skeleton'),
+                    itemCount: 6,
+                  )
+                : KeyedSubtree(
+                    key: const ValueKey('content'),
+                    child: listContent,
+                  ),
+          ),
         ),
       ],
     );

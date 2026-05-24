@@ -3493,6 +3493,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackingReparseFailed => 'Re-evaluation failed';
 
   @override
+  String trackingReparseRateLimit(int seconds) {
+    return 'Too many requests — please try again in $seconds s';
+  }
+
+  @override
   String get trackingReparseOffline => 'No connection — please try again later';
 
   @override
@@ -4854,6 +4859,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsMailboxDeleteError => 'Deletion failed';
 
   @override
+  String get settingsMailboxRemovedFeedback => 'Mailbox removed';
+
+  @override
   String get settingsMailboxAddLabel => 'IMAP account';
 
   @override
@@ -4991,4 +4999,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsShippingDeleteKeyConfirmBody(String carrier) {
     return '$carrier: really remove API key?';
   }
+
+  @override
+  String get unsavedChangesDiscardTitle => 'Discard unsaved changes?';
+
+  @override
+  String get unsavedChangesDiscardMessage => 'Your changes will be lost.';
+
+  @override
+  String get unsavedChangesDiscardLabel => 'Discard';
 }

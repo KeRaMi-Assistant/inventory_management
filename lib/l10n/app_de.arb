@@ -1346,6 +1346,13 @@
   "trackingReparseConfirmBody": "Bestehende Sendungsnummern werden mit der verbesserten Erkennung neu geprüft. Manuelle Einträge bleiben unverändert.",
   "trackingReparseConfirmTitle": "Neubewertung starten?",
   "trackingReparseFailed": "Neubewertung fehlgeschlagen",
+  "@trackingReparseFailed": { "description": "SnackBar-Text wenn die Tracking-Neubewertung fehlschlägt." },
+
+  "trackingReparseRateLimit": "Zu viele Anfragen — bitte in {seconds} s erneut versuchen",
+  "@trackingReparseRateLimit": {
+    "description": "SnackBar-Text wenn die Tracking-Neubewertung durch Rate-Limiting abgelehnt wird.",
+    "placeholders": { "seconds": { "type": "int" } }
+  },
   "trackingReparseOffline": "Keine Verbindung — bitte später erneut versuchen",
   "trackingReparseRunning": "Sendungsnummern werden neu bewertet…",
   "trackingReparseSuccessCount": "{count, plural, =0{Keine Sendungsnummer aktualisiert} =1{1 Sendungsnummer aktualisiert} other{{count} Sendungsnummern aktualisiert}}",
@@ -2143,6 +2150,9 @@
   "settingsMailboxDeleteError": "Löschen fehlgeschlagen",
   "@settingsMailboxDeleteError": { "description": "SnackBar-Text wenn Postfach-Löschen fehlschlägt." },
 
+  "settingsMailboxRemovedFeedback": "Postfach entfernt",
+  "@settingsMailboxRemovedFeedback": { "description": "SnackBar-Text nach erfolgreichem Entfernen eines IMAP-Kontos." },
+
   "settingsMailboxAddLabel": "IMAP-Konto",
   "@settingsMailboxAddLabel": { "description": "FAB-Label zum Hinzufügen eines neuen IMAP-Kontos." },
 
@@ -2297,5 +2307,14 @@
   "@settingsShippingDeleteKeyConfirmBody": {
     "description": "Bestätigungs-Dialog-Text zum Löschen eines Carrier-API-Keys.",
     "placeholders": { "carrier": { "type": "String" } }
-  }
+  },
+
+  "unsavedChangesDiscardTitle": "Ungespeicherte Änderungen verwerfen?",
+  "@unsavedChangesDiscardTitle": { "description": "Titel des Discard-Confirm-Dialogs im UnsavedChangesGuard." },
+
+  "unsavedChangesDiscardMessage": "Deine Änderungen gehen verloren.",
+  "@unsavedChangesDiscardMessage": { "description": "Body-Text des Discard-Confirm-Dialogs im UnsavedChangesGuard." },
+
+  "unsavedChangesDiscardLabel": "Verwerfen",
+  "@unsavedChangesDiscardLabel": { "description": "Label des Confirm-Buttons im Discard-Dialog." }
 }

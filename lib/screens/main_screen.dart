@@ -13,7 +13,7 @@ import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/csv_service.dart';
 import '../widgets/add_edit_deal_dialog.dart';
-import '../widgets/brand_logo.dart';
+import '../widgets/app_nav_rail.dart';
 import '../widgets/global_search_dialog.dart';
 import '../widgets/invites_bell.dart';
 import 'activity_screen.dart';
@@ -419,14 +419,39 @@ class _MainScreenState extends State<MainScreen> {
                 floatingActionButton: fab,
                 body: Row(
                   children: [
-                    _Sidebar(
-                      selectedIndex: _selectedIndex,
-                      icons: _navIcons,
-                      labels: labels,
+                    AppNavRail(
+                      tabs: MainTab.values,
                       visibility: visibility,
-                      extended: extended,
+                      selectedTab: _selectedIndex,
                       onSelect: _select,
-                      badgeCounts: navBadgeCounts,
+                      extended: extended,
+                      iconBuilder: (tab, selected) {
+                        final (outlined, filled) = _navIcons[tab.index];
+                        return Icon(selected ? filled : outlined);
+                      },
+                      labelBuilder: (tab) => labels[tab.index],
+                      badgeBuilder: (tab) {
+                        final count = navBadgeCounts[tab] ?? 0;
+                        if (count <= 0) return null;
+                        // Minimal Marker — wird von AppNavRail via
+                        // Stack/Positioned über das Icon gelegt.
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.warning,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     Expanded(
                       child: Column(
@@ -457,207 +482,6 @@ class _MainScreenState extends State<MainScreen> {
           child: Focus(autofocus: true, child: scaffold),
         );
       },
-    );
-  }
-}
-
-// ─── Custom Sidebar ────────────────────────────────────────────────────────────
-
-class _Sidebar extends StatelessWidget {
-  final MainTab selectedIndex;
-  final List<(IconData, IconData)> icons;
-  final List<String> labels;
-  /// Pro Tab: true = sichtbar, false = ausblenden (z.B. Inbox auf Free).
-  final Map<MainTab, bool> visibility;
-  final bool extended;
-  final ValueChanged<MainTab> onSelect;
-  /// Optional badge counts per tab. Key = MainTab, value = count > 0.
-  final Map<MainTab, int> badgeCounts;
-
-  const _Sidebar({
-    required this.selectedIndex,
-    required this.icons,
-    required this.labels,
-    required this.visibility,
-    required this.extended,
-    required this.onSelect,
-    this.badgeCounts = const {},
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final width = extended ? 220.0 : 64.0;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: width,
-      color: AppTheme.navBg,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Branding Header: BrandMark + optional Wordmark.
-          // Sidebar-Hintergrund ist navBg (fix dunkel), darum onDark=true.
-          SizedBox(
-            height: 56,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: extended ? 14 : 10),
-              child: Row(
-                mainAxisAlignment: extended
-                    ? MainAxisAlignment.start
-                    : MainAxisAlignment.center,
-                children: [
-                  const BrandMark(size: 28, withBackground: true),
-                  if (extended) ...[
-                    const SizedBox(width: 10),
-                    const BrandWordmark(
-                      fontSize: 16,
-                      onDark: true,
-                      canColor: Colors.white,
-                      logisticsColor: Color(0xCCFFFFFF),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          Container(height: 1, color: Colors.white.withAlpha(20)),
-          const SizedBox(height: 8),
-          // Nav items — versteckte Tabs (z.B. Inbox auf Free)
-          // werden hier rausgefiltert; der Enum-Wert bleibt stabil.
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                for (final tab in MainTab.values)
-                  if (visibility[tab] != false)
-                    _NavItem(
-                      key: Key('main-tab-${tab.name}'),
-                      icon: icons[tab.index].$1,
-                      activeIcon: icons[tab.index].$2,
-                      label: labels[tab.index],
-                      isSelected: selectedIndex == tab,
-                      extended: extended,
-                      onTap: () => onSelect(tab),
-                      badgeCount: badgeCounts[tab] ?? 0,
-                      badgeKey: tab == MainTab.inbox
-                          ? const Key('mobile-nav-inbox-badge')
-                          : null,
-                    ),
-              ],
-            ),
-          ),
-          Container(height: 1, color: Colors.white.withAlpha(20)),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatefulWidget {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final bool isSelected;
-  final bool extended;
-  final VoidCallback onTap;
-  /// When > 0, shows a badge on the icon.
-  final int badgeCount;
-  /// Optional key for the Badge widget (used by browser-tester / widget-tests).
-  final Key? badgeKey;
-
-  const _NavItem({
-    super.key,
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.isSelected,
-    required this.extended,
-    required this.onTap,
-    this.badgeCount = 0,
-    this.badgeKey,
-  });
-
-  @override
-  State<_NavItem> createState() => _NavItemState();
-}
-
-class _NavItemState extends State<_NavItem> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final iconColor = widget.isSelected ? Colors.white : AppTheme.navIcon;
-    final labelColor = widget.isSelected ? Colors.white : AppTheme.navLabel;
-    final bgColor = widget.isSelected
-        ? Colors.white.withAlpha(20)
-        : _hovered
-            ? Colors.white.withAlpha(13)
-            : Colors.transparent;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: Tooltip(
-        message: widget.extended ? '' : widget.label,
-        preferBelow: false,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            height: 44,
-            decoration: BoxDecoration(
-              color: bgColor,
-              border: Border(
-                left: BorderSide(
-                  color:
-                      widget.isSelected ? AppTheme.accent : Colors.transparent,
-                  width: 3,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: widget.isSelected ? 61 : 64,
-                  child: Center(
-                    child: Badge(
-                      key: widget.badgeKey,
-                      isLabelVisible: widget.badgeCount > 0,
-                      label: Text(
-                        '${widget.badgeCount}',
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      backgroundColor: AppTheme.warning,
-                      child: Icon(
-                        widget.isSelected ? widget.activeIcon : widget.icon,
-                        color: iconColor,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-                if (widget.extended)
-                  Expanded(
-                    child: Text(
-                      widget.label,
-                      style: TextStyle(
-                        color: labelColor,
-                        fontSize: 13,
-                        fontWeight: widget.isSelected
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

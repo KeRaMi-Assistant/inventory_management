@@ -697,7 +697,7 @@ möglich wo `depends` leer.
   `l10n.feedbackErrorDefault` ODER bekannte Error-Codes mappen.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2, A7, C1]`
 
-- [ ] **A4a** Migriere SnackBars im Mailbox-Tab von
+- [x] **A4a** Migriere SnackBars im Mailbox-Tab von
   `settings_screen.dart` (~Z. 280–620, 18+ Stellen) auf
   `AppFeedback.*`. Confirm-Dialog für „Postfach entfernen"
   (Z. 2266ff.) auf `showConfirmDialog` mit `requireTypeName`
@@ -816,7 +816,7 @@ möglich wo `depends` leer.
   built-in (200ms). Unit-Test.
   `agent: ui-builder` · `model: sonnet` · `depends: []`
 
-- [ ] **B2** Skeleton-Loader für `inventory_screen.dart` First-Load
+- [x] **B2** Skeleton-Loader für `inventory_screen.dart` First-Load
   (ersetzt `CircularProgressIndicator`). Nutzt
   `isLoading && !initialLoadAttempted` aus B0.
   `agent: flutter-coder` · `model: sonnet` · `depends: [B0, B1]`

@@ -6350,11 +6350,17 @@ abstract class AppLocalizations {
   /// **'Neubewertung starten?'**
   String get trackingReparseConfirmTitle;
 
-  /// No description provided for @trackingReparseFailed.
+  /// SnackBar-Text wenn die Tracking-Neubewertung fehlschlägt.
   ///
   /// In de, this message translates to:
   /// **'Neubewertung fehlgeschlagen'**
   String get trackingReparseFailed;
+
+  /// SnackBar-Text wenn die Tracking-Neubewertung durch Rate-Limiting abgelehnt wird.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu viele Anfragen — bitte in {seconds} s erneut versuchen'**
+  String trackingReparseRateLimit(int seconds);
 
   /// No description provided for @trackingReparseOffline.
   ///
@@ -8708,6 +8714,12 @@ abstract class AppLocalizations {
   /// **'Löschen fehlgeschlagen'**
   String get settingsMailboxDeleteError;
 
+  /// SnackBar-Text nach erfolgreichem Entfernen eines IMAP-Kontos.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach entfernt'**
+  String get settingsMailboxRemovedFeedback;
+
   /// FAB-Label zum Hinzufügen eines neuen IMAP-Kontos.
   ///
   /// In de, this message translates to:
@@ -8920,6 +8932,24 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'{carrier}: API-Key wirklich entfernen?'**
   String settingsShippingDeleteKeyConfirmBody(String carrier);
+
+  /// Titel des Discard-Confirm-Dialogs im UnsavedChangesGuard.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungespeicherte Änderungen verwerfen?'**
+  String get unsavedChangesDiscardTitle;
+
+  /// Body-Text des Discard-Confirm-Dialogs im UnsavedChangesGuard.
+  ///
+  /// In de, this message translates to:
+  /// **'Deine Änderungen gehen verloren.'**
+  String get unsavedChangesDiscardMessage;
+
+  /// Label des Confirm-Buttons im Discard-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Verwerfen'**
+  String get unsavedChangesDiscardLabel;
 }
 
 class _AppLocalizationsDelegate

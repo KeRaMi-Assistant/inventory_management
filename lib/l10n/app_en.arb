@@ -1346,6 +1346,13 @@
   "trackingReparseConfirmBody": "Existing tracking numbers will be re-checked with the improved detector. Manual entries stay untouched.",
   "trackingReparseConfirmTitle": "Start re-evaluation?",
   "trackingReparseFailed": "Re-evaluation failed",
+  "@trackingReparseFailed": { "description": "SnackBar text when the tracking re-evaluation fails." },
+
+  "trackingReparseRateLimit": "Too many requests — please try again in {seconds} s",
+  "@trackingReparseRateLimit": {
+    "description": "SnackBar text when the tracking re-evaluation is rejected due to rate limiting.",
+    "placeholders": { "seconds": { "type": "int" } }
+  },
   "trackingReparseOffline": "No connection — please try again later",
   "trackingReparseRunning": "Re-evaluating tracking numbers…",
   "trackingReparseSuccessCount": "{count, plural, =0{No tracking number updated} =1{1 tracking number updated} other{{count} tracking numbers updated}}",
@@ -2143,6 +2150,9 @@
   "settingsMailboxDeleteError": "Deletion failed",
   "@settingsMailboxDeleteError": { "description": "SnackBar text when mailbox deletion fails." },
 
+  "settingsMailboxRemovedFeedback": "Mailbox removed",
+  "@settingsMailboxRemovedFeedback": { "description": "SnackBar text after successfully removing an IMAP account." },
+
   "settingsMailboxAddLabel": "IMAP account",
   "@settingsMailboxAddLabel": { "description": "FAB label for adding a new IMAP account." },
 
@@ -2297,5 +2307,14 @@
   "@settingsShippingDeleteKeyConfirmBody": {
     "description": "Confirm dialog text for deleting a carrier API key.",
     "placeholders": { "carrier": { "type": "String" } }
-  }
+  },
+
+  "unsavedChangesDiscardTitle": "Discard unsaved changes?",
+  "@unsavedChangesDiscardTitle": { "description": "Title of the discard confirm dialog in UnsavedChangesGuard." },
+
+  "unsavedChangesDiscardMessage": "Your changes will be lost.",
+  "@unsavedChangesDiscardMessage": { "description": "Body text of the discard confirm dialog in UnsavedChangesGuard." },
+
+  "unsavedChangesDiscardLabel": "Discard",
+  "@unsavedChangesDiscardLabel": { "description": "Label of the confirm button in the discard dialog." }
 }

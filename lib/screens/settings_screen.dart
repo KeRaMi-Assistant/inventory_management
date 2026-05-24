@@ -26,6 +26,8 @@ import '../services/push_service.dart';
 import '../services/workspace_service.dart';
 import '../utils/role_labels.dart';
 import '../widgets/add_edit_buyer_dialog.dart';
+import '../widgets/app_feedback.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/invite_member_dialog.dart';
 import '../widgets/member_remove_confirm_dialog.dart';
 import '../widgets/workspace_switcher.dart';
@@ -2278,37 +2280,36 @@ class _MailboxTabState extends State<_MailboxTab> {
     InboxProvider provider,
     MailboxAccount account,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final l10n = AppLocalizations.of(context);
+    // Capture messenger and l10n strings before any async gap
+    // (Dialog-Context-Pattern — avoids use_build_context_synchronously).
+    final messenger = ScaffoldMessenger.of(context);
+    final successMsg = l10n.settingsMailboxRemovedFeedback;
+    final errorMsg = l10n.settingsMailboxDeleteError;
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) {
-        final l10n = AppLocalizations.of(ctx);
-        return AlertDialog(
-          title: Text(l10n.settingsMailboxRemoveTitle),
-          content: Text(l10n.settingsMailboxRemoveBody(account.label)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.actionCancel),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: Text(l10n.actionDelete,
-                  style: const TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
+      title: l10n.settingsMailboxRemoveTitle,
+      message: l10n.settingsMailboxRemoveBody(account.label),
+      confirmLabel: l10n.actionDelete,
+      isDestructive: true,
+      requireTypeName: account.label,
     );
     if (confirmed != true) return;
     try {
       await provider.deleteAccount(account.id);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).settingsMailboxDeleteError)),
-        );
-      }
+      if (!mounted) return;
+      AppFeedback.successOn(
+        messenger,
+        successMsg,
+        rootContext: this.context,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        errorMsg,
+        rootContext: this.context,
+      );
     }
   }
 
@@ -3595,28 +3596,16 @@ class _TrackingReparseTileState extends State<_TrackingReparseTile> {
         context.read<ActiveWorkspaceProvider>().active?.id;
 
     if (activeWorkspaceId == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.trackingReparseFailed)),
-      );
+      AppFeedback.errorOn(messenger, l10n.trackingReparseFailed,
+          rootContext: context);
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.trackingReparseConfirmTitle),
-        content: Text(l10n.trackingReparseConfirmBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.trackingReparseCta),
-          ),
-        ],
-      ),
+      title: l10n.trackingReparseConfirmTitle,
+      message: l10n.trackingReparseConfirmBody,
+      confirmLabel: l10n.trackingReparseCta,
     );
     if (confirmed != true || !mounted) return;
 
@@ -3638,20 +3627,14 @@ class _TrackingReparseTileState extends State<_TrackingReparseTile> {
                 (res.data as Map)['retry_after_seconds'] is num)
             ? ((res.data as Map)['retry_after_seconds'] as num).toInt()
             : 60;
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              '${l10n.trackingReparseFailed} ($retry s)',
-            ),
-          ),
-        );
+        AppFeedback.errorOn(messenger, l10n.trackingReparseRateLimit(retry),
+            rootContext: context);
         return;
       }
 
       if (status >= 400) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.trackingReparseFailed)),
-        );
+        AppFeedback.errorOn(messenger, l10n.trackingReparseFailed,
+            rootContext: context);
         return;
       }
 
@@ -3659,23 +3642,21 @@ class _TrackingReparseTileState extends State<_TrackingReparseTile> {
       final updatedCount =
           (data is Map && data['updated'] is num) ? (data['updated'] as num).toInt() : 0;
 
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.trackingReparseSuccessCount(updatedCount))),
-      );
+      AppFeedback.successOn(
+          messenger, l10n.trackingReparseSuccessCount(updatedCount),
+          rootContext: context);
 
       // T7: nach Re-Parse InboxProvider refreshen, damit neue Trackings
       // sofort in der Inbox sichtbar sind.
       await inboxProvider.refresh();
     } on FunctionException catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.trackingReparseFailed)),
-      );
+      AppFeedback.errorOn(messenger, l10n.trackingReparseFailed,
+          rootContext: context);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.trackingReparseOffline)),
-      );
+      AppFeedback.errorOn(messenger, l10n.trackingReparseOffline,
+          rootContext: context);
     } finally {
       if (mounted) setState(() => _running = false);
     }
@@ -3739,51 +3720,19 @@ class _InboxResetTileState extends State<_InboxResetTile> {
         context.read<ActiveWorkspaceProvider>().active?.id;
 
     if (activeWorkspaceId == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.inboxResetFailed)),
-      );
+      AppFeedback.errorOn(messenger, l10n.inboxResetFailed,
+          rootContext: context);
       return;
     }
 
-    final controller = TextEditingController();
-    final confirmed = await showDialog<bool>(
+    // Destructive confirm with requireTypeName — user must type "RESET".
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.inboxResetConfirmTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.inboxResetConfirmBody),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: l10n.inboxResetConfirmInputLabel,
-                hintText: 'RESET',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(
-              ctx,
-              controller.text.trim().toUpperCase() == 'RESET',
-            ),
-            child: Text(
-              l10n.inboxResetCta,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+      title: l10n.inboxResetConfirmTitle,
+      message: l10n.inboxResetConfirmBody,
+      confirmLabel: l10n.inboxResetCta,
+      isDestructive: true,
+      requireTypeName: 'RESET',
     );
     if (confirmed != true || !mounted) return;
 
@@ -3793,21 +3742,16 @@ class _InboxResetTileState extends State<_InboxResetTile> {
           .read<SupabaseRepository>()
           .triggerInboxReset(workspaceId: activeWorkspaceId);
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.inboxResetSuccess(result.deletedMessages),
-          ),
-        ),
-      );
+      AppFeedback.successOn(
+          messenger, l10n.inboxResetSuccess(result.deletedMessages),
+          rootContext: context);
       // Nach Reset Inbox refreshen — UI zeigt sofort leere Liste,
       // der naechste IMAP-Poll laedt Mails neu.
       await inboxProvider.refresh();
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.inboxResetFailed)),
-      );
+      AppFeedback.errorOn(messenger, l10n.inboxResetFailed,
+          rootContext: context);
     } finally {
       if (mounted) setState(() => _running = false);
     }
