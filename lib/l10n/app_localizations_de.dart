@@ -5362,4 +5362,91 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get heatmapMore => 'Mehr';
+
+  @override
+  String get validationInvalidEmail => 'Ungültige E-Mail-Adresse';
+
+  @override
+  String get validationInvalidPort => 'Port muss zwischen 1 und 65535 liegen';
+
+  @override
+  String get mailboxDialogLabelLabel => 'Bezeichnung';
+
+  @override
+  String get mailboxDialogLabelHint => 'z. B. \"Gmail Reseller\"';
+
+  @override
+  String get mailboxDialogHostLabel => 'IMAP-Server';
+
+  @override
+  String get mailboxDialogPortLabel => 'Port';
+
+  @override
+  String get mailboxDialogUsernameLabel => 'Benutzername / Mail-Adresse';
+
+  @override
+  String get mailboxDialogPasswordNewLabel => 'App-Passwort';
+
+  @override
+  String get mailboxDialogPasswordHelper =>
+      'Bei Gmail/Outlook: separates App-Passwort generieren.';
+
+  @override
+  String get mailboxDialogFolderLabel => 'Ordner';
+
+  @override
+  String get mailboxDialogSslLabel => 'SSL/TLS verwenden';
+
+  @override
+  String get mailboxDialogPollingLabel => 'Polling aktiv';
+
+  @override
+  String get mailboxDialogPollingSubtitle =>
+      'Wird alle 5 Minuten von der Edge Function abgefragt.';
+
+  @override
+  String get mailboxDialogRequiredError =>
+      'Bezeichnung, Server und Benutzername sind Pflichtfelder.';
+
+  @override
+  String get mailboxDialogPasswordRequiredError =>
+      'Passwort ist beim Anlegen Pflicht.';
+
+  @override
+  String mailboxDialogSaveFailed(String error) {
+    return 'Speichern fehlgeschlagen: $error';
+  }
+
+  @override
+  String semanticsChartBar(
+    String title,
+    int count,
+    String topValue,
+    String topLabel,
+  ) {
+    return 'Säulendiagramm. $title. $count Werte. Höchster Wert: $topValue für $topLabel.';
+  }
+
+  @override
+  String semanticsChartLine(
+    String title,
+    int count,
+    String topValue,
+    String topLabel,
+  ) {
+    return 'Liniendiagramm. $title. $count Datenpunkte. Höchster Wert: $topValue für $topLabel.';
+  }
+
+  @override
+  String semanticsChartPie(
+    String title,
+    int count,
+    String topLabel,
+    String topPct,
+  ) {
+    return 'Tortendiagramm. $title. $count Segmente. Dominantes Segment: $topLabel mit $topPct%.';
+  }
+
+  @override
+  String get semanticsChartLoading => 'Diagramm lädt.';
 }

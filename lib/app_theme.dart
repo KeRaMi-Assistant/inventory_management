@@ -236,6 +236,21 @@ class AppTheme {
   static const Color cardBg = bgSurface;
   static const Color sidebar = bgSubtle;
 
+  // -- Spacing scale (4-px-Basis, Material 3 aligned) --
+  static const double space2 = 2;
+  static const double space4 = 4;
+  static const double space8 = 8;
+  static const double space12 = 12;
+  static const double space16 = 16;
+  static const double space24 = 24;
+  static const double space32 = 32;
+
+  // -- Border radii --
+  static const double radiusSm = 6;   // Chips
+  static const double radiusMd = 8;   // Cards (default)
+  static const double radiusLg = 12;  // Dialogs, FAB
+  static const double radiusXl = 16;
+
   // -- ThemeData builders --
   static ThemeData get light => lightFor(_active);
   static ThemeData get dark => darkFor(_active);
@@ -543,4 +558,40 @@ class AppTheme {
       ),
     );
   }
+}
+
+/// Spacing constants — semantic aliases for [AppTheme.space*].
+/// Prefer these in UI code for readability.
+class AppSpacing {
+  const AppSpacing._();
+
+  static const double xs = AppTheme.space4;
+  static const double sm = AppTheme.space8;
+  static const double md = AppTheme.space12;
+  static const double lg = AppTheme.space16;
+  static const double xl = AppTheme.space24;
+  static const double xxl = AppTheme.space32;
+  // xxxl has no AppTheme.space48 equivalent yet; define directly.
+  static const double xxxl = 48;
+}
+
+/// Border-radius constants — semantic aliases for [AppTheme.radius*].
+class AppRadius {
+  const AppRadius._();
+
+  static const double sm = AppTheme.radiusSm;
+  static const double md = AppTheme.radiusMd;
+  static const double lg = AppTheme.radiusLg;
+  static const double xl = AppTheme.radiusXl;
+  /// Pill shape for badges / tags.
+  static const double pill = 999;
+}
+
+/// Elevation constants for consistent shadow usage.
+class AppElevation {
+  const AppElevation._();
+
+  static const double card = 1;
+  static const double dialog = 8;
+  static const double fab = 6;
 }

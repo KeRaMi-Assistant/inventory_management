@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
 
 /// Bar-Chart für Profit pro Bucket (Tag/Woche/Monat). Optional zwei Bars
@@ -10,21 +11,30 @@ class MonthlyBarChart extends StatelessWidget {
   final List<TimeBucket> series;
   final List<TimeBucket>? comparison;
   final double height;
+  /// Optionaler Titel — wird als Teil des Semantics-Labels für Screen-Reader
+  /// genutzt. Muss nicht identisch zum StatPanel-Titel sein, aber aussagekräftig.
+  final String? title;
   const MonthlyBarChart({
     super.key,
     required this.series,
     this.comparison,
     this.height = 220,
+    this.title,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (series.isEmpty) {
-      return SizedBox(
-        height: height,
-        child: const Center(
-          child: Text('Keine Daten im Zeitraum.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+      return Semantics(
+        label: l10n.semanticsChartLoading,
+        excludeSemantics: true,
+        child: SizedBox(
+          height: height,
+          child: const Center(
+            child: Text('Keine Daten im Zeitraum.',
+                style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+          ),
         ),
       );
     }
@@ -32,6 +42,20 @@ class MonthlyBarChart extends StatelessWidget {
     final money = NumberFormat.compactCurrency(locale: 'de_DE', symbol: '€');
     final dateFmt = _dateFormatFor(series.first.granularity);
     final hasCompare = comparison != null && comparison!.isNotEmpty;
+
+    // Semantics-Berechnung: höchster absoluter Profit-Wert
+    TimeBucket? topBucket;
+    for (final b in series) {
+      if (topBucket == null || b.profit.abs() > topBucket.profit.abs()) {
+        topBucket = b;
+      }
+    }
+    final semanticsLabel = l10n.semanticsChartBar(
+      title ?? '',
+      series.length,
+      topBucket != null ? money.format(topBucket.profit) : '—',
+      topBucket != null ? dateFmt.format(topBucket.date) : '—',
+    );
 
     double maxY = 0;
     double minY = 0;
@@ -82,7 +106,10 @@ class MonthlyBarChart extends StatelessWidget {
       ));
     }
 
-    return SizedBox(
+    return Semantics(
+      label: semanticsLabel,
+      excludeSemantics: true,
+      child: SizedBox(
       height: height,
       child: BarChart(
         BarChartData(
@@ -163,7 +190,8 @@ class MonthlyBarChart extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ), // SizedBox
+    ); // Semantics
   }
 
   DateFormat _dateFormatFor(Granularity g) {
@@ -182,32 +210,51 @@ class MonthlyBarChart extends StatelessWidget {
 class MarginLineChart extends StatelessWidget {
   final List<TimeBucket> series;
   final double height;
-  const MarginLineChart({super.key, required this.series, this.height = 200});
+  /// Optionaler Titel — wird als Teil des Semantics-Labels für Screen-Reader genutzt.
+  final String? title;
+  const MarginLineChart({super.key, required this.series, this.height = 200, this.title});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (series.isEmpty) {
-      return SizedBox(
-        height: height,
-        child: const Center(
-          child: Text('Keine Daten.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+      return Semantics(
+        label: l10n.semanticsChartLoading,
+        excludeSemantics: true,
+        child: SizedBox(
+          height: height,
+          child: const Center(
+            child: Text('Keine Daten.',
+                style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+          ),
         ),
       );
     }
     final dateFmt = _dateFormatFor(series.first.granularity);
     final spots = <FlSpot>[];
     double maxY = 0, minY = 0;
+    TimeBucket? topBucket;
     for (var i = 0; i < series.length; i++) {
       final m = series[i].marginPct;
       spots.add(FlSpot(i.toDouble(), m));
       if (m > maxY) maxY = m;
       if (m < minY) minY = m;
+      if (topBucket == null || m > topBucket.marginPct) topBucket = series[i];
     }
     if (maxY == 0) maxY = 10;
     final yPadding = ((maxY - minY).abs() * 0.1).clamp(2.0, double.infinity);
 
-    return SizedBox(
+    final semanticsLabel = l10n.semanticsChartLine(
+      title ?? '',
+      series.length,
+      topBucket != null ? '${topBucket.marginPct.toStringAsFixed(1)}%' : '—',
+      topBucket != null ? dateFmt.format(topBucket.date) : '—',
+    );
+
+    return Semantics(
+      label: semanticsLabel,
+      excludeSemantics: true,
+      child: SizedBox(
       height: height,
       child: LineChart(
         LineChartData(
@@ -297,7 +344,8 @@ class MarginLineChart extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ), // SizedBox
+    ); // Semantics
   }
 
   DateFormat _dateFormatFor(Granularity g) {

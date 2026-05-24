@@ -454,7 +454,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
       // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
       key: const PageStorageKey<String>('inventoryStockGroupedList'),
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+      padding: const EdgeInsets.fromLTRB(AppTheme.space12, AppTheme.space4, AppTheme.space12, AppTheme.space16),
       itemCount: groups.length,
       itemBuilder: (context, gi) {
         final group = groups[gi];
@@ -462,7 +462,7 @@ class _InventoryScreenState extends State<InventoryScreen>
         final hasCritical = group.items.any((i) => i.isCritical);
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.only(bottom: AppTheme.space8),
           child: Card(
             margin: EdgeInsets.zero,
             clipBehavior: Clip.antiAlias,
@@ -550,7 +550,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                     ),
                     onPressed: () => openUrlWithFallback(
                         context, resolveDiscordUrl(item.ticketUrl!)),
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(AppTheme.space4),
                     constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
               ],
@@ -710,7 +710,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
       // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
       key: const PageStorageKey<String>('inventoryStockGroupedTable'),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.fromLTRB(AppTheme.space16, 0, AppTheme.space16, AppTheme.space16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: groups.map((group) {
@@ -739,7 +739,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   }) {
     final hasCritical = group.items.any((i) => i.isCritical);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppTheme.space12),
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -846,12 +846,12 @@ class _InventoryScreenState extends State<InventoryScreen>
           ),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space8, vertical: AppTheme.space2),
             decoration: BoxDecoration(
               color: hasCritical
                   ? AppTheme.dangerBgOf(context)
                   : AppTheme.successBgOf(context),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             ),
             child: Text(
               l10n.stockGroupTotalQuantity(totalQty),
@@ -873,7 +873,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     return Builder(builder: (context) {
       final l10n = AppLocalizations.of(context);
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        padding: const EdgeInsets.fromLTRB(AppTheme.space16, 0, AppTheme.space16, AppTheme.space8),
         child: Row(
           children: [
             Expanded(
@@ -949,7 +949,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     if (isNarrow) {
       final cardWidth = (width - 32) / 2;
       return Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        padding: const EdgeInsets.fromLTRB(AppTheme.space12, AppTheme.space12, AppTheme.space12, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -966,7 +966,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       );
     }
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppTheme.space16),
       child: Row(
         children: [
           ...kpis.map((k) => Expanded(child: k)),
@@ -1066,12 +1066,12 @@ class _InventoryScreenState extends State<InventoryScreen>
 
     if (isNarrow) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+        padding: const EdgeInsets.fromLTRB(0, AppTheme.space12, 0, 0),
         child: SizedBox(
           height: 110,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space12),
             itemCount: cards.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (_, i) => SizedBox(width: 240, child: cards[i]),
@@ -1080,7 +1080,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       );
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.fromLTRB(AppTheme.space16, AppTheme.space16, AppTheme.space16, 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1175,7 +1175,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
       // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
       key: const PageStorageKey<String>('inventoryCardList'),
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+      padding: const EdgeInsets.fromLTRB(AppTheme.space12, AppTheme.space4, AppTheme.space12, AppTheme.space16),
       itemCount: items.length,
       separatorBuilder: (context, index) => const SizedBox(height: 8),
       itemBuilder: (context, i) {
@@ -1198,7 +1198,7 @@ class _InventoryScreenState extends State<InventoryScreen>
           color:
               isSelected ? AppTheme.accentLightOf(context) : null,
           child: InkWell(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             onTap: () {
               // T3.3b: Im Master-Detail-Layout NICHT pushen — Detail-Spalte
               // re-rendert sich anhand `_selectedItemId`. Sonst (Phone/Tablet):
@@ -1216,7 +1216,7 @@ class _InventoryScreenState extends State<InventoryScreen>
               }
             },
             child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppTheme.space12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1321,10 +1321,10 @@ class _InventoryScreenState extends State<InventoryScreen>
 
   Widget _statusChip(BuildContext context, String status) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space8, vertical: AppTheme.space2),
       decoration: BoxDecoration(
         color: AppTheme.accentLightOf(context),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Text(localizeInventoryStatus(context, status),
           style: TextStyle(
@@ -1340,7 +1340,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
       // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
       key: const PageStorageKey<String>('inventoryTable'),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.fromLTRB(AppTheme.space16, 0, AppTheme.space16, AppTheme.space16),
       child: Card(
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -1450,7 +1450,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                     ..showSnackBar(SnackBar(
                       behavior: SnackBarBehavior.floating,
                       backgroundColor: bgColor,
-                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      margin: const EdgeInsets.fromLTRB(AppTheme.space16, 0, AppTheme.space16, AppTheme.space16),
                       content: Row(children: [
                         Icon(Icons.check_circle_outline_rounded,
                             color: textColor, size: 20),
@@ -1649,7 +1649,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
             alignment: Alignment.topLeft,
             child: Material(
               elevation: 4,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 240, maxWidth: 420),
                 child: ListView.builder(
@@ -1696,7 +1696,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
 
     return Dialog(
       insetPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          const EdgeInsets.symmetric(horizontal: AppTheme.space16, vertical: AppTheme.space24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
         child: Column(
@@ -1713,10 +1713,10 @@ class _InventoryDialogState extends State<_InventoryDialog> {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(AppTheme.space8),
                     decoration: BoxDecoration(
                       color: AppTheme.accentLightOf(context),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                     child: Icon(Icons.inventory_2_outlined,
                         color: AppTheme.accentTextOf(context), size: 20),
@@ -1800,7 +1800,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                             alignment: Alignment.topLeft,
                             child: Material(
                               elevation: 4,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                               child: ConstrainedBox(
                                 constraints: const BoxConstraints(maxHeight: 200, maxWidth: 280),
                                 child: ListView.builder(
@@ -2268,12 +2268,12 @@ class _StockGroupTileState extends State<_StockGroupTile> {
                 // Summen-Chip
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      const EdgeInsets.symmetric(horizontal: AppTheme.space8, vertical: AppTheme.space2),
                   decoration: BoxDecoration(
                     color: hasCritical
                         ? AppTheme.dangerBgOf(context)
                         : AppTheme.successBgOf(context),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                   ),
                   child: Text(
                     l10n.stockGroupTotalQuantity(widget.totalQty),

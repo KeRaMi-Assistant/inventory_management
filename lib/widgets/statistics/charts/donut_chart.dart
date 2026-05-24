@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../utils/responsive.dart';
 
 /// Donut-Chart mit Legende rechts. Zeigt automatisch nur Top-N Slices,
@@ -11,12 +12,15 @@ class DonutChart extends StatefulWidget {
   final String centerLabel;
   final int topN;
   final double height;
+  /// Optionaler Titel — wird als Teil des Semantics-Labels für Screen-Reader genutzt.
+  final String? title;
   const DonutChart({
     super.key,
     required this.data,
     required this.centerLabel,
     this.topN = 5,
     this.height = 220,
+    this.title,
   });
 
   @override
@@ -38,12 +42,17 @@ class _DonutChartState extends State<DonutChart> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (widget.data.isEmpty) {
-      return SizedBox(
-        height: widget.height,
-        child: const Center(
-          child: Text('Keine Daten.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+      return Semantics(
+        label: l10n.semanticsChartLoading,
+        excludeSemantics: true,
+        child: SizedBox(
+          height: widget.height,
+          child: const Center(
+            child: Text('Keine Daten.',
+                style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+          ),
         ),
       );
     }
@@ -57,6 +66,18 @@ class _DonutChartState extends State<DonutChart> {
     ];
     final total = list.fold<double>(0, (s, e) => s + e.value);
     final money = NumberFormat.compactCurrency(locale: 'de_DE', symbol: '€');
+
+    // Semantics: dominantes Segment (erstes in sortierter Liste)
+    final topEntry = list.isNotEmpty ? list.first : null;
+    final topPct = (topEntry != null && total > 0)
+        ? ((topEntry.value / total) * 100).toStringAsFixed(0)
+        : '0';
+    final semanticsLabel = l10n.semanticsChartPie(
+      widget.title ?? '',
+      list.length,
+      topEntry?.key ?? '—',
+      topPct,
+    );
 
     final sections = <PieChartSectionData>[];
     for (var i = 0; i < list.length; i++) {
@@ -76,7 +97,10 @@ class _DonutChartState extends State<DonutChart> {
       ));
     }
 
-    return SizedBox(
+    return Semantics(
+      label: semanticsLabel,
+      excludeSemantics: true,
+      child: SizedBox(
       height: widget.height,
       child: LayoutBuilder(
         builder: (context, c) {
@@ -194,6 +218,7 @@ class _DonutChartState extends State<DonutChart> {
           );
         },
       ),
-    );
+    ), // SizedBox
+    ); // Semantics
   }
 }

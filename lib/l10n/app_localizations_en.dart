@@ -5329,4 +5329,91 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get heatmapMore => 'More';
+
+  @override
+  String get validationInvalidEmail => 'Invalid email address';
+
+  @override
+  String get validationInvalidPort => 'Port must be between 1 and 65535';
+
+  @override
+  String get mailboxDialogLabelLabel => 'Label';
+
+  @override
+  String get mailboxDialogLabelHint => 'e.g. \"Gmail Reseller\"';
+
+  @override
+  String get mailboxDialogHostLabel => 'IMAP server';
+
+  @override
+  String get mailboxDialogPortLabel => 'Port';
+
+  @override
+  String get mailboxDialogUsernameLabel => 'Username / email address';
+
+  @override
+  String get mailboxDialogPasswordNewLabel => 'App password';
+
+  @override
+  String get mailboxDialogPasswordHelper =>
+      'For Gmail/Outlook: generate a separate app password.';
+
+  @override
+  String get mailboxDialogFolderLabel => 'Folder';
+
+  @override
+  String get mailboxDialogSslLabel => 'Use SSL/TLS';
+
+  @override
+  String get mailboxDialogPollingLabel => 'Polling active';
+
+  @override
+  String get mailboxDialogPollingSubtitle =>
+      'Polled every 5 minutes by the edge function.';
+
+  @override
+  String get mailboxDialogRequiredError =>
+      'Label, server and username are required fields.';
+
+  @override
+  String get mailboxDialogPasswordRequiredError =>
+      'Password is required when creating a new account.';
+
+  @override
+  String mailboxDialogSaveFailed(String error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String semanticsChartBar(
+    String title,
+    int count,
+    String topValue,
+    String topLabel,
+  ) {
+    return 'Bar chart. $title. $count values. Highest value: $topValue for $topLabel.';
+  }
+
+  @override
+  String semanticsChartLine(
+    String title,
+    int count,
+    String topValue,
+    String topLabel,
+  ) {
+    return 'Line chart. $title. $count data points. Highest value: $topValue for $topLabel.';
+  }
+
+  @override
+  String semanticsChartPie(
+    String title,
+    int count,
+    String topLabel,
+    String topPct,
+  ) {
+    return 'Pie chart. $title. $count segments. Dominant segment: $topLabel at $topPct%.';
+  }
+
+  @override
+  String get semanticsChartLoading => 'Chart loading.';
 }

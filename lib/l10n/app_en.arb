@@ -2607,5 +2607,92 @@
   "@heatmapLess": { "description": "Legend label 'Less' in the profit heatmap (left side of the color scale)." },
 
   "heatmapMore": "More",
-  "@heatmapMore": { "description": "Legend label 'More' in the profit heatmap (right side of the color scale)." }
+  "@heatmapMore": { "description": "Legend label 'More' in the profit heatmap (right side of the color scale)." },
+
+  "validationInvalidEmail": "Invalid email address",
+  "@validationInvalidEmail": { "description": "Inline validation error for email fields." },
+
+  "validationInvalidPort": "Port must be between 1 and 65535",
+  "@validationInvalidPort": { "description": "Inline validation error for the IMAP port field." },
+
+  "mailboxDialogLabelLabel": "Label",
+  "@mailboxDialogLabelLabel": { "description": "Label field label in the mailbox dialog." },
+
+  "mailboxDialogLabelHint": "e.g. \"Gmail Reseller\"",
+  "@mailboxDialogLabelHint": { "description": "Hint text for the label field in the mailbox dialog." },
+
+  "mailboxDialogHostLabel": "IMAP server",
+  "@mailboxDialogHostLabel": { "description": "Field label for the IMAP server host in the mailbox dialog." },
+
+  "mailboxDialogPortLabel": "Port",
+  "@mailboxDialogPortLabel": { "description": "Field label for the IMAP port in the mailbox dialog." },
+
+  "mailboxDialogUsernameLabel": "Username / email address",
+  "@mailboxDialogUsernameLabel": { "description": "Field label for the username in the mailbox dialog." },
+
+  "mailboxDialogPasswordNewLabel": "App password",
+  "@mailboxDialogPasswordNewLabel": { "description": "Password field label in the add-mailbox dialog." },
+
+  "mailboxDialogPasswordHelper": "For Gmail/Outlook: generate a separate app password.",
+  "@mailboxDialogPasswordHelper": { "description": "Helper text under the password field in the mailbox add dialog." },
+
+  "mailboxDialogFolderLabel": "Folder",
+  "@mailboxDialogFolderLabel": { "description": "Field label for the IMAP folder in the mailbox dialog." },
+
+  "mailboxDialogSslLabel": "Use SSL/TLS",
+  "@mailboxDialogSslLabel": { "description": "SwitchListTile label for SSL in the mailbox dialog." },
+
+  "mailboxDialogPollingLabel": "Polling active",
+  "@mailboxDialogPollingLabel": { "description": "SwitchListTile label for polling in the mailbox dialog." },
+
+  "mailboxDialogPollingSubtitle": "Polled every 5 minutes by the edge function.",
+  "@mailboxDialogPollingSubtitle": { "description": "Subtitle of the polling switch in the mailbox dialog." },
+
+  "mailboxDialogRequiredError": "Label, server and username are required fields.",
+  "@mailboxDialogRequiredError": { "description": "Error message when required fields are missing." },
+
+  "mailboxDialogPasswordRequiredError": "Password is required when creating a new account.",
+  "@mailboxDialogPasswordRequiredError": { "description": "Error message when no password is provided during account creation." },
+
+  "mailboxDialogSaveFailed": "Save failed: {error}",
+  "@mailboxDialogSaveFailed": {
+    "description": "Error message when saving an IMAP account fails.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "semanticsChartBar": "Bar chart. {title}. {count} values. Highest value: {topValue} for {topLabel}.",
+  "@semanticsChartBar": {
+    "description": "Semantics label for bar charts (screen reader).",
+    "placeholders": {
+      "title": { "type": "String" },
+      "count": { "type": "int" },
+      "topValue": { "type": "String" },
+      "topLabel": { "type": "String" }
+    }
+  },
+
+  "semanticsChartLine": "Line chart. {title}. {count} data points. Highest value: {topValue} for {topLabel}.",
+  "@semanticsChartLine": {
+    "description": "Semantics label for line charts (screen reader).",
+    "placeholders": {
+      "title": { "type": "String" },
+      "count": { "type": "int" },
+      "topValue": { "type": "String" },
+      "topLabel": { "type": "String" }
+    }
+  },
+
+  "semanticsChartPie": "Pie chart. {title}. {count} segments. Dominant segment: {topLabel} at {topPct}%.",
+  "@semanticsChartPie": {
+    "description": "Semantics label for pie / donut charts (screen reader).",
+    "placeholders": {
+      "title": { "type": "String" },
+      "count": { "type": "int" },
+      "topLabel": { "type": "String" },
+      "topPct": { "type": "String" }
+    }
+  },
+
+  "semanticsChartLoading": "Chart loading.",
+  "@semanticsChartLoading": { "description": "Fallback semantics label while a chart is still loading." }
 }

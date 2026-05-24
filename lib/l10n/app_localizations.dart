@@ -9514,6 +9514,141 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Mehr'**
   String get heatmapMore;
+
+  /// Inline-Validierungsfehler für E-Mail-Felder.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungültige E-Mail-Adresse'**
+  String get validationInvalidEmail;
+
+  /// Inline-Validierungsfehler für den IMAP-Port.
+  ///
+  /// In de, this message translates to:
+  /// **'Port muss zwischen 1 und 65535 liegen'**
+  String get validationInvalidPort;
+
+  /// Label-Feld-Label im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Bezeichnung'**
+  String get mailboxDialogLabelLabel;
+
+  /// Hint-Text für das Label-Feld im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'z. B. \"Gmail Reseller\"'**
+  String get mailboxDialogLabelHint;
+
+  /// Feld-Label für den IMAP-Server-Host im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'IMAP-Server'**
+  String get mailboxDialogHostLabel;
+
+  /// Feld-Label für den IMAP-Port im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Port'**
+  String get mailboxDialogPortLabel;
+
+  /// Feld-Label für den Benutzernamen im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Benutzername / Mail-Adresse'**
+  String get mailboxDialogUsernameLabel;
+
+  /// Passwort-Feld-Label im Mailbox-Hinzufügen-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'App-Passwort'**
+  String get mailboxDialogPasswordNewLabel;
+
+  /// Helper-Text unter dem Passwort-Feld im Mailbox-Dialog beim Anlegen.
+  ///
+  /// In de, this message translates to:
+  /// **'Bei Gmail/Outlook: separates App-Passwort generieren.'**
+  String get mailboxDialogPasswordHelper;
+
+  /// Feld-Label für den IMAP-Ordner im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Ordner'**
+  String get mailboxDialogFolderLabel;
+
+  /// SwitchListTile-Label für SSL im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'SSL/TLS verwenden'**
+  String get mailboxDialogSslLabel;
+
+  /// SwitchListTile-Label für Polling im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Polling aktiv'**
+  String get mailboxDialogPollingLabel;
+
+  /// Untertitel des Polling-Switches im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Wird alle 5 Minuten von der Edge Function abgefragt.'**
+  String get mailboxDialogPollingSubtitle;
+
+  /// Fehlermeldung wenn Pflichtfelder fehlen.
+  ///
+  /// In de, this message translates to:
+  /// **'Bezeichnung, Server und Benutzername sind Pflichtfelder.'**
+  String get mailboxDialogRequiredError;
+
+  /// Fehlermeldung wenn beim Anlegen kein Passwort angegeben wurde.
+  ///
+  /// In de, this message translates to:
+  /// **'Passwort ist beim Anlegen Pflicht.'**
+  String get mailboxDialogPasswordRequiredError;
+
+  /// Fehlermeldung wenn das Speichern eines IMAP-Kontos fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen: {error}'**
+  String mailboxDialogSaveFailed(String error);
+
+  /// Semantics-Label für Säulendiagramme (Screen-Reader).
+  ///
+  /// In de, this message translates to:
+  /// **'Säulendiagramm. {title}. {count} Werte. Höchster Wert: {topValue} für {topLabel}.'**
+  String semanticsChartBar(
+    String title,
+    int count,
+    String topValue,
+    String topLabel,
+  );
+
+  /// Semantics-Label für Liniendiagramme (Screen-Reader).
+  ///
+  /// In de, this message translates to:
+  /// **'Liniendiagramm. {title}. {count} Datenpunkte. Höchster Wert: {topValue} für {topLabel}.'**
+  String semanticsChartLine(
+    String title,
+    int count,
+    String topValue,
+    String topLabel,
+  );
+
+  /// Semantics-Label für Tortendiagramme / Donut-Charts (Screen-Reader).
+  ///
+  /// In de, this message translates to:
+  /// **'Tortendiagramm. {title}. {count} Segmente. Dominantes Segment: {topLabel} mit {topPct}%.'**
+  String semanticsChartPie(
+    String title,
+    int count,
+    String topLabel,
+    String topPct,
+  );
+
+  /// Fallback-Semantics-Label während ein Diagramm noch lädt.
+  ///
+  /// In de, this message translates to:
+  /// **'Diagramm lädt.'**
+  String get semanticsChartLoading;
 }
 
 class _AppLocalizationsDelegate

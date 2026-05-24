@@ -55,7 +55,7 @@ class DashboardScreen extends StatelessWidget {
           effect: const SolidColorEffect(),
           enableSwitchAnimation: false,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AppTheme.space24),
             child: Center(
               child: ConstrainedBox(
                 // Begrenzt den Dashboard-Inhalt auf Desktop auf _kDashboardMaxWidth —
@@ -118,15 +118,15 @@ class _LowStockAlertBlock extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.only(bottom: AppTheme.space24),
       child: Container(
         decoration: BoxDecoration(
           color: AppTheme.warningBgOf(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
           border: Border.all(color: AppTheme.warningBorderOf(context)),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppTheme.space16),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final phone = constraints.maxWidth < Breakpoints.legacyDashboardCompact;
@@ -172,7 +172,7 @@ class _LowStockAlertBlock extends StatelessWidget {
                     backgroundColor: AppTheme.warning,
                     foregroundColor: AppTheme.bgSurfaceOf(context),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                   ),
                   onPressed: () => Navigator.push(
@@ -439,7 +439,7 @@ class _BuyerOverview extends StatelessWidget {
                   children: [
                     // Header row
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.only(bottom: AppTheme.space8),
                       child: Row(
                         children: [
                           const SizedBox(width: 20),
@@ -560,7 +560,7 @@ class _Panel extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.bgSurfaceOf(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.borderOf(context)),
       ),
       child: Column(
@@ -582,7 +582,7 @@ class _Panel extends StatelessWidget {
           ),
           Divider(height: 1, color: AppTheme.borderOf(context)),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppTheme.space16),
             child: child,
           ),
         ],

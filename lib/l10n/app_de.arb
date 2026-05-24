@@ -2607,5 +2607,92 @@
   "@heatmapLess": { "description": "Legende-Label 'Weniger' in der Profit-Heatmap (linke Seite der Farb-Skala)." },
 
   "heatmapMore": "Mehr",
-  "@heatmapMore": { "description": "Legende-Label 'Mehr' in der Profit-Heatmap (rechte Seite der Farb-Skala)." }
+  "@heatmapMore": { "description": "Legende-Label 'Mehr' in der Profit-Heatmap (rechte Seite der Farb-Skala)." },
+
+  "validationInvalidEmail": "Ungültige E-Mail-Adresse",
+  "@validationInvalidEmail": { "description": "Inline-Validierungsfehler für E-Mail-Felder." },
+
+  "validationInvalidPort": "Port muss zwischen 1 und 65535 liegen",
+  "@validationInvalidPort": { "description": "Inline-Validierungsfehler für den IMAP-Port." },
+
+  "mailboxDialogLabelLabel": "Bezeichnung",
+  "@mailboxDialogLabelLabel": { "description": "Label-Feld-Label im Mailbox-Dialog." },
+
+  "mailboxDialogLabelHint": "z. B. \"Gmail Reseller\"",
+  "@mailboxDialogLabelHint": { "description": "Hint-Text für das Label-Feld im Mailbox-Dialog." },
+
+  "mailboxDialogHostLabel": "IMAP-Server",
+  "@mailboxDialogHostLabel": { "description": "Feld-Label für den IMAP-Server-Host im Mailbox-Dialog." },
+
+  "mailboxDialogPortLabel": "Port",
+  "@mailboxDialogPortLabel": { "description": "Feld-Label für den IMAP-Port im Mailbox-Dialog." },
+
+  "mailboxDialogUsernameLabel": "Benutzername / Mail-Adresse",
+  "@mailboxDialogUsernameLabel": { "description": "Feld-Label für den Benutzernamen im Mailbox-Dialog." },
+
+  "mailboxDialogPasswordNewLabel": "App-Passwort",
+  "@mailboxDialogPasswordNewLabel": { "description": "Passwort-Feld-Label im Mailbox-Hinzufügen-Dialog." },
+
+  "mailboxDialogPasswordHelper": "Bei Gmail/Outlook: separates App-Passwort generieren.",
+  "@mailboxDialogPasswordHelper": { "description": "Helper-Text unter dem Passwort-Feld im Mailbox-Dialog beim Anlegen." },
+
+  "mailboxDialogFolderLabel": "Ordner",
+  "@mailboxDialogFolderLabel": { "description": "Feld-Label für den IMAP-Ordner im Mailbox-Dialog." },
+
+  "mailboxDialogSslLabel": "SSL/TLS verwenden",
+  "@mailboxDialogSslLabel": { "description": "SwitchListTile-Label für SSL im Mailbox-Dialog." },
+
+  "mailboxDialogPollingLabel": "Polling aktiv",
+  "@mailboxDialogPollingLabel": { "description": "SwitchListTile-Label für Polling im Mailbox-Dialog." },
+
+  "mailboxDialogPollingSubtitle": "Wird alle 5 Minuten von der Edge Function abgefragt.",
+  "@mailboxDialogPollingSubtitle": { "description": "Untertitel des Polling-Switches im Mailbox-Dialog." },
+
+  "mailboxDialogRequiredError": "Bezeichnung, Server und Benutzername sind Pflichtfelder.",
+  "@mailboxDialogRequiredError": { "description": "Fehlermeldung wenn Pflichtfelder fehlen." },
+
+  "mailboxDialogPasswordRequiredError": "Passwort ist beim Anlegen Pflicht.",
+  "@mailboxDialogPasswordRequiredError": { "description": "Fehlermeldung wenn beim Anlegen kein Passwort angegeben wurde." },
+
+  "mailboxDialogSaveFailed": "Speichern fehlgeschlagen: {error}",
+  "@mailboxDialogSaveFailed": {
+    "description": "Fehlermeldung wenn das Speichern eines IMAP-Kontos fehlschlägt.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "semanticsChartBar": "Säulendiagramm. {title}. {count} Werte. Höchster Wert: {topValue} für {topLabel}.",
+  "@semanticsChartBar": {
+    "description": "Semantics-Label für Säulendiagramme (Screen-Reader).",
+    "placeholders": {
+      "title": { "type": "String" },
+      "count": { "type": "int" },
+      "topValue": { "type": "String" },
+      "topLabel": { "type": "String" }
+    }
+  },
+
+  "semanticsChartLine": "Liniendiagramm. {title}. {count} Datenpunkte. Höchster Wert: {topValue} für {topLabel}.",
+  "@semanticsChartLine": {
+    "description": "Semantics-Label für Liniendiagramme (Screen-Reader).",
+    "placeholders": {
+      "title": { "type": "String" },
+      "count": { "type": "int" },
+      "topValue": { "type": "String" },
+      "topLabel": { "type": "String" }
+    }
+  },
+
+  "semanticsChartPie": "Tortendiagramm. {title}. {count} Segmente. Dominantes Segment: {topLabel} mit {topPct}%.",
+  "@semanticsChartPie": {
+    "description": "Semantics-Label für Tortendiagramme / Donut-Charts (Screen-Reader).",
+    "placeholders": {
+      "title": { "type": "String" },
+      "count": { "type": "int" },
+      "topLabel": { "type": "String" },
+      "topPct": { "type": "String" }
+    }
+  },
+
+  "semanticsChartLoading": "Diagramm lädt.",
+  "@semanticsChartLoading": { "description": "Fallback-Semantics-Label während ein Diagramm noch lädt." }
 }

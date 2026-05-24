@@ -2352,6 +2352,7 @@ class _MailboxTabState extends State<_MailboxTab> {
                           context, billing.currentPlan, mailboxLimit)
                       : () => showDialog(
                             context: context,
+                            barrierDismissible: false,
                             builder: (_) => const AddEditMailboxDialog(),
                           ),
                   backgroundColor: atLimit ? Colors.grey : null,
@@ -2397,6 +2398,7 @@ class _MailboxTabState extends State<_MailboxTab> {
                               account: account,
                               onEdit: () => showDialog(
                                 context: context,
+                                barrierDismissible: false,
                                 builder: (_) =>
                                     AddEditMailboxDialog(existing: account),
                               ),
