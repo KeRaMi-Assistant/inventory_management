@@ -984,6 +984,8 @@
   "inventoryDeleteTitle": "Lagerartikel löschen",
   "inventoryDeleteConfirm": "Artikel „{name}\" wirklich löschen?",
   "@inventoryDeleteConfirm": { "placeholders": { "name": {} } },
+  "inventoryBarcodeFound": "Gefunden: {name}",
+  "@inventoryBarcodeFound": { "placeholders": { "name": {} } },
   "inventoryNoEan": "Kein Artikel mit dieser EAN",
   "inventoryCreate": "Anlegen",
   "inventoryKpiTotalItems": "Gesamtartikel",
@@ -1792,6 +1794,7 @@
   },
 
   "appFeedbackUndoAction": "Rückgängig",
+  "appFeedbackSuccessDefault": "Gespeichert",
   "appFeedbackErrorDefault": "Etwas ist schiefgegangen. Bitte erneut versuchen.",
 
   "inboxTabSuggestions": "Vorschläge ({count})",
@@ -2337,5 +2340,26 @@
   "@stocktakeScanIncrement": {
     "description": "SnackBar-Text wenn ein Artikel per Barcode-Scan bei der Inventur inkrementiert wird.",
     "placeholders": { "name": { "type": "String" } }
-  }
+  },
+
+  "suppliersSeedSuccess": "{added} Versanddienste hinzugefügt.",
+  "@suppliersSeedSuccess": {
+    "description": "SnackBar-Text wenn Carrier-Lieferanten erfolgreich angelegt wurden.",
+    "placeholders": { "added": { "type": "int" } }
+  },
+
+  "suppliersSeedAlreadyPresent": "Versanddienste sind bereits vorhanden ({skipped} übersprungen).",
+  "@suppliersSeedAlreadyPresent": {
+    "description": "SnackBar-Text wenn alle Carrier-Lieferanten bereits existieren.",
+    "placeholders": { "skipped": { "type": "int" } }
+  },
+
+  "suppliersAddCarriersFailed": "Fehler beim Hinzufügen der Versanddienste.",
+  "@suppliersAddCarriersFailed": { "description": "Fehler-SnackBar beim Seeden der Carrier-Lieferanten." },
+
+  "suppliersDeleted": "Lieferant gelöscht.",
+  "@suppliersDeleted": { "description": "Erfolgs-SnackBar nach dem Löschen eines Lieferanten." },
+
+  "suppliersDeleteFailed": "Löschen fehlgeschlagen.",
+  "@suppliersDeleteFailed": { "description": "Fehler-SnackBar beim Löschen eines Lieferanten." }
 }

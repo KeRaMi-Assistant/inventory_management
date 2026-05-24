@@ -4586,6 +4586,12 @@ abstract class AppLocalizations {
   /// **'Artikel „{name}\" wirklich löschen?'**
   String inventoryDeleteConfirm(Object name);
 
+  /// No description provided for @inventoryBarcodeFound.
+  ///
+  /// In de, this message translates to:
+  /// **'Gefunden: {name}'**
+  String inventoryBarcodeFound(Object name);
+
   /// No description provided for @inventoryNoEan.
   ///
   /// In de, this message translates to:
@@ -8336,6 +8342,12 @@ abstract class AppLocalizations {
   /// **'Rückgängig'**
   String get appFeedbackUndoAction;
 
+  /// No description provided for @appFeedbackSuccessDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Gespeichert'**
+  String get appFeedbackSuccessDefault;
+
   /// No description provided for @appFeedbackErrorDefault.
   ///
   /// In de, this message translates to:
@@ -9016,6 +9028,36 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'{name} +1'**
   String stocktakeScanIncrement(String name);
+
+  /// SnackBar-Text wenn Carrier-Lieferanten erfolgreich angelegt wurden.
+  ///
+  /// In de, this message translates to:
+  /// **'{added} Versanddienste hinzugefügt.'**
+  String suppliersSeedSuccess(int added);
+
+  /// SnackBar-Text wenn alle Carrier-Lieferanten bereits existieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Versanddienste sind bereits vorhanden ({skipped} übersprungen).'**
+  String suppliersSeedAlreadyPresent(int skipped);
+
+  /// Fehler-SnackBar beim Seeden der Carrier-Lieferanten.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Hinzufügen der Versanddienste.'**
+  String get suppliersAddCarriersFailed;
+
+  /// Erfolgs-SnackBar nach dem Löschen eines Lieferanten.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant gelöscht.'**
+  String get suppliersDeleted;
+
+  /// Fehler-SnackBar beim Löschen eines Lieferanten.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen.'**
+  String get suppliersDeleteFailed;
 }
 
 class _AppLocalizationsDelegate

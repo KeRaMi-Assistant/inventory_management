@@ -11,8 +11,10 @@ import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../utils/validators.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/attachment_gallery.dart';
 import '../widgets/barcode_scanner_sheet.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/inventory_batches_sheet.dart';
 import '../widgets/skeletons/list_skeleton.dart';
@@ -896,33 +898,18 @@ class _InventoryScreenState extends State<InventoryScreen>
     final hit = provider.inventoryItems.where((i) => i.ean == code).firstOrNull;
     if (hit != null) {
       setState(() => _search = code);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(hit.name),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppFeedback.info(context, l10n.inventoryBarcodeFound(hit.name));
       return;
     }
     if (!context.mounted) return;
-    final create = await showDialog<bool>(
+    final create = await showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.inventoryNoEan),
-        content: Text('EAN: $code'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.inventoryCreate),
-          ),
-        ],
-      ),
+      title: l10n.inventoryNoEan,
+      message: 'EAN: $code',
+      confirmLabel: l10n.inventoryCreate,
+      cancelLabel: l10n.actionCancel,
     );
-    if (create == true && context.mounted) {
+    if (create && context.mounted) {
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -1419,8 +1406,40 @@ class _InventoryScreenState extends State<InventoryScreen>
             ),
             IconButton(
               tooltip: l10n.actionDelete,
-              onPressed: () => provider.deleteInventoryItem(item.id),
-              icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final successMsg = l10n.appFeedbackSuccessDefault;
+                final bgColor = AppTheme.successBgOf(context);
+                final textColor = AppTheme.successTextOf(context);
+                final confirmed = await showConfirmDialog(
+                  context: context,
+                  title: l10n.inventoryDeleteTitle,
+                  message: l10n.inventoryDeleteConfirm(item.name),
+                  confirmLabel: l10n.actionDelete,
+                  isDestructive: true,
+                );
+                if (confirmed) {
+                  await provider.deleteInventoryItem(item.id);
+                  messenger
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: bgColor,
+                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      content: Row(children: [
+                        Icon(Icons.check_circle_outline_rounded,
+                            color: textColor, size: 20),
+                        const SizedBox(width: 10),
+                        Text(successMsg,
+                            style: TextStyle(
+                                color: textColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500)),
+                      ]),
+                    ));
+                }
+              },
+              icon: Icon(Icons.delete_outline, size: 18, color: AppTheme.dangerTextOf(context)),
             ),
           ],
         )),

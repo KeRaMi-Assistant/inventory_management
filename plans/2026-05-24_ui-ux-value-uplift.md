@@ -726,10 +726,10 @@ möglich wo `depends` leer.
   zentrale Helpers.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6b** `inventory_screen.dart` SnackBars + Confirm-Dialogs.
+- [x] **A6b** `inventory_screen.dart` SnackBars + Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6c** `suppliers_screen.dart` SnackBars + Confirm-Dialogs.
+- [x] **A6c** `suppliers_screen.dart` SnackBars + Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
 - [ ] **A6d** `warehouses_screen.dart` SnackBars + Confirm-Dialogs.
@@ -760,7 +760,7 @@ möglich wo `depends` leer.
 - [x] **A6k** `onboarding_screen.dart` SnackBars (vor F5).
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6l** `statistics_screen.dart` SnackBars.
+- [x] **A6l** `statistics_screen.dart` SnackBars.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
 - [ ] **A6m** `invite_member_dialog.dart` SnackBars.
@@ -833,12 +833,14 @@ möglich wo `depends` leer.
   suppliers: offen.
   `agent: flutter-coder` · `model: sonnet` · `depends: [B0, B1]`
 
-- [ ] **B5** **States-Audit (Post-Skeleton).** Pro Listen-Screen
+- [x] **B5** **States-Audit (Post-Skeleton).** Pro Listen-Screen
   (inventory, deals, tickets, inbox, suppliers, warehouses,
   categories, stocktake, purchase_orders) prüfen ob `error`-State
   + `no-permission`-State als eigene `EmptyState`-Variante
   existieren. Fehlt: hinzufügen mit ARB-Keys + Retry-/Switch-
   Workspace-CTA.
+  — Audit-Report: `plans/2026-05-24_ui-ux-value-uplift-B5-states-audit.md`
+  — Fix B (suppliers isLoading-Guard) applied.
   `agent: flutter-coder` · `model: sonnet` · `depends: [B2, B3, B4]`
 
 ### Epic C — l10n + Color-Hygiene (P0)

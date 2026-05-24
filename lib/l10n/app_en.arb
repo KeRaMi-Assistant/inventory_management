@@ -984,6 +984,8 @@
   "inventoryDeleteTitle": "Delete inventory item",
   "inventoryDeleteConfirm": "Delete item \"{name}\"?",
   "@inventoryDeleteConfirm": { "placeholders": { "name": {} } },
+  "inventoryBarcodeFound": "Found: {name}",
+  "@inventoryBarcodeFound": { "placeholders": { "name": {} } },
   "inventoryNoEan": "No item with this EAN",
   "inventoryCreate": "Create",
   "inventoryKpiTotalItems": "Total items",
@@ -1792,6 +1794,7 @@
   },
 
   "appFeedbackUndoAction": "Undo",
+  "appFeedbackSuccessDefault": "Saved",
   "appFeedbackErrorDefault": "Something went wrong. Please try again.",
 
   "inboxTabSuggestions": "Suggestions ({count})",
@@ -2337,5 +2340,26 @@
   "@stocktakeScanIncrement": {
     "description": "SnackBar text when a product is incremented via barcode scan during a stocktake.",
     "placeholders": { "name": { "type": "String" } }
-  }
+  },
+
+  "suppliersSeedSuccess": "{added} shipping carriers added.",
+  "@suppliersSeedSuccess": {
+    "description": "SnackBar text when carrier suppliers were successfully seeded.",
+    "placeholders": { "added": { "type": "int" } }
+  },
+
+  "suppliersSeedAlreadyPresent": "Shipping carriers are already present ({skipped} skipped).",
+  "@suppliersSeedAlreadyPresent": {
+    "description": "SnackBar text when all carrier suppliers already exist.",
+    "placeholders": { "skipped": { "type": "int" } }
+  },
+
+  "suppliersAddCarriersFailed": "Failed to add shipping carriers.",
+  "@suppliersAddCarriersFailed": { "description": "Error SnackBar when seeding carrier suppliers fails." },
+
+  "suppliersDeleted": "Supplier deleted.",
+  "@suppliersDeleted": { "description": "Success SnackBar after deleting a supplier." },
+
+  "suppliersDeleteFailed": "Delete failed.",
+  "@suppliersDeleteFailed": { "description": "Error SnackBar when deleting a supplier fails." }
 }

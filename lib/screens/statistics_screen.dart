@@ -11,6 +11,7 @@ import '../providers/inventory_provider.dart';
 import '../providers/statistics_filter_provider.dart';
 import '../services/statistics_export_service.dart';
 import '../services/statistics_service.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/statistics/filter_bar.dart';
 import '../widgets/statistics/tabs/buyers_tab.dart';
 import '../widgets/statistics/tabs/finance_tab.dart';
@@ -87,7 +88,6 @@ class _StatisticsScreenState extends State<StatisticsScreen>
       ),
     );
     if (choice == null || !mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
     try {
       switch (choice) {
         case 'pdf':
@@ -106,15 +106,11 @@ class _StatisticsScreenState extends State<StatisticsScreen>
           break;
       }
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.statsReportExported)),
-        );
+        AppFeedback.success(context, l10n.statsReportExported);
       }
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.statsExportFailed('$e'))),
-        );
+        AppFeedback.error(context, l10n.appFeedbackErrorDefault);
       }
     }
   }
@@ -195,15 +191,15 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                               try {
                                 await svc.saveTaxCsv();
                                 if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(l10n.statsTaxExportSaved)),
+                                AppFeedback.success(
+                                  context,
+                                  l10n.statsTaxExportSaved,
                                 );
                               } catch (e) {
                                 if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(l10n.errorPrefix('$e'))),
+                                AppFeedback.error(
+                                  context,
+                                  l10n.appFeedbackErrorDefault,
                                 );
                               }
                             },

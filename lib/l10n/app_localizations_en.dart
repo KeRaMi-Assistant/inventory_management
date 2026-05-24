@@ -2535,6 +2535,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String inventoryBarcodeFound(Object name) {
+    return 'Found: $name';
+  }
+
+  @override
   String get inventoryNoEan => 'No item with this EAN';
 
   @override
@@ -4579,6 +4584,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appFeedbackUndoAction => 'Undo';
 
   @override
+  String get appFeedbackSuccessDefault => 'Saved';
+
+  @override
   String get appFeedbackErrorDefault =>
       'Something went wrong. Please try again.';
 
@@ -5046,4 +5054,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String stocktakeScanIncrement(String name) {
     return '$name +1';
   }
+
+  @override
+  String suppliersSeedSuccess(int added) {
+    return '$added shipping carriers added.';
+  }
+
+  @override
+  String suppliersSeedAlreadyPresent(int skipped) {
+    return 'Shipping carriers are already present ($skipped skipped).';
+  }
+
+  @override
+  String get suppliersAddCarriersFailed => 'Failed to add shipping carriers.';
+
+  @override
+  String get suppliersDeleted => 'Supplier deleted.';
+
+  @override
+  String get suppliersDeleteFailed => 'Delete failed.';
 }
