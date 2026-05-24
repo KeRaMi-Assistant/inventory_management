@@ -5071,4 +5071,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String purchaseOrderScanItemAdded(String name) {
     return '$name +1';
   }
+
+  @override
+  String stocktakeScanIncrement(String name) {
+    return '$name +1';
+  }
 }

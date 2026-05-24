@@ -9010,6 +9010,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'{name} +1'**
   String purchaseOrderScanItemAdded(String name);
+
+  /// SnackBar-Text wenn ein Artikel per Barcode-Scan bei der Inventur inkrementiert wird.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} +1'**
+  String stocktakeScanIncrement(String name);
 }
 
 class _AppLocalizationsDelegate

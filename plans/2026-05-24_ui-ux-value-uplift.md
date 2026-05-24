@@ -710,7 +710,7 @@ möglich wo `depends` leer.
   Inline-Confirm-Dialogs auf `showConfirmDialog`.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2, C2]`
 
-- [ ] **A4c** Migriere SnackBars im Subscription-/Plan-Bereich von
+- [x] **A4c** Migriere SnackBars im Subscription-/Plan-Bereich von
   `settings_screen.dart` (~16 Stellen) auf `AppFeedback.*`.
   Plan-Upgrade-Hinweise als `AppFeedback.info`.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2, C2]`
@@ -738,7 +738,7 @@ möglich wo `depends` leer.
 - [ ] **A6e** `categories_screen.dart` SnackBars + Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6f** `stocktake_screen.dart` SnackBars + Confirm-Dialogs.
+- [x] **A6f** `stocktake_screen.dart` SnackBars + Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
 - [ ] **A6g** `purchase_orders_screen.dart` SnackBars +
@@ -757,7 +757,7 @@ möglich wo `depends` leer.
   Refresh-Failures).
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6k** `onboarding_screen.dart` SnackBars (vor F5).
+- [x] **A6k** `onboarding_screen.dart` SnackBars (vor F5).
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
 - [ ] **A6l** `statistics_screen.dart` SnackBars.
@@ -829,7 +829,8 @@ möglich wo `depends` leer.
   `inbox_screen.dart`, `suppliers_screen.dart` First-Load.
   Sub-Tasks pro Screen wenn nötig.
   — **inbox_screen.dart: DONE** (alle 3 Tabs: _SuggestionsTab, _MatchedTab, _UnclassifiedTab).
-  tickets + suppliers: offen.
+  — **tickets_screen.dart: DONE** (Active-Tab Desktop + Mobile, Archive-Tab).
+  suppliers: offen.
   `agent: flutter-coder` · `model: sonnet` · `depends: [B0, B1]`
 
 - [ ] **B5** **States-Audit (Post-Skeleton).** Pro Listen-Screen

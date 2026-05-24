@@ -2331,5 +2331,11 @@
   "@purchaseOrderScanItemAdded": {
     "description": "SnackBar-Text wenn ein Artikel per Barcode-Scan zur Wareneingangs-Liste hinzugefügt wird.",
     "placeholders": { "name": { "type": "String" } }
+  },
+
+  "stocktakeScanIncrement": "{name} +1",
+  "@stocktakeScanIncrement": {
+    "description": "SnackBar-Text wenn ein Artikel per Barcode-Scan bei der Inventur inkrementiert wird.",
+    "placeholders": { "name": { "type": "String" } }
   }
 }

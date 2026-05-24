@@ -14,6 +14,7 @@ import '../utils/url_helper.dart';
 import '../widgets/add_edit_deal_dialog.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/skeletons/list_skeleton.dart';
 import '../widgets/tracking_chip.dart';
 
 class TicketsScreen extends StatefulWidget {
@@ -100,6 +101,8 @@ class _TicketsScreenState extends State<TicketsScreen>
                   _ArchiveTicketsView(
                     tickets: provider.archivedTicketSummaries,
                     money: money,
+                    isLoading: provider.isLoading,
+                    initialLoadAttempted: provider.initialLoadAttempted,
                   ),
                 ],
               ),
@@ -212,30 +215,45 @@ class _ActiveTicketsView extends StatelessWidget {
                     onSort: onSort,
                   ),
                   Expanded(
-                    child: tickets.isEmpty
-                        ? EmptyState(
-                            icon: Icons.receipt_long_outlined,
-                            title: AppLocalizations.of(context).ticketsEmpty,
-                            subtitle:
-                                AppLocalizations.of(context).ticketsEmptyHint,
-                            keySlug: 'ticketsEmpty',
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.all(12),
-                            itemCount: tickets.length,
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (context, i) {
-                              final ticket = tickets[i];
-                              return _TicketCard(
-                                ticket: ticket,
-                                money: money,
-                                selected: selected?.ticketNumber ==
-                                    ticket.ticketNumber,
-                                onTap: () => onSelectTicket(ticket.ticketNumber),
-                              );
-                            },
-                          ),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: shouldShowSkeleton(
+                        isLoading: provider.isLoading,
+                        hasData: tickets.isNotEmpty,
+                        initialLoadAttempted: provider.initialLoadAttempted,
+                      )
+                          ? const ListSkeleton(
+                              key: ValueKey('skeleton'),
+                              itemCount: 6,
+                            )
+                          : tickets.isEmpty
+                              ? EmptyState(
+                                  key: const ValueKey('content'),
+                                  icon: Icons.receipt_long_outlined,
+                                  title: AppLocalizations.of(context).ticketsEmpty,
+                                  subtitle:
+                                      AppLocalizations.of(context).ticketsEmptyHint,
+                                  keySlug: 'ticketsEmpty',
+                                )
+                              : ListView.separated(
+                                  key: const ValueKey('content'),
+                                  padding: const EdgeInsets.all(12),
+                                  itemCount: tickets.length,
+                                  separatorBuilder: (context, index) =>
+                                      const SizedBox(height: 10),
+                                  itemBuilder: (context, i) {
+                                    final ticket = tickets[i];
+                                    return _TicketCard(
+                                      ticket: ticket,
+                                      money: money,
+                                      selected: selected?.ticketNumber ==
+                                          ticket.ticketNumber,
+                                      onTap: () =>
+                                          onSelectTicket(ticket.ticketNumber),
+                                    );
+                                  },
+                                ),
+                    ),
                   ),
                 ],
               ),
@@ -259,17 +277,45 @@ class _ActiveTicketsView extends StatelessWidget {
 class _ArchiveTicketsView extends StatelessWidget {
   final List<TicketSummary> tickets;
   final NumberFormat money;
-  const _ArchiveTicketsView({required this.tickets, required this.money});
+  final bool isLoading;
+  final bool initialLoadAttempted;
+
+  const _ArchiveTicketsView({
+    required this.tickets,
+    required this.money,
+    required this.isLoading,
+    required this.initialLoadAttempted,
+  });
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+
+    // Show skeleton during cold-start or first load with no data yet.
+    if (shouldShowSkeleton(
+      isLoading: isLoading,
+      hasData: tickets.isNotEmpty,
+      initialLoadAttempted: initialLoadAttempted,
+    )) {
+      return const AnimatedSwitcher(
+        duration: Duration(milliseconds: 200),
+        child: ListSkeleton(
+          key: ValueKey('skeleton'),
+          itemCount: 6,
+        ),
+      );
+    }
+
     if (tickets.isEmpty) {
-      return EmptyState(
-        icon: Icons.archive_outlined,
-        title: l10n.ticketsArchiveEmpty,
-        subtitle: l10n.ticketsArchiveEmptyHint,
-        keySlug: 'ticketsArchiveEmpty',
+      return AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: EmptyState(
+          key: const ValueKey('content'),
+          icon: Icons.archive_outlined,
+          title: l10n.ticketsArchiveEmpty,
+          subtitle: l10n.ticketsArchiveEmptyHint,
+          keySlug: 'ticketsArchiveEmpty',
+        ),
       );
     }
     final groups = _groupByMonth(tickets);
@@ -626,30 +672,48 @@ class _TicketsMobileLayoutState extends State<_TicketsMobileLayout>
                     onSort: widget.onSort,
                   ),
                   Expanded(
-                    child: widget.tickets.isEmpty
-                        ? EmptyState(
-                            icon: Icons.receipt_long_outlined,
-                            title: l10n.ticketsEmpty,
-                            subtitle: l10n.ticketsEmptyHint,
-                            keySlug: 'ticketsEmpty',
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.all(12),
-                            itemCount: widget.tickets.length,
-                            separatorBuilder: (context, i) => const SizedBox(height: 10),
-                            itemBuilder: (context, i) {
-                              final ticket = widget.tickets[i];
-                              return _TicketCard(
-                                ticket: ticket,
-                                money: widget.money,
-                                selected: widget.selected?.ticketNumber == ticket.ticketNumber,
-                                onTap: () {
-                                  widget.onSelectTicket(ticket.ticketNumber);
-                                  _tab.animateTo(1);
-                                },
-                              );
-                            },
-                          ),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: shouldShowSkeleton(
+                        isLoading: widget.provider.isLoading,
+                        hasData: widget.tickets.isNotEmpty,
+                        initialLoadAttempted:
+                            widget.provider.initialLoadAttempted,
+                      )
+                          ? const ListSkeleton(
+                              key: ValueKey('skeleton'),
+                              itemCount: 6,
+                            )
+                          : widget.tickets.isEmpty
+                              ? EmptyState(
+                                  key: const ValueKey('content'),
+                                  icon: Icons.receipt_long_outlined,
+                                  title: l10n.ticketsEmpty,
+                                  subtitle: l10n.ticketsEmptyHint,
+                                  keySlug: 'ticketsEmpty',
+                                )
+                              : ListView.separated(
+                                  key: const ValueKey('content'),
+                                  padding: const EdgeInsets.all(12),
+                                  itemCount: widget.tickets.length,
+                                  separatorBuilder: (context, i) =>
+                                      const SizedBox(height: 10),
+                                  itemBuilder: (context, i) {
+                                    final ticket = widget.tickets[i];
+                                    return _TicketCard(
+                                      ticket: ticket,
+                                      money: widget.money,
+                                      selected: widget.selected?.ticketNumber ==
+                                          ticket.ticketNumber,
+                                      onTap: () {
+                                        widget
+                                            .onSelectTicket(ticket.ticketNumber);
+                                        _tab.animateTo(1);
+                                      },
+                                    );
+                                  },
+                                ),
+                    ),
                   ),
                 ],
               ),

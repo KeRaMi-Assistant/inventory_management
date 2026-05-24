@@ -791,24 +791,14 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
 
   Future<void> _onReload() async {
     final l10n = AppLocalizations.of(context);
+    // Capture messenger before async gap (Dialog-Context-Pattern).
     final messenger = ScaffoldMessenger.of(context);
     final inventory = context.read<InventoryProvider>();
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.settingsDemoReloadConfirmTitle),
-        content: Text(l10n.settingsDemoReloadConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.settingsDemoReload),
-          ),
-        ],
-      ),
+      title: l10n.settingsDemoReloadConfirmTitle,
+      message: l10n.settingsDemoReloadConfirm,
+      confirmLabel: l10n.settingsDemoReload,
     );
     if (confirmed != true || !mounted) return;
     setState(() => _loading = true);
@@ -824,13 +814,17 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
       }
       await inventory.loadData();
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.settingsDemoReloadSuccess)),
+      AppFeedback.successOn(
+        messenger,
+        l10n.settingsDemoReloadSuccess,
+        rootContext: context,
       );
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.settingsDemoReloadError(e.toString()))),
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context,
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -849,7 +843,7 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
             final info = Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.refresh, color: Color(0xFF2563EB)),
+                Icon(Icons.refresh, color: AppTheme.accentTextOf(context)),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -862,8 +856,9 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
                       const SizedBox(height: 6),
                       Text(
                         l10n.settingsDemoReloadDescription,
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF64748B)),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textMutedOf(context)),
                       ),
                     ],
                   ),
@@ -944,28 +939,18 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
 
   Future<void> _wipe() async {
     final l10n = AppLocalizations.of(context);
+    // Capture messenger before async gap (Dialog-Context-Pattern).
     final messenger = ScaffoldMessenger.of(context);
     final ob = context.read<OnboardingProvider>();
     final activeWs = context.read<ActiveWorkspaceProvider>();
     final inv = context.read<InventoryProvider>();
     final wsId = activeWs.active?.id;
     if (wsId == null) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.settingsDemoWipeConfirmTitle),
-        content: Text(l10n.settingsDemoWipeConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.settingsDemoWipe),
-          ),
-        ],
-      ),
+      title: l10n.settingsDemoWipeConfirmTitle,
+      message: l10n.settingsDemoWipeConfirm,
+      confirmLabel: l10n.settingsDemoWipe,
     );
     if (confirmed != true || !mounted) return;
     setState(() => _wiping = true);
@@ -973,17 +958,19 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
     if (!mounted) return;
     setState(() => _wiping = false);
     if (result == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(
-          l10n.settingsDemoWipeError(ob.lastError ?? ''),
-        )),
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context,
       );
       return;
     }
     await inv.loadData();
     if (!mounted) return;
-    messenger.showSnackBar(
-      SnackBar(content: Text(l10n.settingsDemoWipeSuccess(result.total))),
+    AppFeedback.successOn(
+      messenger,
+      l10n.settingsDemoWipeSuccess(result.total),
+      rootContext: context,
     );
     await _refresh();
   }
@@ -1007,8 +994,8 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
                 final info = Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.delete_sweep_outlined,
-                        color: Color(0xFFD97706)),
+                    Icon(Icons.delete_sweep_outlined,
+                        color: AppTheme.warningTextOf(context)),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -1022,8 +1009,9 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
                           const SizedBox(height: 6),
                           Text(
                             l10n.settingsDemoWipeDescription,
-                            style: const TextStyle(
-                                fontSize: 12, color: Color(0xFF64748B)),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textMutedOf(context)),
                           ),
                         ],
                       ),
@@ -1088,7 +1076,7 @@ class _LogoutCard extends StatelessWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD97706)),
+                backgroundColor: AppTheme.warning),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.accountMenuSignOut),
           ),
@@ -1108,7 +1096,7 @@ class _LogoutCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(Icons.logout, color: Color(0xFFD97706)),
+            Icon(Icons.logout, color: AppTheme.warningTextOf(context)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1116,16 +1104,17 @@ class _LogoutCard extends StatelessWidget {
                 children: [
                   Text(
                     l10n.accountMenuSignOut,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFFB45309),
+                      color: AppTheme.warningTextOf(context),
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     '${l10n.accountMenuSignedInAs} $email',
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMutedOf(context)),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -1135,8 +1124,9 @@ class _LogoutCard extends StatelessWidget {
             OutlinedButton(
               onPressed: () => _confirmLogout(context),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFD97706),
-                side: const BorderSide(color: Color(0xFFD97706)),
+                foregroundColor: AppTheme.warningTextOf(context),
+                side: BorderSide(
+                    color: AppTheme.warningTextOf(context)),
               ),
               child: Text(l10n.accountMenuSignOut),
             ),
@@ -1157,10 +1147,10 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF6B7280),
+          color: AppTheme.textMutedOf(context),
           letterSpacing: 0.7,
         ),
       ),
@@ -1298,56 +1288,15 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
 
   Future<void> _confirmDelete() async {
     final l10n = AppLocalizations.of(context);
-    final confirmCtrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: Text(l10n.deleteAccountTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l10n.deleteAccountText),
-              const SizedBox(height: 16),
-              Text(
-                l10n.deleteAccountConfirmInstruction,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: confirmCtrl,
-                autofocus: true,
-                onChanged: (_) => setS(() {}),
-                decoration: InputDecoration(
-                  hintText: l10n.deleteAccountConfirmKeyword,
-                  border: const OutlineInputBorder(),
-                  isDense: true,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.actionCancel),
-            ),
-            ElevatedButton(
-              onPressed: confirmCtrl.text.trim() ==
-                      l10n.deleteAccountConfirmKeyword
-                  ? () => Navigator.pop(ctx, true)
-                  : null,
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFC0392B)),
-              child: Text(l10n.accountMenuDeleteAccount),
-            ),
-          ],
-        ),
-      ),
+      title: l10n.deleteAccountTitle,
+      message: l10n.deleteAccountText,
+      confirmLabel: l10n.accountMenuDeleteAccount,
+      isDestructive: true,
+      requireTypeName: l10n.deleteAccountConfirmKeyword,
     );
 
-    confirmCtrl.dispose();
     if (confirmed != true || !mounted) return;
 
     setState(() => _loading = true);
@@ -1357,13 +1306,7 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
     setState(() => _loading = false);
 
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error),
-          backgroundColor: const Color(0xFFC0392B),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppFeedback.error(context, l10n.deleteAccountFailed);
     }
   }
 
@@ -1375,7 +1318,8 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(Icons.delete_forever_outlined, color: Color(0xFFC0392B)),
+            Icon(Icons.delete_forever_outlined,
+                color: AppTheme.dangerTextOf(context)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1383,16 +1327,17 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
                 children: [
                   Text(
                     l10n.accountMenuDeleteAccount,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFFC0392B),
+                      color: AppTheme.dangerTextOf(context),
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     l10n.deleteAccountSubtitle,
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMutedOf(context)),
                   ),
                 ],
               ),
@@ -1407,8 +1352,9 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
                 : OutlinedButton(
                     onPressed: _confirmDelete,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFC0392B),
-                      side: const BorderSide(color: Color(0xFFC0392B)),
+                      foregroundColor: AppTheme.dangerTextOf(context),
+                      side: BorderSide(
+                          color: AppTheme.dangerTextOf(context)),
                     ),
                     child: Text(l10n.actionDelete),
                   ),
@@ -1439,7 +1385,7 @@ class _SettingsCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFF2563EB)),
+            Icon(icon, color: AppTheme.accentTextOf(context)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1447,7 +1393,10 @@ class _SettingsCard extends StatelessWidget {
                 children: [
                   Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
                   const SizedBox(height: 3),
-                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                  Text(subtitle,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textMutedOf(context))),
                 ],
               ),
             ),
@@ -1497,14 +1446,11 @@ class _NotificationsTabState extends State<_NotificationsTab> {
     });
     try {
       await context.read<NotificationPreferencesService>().save(next);
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).pushSaveFailed('$e')),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFDC2626),
-        ),
+      AppFeedback.error(
+        context,
+        AppLocalizations.of(context).appFeedbackErrorDefault,
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -1642,14 +1588,14 @@ class _NotificationsTabState extends State<_NotificationsTab> {
             title: l10n.pushSectionInfo,
             children: [
               ListTile(
-                leading: const Icon(Icons.schedule,
-                    size: 20, color: Color(0xFF64748B)),
+                leading: Icon(Icons.schedule,
+                    size: 20, color: AppTheme.textMutedOf(context)),
                 title: Text(l10n.pushDailyCheckTitle),
                 subtitle: Text(l10n.pushDailyCheckSubtitle),
               ),
               ListTile(
-                leading: const Icon(Icons.fingerprint,
-                    size: 20, color: Color(0xFF64748B)),
+                leading: Icon(Icons.fingerprint,
+                    size: 20, color: AppTheme.textMutedOf(context)),
                 title: Text(l10n.pushDedupTitle),
                 subtitle: Text(l10n.pushDedupSubtitle),
               ),
@@ -2214,8 +2160,9 @@ class _PlanSectionState extends State<_PlanSection> {
                         const SizedBox(height: 3),
                         Text(
                           priceLabel,
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF64748B)),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textMutedOf(context)),
                         ),
                       ],
                     ),
@@ -2230,7 +2177,8 @@ class _PlanSectionState extends State<_PlanSection> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                  Icon(Icons.chevron_right,
+                      color: AppTheme.textMutedOf(context)),
                 ],
               ),
             ),
@@ -2249,8 +2197,8 @@ class _PlanSectionState extends State<_PlanSection> {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const Icon(Icons.receipt_long_outlined,
-                      color: Color(0xFF2563EB)),
+                  Icon(Icons.receipt_long_outlined,
+                      color: AppTheme.accentTextOf(context)),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -2264,17 +2212,18 @@ class _PlanSectionState extends State<_PlanSection> {
                           style: TextStyle(
                             fontSize: 12,
                             color: addressMissing
-                                ? Colors.red.shade600
-                                : const Color(0xFF64748B),
+                                ? AppTheme.dangerTextOf(context)
+                                : AppTheme.textMutedOf(context),
                           ),
                         ),
                       ],
                     ),
                   ),
                   if (addressMissing)
-                    const Icon(Icons.warning_amber_rounded,
-                        color: Colors.orange),
-                  const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                    Icon(Icons.warning_amber_rounded,
+                        color: AppTheme.warningTextOf(context)),
+                  Icon(Icons.chevron_right,
+                      color: AppTheme.textMutedOf(context)),
                 ],
               ),
             ),
@@ -2751,14 +2700,16 @@ class _MailboxFreePlanGate extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(10),
+                      Builder(
+                        builder: (ctx) => Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppTheme.warningBgOf(ctx),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.lock_outline,
+                              color: AppTheme.warningTextOf(ctx)),
                         ),
-                        child: const Icon(Icons.lock_outline,
-                            color: Color(0xFFB45309)),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -2773,12 +2724,14 @@ class _MailboxFreePlanGate extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  Text(
-                    l10n.settingsMailboxFreePlanDesc(plan.label),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF334155),
-                      height: 1.5,
+                  Builder(
+                    builder: (ctx) => Text(
+                      l10n.settingsMailboxFreePlanDesc(plan.label),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textSecondaryOf(ctx),
+                        height: 1.5,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -2836,19 +2789,19 @@ class _PlanComparisonRow extends StatelessWidget {
             width: 80,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
-                color: Color(0xFF2563EB),
+                color: AppTheme.accentTextOf(context),
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF334155),
+                color: AppTheme.textSecondaryOf(context),
               ),
             ),
           ),
@@ -2946,24 +2899,41 @@ class _ShippingTabState extends State<_ShippingTab> {
       ),
     );
     if (saved != true || !context.mounted) return;
+    // Capture messenger + navigator before async gap (Dialog-Context-Pattern).
     final messenger = ScaffoldMessenger.of(context);
     final navigatorRef = Navigator.of(context);
+    final rootCtx = context;
     try {
       await context.read<CarrierCredentialsProvider>().setApiKey(
             carrierId: carrierId,
             apiKey: controller.text.trim(),
           );
       if (!context.mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.shippingKeySaved)));
+      AppFeedback.successOn(
+        messenger,
+        l10n.shippingKeySaved,
+        rootContext: rootCtx,
+      );
     } on PostgrestException catch (e) {
       final isMasterKey = e.code == 'P0001' &&
           e.message.contains('carrier_master_key');
       if (isMasterKey) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.shippingSetupError),
+        // Master-key setup error: keep SnackBarAction for Help navigation
+        // (AppFeedback doesn't support custom navigation actions).
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+            key: const Key('appFeedbackError'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppTheme.dangerBgOf(rootCtx),
+            duration: const Duration(seconds: 8),
+            content: Text(
+              l10n.shippingSetupError,
+              style: TextStyle(color: AppTheme.dangerTextOf(rootCtx)),
+            ),
             action: SnackBarAction(
               label: l10n.shippingSetupHelpAction,
+              textColor: AppTheme.dangerTextOf(rootCtx),
               onPressed: () {
                 navigatorRef.push(
                   MaterialPageRoute<void>(
@@ -2972,14 +2942,20 @@ class _ShippingTabState extends State<_ShippingTab> {
                 );
               },
             ),
-            duration: const Duration(seconds: 8),
-          ),
-        );
+          ));
       } else {
-        messenger.showSnackBar(SnackBar(content: Text('$e')));
+        AppFeedback.errorOn(
+          messenger,
+          l10n.appFeedbackErrorDefault,
+          rootContext: rootCtx,
+        );
       }
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    } catch (_) {
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: rootCtx,
+      );
     }
   }
 
@@ -2988,36 +2964,33 @@ class _ShippingTabState extends State<_ShippingTab> {
     required String carrierId,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
+    // Capture messenger before async gap (Dialog-Context-Pattern).
+    final messenger = ScaffoldMessenger.of(context);
+    final rootCtx = context;
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.shippingDeleteKey),
-        content: Text(
-          l10n.settingsShippingDeleteKeyConfirmBody(labelForCarrierId(carrierId)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(
-              l10n.shippingDeleteKey,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+      title: l10n.shippingDeleteKey,
+      message: l10n.settingsShippingDeleteKeyConfirmBody(
+          labelForCarrierId(carrierId)),
+      confirmLabel: l10n.shippingDeleteKey,
+      isDestructive: true,
     );
     if (confirmed != true || !context.mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await context.read<CarrierCredentialsProvider>().deleteApiKey(carrierId);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.shippingKeyDeleted)));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('$e')));
+      if (!context.mounted) return;
+      AppFeedback.successOn(
+        messenger,
+        l10n.shippingKeyDeleted,
+        rootContext: rootCtx,
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: rootCtx,
+      );
     }
   }
 
@@ -3339,15 +3312,17 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
       );
       wsProv.applyUpdate(updated);
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.publicProfileSaved)),
+      AppFeedback.successOn(
+        messenger,
+        l10n.publicProfileSaved,
+        rootContext: context,
       );
     } catch (e) {
       if (!mounted) return;
       final msg = _isUniqueViolation(e)
           ? l10n.publicProfileHandleTaken
-          : l10n.publicProfileSaveFailed(e.toString());
-      messenger.showSnackBar(SnackBar(content: Text(msg)));
+          : l10n.appFeedbackErrorDefault;
+      AppFeedback.errorOn(messenger, msg, rootContext: context);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -3447,11 +3422,9 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
                           ? null
                           : (v) {
                               if (v && (ws.handle == null || ws.handle!.isEmpty)) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content:
-                                        Text(l10n.publicProfileNeedsHandle),
-                                  ),
+                                AppFeedback.info(
+                                  context,
+                                  l10n.publicProfileNeedsHandle,
                                 );
                                 return;
                               }
@@ -3479,11 +3452,9 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
                               await Clipboard.setData(
                                   ClipboardData(text: publicUrl));
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content:
-                                      Text(l10n.publicProfileLinkCopied),
-                                ),
+                              AppFeedback.success(
+                                context,
+                                l10n.publicProfileLinkCopied,
                               );
                             },
                           ),
@@ -3523,14 +3494,11 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
                               await inv.updateInventoryItem(
                                 item.copyWith(isPublic: next),
                               );
-                            } catch (e) {
+                            } catch (_) {
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                      l10n.publicProfileSaveFailed(
-                                          e.toString())),
-                                ),
+                              AppFeedback.error(
+                                context,
+                                l10n.appFeedbackErrorDefault,
                               );
                             }
                           },

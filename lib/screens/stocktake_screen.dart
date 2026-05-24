@@ -7,6 +7,7 @@ import '../models/stocktake.dart';
 import '../models/warehouse.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/app_screen_scaffold.dart';
 import 'stocktake_detail_screen.dart';
 
@@ -109,13 +110,7 @@ class StocktakeScreen extends StatelessWidget {
     } catch (e) {
       if (!context.mounted) return;
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.stocktakeStartError),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppTheme.danger,
-        ),
-      );
+      AppFeedback.error(context, l10n.stocktakeStartError);
     }
   }
 }

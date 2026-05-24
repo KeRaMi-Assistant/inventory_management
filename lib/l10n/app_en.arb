@@ -2331,5 +2331,11 @@
   "@purchaseOrderScanItemAdded": {
     "description": "SnackBar text when a product is added to the goods receipt list via barcode scan.",
     "placeholders": { "name": { "type": "String" } }
+  },
+
+  "stocktakeScanIncrement": "{name} +1",
+  "@stocktakeScanIncrement": {
+    "description": "SnackBar text when a product is incremented via barcode scan during a stocktake.",
+    "placeholders": { "name": { "type": "String" } }
   }
 }

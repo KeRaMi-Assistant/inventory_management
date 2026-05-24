@@ -12,6 +12,7 @@ import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../utils/responsive.dart';
+import '../widgets/app_feedback.dart';
 
 /// First-time-user-Flow als Phone-First-PageView. 6 Steps:
 ///   1. Willkommen
@@ -91,16 +92,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final wsId = activeWs.active?.id;
     if (wsId == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.onboardingErrorNoWorkspace)),
+      AppFeedback.errorOn(
+        messenger,
+        l10n.onboardingErrorNoWorkspace,
+        rootContext: context,
       );
       return;
     }
     final ok = await ob.skipOnboarding(activeWs: activeWs, workspaceId: wsId);
     if (!mounted) return;
     if (!ok) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.onboardingErrorGeneric(ob.lastError ?? ''))),
+      AppFeedback.errorOn(
+        messenger,
+        l10n.onboardingErrorGeneric(ob.lastError ?? ''),
+        rootContext: context,
       );
     }
   }
@@ -113,8 +118,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final wsId = activeWs.active?.id;
     if (wsId == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.onboardingErrorNoWorkspace)),
+      AppFeedback.errorOn(
+        messenger,
+        l10n.onboardingErrorNoWorkspace,
+        rootContext: context,
       );
       return;
     }
@@ -170,8 +177,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
     if (!mounted) return;
     if (!ok) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.onboardingErrorGeneric(ob.lastError ?? ''))),
+      AppFeedback.errorOn(
+        messenger,
+        l10n.onboardingErrorGeneric(ob.lastError ?? ''),
+        rootContext: context,
       );
     }
   }
