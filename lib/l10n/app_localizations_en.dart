@@ -184,6 +184,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navMoreSheetTitle => 'More sections';
 
   @override
+  String get navMoreSearchHint => 'Search sections…';
+
+  @override
+  String get navMoreSearchNoResults => 'No sections found';
+
+  @override
+  String get navMoreSectionManage => 'Manage';
+
+  @override
+  String get navMoreSectionTools => 'Analytics & Tools';
+
+  @override
+  String get navMoreSectionAccount => 'Account';
+
+  @override
   String get navWarehouse => 'Warehousing';
 
   @override
@@ -4605,6 +4620,23 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get appFeedbackErrorDefault =>
       'Something went wrong. Please try again.';
+
+  @override
+  String get errorNetworkOffline =>
+      'No internet connection. Please check your network.';
+
+  @override
+  String get errorTimeout => 'Request timed out. Please try again.';
+
+  @override
+  String get errorAuthExpired =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get errorFormatInvalid => 'Invalid data format.';
+
+  @override
+  String get errorUnknown => 'An unknown error occurred.';
 
   @override
   String inboxTabSuggestions(int count) {

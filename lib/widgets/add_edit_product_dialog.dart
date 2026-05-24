@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/product.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/error_messages.dart';
 import '../utils/validators.dart';
 import 'unsaved_changes_guard.dart';
 
@@ -221,7 +222,7 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.pushSaveFailed('$e')),
+          content: Text(l10n.pushSaveFailed(sanitizeError(e, l10n: l10n))),
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppTheme.danger,
         ),

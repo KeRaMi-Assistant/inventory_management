@@ -416,6 +416,36 @@ abstract class AppLocalizations {
   /// **'Weitere Bereiche'**
   String get navMoreSheetTitle;
 
+  /// No description provided for @navMoreSearchHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Bereich suchen…'**
+  String get navMoreSearchHint;
+
+  /// No description provided for @navMoreSearchNoResults.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Bereich gefunden'**
+  String get navMoreSearchNoResults;
+
+  /// No description provided for @navMoreSectionManage.
+  ///
+  /// In de, this message translates to:
+  /// **'Verwalten'**
+  String get navMoreSectionManage;
+
+  /// No description provided for @navMoreSectionTools.
+  ///
+  /// In de, this message translates to:
+  /// **'Analyse & Tools'**
+  String get navMoreSectionTools;
+
+  /// No description provided for @navMoreSectionAccount.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto'**
+  String get navMoreSectionAccount;
+
   /// No description provided for @navWarehouse.
   ///
   /// In de, this message translates to:
@@ -8377,6 +8407,36 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Etwas ist schiefgegangen. Bitte erneut versuchen.'**
   String get appFeedbackErrorDefault;
+
+  /// No description provided for @errorNetworkOffline.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Internetverbindung. Bitte prüfe deine Verbindung.'**
+  String get errorNetworkOffline;
+
+  /// No description provided for @errorTimeout.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeitüberschreitung. Bitte erneut versuchen.'**
+  String get errorTimeout;
+
+  /// No description provided for @errorAuthExpired.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung abgelaufen. Bitte erneut anmelden.'**
+  String get errorAuthExpired;
+
+  /// No description provided for @errorFormatInvalid.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungültiges Datenformat.'**
+  String get errorFormatInvalid;
+
+  /// No description provided for @errorUnknown.
+  ///
+  /// In de, this message translates to:
+  /// **'Ein unbekannter Fehler ist aufgetreten.'**
+  String get errorUnknown;
 
   /// Tab-Label für Vorschläge mit Anzahl.
   ///

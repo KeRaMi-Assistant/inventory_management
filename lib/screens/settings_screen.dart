@@ -24,6 +24,7 @@ import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../services/push_service.dart';
 import '../services/workspace_service.dart';
+import '../utils/error_messages.dart';
 import '../utils/role_labels.dart';
 import '../widgets/add_edit_buyer_dialog.dart';
 import '../widgets/app_feedback.dart';
@@ -58,11 +59,11 @@ class SettingsScreen extends StatelessWidget {
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white60,
                 tabs: [
-                  Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.settingsTabBuyers),
+                  Tab(icon: const Icon(Icons.people_outlined, size: 18), text: l10n.settingsTabBuyers),
                   Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
                   Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
                   Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
-                  Tab(icon: const Icon(Icons.mail_outline, size: 18), text: l10n.settingsTabMailbox),
+                  Tab(icon: const Icon(Icons.mail_outlined, size: 18), text: l10n.settingsTabMailbox),
                   Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
                   Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
                   Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
@@ -79,11 +80,11 @@ class SettingsScreen extends StatelessWidget {
                 unselectedLabelColor: AppTheme.textMutedOf(context),
                 dividerColor: AppTheme.borderOf(context),
                 tabs: [
-                  Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.settingsTabBuyers),
+                  Tab(icon: const Icon(Icons.people_outlined, size: 18), text: l10n.settingsTabBuyers),
                   Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
                   Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
                   Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
-                  Tab(icon: const Icon(Icons.mail_outline, size: 18), text: l10n.settingsTabMailbox),
+                  Tab(icon: const Icon(Icons.mail_outlined, size: 18), text: l10n.settingsTabMailbox),
                   Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
                   Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
                   Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
@@ -1717,7 +1718,7 @@ class _TeamTabState extends State<_TeamTab> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString();
+        _error = sanitizeError(e);
       });
     }
   }

@@ -286,7 +286,7 @@ class DealCard extends StatelessWidget {
                     tooltip: l10n.actionDelete,
                     visualDensity: VisualDensity.compact,
                     onPressed: () => _confirmDelete(context),
-                    icon: Icon(Icons.delete_outline,
+                    icon: Icon(Icons.delete_outlined,
                         size: 18, color: AppTheme.dangerTextOf(context)),
                   ),
                 ],

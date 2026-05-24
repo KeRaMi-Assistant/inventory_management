@@ -8,6 +8,7 @@ import '../models/billing_profile.dart';
 import '../models/workspace.dart';
 import '../providers/billing_provider.dart';
 import '../services/workspace_service.dart';
+import '../utils/error_messages.dart';
 import 'app_feedback.dart';
 
 // ---------------------------------------------------------------------------
@@ -99,16 +100,10 @@ class _InviteMemberDialogState extends State<InviteMemberDialog> {
       if (!mounted) return;
       Navigator.of(context).pop(invite);
     } catch (e) {
-      // Sanitize: take only the first line and cap at 200 chars so raw
-      // internal paths / stack-trace fragments never reach the UI.
-      final sanitized = e.toString().split('\n').first.trim();
-      final errorMsg = sanitized.length > 200
-          ? '${sanitized.substring(0, 200)}…'
-          : sanitized;
       if (!rootContext.mounted) return;
       AppFeedback.errorOn(
         messenger,
-        l10n.teamInviteFailed(errorMsg),
+        l10n.teamInviteFailed(sanitizeError(e, l10n: l10n)),
         rootContext: rootContext,
       );
     } finally {

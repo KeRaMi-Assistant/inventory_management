@@ -6,6 +6,7 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/supplier.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/error_messages.dart';
 import '../utils/validators.dart';
 import 'unsaved_changes_guard.dart';
 
@@ -260,7 +261,7 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
       if (context.mounted) {
         messenger.showSnackBar(
           SnackBar(
-            content: Text(l10n.pushSaveFailed('$e')),
+            content: Text(l10n.pushSaveFailed(sanitizeError(e, l10n: l10n))),
             behavior: SnackBarBehavior.floating,
           ),
         );

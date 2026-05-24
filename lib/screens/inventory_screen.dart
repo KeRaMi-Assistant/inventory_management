@@ -23,6 +23,15 @@ import 'product_detail_screen.dart';
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
 
+  /// Convenience helper for external callers (e.g. MainScreen FAB).
+  static void showAddDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _InventoryDialog(),
+    );
+  }
+
   @override
   State<InventoryScreen> createState() => _InventoryScreenState();
 }
@@ -641,7 +650,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                       onPressed: () =>
                           provider.deleteInventoryItem(item.id),
                       icon: const Icon(
-                        Icons.delete_outline,
+                        Icons.delete_outlined,
                         size: 18,
                         color: Color(0xFFDC2626),
                       ),
@@ -1301,7 +1310,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                         IconButton(
                           tooltip: l10n.actionDelete,
                           onPressed: () => provider.deleteInventoryItem(item.id),
-                          icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
+                          icon: const Icon(Icons.delete_outlined, size: 18, color: Color(0xFFDC2626)),
                         ),
                       ]);
                     }),
@@ -1464,7 +1473,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                     ));
                 }
               },
-              icon: Icon(Icons.delete_outline, size: 18, color: AppTheme.dangerTextOf(context)),
+              icon: Icon(Icons.delete_outlined, size: 18, color: AppTheme.dangerTextOf(context)),
             ),
           ],
         )),

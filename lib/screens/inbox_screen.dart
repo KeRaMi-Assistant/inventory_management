@@ -1150,7 +1150,7 @@ class _SuggestionCard extends StatelessWidget {
                     PopupMenuItem(
                       value: 'reject',
                       child: ListTile(
-                        leading: const Icon(Icons.delete_outline,
+                        leading: const Icon(Icons.delete_outlined,
                             color: Color(0xFFB91C1C)),
                         title: Text(l10n.inboxSuggestionDismiss),
                         dense: true,
@@ -1474,7 +1474,7 @@ class _MatchedTab extends StatelessWidget {
           },
         ),
       OutlinedButton.icon(
-        icon: const Icon(Icons.delete_outline, size: 16),
+        icon: const Icon(Icons.delete_outlined, size: 16),
         label: Text(AppLocalizations.of(context).inboxSuggestionDismiss),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppTheme.dangerTextOf(context),
@@ -1672,7 +1672,7 @@ class _UnclassifiedRow extends StatelessWidget {
             },
           ),
         OutlinedButton.icon(
-          icon: const Icon(Icons.delete_outline, size: 16),
+          icon: const Icon(Icons.delete_outlined, size: 16),
           label: Text(AppLocalizations.of(context).inboxSuggestionDismiss),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppTheme.dangerTextOf(context),
@@ -1785,7 +1785,7 @@ class _UnclassifiedRow extends StatelessWidget {
               value: 'dismiss',
               child: ListTile(
                 leading: const Icon(
-                    Icons.delete_outline, color: Color(0xFFB91C1C)),
+                    Icons.delete_outlined, color: Color(0xFFB91C1C)),
                 title: Text(l10n.inboxSuggestionDismiss),
                 dense: true,
               ),

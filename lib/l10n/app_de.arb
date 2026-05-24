@@ -66,6 +66,11 @@
   "navSettings": "Einstellungen",
   "navMore": "Mehr",
   "navMoreSheetTitle": "Weitere Bereiche",
+  "navMoreSearchHint": "Bereich suchen…",
+  "navMoreSearchNoResults": "Kein Bereich gefunden",
+  "navMoreSectionManage": "Verwalten",
+  "navMoreSectionTools": "Analyse & Tools",
+  "navMoreSectionAccount": "Konto",
   "navWarehouse": "Warenwirtschaft",
   "warehouseHubTitle": "Warenwirtschaft",
   "warehouseHubComingSoon": "Bald verfügbar",
@@ -1802,6 +1807,12 @@
   "appFeedbackUndoAction": "Rückgängig",
   "appFeedbackSuccessDefault": "Gespeichert",
   "appFeedbackErrorDefault": "Etwas ist schiefgegangen. Bitte erneut versuchen.",
+
+  "errorNetworkOffline": "Keine Internetverbindung. Bitte prüfe deine Verbindung.",
+  "errorTimeout": "Zeitüberschreitung. Bitte erneut versuchen.",
+  "errorAuthExpired": "Anmeldung abgelaufen. Bitte erneut anmelden.",
+  "errorFormatInvalid": "Ungültiges Datenformat.",
+  "errorUnknown": "Ein unbekannter Fehler ist aufgetreten.",
 
   "inboxTabSuggestions": "Vorschläge ({count})",
   "@inboxTabSuggestions": {

@@ -8,6 +8,7 @@ import '../models/workspace.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/invites_provider.dart';
+import '../utils/error_messages.dart';
 import '../utils/role_labels.dart';
 import 'app_feedback.dart';
 
@@ -172,16 +173,6 @@ class _InviteRow extends StatefulWidget {
 class _InviteRowState extends State<_InviteRow> {
   bool _busy = false;
 
-  /// Extrahiert eine sichere, kurze Fehlermeldung aus einer Exception.
-  ///
-  /// Nimmt nur die erste Zeile des `toString()`-Outputs und kürzt auf
-  /// maximal 120 Zeichen, damit keine Stack-Traces an den User durchsickern.
-  static String _sanitizeException(Object e) {
-    final raw = e.toString();
-    final firstLine = raw.split('\n').first.trim();
-    return firstLine.length > 120 ? '${firstLine.substring(0, 120)}…' : firstLine;
-  }
-
   Future<void> _accept() async {
     setState(() => _busy = true);
     // Dialog-Context-Pattern: Capture messenger + l10n before async gaps so
@@ -212,7 +203,7 @@ class _InviteRowState extends State<_InviteRow> {
       if (!rootContext.mounted) return;
       AppFeedback.errorOn(
         messenger,
-        l10n.invitesAcceptFailed(_sanitizeException(e)),
+        l10n.invitesAcceptFailed(sanitizeError(e, l10n: l10n)),
         rootContext: rootContext,
       );
     } finally {
@@ -239,7 +230,7 @@ class _InviteRowState extends State<_InviteRow> {
       if (!rootContext.mounted) return;
       AppFeedback.errorOn(
         messenger,
-        l10n.invitesDeclineFailed(_sanitizeException(e)),
+        l10n.invitesDeclineFailed(sanitizeError(e, l10n: l10n)),
         rootContext: rootContext,
       );
     } finally {

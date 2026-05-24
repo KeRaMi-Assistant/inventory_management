@@ -6,6 +6,7 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/mailbox_account.dart';
 import '../providers/inbox_provider.dart';
+import '../utils/error_messages.dart';
 import 'unsaved_changes_guard.dart';
 
 /// Snapshot der Initialwerte für die Dirty-Detection im Mailbox-Dialog.
@@ -229,7 +230,8 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
           SnackBar(
-            content: Text(l10n.mailboxDialogSaveFailed('$e')),
+            content: Text(
+                l10n.mailboxDialogSaveFailed(sanitizeError(e, l10n: l10n))),
             behavior: SnackBarBehavior.floating,
           ),
         );

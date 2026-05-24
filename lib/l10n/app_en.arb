@@ -66,6 +66,11 @@
   "navSettings": "Settings",
   "navMore": "More",
   "navMoreSheetTitle": "More sections",
+  "navMoreSearchHint": "Search sections…",
+  "navMoreSearchNoResults": "No sections found",
+  "navMoreSectionManage": "Manage",
+  "navMoreSectionTools": "Analytics & Tools",
+  "navMoreSectionAccount": "Account",
   "navWarehouse": "Warehousing",
   "warehouseHubTitle": "Warehousing",
   "warehouseHubComingSoon": "Coming soon",
@@ -1802,6 +1807,12 @@
   "appFeedbackUndoAction": "Undo",
   "appFeedbackSuccessDefault": "Saved",
   "appFeedbackErrorDefault": "Something went wrong. Please try again.",
+
+  "errorNetworkOffline": "No internet connection. Please check your network.",
+  "errorTimeout": "Request timed out. Please try again.",
+  "errorAuthExpired": "Your session has expired. Please sign in again.",
+  "errorFormatInvalid": "Invalid data format.",
+  "errorUnknown": "An unknown error occurred.",
 
   "inboxTabSuggestions": "Suggestions ({count})",
   "@inboxTabSuggestions": {

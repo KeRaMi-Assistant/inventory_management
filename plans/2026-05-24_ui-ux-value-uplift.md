@@ -859,10 +859,14 @@ möglich wo `depends` leer.
   `l10n.*` umbiegen.
   `agent: flutter-coder` · `model: sonnet` · `depends: [C1]`
 
-- [ ] **C4** `settings_screen.dart` — alle hardcoded Strings auf
+- [x] **C4** `settings_screen.dart` — alle hardcoded Strings auf
   `l10n.*`. Rohe Exception-Strings sanitisieren (kein `'$e'` in
   Body — generic `l10n.feedbackErrorDefault` ODER
   Error-Code-Mapping).
+  — `lib/utils/error_messages.dart` (NEU): `sanitizeError()` mit 6 Branches.
+  — ARB-Keys: `errorNetworkOffline`, `errorTimeout`, `errorAuthExpired`, `errorFormatInvalid`, `errorUnknown` (DE+EN).
+  — 10 Catch-Blocks migriert: settings_screen, add_edit_supplier_dialog, add_edit_product_dialog, add_edit_mailbox_dialog, deal_comments_section (3 Stellen), attachment_gallery, invite_member_dialog, invites_bell (2 Stellen), barcode_scanner_sheet.
+  — `test/utils/error_messages_test.dart` (NEU): 16 Tests, alle grün.
   `agent: flutter-coder` · `model: sonnet` · `depends: [C2]`
 
 - [ ] **C5a** **Hardcoded-Colors-Cluster: Confirm-/Modal-Dialog-Bereich.**
@@ -991,14 +995,17 @@ möglich wo `depends` leer.
 
 ### Epic F — Visual-Polish + Onboarding (P1)
 
-- [ ] **F1** `lib/app_theme.dart`: `space*` + `radius*`-Konstanten
+- [x] **F1** `lib/app_theme.dart`: `space*` + `radius*`-Konstanten
   hinzufügen (siehe §5.4). Verhaltensneutral, nur Tokens.
   `agent: flutter-coder` · `model: sonnet` · `depends: []`
 
-- [ ] **F2** Magic-Number-Migration für die 6 häufigsten
+- [x] **F2** Magic-Number-Migration für die 6 häufigsten
   Padding-/Spacing-Werte (`grep -E "EdgeInsets\.(all|symmetric)\((const )?[0-9]+"`)
   auf `AppTheme.space*`. Inkrementell — nicht alle Stellen, nur
   Schlüssel-Screens (`dashboard`, `inventory`, `deals`).
+  — dashboard_screen.dart: 8 Stellen migriert (EdgeInsets + BorderRadius).
+  — inventory_screen.dart: ~25 Stellen migriert (EdgeInsets + BorderRadius).
+  — deals_screen.dart: 1 Hit (`fromLTRB(14, 14, 14, 100)`) — 14 und 100 passen nicht in die Skala, nicht migriert.
   `agent: flutter-coder` · `model: sonnet` · `depends: [F1]`
 
 - [ ] **F4** `Hero`-Animation für Item-Card → Detail-Push in
@@ -1025,17 +1032,20 @@ möglich wo `depends` leer.
   (außer `onboardingStepLabel`).
   `agent: ui-builder` · `model: sonnet` · `depends: [A1, F1]`
 
-- [ ] **F6a** **Icon-Stil-Audit (Report-Only).** Durch `lib/screens`
+- [x] **F6a** **Icon-Stil-Audit (Report-Only).** Durch `lib/screens`
   greppen (`Icons\.[a-z_]+_outlined` vs. nicht-outlined),
   Statistik erstellen (Outlined-Anteil pro Screen). Empfehlung
   „konsequent outlined" oder „gemischt OK" mit Begründung als
   Markdown-Report unter `plans/2026-05-24_icon-style-audit.md`.
   `agent: flutter-coder` · `model: sonnet` · `depends: []`
 
-- [ ] **F6b** **Icon-Stil-Migration.** Nur ausführen wenn F6a
+- [x] **F6b** **Icon-Stil-Migration.** Nur ausführen wenn F6a
   „konsequent outlined" empfiehlt UND Stakeholder zustimmt.
   Diff-Patch über die Non-Outlined-Stellen, inkrementell pro
-  Cluster.
+  Cluster. **Migriert: main_screen (mail_outline→mail_outlined,
+  help_outline→help_outlined), settings_screen (Tab-Icons),
+  inventory_screen (3×), inbox_screen (4×), deal_card (1×),
+  deal_table (2×). Total: 12 Stellen in 6 Files.**
   `agent: flutter-coder` · `model: sonnet` · `depends: [F6a]`
 
 ### Epic G — Phone-Reachability + MoreNavSheet (P2, Stretch)

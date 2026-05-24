@@ -184,6 +184,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get navMoreSheetTitle => 'Weitere Bereiche';
 
   @override
+  String get navMoreSearchHint => 'Bereich suchen…';
+
+  @override
+  String get navMoreSearchNoResults => 'Kein Bereich gefunden';
+
+  @override
+  String get navMoreSectionManage => 'Verwalten';
+
+  @override
+  String get navMoreSectionTools => 'Analyse & Tools';
+
+  @override
+  String get navMoreSectionAccount => 'Konto';
+
+  @override
   String get navWarehouse => 'Warenwirtschaft';
 
   @override
@@ -4634,6 +4649,22 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get appFeedbackErrorDefault =>
       'Etwas ist schiefgegangen. Bitte erneut versuchen.';
+
+  @override
+  String get errorNetworkOffline =>
+      'Keine Internetverbindung. Bitte prüfe deine Verbindung.';
+
+  @override
+  String get errorTimeout => 'Zeitüberschreitung. Bitte erneut versuchen.';
+
+  @override
+  String get errorAuthExpired => 'Anmeldung abgelaufen. Bitte erneut anmelden.';
+
+  @override
+  String get errorFormatInvalid => 'Ungültiges Datenformat.';
+
+  @override
+  String get errorUnknown => 'Ein unbekannter Fehler ist aufgetreten.';
 
   @override
   String inboxTabSuggestions(int count) {

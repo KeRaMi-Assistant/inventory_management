@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management/screens/main_tab.dart';
 import 'package:inventory_management/widgets/app_nav_rail.dart';
@@ -269,5 +270,255 @@ void main() {
 
     // Andere Tabs haben keinen Badge.
     expect(find.byKey(const Key('mobile-nav-dashboard-badge')), findsNothing);
+  });
+
+  // ── D1c: Keyboard-Navigation-Tests ────────────────────────────────────────
+
+  // D1c-1: Tab-Key fokussiert NavigationRail-Destinations sequenziell.
+  // Jede Destination ist via Material's InkResponse ein Focus-Knoten;
+  // Tab-Traversal durchläuft sie in Renderreihenfolge (= Tab-Enum-Reihenfolge).
+  testWidgets('AppNavRail — Tab-Key traverses destinations sequentially', (tester) async {
+    tester.binding.focusManager.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+
+    await tester.pumpWidget(_wrap(
+      tabs: _allTabs,
+      visibility: _allVisible(),
+      selectedTab: MainTab.dashboard,
+    ));
+    await tester.pumpAndSettle();
+
+    // Erstes Tab: Fokus landet auf dem ersten NavigationRail-Destination-Item.
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+
+    final firstFocused = tester.binding.focusManager.primaryFocus;
+    expect(
+      firstFocused,
+      isNotNull,
+      reason: 'Nach 1x Tab muss ein Focus-Knoten aktiv sein',
+    );
+    expect(
+      firstFocused!.hasPrimaryFocus,
+      isTrue,
+      reason: 'primaryFocus.hasPrimaryFocus muss true sein',
+    );
+
+    // Zweites Tab: Fokus wechselt zu einem anderen Knoten (= nächste Destination).
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+
+    final secondFocused = tester.binding.focusManager.primaryFocus;
+    expect(
+      secondFocused,
+      isNotNull,
+      reason: 'Nach 2x Tab muss weiterhin ein Focus-Knoten aktiv sein',
+    );
+    // Der Fokus muss sich von Schritt 1 auf Schritt 2 unterscheiden —
+    // Tab hat eine neue Destination fokussiert.
+    expect(
+      secondFocused,
+      isNot(same(firstFocused)),
+      reason: 'Tab muss den Fokus von Destination 1 auf Destination 2 verschieben',
+    );
+  });
+
+  // D1c-2: Enter löst onSelect mit dem richtigen MainTab aus.
+  // Tab-Traversal: Tab 0 → dashboard (Index 0), Tab 1 → deals (Index 1).
+  testWidgets('AppNavRail — Enter on focused destination fires onSelect', (tester) async {
+    tester.binding.focusManager.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+    final selections = <MainTab>[];
+
+    await tester.pumpWidget(_wrap(
+      tabs: _allTabs,
+      visibility: _allVisible(),
+      selectedTab: MainTab.dashboard,
+      onSelect: selections.add,
+    ));
+    await tester.pumpAndSettle();
+
+    // Tab zum ersten Item (dashboard, Index 0 in der Rail).
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+
+    expect(tester.binding.focusManager.primaryFocus?.hasPrimaryFocus, isTrue);
+
+    // Enter aktiviert das fokussierte Item.
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(
+      selections,
+      hasLength(1),
+      reason: 'Enter auf fokussierter Destination muss onSelect genau einmal rufen',
+    );
+    expect(
+      selections.first,
+      MainTab.dashboard,
+      reason: 'Fokussiertes Item war dashboard (erste Destination in Rail)',
+    );
+  });
+
+  // D1c-3: Space löst ebenfalls onSelect aus (WCAG: Space und Enter sind
+  // gleichwertige Aktivierungs-Tasten für fokussierbare Elemente).
+  testWidgets('AppNavRail — Space on focused destination fires onSelect', (tester) async {
+    tester.binding.focusManager.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+    final selections = <MainTab>[];
+
+    await tester.pumpWidget(_wrap(
+      tabs: _allTabs,
+      visibility: _allVisible(),
+      selectedTab: MainTab.dashboard,
+      onSelect: selections.add,
+    ));
+    await tester.pumpAndSettle();
+
+    // Tab zum zweiten Item (deals, Tab 1 in der traversierten Rail).
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+
+    expect(tester.binding.focusManager.primaryFocus?.hasPrimaryFocus, isTrue);
+
+    // Space aktiviert das fokussierte Item (deals).
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pumpAndSettle();
+
+    expect(
+      selections,
+      hasLength(1),
+      reason: 'Space auf fokussierter Destination muss onSelect genau einmal rufen',
+    );
+    expect(
+      selections.first,
+      MainTab.deals,
+      reason: 'Zweite Tab-Traversal-Position ist deals',
+    );
+  });
+
+  // D1c-4: Mehrfache Tab-Traversal wechselt sukzessive Destinations.
+  // Entspricht dem Verhalten "ArrowDown navigiert zur nächsten Destination"
+  // (NavigationRail nutzt Column-Traversal über Tab, nicht Arrow-Keys intern).
+  testWidgets(
+      'AppNavRail — repeated Tab advances focus through destinations in order',
+      (tester) async {
+    tester.binding.focusManager.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+    final selections = <MainTab>[];
+
+    await tester.pumpWidget(_wrap(
+      tabs: _allTabs,
+      visibility: _allVisible(),
+      selectedTab: MainTab.dashboard,
+      onSelect: selections.add,
+    ));
+    await tester.pumpAndSettle();
+
+    // Aktiviere 3 Destinations der Reihe nach über Tab + Enter.
+    final expected = [MainTab.dashboard, MainTab.deals, MainTab.tickets];
+    for (final expectedTab in expected) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(
+        selections.last,
+        expectedTab,
+        reason: 'Tab+Enter muss Destination $expectedTab auswählen',
+      );
+    }
+    expect(selections, hasLength(3));
+  });
+
+  // D1c-5: Selected-Indicator via Semantics — bei selectedTab=MainTab.deals
+  // hat die deals-Destination `isSelected` im Semantics-Baum, alle anderen nicht.
+  testWidgets('AppNavRail — selected destination has isSelected in semantics', (tester) async {
+    await tester.pumpWidget(_wrap(
+      tabs: _allTabs,
+      visibility: _allVisible(),
+      selectedTab: MainTab.deals,
+    ));
+    await tester.pumpAndSettle();
+
+    // deals ist selected — Semantics-Flag muss gesetzt sein.
+    final dealsSem =
+        tester.getSemantics(find.byKey(const Key('navRailDestination-deals')));
+    expect(
+      dealsSem.flagsCollection.isSelected.name,
+      'isTrue',
+      reason:
+          'navRailDestination-deals muss Semantics-Flag isSelected=true tragen',
+    );
+
+    // dashboard ist NICHT selected.
+    final dashSem =
+        tester.getSemantics(find.byKey(const Key('navRailDestination-dashboard')));
+    expect(
+      dashSem.flagsCollection.isSelected.name,
+      isNot('isTrue'),
+      reason: 'navRailDestination-dashboard darf isSelected=true NICHT tragen',
+    );
+
+    // Alle sichtbaren Tabs bis auf deals müssen isSelected=false haben.
+    for (final tab in _allTabs) {
+      if (tab == MainTab.deals) continue;
+      final sem = tester.getSemantics(
+        find.byKey(Key('navRailDestination-${tab.name}')),
+      );
+      expect(
+        sem.flagsCollection.isSelected.name,
+        isNot('isTrue'),
+        reason: '${tab.name} darf isSelected=true nicht tragen wenn deals selected ist',
+      );
+    }
+  });
+
+  // D1c-6: Visibility-Filter + Keyboard-Traversal — versteckter Tab wird
+  // bei Tab-Traversal übersprungen (er existiert nicht im Widget-Tree,
+  // daher kein Focus-Knoten dafür). Nach N Tabs über alle sichtbaren
+  // Destinations wurde deals nie als Focus-Ziel erreicht.
+  testWidgets(
+      'AppNavRail — Tab traversal skips hidden destination (visibility=false)',
+      (tester) async {
+    tester.binding.focusManager.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+
+    // deals ist ausgeblendet.
+    final vis = _allVisible();
+    vis[MainTab.deals] = false;
+
+    final selections = <MainTab>[];
+
+    await tester.pumpWidget(_wrap(
+      tabs: _allTabs,
+      visibility: vis,
+      selectedTab: MainTab.dashboard,
+      onSelect: selections.add,
+    ));
+    await tester.pumpAndSettle();
+
+    // Versuche, alle 10 sichtbaren Destinations via Tab+Enter zu aktivieren.
+    // deals darf dabei NIE vorkommen.
+    const visibleCount = 10; // 11 - 1 (deals hidden)
+    for (int i = 0; i < visibleCount; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+    }
+
+    expect(
+      selections.contains(MainTab.deals),
+      isFalse,
+      reason: 'deals ist hidden — Tab-Traversal+Enter darf deals nie triggern',
+    );
+    expect(
+      selections.length,
+      visibleCount,
+      reason: 'Genau $visibleCount Selections für $visibleCount sichtbare Destinations',
+    );
   });
 }

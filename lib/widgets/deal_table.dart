@@ -514,7 +514,7 @@ class _BulkActionBar extends StatelessWidget {
               await provider.deleteDeals(ids);
               filters.clearSelection();
             },
-            icon: const Icon(Icons.delete_outline, size: 16),
+            icon: const Icon(Icons.delete_outlined, size: 16),
             label: Text(l10n.actionDelete),
             style:
                 TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
@@ -786,7 +786,7 @@ class _DealRowState extends State<_DealRow> {
                     ),
                   ),
                   _ActionBtn(
-                    icon: Icons.delete_outline,
+                    icon: Icons.delete_outlined,
                     color: AppTheme.danger,
                     tooltip: AppLocalizations.of(context).actionDelete,
                     onTap: () => _confirmDelete(context, provider, deal),
