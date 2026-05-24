@@ -8,7 +8,9 @@ import '../models/warehouse.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/validators.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/app_screen_scaffold.dart';
+import '../widgets/confirm_dialog.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WarehousesScreen
@@ -43,29 +45,24 @@ class WarehousesScreen extends StatelessWidget {
     Warehouse warehouse,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final ok = await showDialog<bool>(
+
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(l10n.warehousesTitle),
-        content: Text(l10n.warehouseDeletePrompt(warehouse.name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.danger,
-              foregroundColor: Colors.white, // justified: white on danger-red
-            ),
-            child: Text(l10n.actionDelete),
-          ),
-        ],
-      ),
+      title: l10n.warehouseDeleteTitle,
+      message: l10n.warehouseDeletePrompt(warehouse.name),
+      confirmLabel: l10n.actionDelete,
+      isDestructive: true,
     );
-    if (ok == true && context.mounted) {
-      await provider.deleteWarehouse(warehouse.id);
+
+    if (confirmed && context.mounted) {
+      try {
+        await provider.deleteWarehouse(warehouse.id);
+        if (!context.mounted) return;
+        AppFeedback.success(context, l10n.warehouseDeleted);
+      } catch (_) {
+        if (!context.mounted) return;
+        AppFeedback.error(context, l10n.warehouseDeleteFailed);
+      }
     }
   }
 
@@ -544,14 +541,24 @@ class _AddEditWarehouseDialogState extends State<_AddEditWarehouseDialog> {
       } else {
         await provider.addWarehouse(warehouse);
       }
-      if (context.mounted) navigator.pop();
-    } catch (e) {
-      if (context.mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.pushSaveFailed('$e')),
-            behavior: SnackBarBehavior.floating,
-          ),
+      if (mounted) {
+        // Dialog-Context-Pattern: Feedback wird VOR dem pop() gesendet,
+        // solange der Kontext noch mounted ist. Der pre-gecapturte
+        // Messenger sorgt dafür, dass die SnackBar am Root-Scaffold
+        // erscheint, auch wenn der Dialog-Scaffold mitgeschlossen wird.
+        AppFeedback.successOn(
+          messenger,
+          l10n.warehouseSaved,
+          rootContext: context,
+        );
+        navigator.pop();
+      }
+    } catch (_) {
+      if (mounted) {
+        AppFeedback.errorOn(
+          messenger,
+          l10n.warehouseSaveFailed,
+          rootContext: context,
         );
       }
     } finally {

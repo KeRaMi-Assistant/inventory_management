@@ -732,16 +732,16 @@ möglich wo `depends` leer.
 - [x] **A6c** `suppliers_screen.dart` SnackBars + Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6d** `warehouses_screen.dart` SnackBars + Confirm-Dialogs.
+- [x] **A6d** `warehouses_screen.dart` SnackBars + Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6e** `categories_screen.dart` SnackBars + Confirm-Dialogs.
+- [x] **A6e** `categories_screen.dart` SnackBars + Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
 - [x] **A6f** `stocktake_screen.dart` SnackBars + Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6g** `purchase_orders_screen.dart` SnackBars +
+- [x] **A6g** `purchase_orders_screen.dart` SnackBars +
   Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
@@ -763,7 +763,7 @@ möglich wo `depends` leer.
 - [x] **A6l** `statistics_screen.dart` SnackBars.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6m** `invite_member_dialog.dart` SnackBars.
+- [x] **A6m** `invite_member_dialog.dart` SnackBars.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
 - [ ] **A6n** `invites_bell.dart` SnackBars.

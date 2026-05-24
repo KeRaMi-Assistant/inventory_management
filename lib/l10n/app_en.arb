@@ -1661,6 +1661,8 @@
   "purchaseOrderPdfExport": "PDF receipt",
   "purchaseOrderPdfExportComingSoon": "PDF export is coming in a future update.",
   "purchaseOrderPdfExportError": "Could not create PDF receipt.",
+  "purchaseOrderCreatedSuccess": "Order created.",
+  "purchaseOrderCreateError": "Could not create order.",
   "purchaseOrderStatusChangeError": "Could not change status.",
   "purchaseOrderViewerHint": "You have read-only access — booking actions unavailable.",
   "purchaseOrderStatusAutoManaged": "This status is managed automatically.",
@@ -2361,5 +2363,26 @@
   "@suppliersDeleted": { "description": "Success SnackBar after deleting a supplier." },
 
   "suppliersDeleteFailed": "Delete failed.",
-  "@suppliersDeleteFailed": { "description": "Error SnackBar when deleting a supplier fails." }
+  "@suppliersDeleteFailed": { "description": "Error SnackBar when deleting a supplier fails." },
+
+  "categoryDeleted": "Category deleted.",
+  "@categoryDeleted": { "description": "Success SnackBar after deleting a product category." },
+
+  "categoryDeleteFailed": "Delete failed.",
+  "@categoryDeleteFailed": { "description": "Error SnackBar when deleting a product category fails." },
+
+  "warehouseDeleteTitle": "Delete warehouse",
+  "@warehouseDeleteTitle": { "description": "Title of the confirm dialog when deleting a warehouse." },
+
+  "warehouseDeleted": "Warehouse deleted.",
+  "@warehouseDeleted": { "description": "Success SnackBar after deleting a warehouse." },
+
+  "warehouseDeleteFailed": "Delete failed.",
+  "@warehouseDeleteFailed": { "description": "Error SnackBar when deleting a warehouse fails." },
+
+  "warehouseSaved": "Warehouse saved.",
+  "@warehouseSaved": { "description": "Success SnackBar after saving a warehouse." },
+
+  "warehouseSaveFailed": "Save failed.",
+  "@warehouseSaveFailed": { "description": "Error SnackBar when saving a warehouse fails." }
 }

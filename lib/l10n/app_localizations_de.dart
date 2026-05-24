@@ -4291,6 +4291,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'PDF-Beleg konnte nicht erstellt werden.';
 
   @override
+  String get purchaseOrderCreatedSuccess => 'Bestellung angelegt.';
+
+  @override
+  String get purchaseOrderCreateError =>
+      'Bestellung konnte nicht angelegt werden.';
+
+  @override
   String get purchaseOrderStatusChangeError =>
       'Status konnte nicht geändert werden.';
 
@@ -5104,4 +5111,25 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get suppliersDeleteFailed => 'Löschen fehlgeschlagen.';
+
+  @override
+  String get categoryDeleted => 'Warengruppe gelöscht.';
+
+  @override
+  String get categoryDeleteFailed => 'Löschen fehlgeschlagen.';
+
+  @override
+  String get warehouseDeleteTitle => 'Lager löschen';
+
+  @override
+  String get warehouseDeleted => 'Lager gelöscht.';
+
+  @override
+  String get warehouseDeleteFailed => 'Löschen fehlgeschlagen.';
+
+  @override
+  String get warehouseSaved => 'Lager gespeichert.';
+
+  @override
+  String get warehouseSaveFailed => 'Speichern fehlgeschlagen.';
 }

@@ -1661,6 +1661,8 @@
   "purchaseOrderPdfExport": "PDF-Beleg",
   "purchaseOrderPdfExportComingSoon": "PDF-Export kommt in einem späteren Update.",
   "purchaseOrderPdfExportError": "PDF-Beleg konnte nicht erstellt werden.",
+  "purchaseOrderCreatedSuccess": "Bestellung angelegt.",
+  "purchaseOrderCreateError": "Bestellung konnte nicht angelegt werden.",
   "purchaseOrderStatusChangeError": "Status konnte nicht geändert werden.",
   "purchaseOrderViewerHint": "Du hast nur Lesezugriff — Buchungsaktionen nicht verfügbar.",
   "purchaseOrderStatusAutoManaged": "Dieser Status wird automatisch gepflegt.",
@@ -2361,5 +2363,26 @@
   "@suppliersDeleted": { "description": "Erfolgs-SnackBar nach dem Löschen eines Lieferanten." },
 
   "suppliersDeleteFailed": "Löschen fehlgeschlagen.",
-  "@suppliersDeleteFailed": { "description": "Fehler-SnackBar beim Löschen eines Lieferanten." }
+  "@suppliersDeleteFailed": { "description": "Fehler-SnackBar beim Löschen eines Lieferanten." },
+
+  "categoryDeleted": "Warengruppe gelöscht.",
+  "@categoryDeleted": { "description": "Erfolgs-SnackBar nach dem Löschen einer Warengruppe." },
+
+  "categoryDeleteFailed": "Löschen fehlgeschlagen.",
+  "@categoryDeleteFailed": { "description": "Fehler-SnackBar beim Löschen einer Warengruppe." },
+
+  "warehouseDeleteTitle": "Lager löschen",
+  "@warehouseDeleteTitle": { "description": "Titel des Bestätigungs-Dialogs beim Löschen eines Lagers." },
+
+  "warehouseDeleted": "Lager gelöscht.",
+  "@warehouseDeleted": { "description": "Erfolgs-SnackBar nach dem Löschen eines Lagers." },
+
+  "warehouseDeleteFailed": "Löschen fehlgeschlagen.",
+  "@warehouseDeleteFailed": { "description": "Fehler-SnackBar beim Löschen eines Lagers." },
+
+  "warehouseSaved": "Lager gespeichert.",
+  "@warehouseSaved": { "description": "Erfolgs-SnackBar nach dem Speichern eines Lagers." },
+
+  "warehouseSaveFailed": "Speichern fehlgeschlagen.",
+  "@warehouseSaveFailed": { "description": "Fehler-SnackBar beim Speichern eines Lagers." }
 }

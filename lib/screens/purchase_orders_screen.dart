@@ -10,6 +10,7 @@ import '../models/product.dart';
 import '../models/supplier.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/app_screen_scaffold.dart';
 import 'purchase_order_detail_screen.dart';
 
@@ -441,6 +442,11 @@ class _AddEditOrderDialogState extends State<_AddEditOrderDialog> {
       _error = null;
     });
 
+    // Capture messenger before async gap (dialog-context pattern).
+    // The dialog will be popped before AppFeedback can use the dialog's
+    // ScaffoldMessenger, so we capture the root messenger here.
+    final messenger = ScaffoldMessenger.of(context);
+
     try {
       final provider = Provider.of<InventoryProvider>(context, listen: false);
       final wsProvider =
@@ -479,12 +485,23 @@ class _AddEditOrderDialogState extends State<_AddEditOrderDialog> {
         await provider.addPurchaseOrderItem(item);
       }
 
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context);
+        // Show success feedback via root messenger after dialog is closed.
+        // context is State.context — safe to use inside mounted guard.
+        AppFeedback.successOn(
+          messenger,
+          l10n.purchaseOrderCreatedSuccess,
+          rootContext: context,
+        );
+      }
     } catch (e) {
-      setState(() {
-        _saving = false;
-        _error = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = l10n.purchaseOrderCreateError;
+        });
+      }
     }
   }
 

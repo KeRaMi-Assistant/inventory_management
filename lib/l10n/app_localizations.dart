@@ -7748,6 +7748,18 @@ abstract class AppLocalizations {
   /// **'PDF-Beleg konnte nicht erstellt werden.'**
   String get purchaseOrderPdfExportError;
 
+  /// No description provided for @purchaseOrderCreatedSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellung angelegt.'**
+  String get purchaseOrderCreatedSuccess;
+
+  /// No description provided for @purchaseOrderCreateError.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellung konnte nicht angelegt werden.'**
+  String get purchaseOrderCreateError;
+
   /// No description provided for @purchaseOrderStatusChangeError.
   ///
   /// In de, this message translates to:
@@ -9058,6 +9070,48 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Löschen fehlgeschlagen.'**
   String get suppliersDeleteFailed;
+
+  /// Erfolgs-SnackBar nach dem Löschen einer Warengruppe.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppe gelöscht.'**
+  String get categoryDeleted;
+
+  /// Fehler-SnackBar beim Löschen einer Warengruppe.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen.'**
+  String get categoryDeleteFailed;
+
+  /// Titel des Bestätigungs-Dialogs beim Löschen eines Lagers.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager löschen'**
+  String get warehouseDeleteTitle;
+
+  /// Erfolgs-SnackBar nach dem Löschen eines Lagers.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager gelöscht.'**
+  String get warehouseDeleted;
+
+  /// Fehler-SnackBar beim Löschen eines Lagers.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen.'**
+  String get warehouseDeleteFailed;
+
+  /// Erfolgs-SnackBar nach dem Speichern eines Lagers.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager gespeichert.'**
+  String get warehouseSaved;
+
+  /// Fehler-SnackBar beim Speichern eines Lagers.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen.'**
+  String get warehouseSaveFailed;
 }
 
 class _AppLocalizationsDelegate

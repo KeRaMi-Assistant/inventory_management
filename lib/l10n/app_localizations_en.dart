@@ -4270,6 +4270,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get purchaseOrderPdfExportError => 'Could not create PDF receipt.';
 
   @override
+  String get purchaseOrderCreatedSuccess => 'Order created.';
+
+  @override
+  String get purchaseOrderCreateError => 'Could not create order.';
+
+  @override
   String get purchaseOrderStatusChangeError => 'Could not change status.';
 
   @override
@@ -5073,4 +5079,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get suppliersDeleteFailed => 'Delete failed.';
+
+  @override
+  String get categoryDeleted => 'Category deleted.';
+
+  @override
+  String get categoryDeleteFailed => 'Delete failed.';
+
+  @override
+  String get warehouseDeleteTitle => 'Delete warehouse';
+
+  @override
+  String get warehouseDeleted => 'Warehouse deleted.';
+
+  @override
+  String get warehouseDeleteFailed => 'Delete failed.';
+
+  @override
+  String get warehouseSaved => 'Warehouse saved.';
+
+  @override
+  String get warehouseSaveFailed => 'Save failed.';
 }

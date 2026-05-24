@@ -9,7 +9,9 @@ import '../models/product_category.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/validators.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/app_screen_scaffold.dart';
+import '../widgets/confirm_dialog.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CategoriesScreen
@@ -45,29 +47,22 @@ class CategoriesScreen extends StatelessWidget {
     ProductCategory category,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final ok = await showDialog<bool>(
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(l10n.categoryDelete),
-        content: Text(l10n.categoryDeletePrompt(category.name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.danger,
-              foregroundColor: Colors.white, // justified: white on danger-red
-            ),
-            child: Text(l10n.actionDelete),
-          ),
-        ],
-      ),
+      title: l10n.categoryDelete,
+      message: l10n.categoryDeletePrompt(category.name),
+      confirmLabel: l10n.actionDelete,
+      isDestructive: true,
     );
-    if (ok == true && context.mounted) {
-      await provider.deleteProductCategory(category.id);
+    if (confirmed && context.mounted) {
+      try {
+        await provider.deleteProductCategory(category.id);
+        if (!context.mounted) return;
+        AppFeedback.success(context, l10n.categoryDeleted);
+      } catch (_) {
+        if (!context.mounted) return;
+        AppFeedback.error(context, l10n.categoryDeleteFailed);
+      }
     }
   }
 
@@ -479,15 +474,16 @@ class _AddEditCategoryDialogState extends State<AddEditCategoryDialog> {
         await provider.addProductCategory(category);
       }
       if (context.mounted) navigator.pop();
-    } catch (e) {
-      if (context.mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.pushSaveFailed('$e')),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+    } catch (_) {
+      // Dialog-Context-Pattern: messenger was captured before await so it
+      // remains valid even if the dialog's BuildContext is no longer mounted.
+      // Guard with State.mounted before accessing context for rootContext.
+      if (!mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context,
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
