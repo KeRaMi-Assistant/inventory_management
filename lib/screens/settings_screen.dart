@@ -150,6 +150,8 @@ class _BuyersTab extends StatelessWidget {
           backgroundColor: AppTheme.bgAppOf(context),
           floatingActionButton: FloatingActionButton.extended(
             heroTag: 'addBuyer',
+            // D4: tooltip → explicit Semantics-Label for screen readers.
+            tooltip: l10n.buyersAdd,
             onPressed: () => showDialog(
               context: context,
               builder: (_) => const AddEditBuyerDialog(),
@@ -342,6 +344,8 @@ class _ShopsTab extends StatelessWidget {
           backgroundColor: AppTheme.bgAppOf(context),
           floatingActionButton: FloatingActionButton.extended(
             heroTag: 'addShop',
+            // D4: tooltip → explicit Semantics-Label for screen readers.
+            tooltip: l10n.shopsAdd,
             onPressed: () => showDialog(
               context: context,
               builder: (_) => const AddEditShopDialog(),
@@ -2333,6 +2337,11 @@ class _MailboxTabState extends State<_MailboxTab> {
           floatingActionButton: hasInbox
               ? FloatingActionButton.extended(
                   heroTag: 'addMailbox',
+                  // D4: tooltip mirrors the visible label text so screen
+                  // readers get an explicit semantics label in both states.
+                  tooltip: atLimit
+                      ? l10n.settingsMailboxLimitLabel(mailboxLimit)
+                      : l10n.settingsMailboxAddLabel,
                   onPressed: atLimit
                       ? () => _showMailboxLimitReached(
                           context, billing.currentPlan, mailboxLimit)

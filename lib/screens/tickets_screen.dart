@@ -888,8 +888,12 @@ class _TicketCard extends StatelessWidget {
                 _badge(
                     '${ticket.totalQuantity} · ${ticket.dealCount}',
                     const Color(0xFF2563EB)),
-                _badge(localizeDealStatus(context, ticket.worstStatus),
-                    status),
+                Semantics(
+                  label: 'Status: ${localizeDealStatus(context, ticket.worstStatus)}',
+                  excludeSemantics: true,
+                  child: _badge(localizeDealStatus(context, ticket.worstStatus),
+                      status),
+                ),
                 _badge(ticket.arrivalSummary, const Color(0xFF0D9488)),
               ],
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
@@ -13,6 +14,7 @@ import '../utils/validators.dart';
 import 'attachment_gallery.dart';
 import 'deal_comments_section.dart';
 import 'tracking_status_block.dart';
+import 'unsaved_changes_guard.dart';
 
 class AddEditDealDialog extends StatefulWidget {
   final Deal? deal;
@@ -27,6 +29,52 @@ class AddEditDealDialog extends StatefulWidget {
 
   @override
   State<AddEditDealDialog> createState() => _AddEditDealDialogState();
+}
+
+/// Snapshot der Initial-Werte des Formulars — wird in [_AddEditDealDialogState.initState]
+/// einmalig gefüllt und zum Dirty-Vergleich herangezogen.
+class _FormSnapshot {
+  const _FormSnapshot({
+    required this.product,
+    required this.quantity,
+    required this.price,
+    required this.vk,
+    required this.taxRate,
+    required this.ticket,
+    required this.ticketUrl,
+    required this.tracking,
+    required this.note,
+    required this.isDropship,
+    required this.shop,
+    required this.orderDate,
+    required this.arrivalDate,
+    required this.status,
+    required this.hasReceipt,
+    required this.buyer,
+    required this.priceType,
+    required this.currency,
+    required this.attachmentPaths,
+  });
+
+  final String product;
+  final String quantity;
+  final String price;
+  final String vk;
+  final String taxRate;
+  final String ticket;
+  final String ticketUrl;
+  final String tracking;
+  final String note;
+  final bool isDropship;
+  final String? shop;
+  final DateTime orderDate;
+  final DateTime? arrivalDate;
+  final String status;
+  final bool hasReceipt;
+  final String? buyer;
+  final String priceType;
+  final String currency;
+  final List<String> attachmentPaths;
 }
 
 class _AddEditDealDialogState extends State<AddEditDealDialog> {
@@ -54,6 +102,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
 
   bool _saving = false;
   bool _retracking = false;
+
+  // ── Dirty-Detection ──────────────────────────────────────────────────────
+  late _FormSnapshot _initialSnapshot;
+  bool _wasDirty = false;
 
   static const List<String> _currencyOptions = [
     'EUR',
@@ -103,6 +155,18 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     } else if (widget.initialTicketNumber != null) {
       _ticketCtrl.text = widget.initialTicketNumber!;
     }
+
+    // Snapshot aller Felder direkt NACH dem Befüllen festhalten.
+    _initialSnapshot = _captureSnapshot();
+
+    // Dirty-Listener: triggert setState nur wenn sich _isDirty ändert,
+    // nicht bei jedem Tastendruck.
+    for (final ctrl in [
+      _productCtrl, _quantityCtrl, _priceCtrl, _vkCtrl,
+      _taxRateCtrl, _ticketCtrl, _ticketUrlCtrl, _trackingCtrl, _noteCtrl,
+    ]) {
+      ctrl.addListener(_checkDirtyChanged);
+    }
   }
 
   @override
@@ -110,6 +174,12 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     _quantityCtrl.removeListener(_refreshPreview);
     _priceCtrl.removeListener(_refreshPreview);
     _vkCtrl.removeListener(_refreshPreview);
+    for (final ctrl in [
+      _productCtrl, _quantityCtrl, _priceCtrl, _vkCtrl,
+      _taxRateCtrl, _ticketCtrl, _ticketUrlCtrl, _trackingCtrl, _noteCtrl,
+    ]) {
+      ctrl.removeListener(_checkDirtyChanged);
+    }
     _productCtrl.dispose();
     _quantityCtrl.dispose();
     _priceCtrl.dispose();
@@ -120,6 +190,74 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     _trackingCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
+  }
+
+  // ── Dirty-Detection ──────────────────────────────────────────────────────
+
+  /// Erzeugt einen Snapshot des aktuellen Form-Zustands.
+  _FormSnapshot _captureSnapshot() => _FormSnapshot(
+    product: _productCtrl.text,
+    quantity: _quantityCtrl.text,
+    price: _priceCtrl.text,
+    vk: _vkCtrl.text,
+    taxRate: _taxRateCtrl.text,
+    ticket: _ticketCtrl.text,
+    ticketUrl: _ticketUrlCtrl.text,
+    tracking: _trackingCtrl.text,
+    note: _noteCtrl.text,
+    isDropship: _isDropship,
+    shop: _shop,
+    orderDate: _orderDate,
+    arrivalDate: _arrivalDate,
+    status: _status,
+    hasReceipt: _hasReceipt,
+    buyer: _buyer,
+    priceType: _priceType,
+    currency: _currency,
+    attachmentPaths: List.of(_attachmentPaths),
+  );
+
+  /// Vergleicht den aktuellen Form-Zustand mit dem Initial-Snapshot.
+  /// Gibt `true` zurück, wenn mindestens ein Feld abweicht.
+  bool get _isDirty {
+    final s = _initialSnapshot;
+    return _productCtrl.text != s.product ||
+        _quantityCtrl.text != s.quantity ||
+        _priceCtrl.text != s.price ||
+        _vkCtrl.text != s.vk ||
+        _taxRateCtrl.text != s.taxRate ||
+        _ticketCtrl.text != s.ticket ||
+        _ticketUrlCtrl.text != s.ticketUrl ||
+        _trackingCtrl.text != s.tracking ||
+        _noteCtrl.text != s.note ||
+        _isDropship != s.isDropship ||
+        _shop != s.shop ||
+        _orderDate != s.orderDate ||
+        _arrivalDate != s.arrivalDate ||
+        _status != s.status ||
+        _hasReceipt != s.hasReceipt ||
+        _buyer != s.buyer ||
+        _priceType != s.priceType ||
+        _currency != s.currency ||
+        !_attachmentPathsEqual(_attachmentPaths, s.attachmentPaths);
+  }
+
+  static bool _attachmentPathsEqual(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  /// Listener, der `setState` nur aufruft, wenn sich `_isDirty` geändert hat.
+  /// Verhindert einen vollständigen Form-Rebuild bei jedem Tastendruck.
+  void _checkDirtyChanged() {
+    if (!mounted) return;
+    final nowDirty = _isDirty;
+    if (nowDirty != _wasDirty) {
+      setState(() => _wasDirty = nowDirty);
+    }
   }
 
   void _refreshPreview() {
@@ -202,6 +340,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
           _orderDate = picked;
         }
       });
+      _checkDirtyChanged();
     }
   }
 
@@ -286,7 +425,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
-    if (mounted) Navigator.pop(context, saved);
+    if (mounted) {
+      HapticFeedback.lightImpact();
+      Navigator.pop(context, saved);
+    }
   }
 
   @override
@@ -320,7 +462,9 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     final dateFmt = DateFormat.yMd(
         Localizations.localeOf(context).toLanguageTag());
 
-    return Dialog(
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      child: Dialog(
       insetPadding:
           const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: ConstrainedBox(
@@ -367,7 +511,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                   IconButton(
                     icon: const Icon(Icons.close, size: 18,
                         color: Color(0xFF64748B)),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.maybePop(context),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -415,8 +559,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                   value: true,
                                   child: Text(l10n.dealDropship)),
                             ],
-                            onChanged: (v) =>
-                                setState(() => _isDropship = v ?? false),
+                            onChanged: (v) {
+                              setState(() => _isDropship = v ?? false);
+                              _checkDirtyChanged();
+                            },
                           ),
                           DropdownButtonFormField<String>(
                             initialValue: _shop,
@@ -436,7 +582,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                 DropdownMenuItem(
                                     value: s.name, child: Text(s.name)),
                             ],
-                            onChanged: (v) => setState(() => _shop = v),
+                            onChanged: (v) {
+                              setState(() => _shop = v);
+                              _checkDirtyChanged();
+                            },
                             validator: (v) => v == null || v.isEmpty
                                 ? l10n.commonRequired
                                 : null,
@@ -510,6 +659,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                 onChanged: (v) {
                                   if (v == null) return;
                                   setState(() => _currency = v);
+                                  _checkDirtyChanged();
                                 },
                               ),
                             ),
@@ -559,6 +709,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             ],
                             onChanged: (v) {
                               setState(() => _buyer = v);
+                              _checkDirtyChanged();
                             },
                           ),
                           DropdownButtonFormField<String>(
@@ -571,7 +722,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                     child: Text(
                                         localizeDealStatus(context, s))))
                                 .toList(),
-                            onChanged: (v) => setState(() => _status = v!),
+                            onChanged: (v) {
+                              setState(() => _status = v!);
+                              _checkDirtyChanged();
+                            },
                           ),
                           DropdownButtonFormField<bool>(
                             initialValue: _hasReceipt,
@@ -585,8 +739,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                   value: true,
                                   child: Text(l10n.dealReceiptYes)),
                             ],
-                            onChanged: (v) =>
-                                setState(() => _hasReceipt = v ?? false),
+                            onChanged: (v) {
+                              setState(() => _hasReceipt = v ?? false);
+                              _checkDirtyChanged();
+                            },
                           ),
                         ]),
                         const SizedBox(height: 20),
@@ -763,8 +919,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                           entityId: widget.deal != null
                               ? widget.deal!.id.toString()
                               : '',
-                          onChanged: (next) =>
-                              setState(() => _attachmentPaths = next),
+                          onChanged: (next) {
+                            setState(() => _attachmentPaths = next);
+                            _checkDirtyChanged();
+                          },
                         ),
                         const SizedBox(height: 20),
                         _sectionLabel(l10n.dealNote),
@@ -801,7 +959,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.maybePop(context),
                     child: Text(l10n.actionCancel),
                   ),
                   const SizedBox(width: 10),
@@ -824,7 +982,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
           ],
         ),
       ),
-    );
+    ), // Dialog
+    ); // UnsavedChangesGuard
   }
 
   /// Returns a 2-column Row on wide screens or a stacked Column on narrow screens.
@@ -871,7 +1030,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
 
   Widget _radioOption(String value, String label) {
     return GestureDetector(
-      onTap: () => setState(() => _priceType = value),
+      onTap: () {
+        setState(() => _priceType = value);
+        _checkDirtyChanged();
+      },
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -884,7 +1046,10 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
               // ignore: deprecated_member_use
               groupValue: _priceType,
               // ignore: deprecated_member_use
-              onChanged: (v) => setState(() => _priceType = v!),
+              onChanged: (v) {
+                setState(() => _priceType = v!);
+                _checkDirtyChanged();
+              },
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),

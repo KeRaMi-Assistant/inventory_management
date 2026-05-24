@@ -84,6 +84,8 @@ class WarehousesScreen extends StatelessWidget {
         final fab = canEdit
             ? FloatingActionButton.extended(
                 key: const Key('warehouseNewFab'),
+                // D4: tooltip → explicit Semantics-Label for screen readers.
+                tooltip: l10n.warehouseNew,
                 onPressed: () => _openDialog(context),
                 icon: const Icon(Icons.add, size: 18),
                 label: Text(l10n.warehouseNew),

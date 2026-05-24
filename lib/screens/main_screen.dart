@@ -350,6 +350,12 @@ class _MainScreenState extends State<MainScreen> {
         final fab =
             _selectedIndex == MainTab.deals || _selectedIndex == MainTab.tickets
                 ? FloatingActionButton.extended(
+                    // D4: tooltip → explicit Semantics-Label for screen readers
+                    // and desktop long-press. NavigationBar items do NOT need
+                    // additional Semantics wrapping — M3 NavigationBar already
+                    // emits Semantics(role: tab, selected: …) per destination
+                    // (Flutter SDK navigation_bar.dart lines 304-306).
+                    tooltip: l10n.dealNew,
                     onPressed: () => showDialog(
                       context: context,
                       barrierDismissible: false,

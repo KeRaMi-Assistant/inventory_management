@@ -87,6 +87,8 @@ class CategoriesScreen extends StatelessWidget {
         final fab = canEdit
             ? FloatingActionButton.extended(
                 key: const Key('categoryNewFab'),
+                // D4: tooltip → explicit Semantics-Label for screen readers.
+                tooltip: l10n.categoryNew,
                 onPressed: () => _openAddDialog(context),
                 icon: const Icon(Icons.add, size: 18),
                 label: Text(l10n.categoryNew),

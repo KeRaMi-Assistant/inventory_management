@@ -938,15 +938,15 @@ möglich wo `depends` leer.
   Premium).
   `agent: flutter-coder` · `model: sonnet` · `depends: [D1b]`
 
-- [ ] **D2** Semantics-Labels für KPI-Karten im Dashboard.
+- [x] **D2** Semantics-Labels für KPI-Karten im Dashboard.
   `Semantics(label: 'KPI <title>, Wert <value>, Trend <trend>')`.
   `agent: flutter-coder` · `model: sonnet` · `depends: [D0]`
 
-- [ ] **D3** Semantics-Labels für Status-Badges in `deal_card`,
+- [x] **D3** Semantics-Labels für Status-Badges in `deal_card`,
   `deal_table`, `tickets_screen`, `purchase_order_detail`.
   `agent: flutter-coder` · `model: sonnet` · `depends: [D0]`
 
-- [ ] **D4** Semantics-Labels für FABs + Bottom-Nav-Items
+- [x] **D4** Semantics-Labels für FABs + Bottom-Nav-Items
   (`main_screen.dart`, `inventory_screen.dart`,
   `warehouses_screen.dart`, `categories_screen.dart`,
   `purchase_orders_screen.dart`, `stocktake_screen.dart`).

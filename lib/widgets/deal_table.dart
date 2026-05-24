@@ -884,14 +884,18 @@ class _DealRowState extends State<_DealRow> {
       );
 
   Widget _statusBadge(String label, ({Color bg, Color border, Color text}) style) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: style.bg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: style.border),
+    return Semantics(
+      label: 'Status: $label',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: style.bg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: style.border),
+        ),
+        child: Text(label, style: TextStyle(fontSize: 11, color: style.text, fontWeight: FontWeight.w700)),
       ),
-      child: Text(label, style: TextStyle(fontSize: 11, color: style.text, fontWeight: FontWeight.w700)),
     );
   }
 

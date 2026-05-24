@@ -153,9 +153,13 @@ class DealCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  _StatusPill(
-                      label: localizeDealStatus(context, deal.status),
-                      style: status),
+                  Semantics(
+                    label: 'Status: ${localizeDealStatus(context, deal.status)}',
+                    excludeSemantics: true,
+                    child: _StatusPill(
+                        label: localizeDealStatus(context, deal.status),
+                        style: status),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),

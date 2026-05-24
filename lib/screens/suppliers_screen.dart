@@ -66,6 +66,8 @@ class SuppliersScreen extends StatelessWidget {
         final suppliers = provider.suppliers;
         return Scaffold(
           floatingActionButton: FloatingActionButton.extended(
+            // D4: tooltip → explicit Semantics-Label for screen readers.
+            tooltip: l10n.suppliersNew,
             onPressed: () => showDialog(
               context: context,
               builder: (_) => const AddEditSupplierDialog(),
