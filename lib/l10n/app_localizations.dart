@@ -6254,6 +6254,12 @@ abstract class AppLocalizations {
   /// **'Onboarding fehlgeschlagen: {error}'**
   String onboardingErrorGeneric(Object error);
 
+  /// No description provided for @onboardingStepLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Schritt {current} von {total}'**
+  String onboardingStepLabel(Object current, Object total);
+
   /// No description provided for @dashboardEmptyTitle.
   ///
   /// In de, this message translates to:

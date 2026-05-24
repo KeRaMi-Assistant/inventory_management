@@ -154,6 +154,7 @@ class _BuyersTab extends StatelessWidget {
             tooltip: l10n.buyersAdd,
             onPressed: () => showDialog(
               context: context,
+              barrierDismissible: false,
               builder: (_) => const AddEditBuyerDialog(),
             ),
             icon: const Icon(Icons.person_add_outlined),
@@ -239,6 +240,7 @@ class _BuyersTab extends StatelessWidget {
                               color: AppTheme.textMutedOf(context),
                               onPressed: () => showDialog(
                                 context: context,
+                                barrierDismissible: false,
                                 builder: (_) =>
                                     AddEditBuyerDialog(buyer: buyer),
                               ),
@@ -348,6 +350,7 @@ class _ShopsTab extends StatelessWidget {
             tooltip: l10n.shopsAdd,
             onPressed: () => showDialog(
               context: context,
+              barrierDismissible: false,
               builder: (_) => const AddEditShopDialog(),
             ),
             icon: const Icon(Icons.add_business_outlined),
@@ -398,6 +401,7 @@ class _ShopsTab extends StatelessWidget {
                               shops: amazonShops,
                               onEdit: (shop) => showDialog(
                                 context: context,
+                                barrierDismissible: false,
                                 builder: (_) => AddEditShopDialog(shop: shop),
                               ),
                               onDelete: (shop) => _confirmDeleteShop(
@@ -410,6 +414,7 @@ class _ShopsTab extends StatelessWidget {
                               shop: shop,
                               onEdit: () => showDialog(
                                 context: context,
+                                barrierDismissible: false,
                                 builder: (_) => AddEditShopDialog(shop: shop),
                               ),
                               onDelete: () => _confirmDeleteShop(

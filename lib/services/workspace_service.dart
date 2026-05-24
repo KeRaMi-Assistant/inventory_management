@@ -18,9 +18,24 @@ class WorkspaceLimitException implements Exception {
 /// `SupabaseRepository` — das hier wird unabhängig vom Single-User-Daten-
 /// Pfad eingeführt und kann später in eigene Provider/Screens wachsen.
 class WorkspaceService {
-  WorkspaceService(this._client);
+  WorkspaceService(SupabaseClient client) : _clientOrNull = client;
 
-  final SupabaseClient _client;
+  /// Konstruktor für Tests: Subklassen überschreiben alle relevanten Methoden.
+  /// Nie in Produktion verwenden.
+  WorkspaceService.forTesting() : _clientOrNull = null;
+
+  final SupabaseClient? _clientOrNull;
+
+  SupabaseClient get _client {
+    final c = _clientOrNull;
+    if (c == null) {
+      throw StateError(
+        'WorkspaceService.forTesting: _client darf nicht aufgerufen werden '
+        '— alle Methoden müssen in der Test-Subklasse überschrieben werden.',
+      );
+    }
+    return c;
+  }
 
   String get _userId {
     final id = _client.auth.currentUser?.id;

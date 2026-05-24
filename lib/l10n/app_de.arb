@@ -1324,6 +1324,8 @@
   "onboardingErrorNoWorkspace": "Kein aktiver Workspace gefunden. Bitte ausloggen und erneut anmelden.",
   "onboardingErrorGeneric": "Onboarding fehlgeschlagen: {error}",
   "@onboardingErrorGeneric": { "placeholders": { "error": {} } },
+  "onboardingStepLabel": "Schritt {current} von {total}",
+  "@onboardingStepLabel": { "placeholders": { "current": {}, "total": {} } },
 
   "dashboardEmptyTitle": "Noch keine Daten",
   "dashboardEmptySubtitle": "Lade ein paar Beispiel-Tickets, Käufer und Lagerartikel, um dich in der App zurechtzufinden.",

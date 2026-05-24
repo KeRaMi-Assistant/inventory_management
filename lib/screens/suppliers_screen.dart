@@ -70,6 +70,7 @@ class SuppliersScreen extends StatelessWidget {
             tooltip: l10n.suppliersNew,
             onPressed: () => showDialog(
               context: context,
+              barrierDismissible: false, // UnsavedChangesGuard fängt Schließen ab
               builder: (_) => const AddEditSupplierDialog(),
             ),
             icon: const Icon(Icons.add, size: 18),
@@ -177,6 +178,7 @@ class SuppliersScreen extends StatelessWidget {
                   tooltip: l10n.actionEdit,
                   onPressed: () => showDialog(
                     context: context,
+                    barrierDismissible: false, // UnsavedChangesGuard fängt Schließen ab
                     builder: (_) => AddEditSupplierDialog(supplier: s),
                   ),
                 ),

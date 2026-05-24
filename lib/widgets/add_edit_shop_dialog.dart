@@ -5,6 +5,7 @@ import '../models/shop.dart';
 import '../providers/inventory_provider.dart';
 import '../services/carrier_service.dart';
 import '../utils/validators.dart';
+import 'unsaved_changes_guard.dart';
 
 class AddEditShopDialog extends StatefulWidget {
   final Shop? shop;
@@ -14,6 +15,22 @@ class AddEditShopDialog extends StatefulWidget {
   State<AddEditShopDialog> createState() => _AddEditShopDialogState();
 }
 
+/// Snapshot der Initialwerte für die Dirty-Detection.
+class _ShopFormSnapshot {
+  const _ShopFormSnapshot({
+    required this.name,
+    required this.region,
+    required this.channel,
+    required this.url,
+    required this.active,
+  });
+  final String name;
+  final String region;
+  final String channel;
+  final String url;
+  final bool active;
+}
+
 class _AddEditShopDialogState extends State<AddEditShopDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
@@ -21,6 +38,10 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
   final _channelCtrl = TextEditingController();
   final _urlCtrl = TextEditingController();
   bool _active = true;
+
+  // ── Dirty-Detection ──────────────────────────────────────────────────────
+  late _ShopFormSnapshot _initialSnapshot;
+  bool _wasDirty = false;
 
   @override
   void initState() {
@@ -33,9 +54,15 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
       _urlCtrl.text = s.url ?? '';
       _active = s.active;
     }
+    // Snapshot nach dem Befüllen festhalten.
+    _initialSnapshot = _captureSnapshot();
+
     // Wenn der Nutzer "Amazon" ins Name-Feld tippt, blenden wir den
     // EU-Country-Picker für Region ein. Listener triggert ein Rebuild.
     _nameCtrl.addListener(_onNameChanged);
+    for (final ctrl in [_nameCtrl, _regionCtrl, _channelCtrl, _urlCtrl]) {
+      ctrl.addListener(_checkDirtyChanged);
+    }
   }
 
   void _onNameChanged() {
@@ -44,12 +71,42 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
 
   @override
   void dispose() {
+    for (final ctrl in [_nameCtrl, _regionCtrl, _channelCtrl, _urlCtrl]) {
+      ctrl.removeListener(_checkDirtyChanged);
+    }
     _nameCtrl.removeListener(_onNameChanged);
     _nameCtrl.dispose();
     _regionCtrl.dispose();
     _channelCtrl.dispose();
     _urlCtrl.dispose();
     super.dispose();
+  }
+
+  // ── Dirty-Detection ──────────────────────────────────────────────────────
+
+  _ShopFormSnapshot _captureSnapshot() => _ShopFormSnapshot(
+        name: _nameCtrl.text,
+        region: _regionCtrl.text,
+        channel: _channelCtrl.text,
+        url: _urlCtrl.text,
+        active: _active,
+      );
+
+  bool get _isDirty {
+    final s = _initialSnapshot;
+    return _nameCtrl.text != s.name ||
+        _regionCtrl.text != s.region ||
+        _channelCtrl.text != s.channel ||
+        _urlCtrl.text != s.url ||
+        _active != s.active;
+  }
+
+  void _checkDirtyChanged() {
+    if (!mounted) return;
+    final nowDirty = _isDirty;
+    if (nowDirty != _wasDirty) {
+      setState(() => _wasDirty = nowDirty);
+    }
   }
 
   bool get _isAmazonShop =>
@@ -100,76 +157,97 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(widget.shop != null ? l10n.shopEditTitle : l10n.shopNewTitle),
-      content: SizedBox(
-        width: 380,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameCtrl,
-                decoration: InputDecoration(labelText: '${l10n.fieldName} *'),
-                maxLength: Validators.maxShopName,
-                validator: Validators.validateShopName,
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      child: AlertDialog(
+        titlePadding: const EdgeInsets.fromLTRB(24, 20, 8, 0),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                widget.shop != null ? l10n.shopEditTitle : l10n.shopNewTitle,
               ),
-              const SizedBox(height: 8),
-              if (_isAmazonShop && _amazonSuffixCountry != null)
-                _AmazonSuffixCountryChip(
-                  country: _amazonSuffixCountry!,
-                  label: '${l10n.shopRegion} *',
-                )
-              else if (_isAmazonShop)
-                _AmazonCountryDropdown(
-                  controller: _regionCtrl,
-                  label: '${l10n.shopRegion} *',
-                )
-              else
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: () => Navigator.maybePop(context),
+              tooltip: l10n.actionCancel,
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 380,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 TextFormField(
-                  controller: _regionCtrl,
+                  controller: _nameCtrl,
                   decoration:
-                      InputDecoration(labelText: '${l10n.shopRegion} *'),
-                  maxLength: 40,
-                  validator: (v) =>
-                      Validators.validateRequired(v, label: l10n.shopRegion),
+                      InputDecoration(labelText: '${l10n.fieldName} *'),
+                  maxLength: Validators.maxShopName,
+                  validator: Validators.validateShopName,
                 ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _channelCtrl,
-                decoration: InputDecoration(labelText: l10n.shopChannel),
-                maxLength: 50,
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _urlCtrl,
-                decoration: InputDecoration(
-                  labelText: l10n.supplierWebsite,
-                  hintText: 'https://www.amazon.de',
-                  prefixIcon: const Icon(Icons.link, size: 18),
+                const SizedBox(height: 8),
+                if (_isAmazonShop && _amazonSuffixCountry != null)
+                  _AmazonSuffixCountryChip(
+                    country: _amazonSuffixCountry!,
+                    label: '${l10n.shopRegion} *',
+                  )
+                else if (_isAmazonShop)
+                  _AmazonCountryDropdown(
+                    controller: _regionCtrl,
+                    label: '${l10n.shopRegion} *',
+                  )
+                else
+                  TextFormField(
+                    controller: _regionCtrl,
+                    decoration:
+                        InputDecoration(labelText: '${l10n.shopRegion} *'),
+                    maxLength: 40,
+                    validator: (v) =>
+                        Validators.validateRequired(v, label: l10n.shopRegion),
+                  ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _channelCtrl,
+                  decoration: InputDecoration(labelText: l10n.shopChannel),
+                  maxLength: 50,
                 ),
-                keyboardType: TextInputType.url,
-                validator: (v) => Validators.validateUrl(v),
-              ),
-              const SizedBox(height: 8),
-              SwitchListTile(
-                value: _active,
-                onChanged: (v) => setState(() => _active = v),
-                title: Text(l10n.shopActive),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ],
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _urlCtrl,
+                  decoration: InputDecoration(
+                    labelText: l10n.supplierWebsite,
+                    hintText: 'https://www.amazon.de',
+                    prefixIcon: const Icon(Icons.link, size: 18),
+                  ),
+                  keyboardType: TextInputType.url,
+                  validator: (v) => Validators.validateUrl(v),
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  value: _active,
+                  onChanged: (v) {
+                    setState(() => _active = v);
+                    _checkDirtyChanged();
+                  },
+                  title: Text(l10n.shopActive),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
+            ),
           ),
         ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.maybePop(context),
+              child: Text(l10n.actionCancel)),
+          ElevatedButton(
+              onPressed: _save, child: Text(l10n.actionSave)),
+        ],
       ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.actionCancel)),
-        ElevatedButton(
-            onPressed: _save, child: Text(l10n.actionSave)),
-      ],
     );
   }
 }

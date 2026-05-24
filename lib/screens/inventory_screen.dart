@@ -500,7 +500,12 @@ class _InventoryScreenState extends State<InventoryScreen>
             ? const Color(0xFFD97706)
             : const Color(0xFF059669);
     final isSelected = isMasterDetail && _selectedItemId == item.id;
-    return InkWell(
+
+    // F4: Hero-Animation nur auf Phone + kein Master-Detail.
+    final useHero = !isMasterDetail && isPhoneViewport(context);
+    final heroTag = 'product-hero-${item.id}';
+
+    final inkWell = InkWell(
       onTap: () {
         // T3.3b: Im Master-Detail-Layout NICHT pushen — Detail-Spalte
         // re-rendert sich anhand `_selectedItemId`. Sonst (Phone/Tablet):
@@ -509,7 +514,10 @@ class _InventoryScreenState extends State<InventoryScreen>
         if (!isMasterDetail) {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => ProductDetailScreen(item: item),
+              builder: (_) => ProductDetailScreen(
+                item: item,
+                heroTag: heroTag,
+              ),
             ),
           );
         }
@@ -647,6 +655,9 @@ class _InventoryScreenState extends State<InventoryScreen>
         ),
       ),
     );
+
+    // F4: Phone-gated Hero wrapping für den grouped-Card-List-Pfad.
+    return useHero ? Hero(tag: heroTag, child: inkWell) : inkWell;
   }
 
   Widget _actionBtn({
@@ -1175,7 +1186,15 @@ class _InventoryScreenState extends State<InventoryScreen>
                 ? const Color(0xFFD97706)
                 : const Color(0xFF059669);
         final isSelected = isMasterDetail && _selectedItemId == item.id;
-        return Card(
+
+        // F4: Hero-Animation für Phone-Push → ProductDetailScreen.
+        // Nur wenn NICHT im Master-Detail-Layout UND Phone-Viewport.
+        // Auf Desktop (isMasterDetail=true ODER breiter Viewport) kein Hero,
+        // damit kein duplicate-Tag im Master-Detail-Tree entsteht.
+        final useHero = !isMasterDetail && isPhoneViewport(context);
+        final heroTag = 'product-hero-${item.id}';
+
+        final card = Card(
           color:
               isSelected ? AppTheme.accentLightOf(context) : null,
           child: InkWell(
@@ -1188,7 +1207,10 @@ class _InventoryScreenState extends State<InventoryScreen>
               if (!isMasterDetail) {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => ProductDetailScreen(item: item),
+                    builder: (_) => ProductDetailScreen(
+                      item: item,
+                      heroTag: heroTag,
+                    ),
                   ),
                 );
               }
@@ -1290,6 +1312,9 @@ class _InventoryScreenState extends State<InventoryScreen>
           ),
           ),
         );
+
+        // F4: Phone-gated Hero wrapping.
+        return useHero ? Hero(tag: heroTag, child: card) : card;
       },
     );
   }

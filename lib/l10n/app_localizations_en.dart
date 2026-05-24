@@ -3431,6 +3431,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String onboardingStepLabel(Object current, Object total) {
+    return 'Step $current of $total';
+  }
+
+  @override
   String get dashboardEmptyTitle => 'No data yet';
 
   @override

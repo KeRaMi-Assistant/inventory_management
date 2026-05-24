@@ -7,6 +7,38 @@ import '../models/product.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/validators.dart';
+import 'unsaved_changes_guard.dart';
+
+/// Snapshot der Initialwerte für die Dirty-Detection im Produkt-Dialog.
+class _ProductFormSnapshot {
+  const _ProductFormSnapshot({
+    required this.name,
+    required this.sku,
+    required this.ean,
+    required this.unit,
+    required this.defaultCostPrice,
+    required this.defaultSalePrice,
+    required this.minStock,
+    required this.taxRate,
+    required this.note,
+    required this.categoryId,
+    required this.defaultSupplierId,
+    required this.isActive,
+  });
+
+  final String name;
+  final String sku;
+  final String ean;
+  final String unit;
+  final String defaultCostPrice;
+  final String defaultSalePrice;
+  final String minStock;
+  final String taxRate;
+  final String note;
+  final String? categoryId;
+  final String? defaultSupplierId;
+  final bool isActive;
+}
 
 /// Dialog zum Anlegen und Bearbeiten eines Produkt-Stammsatzes ([Product]).
 ///
@@ -15,6 +47,9 @@ import '../utils/validators.dart';
 /// verdeckt wird.
 ///
 /// A11y-Keys: `Key('productCategoryDropdown')`, `Key('productSaveButton')`.
+///
+/// **UnsavedChangesGuard:** `barrierDismissible: false` ist beim showDialog-Aufrufer
+/// Pflicht (z.B. in `product_catalog_screen.dart`), damit der Guard greifen kann.
 class AddEditProductDialog extends StatefulWidget {
   final Product? product;
 
@@ -38,12 +73,29 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
   final _taxRateCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
 
-  // ── Dropdown state ────────────────────────────────────────────────────────
+  // ── Dropdown / switch state ───────────────────────────────────────────────
   String? _categoryId;
   String? _defaultSupplierId;
   bool _isActive = true;
   bool _advancedExpanded = false;
   bool _saving = false;
+
+  // ── Dirty-Detection ───────────────────────────────────────────────────────
+  late _ProductFormSnapshot _initialSnapshot;
+  bool _wasDirty = false;
+
+  /// Liste aller TextController — zum komfortablen Listener-Management.
+  List<TextEditingController> get _allCtrls => [
+        _nameCtrl,
+        _skuCtrl,
+        _eanCtrl,
+        _unitCtrl,
+        _defaultCostPriceCtrl,
+        _defaultSalePriceCtrl,
+        _minStockCtrl,
+        _taxRateCtrl,
+        _noteCtrl,
+      ];
 
   @override
   void initState() {
@@ -66,20 +118,65 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
       _defaultSupplierId = p.defaultSupplierId;
       _isActive = p.isActive;
     }
+
+    // Snapshot direkt nach dem Befüllen festhalten.
+    _initialSnapshot = _captureSnapshot();
+
+    // Dirty-Listener: setState nur wenn sich _isDirty ändert.
+    for (final ctrl in _allCtrls) {
+      ctrl.addListener(_checkDirtyChanged);
+    }
   }
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
-    _skuCtrl.dispose();
-    _eanCtrl.dispose();
-    _unitCtrl.dispose();
-    _defaultCostPriceCtrl.dispose();
-    _defaultSalePriceCtrl.dispose();
-    _minStockCtrl.dispose();
-    _taxRateCtrl.dispose();
-    _noteCtrl.dispose();
+    for (final ctrl in _allCtrls) {
+      ctrl.removeListener(_checkDirtyChanged);
+      ctrl.dispose();
+    }
     super.dispose();
+  }
+
+  // ── Dirty-Detection Helpers ───────────────────────────────────────────────
+
+  _ProductFormSnapshot _captureSnapshot() => _ProductFormSnapshot(
+        name: _nameCtrl.text,
+        sku: _skuCtrl.text,
+        ean: _eanCtrl.text,
+        unit: _unitCtrl.text,
+        defaultCostPrice: _defaultCostPriceCtrl.text,
+        defaultSalePrice: _defaultSalePriceCtrl.text,
+        minStock: _minStockCtrl.text,
+        taxRate: _taxRateCtrl.text,
+        note: _noteCtrl.text,
+        categoryId: _categoryId,
+        defaultSupplierId: _defaultSupplierId,
+        isActive: _isActive,
+      );
+
+  bool get _isDirty {
+    final s = _initialSnapshot;
+    return _nameCtrl.text != s.name ||
+        _skuCtrl.text != s.sku ||
+        _eanCtrl.text != s.ean ||
+        _unitCtrl.text != s.unit ||
+        _defaultCostPriceCtrl.text != s.defaultCostPrice ||
+        _defaultSalePriceCtrl.text != s.defaultSalePrice ||
+        _minStockCtrl.text != s.minStock ||
+        _taxRateCtrl.text != s.taxRate ||
+        _noteCtrl.text != s.note ||
+        _categoryId != s.categoryId ||
+        _defaultSupplierId != s.defaultSupplierId ||
+        _isActive != s.isActive;
+  }
+
+  /// setState nur bei Dirty-Status-Wechsel — nicht bei jedem Tastendruck.
+  void _checkDirtyChanged() {
+    if (!mounted) return;
+    final nowDirty = _isDirty;
+    if (nowDirty != _wasDirty) {
+      setState(() => _wasDirty = nowDirty);
+    }
   }
 
   Future<void> _save() async {
@@ -150,7 +247,9 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
     // Bottom padding so keyboard doesn't obscure fields (Formular-Mobile-Checkliste)
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Dialog(
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      child: Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: SafeArea(
         child: ConstrainedBox(
@@ -246,7 +345,10 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
                             ),
                           ],
                           onChanged: canEdit
-                              ? (v) => setState(() => _categoryId = v)
+                              ? (v) {
+                                  setState(() => _categoryId = v);
+                                  _checkDirtyChanged();
+                                }
                               : null,
                         ),
                         const SizedBox(height: 8),
@@ -277,8 +379,10 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
                             ),
                           ],
                           onChanged: canEdit
-                              ? (v) =>
-                                  setState(() => _defaultSupplierId = v)
+                              ? (v) {
+                                  setState(() => _defaultSupplierId = v);
+                                  _checkDirtyChanged();
+                                }
                               : null,
                         ),
                         const SizedBox(height: 8),
@@ -321,7 +425,10 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
                         SwitchListTile(
                           value: _isActive,
                           onChanged: canEdit
-                              ? (v) => setState(() => _isActive = v)
+                              ? (v) {
+                                  setState(() => _isActive = v);
+                                  _checkDirtyChanged();
+                                }
                               : null,
                           title: Text(l10n.productIsActive),
                           contentPadding: EdgeInsets.zero,
@@ -342,7 +449,8 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
           ),
         ),
       ),
-    );
+    ), // Dialog
+    ); // UnsavedChangesGuard
   }
 
   Widget _buildHeader(BuildContext context, AppLocalizations l10n) {
@@ -380,7 +488,8 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
               ),
             ),
           ),
-          // Close button — touch target ≥ 48 dp via padding
+          // Close button — touch target ≥ 48 dp via padding.
+          // maybePop damit UnsavedChangesGuard (PopScope) greifen kann.
           SizedBox(
             width: 48,
             height: 48,
@@ -390,7 +499,7 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
                 size: 20,
                 color: AppTheme.textMutedOf(context),
               ),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.maybePop(context),
             ),
           ),
         ],
@@ -515,7 +624,8 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            // maybePop damit UnsavedChangesGuard greifen kann
+            onPressed: () => Navigator.maybePop(context),
             child: Text(l10n.actionCancel),
           ),
           const SizedBox(width: 10),

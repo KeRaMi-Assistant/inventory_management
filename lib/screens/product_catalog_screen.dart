@@ -44,6 +44,7 @@ class ProductCatalogScreen extends StatelessWidget {
   void _openDialog(BuildContext context, {Product? product}) {
     showDialog<void>(
       context: context,
+      barrierDismissible: false, // UnsavedChangesGuard fängt Schließen ab
       builder: (_) => AddEditProductDialog(product: product),
     );
   }

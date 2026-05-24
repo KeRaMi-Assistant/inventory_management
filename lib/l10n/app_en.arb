@@ -1324,6 +1324,8 @@
   "onboardingErrorNoWorkspace": "No active workspace found. Please sign out and back in.",
   "onboardingErrorGeneric": "Onboarding failed: {error}",
   "@onboardingErrorGeneric": { "placeholders": { "error": {} } },
+  "onboardingStepLabel": "Step {current} of {total}",
+  "@onboardingStepLabel": { "placeholders": { "current": {}, "total": {} } },
 
   "dashboardEmptyTitle": "No data yet",
   "dashboardEmptySubtitle": "Load some sample tickets, buyers, and inventory items to find your way around.",
