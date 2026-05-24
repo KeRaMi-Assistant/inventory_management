@@ -227,12 +227,16 @@
   "buyersDeleteTitle": "Käufer löschen",
   "buyersDeleteConfirm": "Käufer „{name}\" wirklich löschen?",
   "@buyersDeleteConfirm": { "placeholders": { "name": {} } },
+  "buyersDeletedSuccess": "Käufer entfernt.",
+  "buyersDeleteFailed": "Löschen fehlgeschlagen.",
 
   "shopsEmpty": "Noch keine Shops angelegt.",
   "shopsAdd": "Shop hinzufügen",
   "shopsDeleteTitle": "Shop löschen",
   "shopsDeleteConfirm": "Shop „{name}\" wirklich löschen?",
   "@shopsDeleteConfirm": { "placeholders": { "name": {} } },
+  "shopsDeletedSuccess": "Shop entfernt.",
+  "shopsDeleteFailed": "Löschen fehlgeschlagen.",
 
   "teamLoadFailed": "Team-Daten konnten nicht geladen werden: {error}",
   "@teamLoadFailed": { "placeholders": { "error": {} } },
@@ -268,7 +272,11 @@
   "teamMemberRemove": "Entfernen",
   "teamMemberFallbackLabel": "diesem Mitglied",
   "@teamMemberFallbackLabel": { "description": "Fallback-Bezeichnung wenn Email eines Mitglieds nicht bekannt ist (z.B. im Entfernen-Dialog)." },
+  "teamMemberRemovedSuccess": "Mitglied entfernt.",
+  "teamMemberRemoveFailed": "Entfernen fehlgeschlagen.",
   "teamInviteRevoke": "Einladung zurückziehen",
+  "teamInviteRevokedSuccess": "Einladung zurückgezogen.",
+  "teamInviteRevokeFailed": "Zurückziehen fehlgeschlagen.",
   "teamSwitchWorkspace": "Workspace wechseln",
   "teamRoleOwner": "Eigentümer:in",
   "teamRoleAdmin": "Admin",
@@ -1628,6 +1636,7 @@
   "purchaseOrderStatusToOrdered": "Als bestellt markieren",
   "purchaseOrderStatusToCancelled": "Stornieren",
   "purchaseOrderStatusChangeConfirm": "Status wirklich ändern?",
+  "purchaseOrderStatusChangeBody": "Der Bestellstatus wird geändert. Diese Aktion kann nicht rückgängig gemacht werden.",
   "purchaseOrderDetailTitle": "Bestelldetails",
   "purchaseOrderDetailSectionHead": "Bestellkopf",
   "purchaseOrderLabelNumber": "Bestellnummer",
@@ -2316,5 +2325,11 @@
   "@unsavedChangesDiscardMessage": { "description": "Body-Text des Discard-Confirm-Dialogs im UnsavedChangesGuard." },
 
   "unsavedChangesDiscardLabel": "Verwerfen",
-  "@unsavedChangesDiscardLabel": { "description": "Label des Confirm-Buttons im Discard-Dialog." }
+  "@unsavedChangesDiscardLabel": { "description": "Label des Confirm-Buttons im Discard-Dialog." },
+
+  "purchaseOrderScanItemAdded": "{name} +1",
+  "@purchaseOrderScanItemAdded": {
+    "description": "SnackBar-Text wenn ein Artikel per Barcode-Scan zur Wareneingangs-Liste hinzugefügt wird.",
+    "placeholders": { "name": { "type": "String" } }
+  }
 }

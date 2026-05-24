@@ -1094,6 +1094,18 @@ abstract class AppLocalizations {
   /// **'Käufer „{name}\" wirklich löschen?'**
   String buyersDeleteConfirm(Object name);
 
+  /// No description provided for @buyersDeletedSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Käufer entfernt.'**
+  String get buyersDeletedSuccess;
+
+  /// No description provided for @buyersDeleteFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen.'**
+  String get buyersDeleteFailed;
+
   /// No description provided for @shopsEmpty.
   ///
   /// In de, this message translates to:
@@ -1117,6 +1129,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Shop „{name}\" wirklich löschen?'**
   String shopsDeleteConfirm(Object name);
+
+  /// No description provided for @shopsDeletedSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Shop entfernt.'**
+  String get shopsDeletedSuccess;
+
+  /// No description provided for @shopsDeleteFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen.'**
+  String get shopsDeleteFailed;
 
   /// No description provided for @teamLoadFailed.
   ///
@@ -1268,11 +1292,35 @@ abstract class AppLocalizations {
   /// **'diesem Mitglied'**
   String get teamMemberFallbackLabel;
 
+  /// No description provided for @teamMemberRemovedSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Mitglied entfernt.'**
+  String get teamMemberRemovedSuccess;
+
+  /// No description provided for @teamMemberRemoveFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Entfernen fehlgeschlagen.'**
+  String get teamMemberRemoveFailed;
+
   /// No description provided for @teamInviteRevoke.
   ///
   /// In de, this message translates to:
   /// **'Einladung zurückziehen'**
   String get teamInviteRevoke;
+
+  /// No description provided for @teamInviteRevokedSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Einladung zurückgezogen.'**
+  String get teamInviteRevokedSuccess;
+
+  /// No description provided for @teamInviteRevokeFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurückziehen fehlgeschlagen.'**
+  String get teamInviteRevokeFailed;
 
   /// No description provided for @teamSwitchWorkspace.
   ///
@@ -7556,6 +7604,12 @@ abstract class AppLocalizations {
   /// **'Status wirklich ändern?'**
   String get purchaseOrderStatusChangeConfirm;
 
+  /// No description provided for @purchaseOrderStatusChangeBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Bestellstatus wird geändert. Diese Aktion kann nicht rückgängig gemacht werden.'**
+  String get purchaseOrderStatusChangeBody;
+
   /// No description provided for @purchaseOrderDetailTitle.
   ///
   /// In de, this message translates to:
@@ -8950,6 +9004,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Verwerfen'**
   String get unsavedChangesDiscardLabel;
+
+  /// SnackBar-Text wenn ein Artikel per Barcode-Scan zur Wareneingangs-Liste hinzugefügt wird.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} +1'**
+  String purchaseOrderScanItemAdded(String name);
 }
 
 class _AppLocalizationsDelegate

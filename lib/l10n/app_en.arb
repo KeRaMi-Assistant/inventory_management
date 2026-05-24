@@ -227,12 +227,16 @@
   "buyersDeleteTitle": "Delete buyer",
   "buyersDeleteConfirm": "Delete buyer \"{name}\"?",
   "@buyersDeleteConfirm": { "placeholders": { "name": {} } },
+  "buyersDeletedSuccess": "Buyer removed.",
+  "buyersDeleteFailed": "Delete failed.",
 
   "shopsEmpty": "No shops yet.",
   "shopsAdd": "Add shop",
   "shopsDeleteTitle": "Delete shop",
   "shopsDeleteConfirm": "Delete shop \"{name}\"?",
   "@shopsDeleteConfirm": { "placeholders": { "name": {} } },
+  "shopsDeletedSuccess": "Shop removed.",
+  "shopsDeleteFailed": "Delete failed.",
 
   "teamLoadFailed": "Couldn't load team data: {error}",
   "@teamLoadFailed": { "placeholders": { "error": {} } },
@@ -268,7 +272,11 @@
   "teamMemberRemove": "Remove",
   "teamMemberFallbackLabel": "this member",
   "@teamMemberFallbackLabel": { "description": "Fallback label when a member's email is not available (e.g. in the remove confirmation dialog)." },
+  "teamMemberRemovedSuccess": "Member removed.",
+  "teamMemberRemoveFailed": "Remove failed.",
   "teamInviteRevoke": "Revoke invite",
+  "teamInviteRevokedSuccess": "Invite revoked.",
+  "teamInviteRevokeFailed": "Revoke failed.",
   "teamSwitchWorkspace": "Switch workspace",
   "teamRoleOwner": "Owner",
   "teamRoleAdmin": "Admin",
@@ -1628,6 +1636,7 @@
   "purchaseOrderStatusToOrdered": "Mark as ordered",
   "purchaseOrderStatusToCancelled": "Cancel order",
   "purchaseOrderStatusChangeConfirm": "Change status?",
+  "purchaseOrderStatusChangeBody": "The order status will be changed. This action cannot be undone.",
   "purchaseOrderDetailTitle": "Order details",
   "purchaseOrderDetailSectionHead": "Order header",
   "purchaseOrderLabelNumber": "Order number",
@@ -2316,5 +2325,11 @@
   "@unsavedChangesDiscardMessage": { "description": "Body text of the discard confirm dialog in UnsavedChangesGuard." },
 
   "unsavedChangesDiscardLabel": "Discard",
-  "@unsavedChangesDiscardLabel": { "description": "Label of the confirm button in the discard dialog." }
+  "@unsavedChangesDiscardLabel": { "description": "Label of the confirm button in the discard dialog." },
+
+  "purchaseOrderScanItemAdded": "{name} +1",
+  "@purchaseOrderScanItemAdded": {
+    "description": "SnackBar text when a product is added to the goods receipt list via barcode scan.",
+    "placeholders": { "name": { "type": "String" } }
+  }
 }

@@ -705,7 +705,7 @@ möglich wo `depends` leer.
   sanitisieren.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2, C2]`
 
-- [ ] **A4b** Migriere SnackBars im Team-/Buyer-/Shop-Tab von
+- [x] **A4b** Migriere SnackBars im Team-/Buyer-/Shop-Tab von
   `settings_screen.dart` (~22 Stellen) auf `AppFeedback.*`.
   Inline-Confirm-Dialogs auf `showConfirmDialog`.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2, C2]`
@@ -745,7 +745,7 @@ möglich wo `depends` leer.
   Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6h** `purchase_order_detail_screen.dart` SnackBars +
+- [x] **A6h** `purchase_order_detail_screen.dart` SnackBars +
   Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
@@ -825,9 +825,11 @@ möglich wo `depends` leer.
   (Tabelle + Master-Detail-Pane).
   `agent: flutter-coder` · `model: sonnet` · `depends: [B0, B1]`
 
-- [ ] **B4** Skeleton-Loader für `tickets_screen.dart`,
+- [x] **B4** Skeleton-Loader für `tickets_screen.dart`,
   `inbox_screen.dart`, `suppliers_screen.dart` First-Load.
   Sub-Tasks pro Screen wenn nötig.
+  — **inbox_screen.dart: DONE** (alle 3 Tabs: _SuggestionsTab, _MatchedTab, _UnclassifiedTab).
+  tickets + suppliers: offen.
   `agent: flutter-coder` · `model: sonnet` · `depends: [B0, B1]`
 
 - [ ] **B5** **States-Audit (Post-Skeleton).** Pro Listen-Screen

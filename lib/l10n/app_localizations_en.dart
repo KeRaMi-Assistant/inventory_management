@@ -555,6 +555,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get buyersDeletedSuccess => 'Buyer removed.';
+
+  @override
+  String get buyersDeleteFailed => 'Delete failed.';
+
+  @override
   String get shopsEmpty => 'No shops yet.';
 
   @override
@@ -567,6 +573,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String shopsDeleteConfirm(Object name) {
     return 'Delete shop \"$name\"?';
   }
+
+  @override
+  String get shopsDeletedSuccess => 'Shop removed.';
+
+  @override
+  String get shopsDeleteFailed => 'Delete failed.';
 
   @override
   String teamLoadFailed(Object error) {
@@ -658,7 +670,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get teamMemberFallbackLabel => 'this member';
 
   @override
+  String get teamMemberRemovedSuccess => 'Member removed.';
+
+  @override
+  String get teamMemberRemoveFailed => 'Remove failed.';
+
+  @override
   String get teamInviteRevoke => 'Revoke invite';
+
+  @override
+  String get teamInviteRevokedSuccess => 'Invite revoked.';
+
+  @override
+  String get teamInviteRevokeFailed => 'Revoke failed.';
 
   @override
   String get teamSwitchWorkspace => 'Switch workspace';
@@ -4169,6 +4193,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get purchaseOrderStatusChangeConfirm => 'Change status?';
 
   @override
+  String get purchaseOrderStatusChangeBody =>
+      'The order status will be changed. This action cannot be undone.';
+
+  @override
   String get purchaseOrderDetailTitle => 'Order details';
 
   @override
@@ -5008,4 +5036,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unsavedChangesDiscardLabel => 'Discard';
+
+  @override
+  String purchaseOrderScanItemAdded(String name) {
+    return '$name +1';
+  }
 }

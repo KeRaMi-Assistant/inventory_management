@@ -20,6 +20,7 @@ import '../widgets/confirm_dialog.dart';
 import '../widgets/deal_picker_dialog.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/inbox_message_details.dart';
+import '../widgets/skeletons/list_skeleton.dart';
 import '../widgets/tracking_banner_improved_detection.dart';
 
 /// Postfach-Inbox: Vorschläge → vorausgefüllter Edit-Dialog beim Annehmen,
@@ -129,17 +130,23 @@ class _InboxScreenState extends State<InboxScreen> {
                         accounts: provider.accounts,
                         onRefresh: _refresh,
                         onGoToDeals: widget.onGoToDealsReview,
+                        isLoading: provider.isLoading,
+                        initialLoadAttempted: provider.initialLoadAttempted,
                       ),
                       _MatchedTab(
                         messages: provider.matchedRecently,
                         accounts: provider.accounts,
                         onRefresh: _refresh,
                         onOpenTicket: widget.onOpenTicket,
+                        isLoading: provider.isLoading,
+                        initialLoadAttempted: provider.initialLoadAttempted,
                       ),
                       _UnclassifiedTab(
                         messages: provider.unclassified,
                         accounts: provider.accounts,
                         onRefresh: _refresh,
+                        isLoading: provider.isLoading,
+                        initialLoadAttempted: provider.initialLoadAttempted,
                       ),
                     ],
                   ),
@@ -736,42 +743,59 @@ class _SuggestionsTab extends StatelessWidget {
   final List<MailboxAccount> accounts;
   final Future<void> Function() onRefresh;
   final VoidCallback? onGoToDeals;
+  final bool isLoading;
+  final bool initialLoadAttempted;
   const _SuggestionsTab({
     required this.suggestions,
     required this.accounts,
     required this.onRefresh,
+    required this.isLoading,
+    required this.initialLoadAttempted,
     this.onGoToDeals,
   });
 
   @override
   Widget build(BuildContext context) {
+    final showSkeleton = shouldShowSkeleton(
+      isLoading: isLoading,
+      hasData: suggestions.isNotEmpty,
+      initialLoadAttempted: initialLoadAttempted,
+    );
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: suggestions.isEmpty
-          ? CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverFillRemaining(
-                  child: EmptyState(
-                    icon: Icons.check_circle_outline,
-                    title: AppLocalizations.of(context).inboxSuggestionsEmpty,
-                    subtitle:
-                        AppLocalizations.of(context).inboxSuggestionsEmptyHint,
-                    keySlug: 'inboxSuggestionsEmpty',
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: showSkeleton
+            ? const ListSkeleton(key: ValueKey('skeleton'), itemCount: 6)
+            : suggestions.isEmpty
+                ? CustomScrollView(
+                    key: const ValueKey('content'),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverFillRemaining(
+                        child: EmptyState(
+                          icon: Icons.check_circle_outline,
+                          title:
+                              AppLocalizations.of(context).inboxSuggestionsEmpty,
+                          subtitle: AppLocalizations.of(context)
+                              .inboxSuggestionsEmptyHint,
+                          keySlug: 'inboxSuggestionsEmpty',
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.separated(
+                    key: const ValueKey('content'),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: suggestions.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, i) => _SuggestionCard(
+                      suggestion: suggestions[i],
+                      imapHost: _imapHostFor(accounts),
+                      onGoToDeals: onGoToDeals,
+                    ),
                   ),
-                ),
-              ],
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: suggestions.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, i) => _SuggestionCard(
-                suggestion: suggestions[i],
-                imapHost: _imapHostFor(accounts),
-                onGoToDeals: onGoToDeals,
-              ),
-            ),
+      ),
     );
   }
 }
@@ -1301,37 +1325,52 @@ class _MatchedTab extends StatelessWidget {
   final List<MailboxAccount> accounts;
   final Future<void> Function() onRefresh;
   final void Function(String ticket)? onOpenTicket;
+  final bool isLoading;
+  final bool initialLoadAttempted;
   const _MatchedTab({
     required this.messages,
     required this.accounts,
     required this.onRefresh,
+    required this.isLoading,
+    required this.initialLoadAttempted,
     this.onOpenTicket,
   });
 
   @override
   Widget build(BuildContext context) {
+    final showSkeleton = shouldShowSkeleton(
+      isLoading: isLoading,
+      hasData: messages.isNotEmpty,
+      initialLoadAttempted: initialLoadAttempted,
+    );
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: messages.isEmpty
-          ? CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverFillRemaining(
-                  child: EmptyState(
-                    icon: Icons.inbox_outlined,
-                    title: AppLocalizations.of(context).inboxUpdatedEmpty,
-                    subtitle:
-                        AppLocalizations.of(context).inboxUpdatedEmptyHint,
-                    keySlug: 'inboxUpdatedEmpty',
-                  ),
-                ),
-              ],
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: messages.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, i) {
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: showSkeleton
+            ? const ListSkeleton(key: ValueKey('skeleton'), itemCount: 6)
+            : messages.isEmpty
+                ? CustomScrollView(
+                    key: const ValueKey('content'),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverFillRemaining(
+                        child: EmptyState(
+                          icon: Icons.inbox_outlined,
+                          title: AppLocalizations.of(context).inboxUpdatedEmpty,
+                          subtitle: AppLocalizations.of(context)
+                              .inboxUpdatedEmptyHint,
+                          keySlug: 'inboxUpdatedEmpty',
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.separated(
+                    key: const ValueKey('content'),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, i) {
                 final msg = messages[i];
                 final payload = msg.parsedPayload ?? const {};
                 final orderId = payload['order_id'] as String?;
@@ -1399,7 +1438,8 @@ class _MatchedTab extends StatelessWidget {
                   ),
                 );
               },
-            ),
+                  ),
+      ),
     );
   }
 
@@ -1454,40 +1494,58 @@ class _UnclassifiedTab extends StatelessWidget {
   final List<ParsedMessage> messages;
   final List<MailboxAccount> accounts;
   final Future<void> Function() onRefresh;
+  final bool isLoading;
+  final bool initialLoadAttempted;
   const _UnclassifiedTab({
     required this.messages,
     required this.accounts,
     required this.onRefresh,
+    required this.isLoading,
+    required this.initialLoadAttempted,
   });
 
   @override
   Widget build(BuildContext context) {
+    final showSkeleton = shouldShowSkeleton(
+      isLoading: isLoading,
+      hasData: messages.isNotEmpty,
+      initialLoadAttempted: initialLoadAttempted,
+    );
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: messages.isEmpty
-          ? CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverFillRemaining(
-                  child: EmptyState(
-                    icon: Icons.help_outline,
-                    title: AppLocalizations.of(context).inboxUnclassifiedEmpty,
-                    subtitle:
-                        AppLocalizations.of(context).inboxUnclassifiedEmptyHint,
-                    keySlug: 'inboxUnclassifiedEmpty',
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: showSkeleton
+            ? const ListSkeleton(key: ValueKey('skeleton'), itemCount: 6)
+            : messages.isEmpty
+                ? CustomScrollView(
+                    key: const ValueKey('content'),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverFillRemaining(
+                        child: EmptyState(
+                          icon: Icons.help_outline,
+                          title: AppLocalizations.of(context)
+                              .inboxUnclassifiedEmpty,
+                          subtitle: AppLocalizations.of(context)
+                              .inboxUnclassifiedEmptyHint,
+                          keySlug: 'inboxUnclassifiedEmpty',
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.separated(
+                    key: const ValueKey('content'),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, i) => _UnclassifiedRow(
+                      message: messages[i],
+                      imapHost: _imapHostFor(
+                          accounts, accountId: messages[i].accountId),
+                    ),
                   ),
-                ),
-              ],
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: messages.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, i) => _UnclassifiedRow(
-                message: messages[i],
-                imapHost: _imapHostFor(accounts, accountId: messages[i].accountId),
-              ),
-            ),
+      ),
     );
   }
 }

@@ -33,7 +33,7 @@ die der Browser-Tester pro Eintrag durchspielt — Definitionen unten.
 
 | Route | File | Pflicht-Tests | Notizen |
 |---|---|---|---|
-| `/main` (Shell) | [`lib/screens/main_screen.dart`](../../lib/screens/main_screen.dart) | smoke-theme, mobile-overflow | Side-Nav + AppBar, hält Tab-Index. **Bottom-Nav auf Phone (`< 800px`):** `Key('mainBottomNav')` mit 5 festen Slots (Dashboard, Deals, Tickets, Inbox[conditional], Inventory) + „Mehr"-Slot (`Key('main-tab-more')`). Inbox-Slot entfällt wenn `!billing.hasInbox` (4 Slots + Mehr). Help-Icon AppBar (Phone): `Key('appBar-help-action')` — navigiert direkt zu `/help`. Reihenfolge Slots: `Key('main-tab-dashboard')`, `main-tab-deals`, `main-tab-tickets`, `main-tab-inbox`, `main-tab-inventory`, `main-tab-more`. |
+| `/main` (Shell) | [`lib/screens/main_screen.dart`](../../lib/screens/main_screen.dart) | smoke-theme, mobile-overflow, smoke-keyboard-nav, smoke-nav-feature-gating | Side-Nav + AppBar, hält Tab-Index. **Desktop-Sidebar (≥ 800px):** [`lib/widgets/app_nav_rail.dart`](../../lib/widgets/app_nav_rail.dart) (`AppNavRail`) — ersetzt das frühere Custom-`_Sidebar`-Widget. `extended: true` bei Container-Breite ≥ 1200px, `extended: false` bei 800–1199px. Interne `_navVisibility`-Filterung: Free-Plan-Tabs + Feature-Flag-gesperrte Tabs werden über die `visibility`-Map ausgeblendet (`false` = ausgeblendet), Index-Mapping `visibleTabAtRailIndex(int) → MainTab` verhindert falsche Selektion. A11y-Keys: `Key('mainNavRail')` auf Rail-Root, `Key('navRailDestination-<tab.name>')` pro Destination (snake-case, z. B. `navRailDestination-dashboard`). **Bottom-Nav auf Phone (`< 800px`):** `Key('mainBottomNav')` mit 5 festen Slots (Dashboard, Deals, Tickets, Inbox[conditional], Inventory) + „Mehr"-Slot (`Key('main-tab-more')`). Inbox-Slot entfällt wenn `!billing.hasInbox` (4 Slots + Mehr). Help-Icon AppBar (Phone): `Key('appBar-help-action')` — navigiert direkt zu `/help`. Reihenfolge Slots: `Key('main-tab-dashboard')`, `main-tab-deals`, `main-tab-tickets`, `main-tab-inbox`, `main-tab-inventory`, `main-tab-more`. Phone-Pfad (Bottom-Nav + Mehr-Sheet) unverändert. |
 | `/dashboard` | [`lib/screens/dashboard_screen.dart`](../../lib/screens/dashboard_screen.dart) | smoke-theme, mobile-overflow | KPI-Cards + Recent-Deals. Skeleton-Loader via `skeletonizer` beim Initial-Load (`Key('skeletonLoader')`); aktiv nur wenn `isLoading=true && data leer` (Race-Condition-safe). |
 | `/deals` | [`lib/screens/deals_screen.dart`](../../lib/screens/deals_screen.dart) | smoke-theme, mobile-overflow, deal-flow | Tabelle + Detail-Sidebar (Desktop) bzw. Stack (Phone). |
 | `/tickets` | [`lib/screens/tickets_screen.dart`](../../lib/screens/tickets_screen.dart) | smoke-theme, archive-tab | Aktiv-/Archiv-Tabs. |
@@ -102,6 +102,10 @@ Dialogs müssen auf 390×844 ohne horizontalen Scroll funktionieren.
 | `/warehouse` → Lager (Sub-Route) | [`lib/screens/warehouses_screen.dart`](../../lib/screens/warehouses_screen.dart) | smoke-theme, mobile-overflow | Lager verwalten (CRUD). FAB „Neues Lager" (`Key('warehouseNewFab')`). Sub-Route des Warenwirtschaft-Hubs, kein eigener MainTab. Viewer → kein FAB. A11y-Keys: `Key('warehouseRow-<id>')`, `Key('warehouseDropdown')`. Epic D (D3). **Seit T3.4 embeddable (`embedded: bool`-Parameter)** — im Warehouse-Hub-Master-Detail als Detail-Spalte nutzbar. |
 | `/warehouse` → Inventur (Sub-Route) | [`lib/screens/stocktake_screen.dart`](../../lib/screens/stocktake_screen.dart) | smoke-theme, mobile-overflow | Inventur-Sessionen auflisten; FAB „Neue Inventur" (`Key('stocktakeNewFab')`). Sub-Route des Warenwirtschaft-Hubs, kein eigener MainTab. Viewer → kein FAB. A11y-Keys: `Key('stocktakeRow-<id>')`. Epic E (E3). **Seit T3.4 embeddable (`embedded: bool`-Parameter)** — im Warehouse-Hub-Master-Detail als Detail-Spalte nutzbar. |
 | `/warehouse` → Inventur-Detail (Sub-Route) | [`lib/screens/stocktake_detail_screen.dart`](../../lib/screens/stocktake_detail_screen.dart) | smoke-theme, mobile-overflow, stocktake-count-flow | Inventur durchführen: durchscrollbare 48dp-Liste, Filter „nur ungezählte" (`Key('stocktakeFilterUncounted')`), Fortschritts-Header, Barcode-Einsprung, Differenz-Report als vertikale Cards, Abschließen-Button (`Key('stocktakeCloseButton')`). A11y-Keys: `Key('stocktakeCountField-<id>')`. Epic E (E3). |
+| (global) → Destruktiver Confirm | [`lib/widgets/confirm_dialog.dart`](../../lib/widgets/confirm_dialog.dart) | smoke-confirm-dialog, smoke-form-keyboard-phone | Allgemeiner Confirm-Dialog-Helper (`showConfirmDialog`), generalisiert aus `MemberRemoveConfirmDialog`. Ablöst inline-`AlertDialog`-Wildwuchs aus 28 Files inkrementell. **Phone** (Container-Breite < `Breakpoints.phone`): `showModalBottomSheet(isScrollControlled: true)` mit `Padding(MediaQuery.viewInsetsOf(context))` — Keyboard-safe. **Desktop:** zentrierter `AlertDialog`. `requireTypeName`-Modus: Confirm-Button bleibt disabled bis der User `confirmTypeNameValue` exakt eingetippt hat; Unicode-Bidi-Sanitize (RTL-Override-Chars gefiltert via `_sanitizeBidi`). `HapticFeedback.lightImpact()` bei destruktivem Confirm. A11y-Keys: `Key('confirmDialog')`, `Key('confirmDialog-confirm')`, `Key('confirmDialog-cancel')`, `Key('confirmDialog-typeName-field')` (nur bei `requireTypeName`). Epic A (A2). |
+| (global) → App-Feedback / SnackBar | [`lib/widgets/app_feedback.dart`](../../lib/widgets/app_feedback.dart) | smoke-feedback-undo | Zentraler SnackBar-Helper `AppFeedback` mit Varianten `success`, `error`, `info`, `loading`. Undo-Action-Slot über `undo`-Parameter. Farbkodierung über `AppTheme`-Tokens (`successBgOf`, `dangerBgOf`, `infoBgOf`). **Phone-Bottom-Margin:** SnackBar liegt über Bottom-Nav (`kBottomNavHeight = 80dp` + SafeArea-Bottom + 8dp), Desktop 16dp; `SnackBarBehavior.floating` zwingend. **Dialog-Context-Pattern:** Root-`ScaffoldMessengerState` vor `showDialog` capturen (`AppFeedback.successOn(messenger, …)`). A11y-Keys: `Key('appFeedbackSuccess')`, `Key('appFeedbackError')`, `Key('appFeedbackInfo')`, `Key('appFeedbackUndoAction')`. Epic A (A1). |
+| (global) → Unsaved-Changes-Guard | [`lib/widgets/unsaved_changes_guard.dart`](../../lib/widgets/unsaved_changes_guard.dart) | smoke-form-unsaved | `PopScope`-Wrapper (`UnsavedChangesGuard`) für Dialog-/Form-Trees. Bei `isDirty: true` wird Back/Pop abgefangen und Discard-Confirm via `showConfirmDialog` gezeigt. **Muss INNERHALB des Dialog-Trees** liegen (nicht um `showDialog`-Call), damit `PopScope` greift. Dirty-Detection prüft `originalValue != currentValue` (kein False-Positive durch Feld-Fokus). Epic D (Form-UX). |
+| (global) → Listen-Skeleton-Loader | [`lib/widgets/skeletons/list_skeleton.dart`](../../lib/widgets/skeletons/list_skeleton.dart) | smoke-skeleton | `ListSkeleton({itemCount, itemHeight})` — Loading-State-Companion für alle Listen-Screens. `Key('skeletonLoader')`-Konvention (übernommen aus `dashboard_screen.dart`). `shouldShowSkeleton(isLoading, hasData, initialLoadAttempted)` Helper steuert Race-Condition-safe Anzeige: Skeleton nur bei `!initialLoadAttempted && !hasData` ODER `isLoading && !hasData` — nie während Refresh mit vorhandenen Daten. Built-in `AnimatedSwitcher` (200ms) für Loading→Content-Crossfade. Powered by `skeletonizer`-Package (bereits in `pubspec.yaml`). Epic B (B1). |
 
 ## Pflicht-Tests-Definitionen
 
@@ -162,6 +166,44 @@ Tester nutzt sie als Sprungmarken in seinem System-Prompt.
   abweichenden Artikel wird angepasst → `inventory_movements` mit
   `movement_type='stocktake'` werden geschrieben (append-only). Kein Overflow,
   kein Crash auf 390×844.
+- `smoke-feedback-undo` — Destruktive Aktion ausführen (z. B. Inbox-Mail
+  verwerfen) → `AppFeedback`-SnackBar erscheint mit Undo-Button
+  (`Key('appFeedbackUndoAction')`) → Undo tippen → Element kommt zurück.
+  Prüft auch: SnackBar liegt ÜBER Bottom-Nav (kein Overlap) auf Phone-Viewport.
+- `smoke-confirm-dialog` — Destruktive Aktion triggern (z. B. Mailbox
+  löschen) → `showConfirmDialog` erscheint → Cancel-Button
+  (`Key('confirmDialog-cancel')`) schließt ohne Aktion; erneut öffnen →
+  Confirm-Button (`Key('confirmDialog-confirm')`) führt die Aktion aus.
+  Phone-Viewport: Dialog erscheint als Bottom-Sheet (nicht als AlertDialog).
+- `smoke-skeleton` — Listen-Screen (Dashboard, Inventory, Inbox) im ersten
+  Load: Skeleton-Loader (`Key('skeletonLoader')`) sichtbar statt
+  `CircularProgressIndicator`. Nach Daten-Eingang: AnimatedSwitcher-
+  Crossfade → Content sichtbar. Refresh (Daten vorhanden) darf KEINEN
+  Skeleton zeigen (Race-Condition-Test).
+- `smoke-form-unsaved` — Add/Edit-Dialog öffnen → Textfeld ändern →
+  Schließen-X oder Back-Button drücken → `UnsavedChangesGuard` zeigt
+  Discard-Confirm (`Key('unsavedChangesGuard-dialog')`). Discard-Button
+  (`Key('unsavedChangesGuard-discard')`) schließt Dialog. Bei unveränderten
+  Feldern: Dialog schließt direkt ohne Confirm-Prompt.
+- `smoke-form-keyboard-phone` — Add/Edit-Dialog auf Phone-Viewport (390×844)
+  öffnen → Textfeld tippen → Tastatur öffnet sich → aktives TextField bleibt
+  sichtbar (kein Verdecken durch Tastatur, `MediaQuery.viewInsetsOf` greift).
+  Gilt auch für `showConfirmDialog` mit `requireTypeName` in der
+  BottomSheet-Variante.
+- `smoke-keyboard-nav` — Desktop-Viewport: Tab-Taste durch alle
+  `AppNavRail`-Destinations (`Key('navRailDestination-<tab>')`) → Focus-Ring
+  sichtbar auf jeder Destination → Enter aktiviert den Tab (Screen wechselt).
+  Prüft M3-State-Layer und Keyboard-Focus-Handling.
+- `smoke-nav-feature-gating` — Free-User-Login: `AppNavRail` zeigt
+  ausschließlich für Free freigeschaltete Tabs (kein Premium-Tab sichtbar).
+  Switch auf Premium-Account → Premium-Tabs erscheinen. `_navVisibility`-
+  Filter-Regression: `visibleTabAtRailIndex`-Mapping zeigt korrekte
+  Selektion nach Tab-Wechsel.
+- `smoke-hero-no-desktop-regression` — Desktop-Viewport (≥ 1200px):
+  Inventory-Item-Tap öffnet Detail in Master-Detail-Pane OHNE Hero-Animation
+  (kein Vollbild-Push). Phone-Viewport: Hero-Animation triggert korrekt
+  beim Vollbild-Push auf `ProductDetailScreen`. Kein `RenderFlex`-Overflow
+  auf beiden Viewports.
 
 ## Pflege-Hinweise
 

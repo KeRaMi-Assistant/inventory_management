@@ -556,6 +556,12 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get buyersDeletedSuccess => 'Käufer entfernt.';
+
+  @override
+  String get buyersDeleteFailed => 'Löschen fehlgeschlagen.';
+
+  @override
   String get shopsEmpty => 'Noch keine Shops angelegt.';
 
   @override
@@ -568,6 +574,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String shopsDeleteConfirm(Object name) {
     return 'Shop „$name\" wirklich löschen?';
   }
+
+  @override
+  String get shopsDeletedSuccess => 'Shop entfernt.';
+
+  @override
+  String get shopsDeleteFailed => 'Löschen fehlgeschlagen.';
 
   @override
   String teamLoadFailed(Object error) {
@@ -659,7 +671,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get teamMemberFallbackLabel => 'diesem Mitglied';
 
   @override
+  String get teamMemberRemovedSuccess => 'Mitglied entfernt.';
+
+  @override
+  String get teamMemberRemoveFailed => 'Entfernen fehlgeschlagen.';
+
+  @override
   String get teamInviteRevoke => 'Einladung zurückziehen';
+
+  @override
+  String get teamInviteRevokedSuccess => 'Einladung zurückgezogen.';
+
+  @override
+  String get teamInviteRevokeFailed => 'Zurückziehen fehlgeschlagen.';
 
   @override
   String get teamSwitchWorkspace => 'Workspace wechseln';
@@ -4187,6 +4211,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get purchaseOrderStatusChangeConfirm => 'Status wirklich ändern?';
 
   @override
+  String get purchaseOrderStatusChangeBody =>
+      'Der Bestellstatus wird geändert. Diese Aktion kann nicht rückgängig gemacht werden.';
+
+  @override
   String get purchaseOrderDetailTitle => 'Bestelldetails';
 
   @override
@@ -5038,4 +5066,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get unsavedChangesDiscardLabel => 'Verwerfen';
+
+  @override
+  String purchaseOrderScanItemAdded(String name) {
+    return '$name +1';
+  }
 }

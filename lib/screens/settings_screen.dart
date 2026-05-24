@@ -234,7 +234,7 @@ class _BuyersTab extends StatelessWidget {
                             IconButton(
                               icon:
                                   const Icon(Icons.edit_outlined, size: 20),
-                              color: const Color(0xFF64748B),
+                              color: AppTheme.textMutedOf(context),
                               onPressed: () => showDialog(
                                 context: context,
                                 builder: (_) =>
@@ -244,7 +244,7 @@ class _BuyersTab extends StatelessWidget {
                             IconButton(
                               icon: const Icon(Icons.delete_outline,
                                   size: 20),
-                              color: Colors.red[400],
+                              color: AppTheme.dangerTextOf(context),
                               onPressed: () => _confirmDeleteBuyer(
                                   context, provider, buyer.id, buyer.name),
                             ),
@@ -259,31 +259,38 @@ class _BuyersTab extends StatelessWidget {
     );
   }
 
-  void _confirmDeleteBuyer(BuildContext context, InventoryProvider provider,
-      String id, String name) {
+  Future<void> _confirmDeleteBuyer(BuildContext context,
+      InventoryProvider provider, String id, String name) async {
     final l10n = AppLocalizations.of(context);
-    showDialog(
+    // Capture before async gap (Dialog-Context-Pattern).
+    final messenger = ScaffoldMessenger.of(context);
+    final successMsg = l10n.buyersDeletedSuccess;
+    final errorMsg = l10n.buyersDeleteFailed;
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(l10n.buyersDeleteTitle),
-        content: Text(l10n.buyersDeleteConfirm(name)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.actionCancel)),
-          ElevatedButton(
-            onPressed: () {
-              provider.deleteBuyer(id);
-              Navigator.pop(context);
-            },
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(l10n.actionDelete,
-                style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      title: l10n.buyersDeleteTitle,
+      message: l10n.buyersDeleteConfirm(name),
+      confirmLabel: l10n.actionDelete,
+      isDestructive: true,
     );
+    if (confirmed != true) return;
+    try {
+      await provider.deleteBuyer(id);
+      // Use messenger directly — context is a method parameter (no mounted guard).
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(successMsg),
+          behavior: SnackBarBehavior.floating,
+        ));
+    } catch (_) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(errorMsg),
+          behavior: SnackBarBehavior.floating,
+        ));
+    }
   }
 }
 
@@ -299,10 +306,10 @@ class _ShopsTab extends StatelessWidget {
     BuildContext context,
     InventoryProvider provider,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
     try {
       final result = await provider.seedAmazonShops();
+      if (!context.mounted) return;
       final String message;
       if (result.added == 0) {
         message = l10n.settingsShopsAmazonAlreadyPresent(result.skipped);
@@ -312,15 +319,10 @@ class _ShopsTab extends StatelessWidget {
             : '';
         message = l10n.settingsShopsAmazonAdded(result.added, suffix);
       }
-      messenger.showSnackBar(SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.settingsShopsAddError),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.success(context, message);
+    } catch (_) {
+      if (!context.mounted) return;
+      AppFeedback.error(context, l10n.settingsShopsAddError);
     }
   }
 
@@ -374,12 +376,13 @@ class _ShopsTab extends StatelessWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.store_outlined,
-                                size: 52, color: Color(0xFFCBD5E1)),
+                            Icon(Icons.store_outlined,
+                                size: 52,
+                                color: AppTheme.textDisabledOf(context)),
                             const SizedBox(height: 12),
                             Text(l10n.shopsEmpty,
-                                style:
-                                    const TextStyle(color: Color(0xFF94A3B8))),
+                                style: TextStyle(
+                                    color: AppTheme.textMutedOf(context))),
                           ],
                         ),
                       )
@@ -420,31 +423,38 @@ class _ShopsTab extends StatelessWidget {
     );
   }
 
-  void _confirmDeleteShop(BuildContext context, InventoryProvider provider,
-      String id, String name) {
+  Future<void> _confirmDeleteShop(BuildContext context,
+      InventoryProvider provider, String id, String name) async {
     final l10n = AppLocalizations.of(context);
-    showDialog(
+    // Capture before async gap (Dialog-Context-Pattern).
+    final messenger = ScaffoldMessenger.of(context);
+    final successMsg = l10n.shopsDeletedSuccess;
+    final errorMsg = l10n.shopsDeleteFailed;
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(l10n.shopsDeleteTitle),
-        content: Text(l10n.shopsDeleteConfirm(name)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.actionCancel)),
-          ElevatedButton(
-            onPressed: () {
-              provider.deleteShop(id);
-              Navigator.pop(context);
-            },
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(l10n.actionDelete,
-                style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      title: l10n.shopsDeleteTitle,
+      message: l10n.shopsDeleteConfirm(name),
+      confirmLabel: l10n.actionDelete,
+      isDestructive: true,
     );
+    if (confirmed != true) return;
+    try {
+      await provider.deleteShop(id);
+      // Use messenger directly — context is a method parameter (no mounted guard).
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(successMsg),
+          behavior: SnackBarBehavior.floating,
+        ));
+    } catch (_) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(errorMsg),
+          behavior: SnackBarBehavior.floating,
+        ));
+    }
   }
 }
 
@@ -1769,20 +1779,13 @@ class _TeamTabState extends State<_TeamTab> {
     final isPersonal = ws.isPersonal ||
         ws.name.trim().toLowerCase() == 'personal';
     if (isPersonal) {
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showConfirmDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(l10n.teamRenamePersonalWarnTitle),
-          content: Text(l10n.teamRenamePersonalWarn),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(l10n.commonCancel)),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(l10n.commonConfirm)),
-          ],
-        ),
+        title: l10n.teamRenamePersonalWarnTitle,
+        message: l10n.teamRenamePersonalWarn,
+        confirmLabel: l10n.commonConfirm,
+        cancelLabel: l10n.commonCancel,
+        isDestructive: false,
       );
       if (confirmed != true || !mounted) return;
     }
@@ -1814,6 +1817,8 @@ class _TeamTabState extends State<_TeamTab> {
     ctrl.dispose();
     if (newName == null || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
+    final renameSuccess = l10n.teamRenameSuccess;
+    final renameError = l10n.appFeedbackErrorDefault;
     final activeWs = context.read<ActiveWorkspaceProvider>();
     final uid = context.read<AuthProvider>().currentUser?.id;
     try {
@@ -1826,11 +1831,21 @@ class _TeamTabState extends State<_TeamTab> {
       }
       if (!mounted) return;
       await _load();
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.teamRenameSuccess)));
-    } catch (e) {
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.teamRenameFailed('$e'))));
+      if (!mounted) return;
+      AppFeedback.successOn(
+        messenger,
+        renameSuccess,
+        // ignore: use_build_context_synchronously
+        rootContext: context,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        renameError,
+        // ignore: use_build_context_synchronously
+        rootContext: context,
+      );
     }
   }
 
@@ -1913,9 +1928,7 @@ class _TeamTabState extends State<_TeamTab> {
                     await Clipboard.setData(
                         ClipboardData(text: ws.id));
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.teamCopyIdSnack)),
-                    );
+                    AppFeedback.success(context, l10n.teamCopyIdSnack);
                   },
                 ),
                 if (canManage) ...[
@@ -1962,16 +1975,38 @@ class _TeamTabState extends State<_TeamTab> {
                         onPressed: () async {
                           final email = m.email ?? m.userId;
                           final svc = context.read<WorkspaceService>();
+                          // Capture before async gap (Dialog-Context-Pattern).
+                          final messenger = ScaffoldMessenger.of(context);
+                          final removeSuccess = l10n.teamMemberRemovedSuccess;
+                          final removeFailed = l10n.teamMemberRemoveFailed;
                           final confirmed = await MemberRemoveConfirmDialog.show(
                             context,
                             email,
                           );
                           if (!confirmed || !mounted) return;
-                          await svc.removeMember(
-                            workspaceId: ws.id,
-                            userId: m.userId,
-                          );
-                          if (mounted) await _load();
+                          try {
+                            await svc.removeMember(
+                              workspaceId: ws.id,
+                              userId: m.userId,
+                            );
+                            if (!mounted) return;
+                            await _load();
+                            if (!mounted) return;
+                            AppFeedback.successOn(
+                              messenger,
+                              removeSuccess,
+                              // ignore: use_build_context_synchronously
+                              rootContext: context,
+                            );
+                          } catch (_) {
+                            if (!mounted) return;
+                            AppFeedback.errorOn(
+                              messenger,
+                              removeFailed,
+                              // ignore: use_build_context_synchronously
+                              rootContext: context,
+                            );
+                          }
                         },
                       )
                     : null,
@@ -2010,10 +2045,31 @@ class _TeamTabState extends State<_TeamTab> {
                               color: AppTheme.dangerTextOf(context),
                               size: 18),
                           onPressed: () async {
-                            await context
-                                .read<WorkspaceService>()
-                                .revokeInvite(inv.id);
-                            if (mounted) await _load();
+                            // Capture before async gap (Dialog-Context-Pattern).
+                            final messenger = ScaffoldMessenger.of(context);
+                            final revokedSuccess = l10n.teamInviteRevokedSuccess;
+                            final revokeFailed = l10n.teamInviteRevokeFailed;
+                            final svcR = context.read<WorkspaceService>();
+                            try {
+                              await svcR.revokeInvite(inv.id);
+                              if (!mounted) return;
+                              await _load();
+                              if (!mounted) return;
+                              AppFeedback.successOn(
+                                messenger,
+                                revokedSuccess,
+                                // ignore: use_build_context_synchronously
+                                rootContext: context,
+                              );
+                            } catch (_) {
+                              if (!mounted) return;
+                              AppFeedback.errorOn(
+                                messenger,
+                                revokeFailed,
+                                // ignore: use_build_context_synchronously
+                                rootContext: context,
+                              );
+                            }
                           },
                         )
                       : null,
