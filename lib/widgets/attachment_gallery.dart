@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/attachment_service.dart';
+import '../utils/error_messages.dart';
 
 /// Inline-Gallery für Foto-Anhänge an Items/Deals. Hält die `paths`-Liste
 /// als Local-State (Source-of-Truth liegt beim Caller / Form-State) und
@@ -169,7 +170,7 @@ class _AttachmentGalleryState extends State<AttachmentGallery> {
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.errorPrefix('$e')),
+          content: Text(l10n.errorPrefix(sanitizeError(e, l10n: l10n))),
           backgroundColor: AppTheme.danger,
           behavior: SnackBarBehavior.floating,
         ),

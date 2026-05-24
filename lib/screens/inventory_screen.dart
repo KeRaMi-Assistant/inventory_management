@@ -11,14 +11,26 @@ import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../utils/validators.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/attachment_gallery.dart';
 import '../widgets/barcode_scanner_sheet.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/inventory_batches_sheet.dart';
+import '../widgets/skeletons/list_skeleton.dart';
 import 'product_detail_screen.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
+
+  /// Convenience helper for external callers (e.g. MainScreen FAB).
+  static void showAddDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _InventoryDialog(),
+    );
+  }
 
   @override
   State<InventoryScreen> createState() => _InventoryScreenState();
@@ -324,31 +336,64 @@ class _InventoryScreenState extends State<InventoryScreen>
     required AppLocalizations l10n,
     required bool isMasterDetail,
   }) {
+    // B2: Skeleton-Loader for first load.
+    //
+    // `shouldShowSkeleton` returns true when:
+    //   - cold-start race: `initialLoadAttempted == false` AND no data yet, OR
+    //   - still loading AND no data (covers re-load edge case too).
+    //
+    // Once the first load completes:
+    //   - with data → skeleton hides, list shows.
+    //   - without data → skeleton hides, EmptyState shows (no race flash).
+    final showSkeleton = shouldShowSkeleton(
+      isLoading: provider.isLoading,
+      hasData: provider.inventoryItems.isNotEmpty,
+      initialLoadAttempted: provider.initialLoadAttempted,
+    );
+
+    // Determine the actual list content (used when skeleton is NOT shown).
+    Widget listContent;
+    if (items.isEmpty) {
+      listContent = allStockEmpty
+          ? EmptyState(
+              key: const ValueKey('inventoryStockEmpty'),
+              icon: Icons.inventory_2_outlined,
+              title: l10n.inventoryEmpty,
+              subtitle: l10n.inventoryEmptyHint,
+              keySlug: 'inventoryEmpty',
+            )
+          : EmptyState(
+              key: const ValueKey('inventoryStockFilterEmpty'),
+              icon: Icons.search_off_outlined,
+              title: l10n.dealsEmpty,
+              subtitle: l10n.dealsEmptyHint,
+              keySlug: 'inventoryFilterEmpty',
+            );
+    } else {
+      listContent = isNarrow
+          ? _buildGroupedCardList(
+              context, provider, money, items, l10n, isMasterDetail)
+          : _buildGroupedTable(context, provider, money, items, l10n);
+    }
+
     return Column(
       children: [
         _buildHeader(context, provider, isNarrow, money, width),
         if (provider.criticalStockCount > 0)
           _LowStockBanner(count: provider.criticalStockCount),
         Expanded(
-          child: items.isEmpty
-              ? allStockEmpty
-                  ? EmptyState(
-                      icon: Icons.inventory_2_outlined,
-                      title: l10n.inventoryEmpty,
-                      subtitle: l10n.inventoryEmptyHint,
-                      keySlug: 'inventoryEmpty',
-                    )
-                  : EmptyState(
-                      icon: Icons.search_off_outlined,
-                      title: l10n.dealsEmpty,
-                      subtitle: l10n.dealsEmptyHint,
-                      keySlug: 'inventoryFilterEmpty',
-                    )
-              : isNarrow
-                  ? _buildGroupedCardList(
-                      context, provider, money, items, l10n, isMasterDetail)
-                  : _buildGroupedTable(
-                      context, provider, money, items, l10n),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: showSkeleton
+                ? const ListSkeleton(
+                    key: ValueKey('skeleton'),
+                    itemCount: 6,
+                  )
+                : KeyedSubtree(
+                    key: const ValueKey('content'),
+                    child: listContent,
+                  ),
+          ),
         ),
       ],
     );
@@ -418,7 +463,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
       // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
       key: const PageStorageKey<String>('inventoryStockGroupedList'),
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+      padding: const EdgeInsets.fromLTRB(AppTheme.space12, AppTheme.space4, AppTheme.space12, AppTheme.space16),
       itemCount: groups.length,
       itemBuilder: (context, gi) {
         final group = groups[gi];
@@ -426,7 +471,7 @@ class _InventoryScreenState extends State<InventoryScreen>
         final hasCritical = group.items.any((i) => i.isCritical);
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.only(bottom: AppTheme.space8),
           child: Card(
             margin: EdgeInsets.zero,
             clipBehavior: Clip.antiAlias,
@@ -464,7 +509,12 @@ class _InventoryScreenState extends State<InventoryScreen>
             ? const Color(0xFFD97706)
             : const Color(0xFF059669);
     final isSelected = isMasterDetail && _selectedItemId == item.id;
-    return InkWell(
+
+    // F4: Hero-Animation nur auf Phone + kein Master-Detail.
+    final useHero = !isMasterDetail && isPhoneViewport(context);
+    final heroTag = 'product-hero-${item.id}';
+
+    final inkWell = InkWell(
       onTap: () {
         // T3.3b: Im Master-Detail-Layout NICHT pushen — Detail-Spalte
         // re-rendert sich anhand `_selectedItemId`. Sonst (Phone/Tablet):
@@ -473,7 +523,10 @@ class _InventoryScreenState extends State<InventoryScreen>
         if (!isMasterDetail) {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => ProductDetailScreen(item: item),
+              builder: (_) => ProductDetailScreen(
+                item: item,
+                heroTag: heroTag,
+              ),
             ),
           );
         }
@@ -506,7 +559,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                     ),
                     onPressed: () => openUrlWithFallback(
                         context, resolveDiscordUrl(item.ticketUrl!)),
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(AppTheme.space4),
                     constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
               ],
@@ -597,7 +650,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                       onPressed: () =>
                           provider.deleteInventoryItem(item.id),
                       icon: const Icon(
-                        Icons.delete_outline,
+                        Icons.delete_outlined,
                         size: 18,
                         color: Color(0xFFDC2626),
                       ),
@@ -611,6 +664,9 @@ class _InventoryScreenState extends State<InventoryScreen>
         ),
       ),
     );
+
+    // F4: Phone-gated Hero wrapping für den grouped-Card-List-Pfad.
+    return useHero ? Hero(tag: heroTag, child: inkWell) : inkWell;
   }
 
   Widget _actionBtn({
@@ -663,7 +719,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
       // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
       key: const PageStorageKey<String>('inventoryStockGroupedTable'),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.fromLTRB(AppTheme.space16, 0, AppTheme.space16, AppTheme.space16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: groups.map((group) {
@@ -692,7 +748,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   }) {
     final hasCritical = group.items.any((i) => i.isCritical);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppTheme.space12),
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -799,12 +855,12 @@ class _InventoryScreenState extends State<InventoryScreen>
           ),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space8, vertical: AppTheme.space2),
             decoration: BoxDecoration(
               color: hasCritical
                   ? AppTheme.dangerBgOf(context)
                   : AppTheme.successBgOf(context),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
             ),
             child: Text(
               l10n.stockGroupTotalQuantity(totalQty),
@@ -826,7 +882,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     return Builder(builder: (context) {
       final l10n = AppLocalizations.of(context);
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        padding: const EdgeInsets.fromLTRB(AppTheme.space16, 0, AppTheme.space16, AppTheme.space8),
         child: Row(
           children: [
             Expanded(
@@ -862,33 +918,18 @@ class _InventoryScreenState extends State<InventoryScreen>
     final hit = provider.inventoryItems.where((i) => i.ean == code).firstOrNull;
     if (hit != null) {
       setState(() => _search = code);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(hit.name),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppFeedback.info(context, l10n.inventoryBarcodeFound(hit.name));
       return;
     }
     if (!context.mounted) return;
-    final create = await showDialog<bool>(
+    final create = await showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.inventoryNoEan),
-        content: Text('EAN: $code'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.inventoryCreate),
-          ),
-        ],
-      ),
+      title: l10n.inventoryNoEan,
+      message: 'EAN: $code',
+      confirmLabel: l10n.inventoryCreate,
+      cancelLabel: l10n.actionCancel,
     );
-    if (create == true && context.mounted) {
+    if (create && context.mounted) {
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -917,7 +958,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     if (isNarrow) {
       final cardWidth = (width - 32) / 2;
       return Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        padding: const EdgeInsets.fromLTRB(AppTheme.space12, AppTheme.space12, AppTheme.space12, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -934,7 +975,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       );
     }
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppTheme.space16),
       child: Row(
         children: [
           ...kpis.map((k) => Expanded(child: k)),
@@ -1034,12 +1075,12 @@ class _InventoryScreenState extends State<InventoryScreen>
 
     if (isNarrow) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+        padding: const EdgeInsets.fromLTRB(0, AppTheme.space12, 0, 0),
         child: SizedBox(
           height: 110,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space12),
             itemCount: cards.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (_, i) => SizedBox(width: 240, child: cards[i]),
@@ -1048,7 +1089,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       );
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.fromLTRB(AppTheme.space16, AppTheme.space16, AppTheme.space16, 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1143,7 +1184,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
       // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
       key: const PageStorageKey<String>('inventoryCardList'),
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+      padding: const EdgeInsets.fromLTRB(AppTheme.space12, AppTheme.space4, AppTheme.space12, AppTheme.space16),
       itemCount: items.length,
       separatorBuilder: (context, index) => const SizedBox(height: 8),
       itemBuilder: (context, i) {
@@ -1154,11 +1195,19 @@ class _InventoryScreenState extends State<InventoryScreen>
                 ? const Color(0xFFD97706)
                 : const Color(0xFF059669);
         final isSelected = isMasterDetail && _selectedItemId == item.id;
-        return Card(
+
+        // F4: Hero-Animation für Phone-Push → ProductDetailScreen.
+        // Nur wenn NICHT im Master-Detail-Layout UND Phone-Viewport.
+        // Auf Desktop (isMasterDetail=true ODER breiter Viewport) kein Hero,
+        // damit kein duplicate-Tag im Master-Detail-Tree entsteht.
+        final useHero = !isMasterDetail && isPhoneViewport(context);
+        final heroTag = 'product-hero-${item.id}';
+
+        final card = Card(
           color:
               isSelected ? AppTheme.accentLightOf(context) : null,
           child: InkWell(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             onTap: () {
               // T3.3b: Im Master-Detail-Layout NICHT pushen — Detail-Spalte
               // re-rendert sich anhand `_selectedItemId`. Sonst (Phone/Tablet):
@@ -1167,13 +1216,16 @@ class _InventoryScreenState extends State<InventoryScreen>
               if (!isMasterDetail) {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => ProductDetailScreen(item: item),
+                    builder: (_) => ProductDetailScreen(
+                      item: item,
+                      heroTag: heroTag,
+                    ),
                   ),
                 );
               }
             },
             child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppTheme.space12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1203,7 +1255,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                   children: [
                     Icon(Icons.circle, size: 10, color: color),
                     const SizedBox(width: 4),
-                    Text('${item.quantity} Stück', style: TextStyle(fontWeight: FontWeight.w800, color: color)),
+                    Text(AppLocalizations.of(context).inventoryPiecesCount(item.quantity), style: TextStyle(fontWeight: FontWeight.w800, color: color)),
                     const Spacer(),
                     Text(item.costPrice != null ? money.format(item.costPrice) : '-', style: const TextStyle(fontSize: 13)),
                   ],
@@ -1258,7 +1310,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                         IconButton(
                           tooltip: l10n.actionDelete,
                           onPressed: () => provider.deleteInventoryItem(item.id),
-                          icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
+                          icon: const Icon(Icons.delete_outlined, size: 18, color: Color(0xFFDC2626)),
                         ),
                       ]);
                     }),
@@ -1269,16 +1321,19 @@ class _InventoryScreenState extends State<InventoryScreen>
           ),
           ),
         );
+
+        // F4: Phone-gated Hero wrapping.
+        return useHero ? Hero(tag: heroTag, child: card) : card;
       },
     );
   }
 
   Widget _statusChip(BuildContext context, String status) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space8, vertical: AppTheme.space2),
       decoration: BoxDecoration(
         color: AppTheme.accentLightOf(context),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
       child: Text(localizeInventoryStatus(context, status),
           style: TextStyle(
@@ -1294,7 +1349,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
       // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
       key: const PageStorageKey<String>('inventoryTable'),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.fromLTRB(AppTheme.space16, 0, AppTheme.space16, AppTheme.space16),
       child: Card(
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -1385,8 +1440,40 @@ class _InventoryScreenState extends State<InventoryScreen>
             ),
             IconButton(
               tooltip: l10n.actionDelete,
-              onPressed: () => provider.deleteInventoryItem(item.id),
-              icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final successMsg = l10n.appFeedbackSuccessDefault;
+                final bgColor = AppTheme.successBgOf(context);
+                final textColor = AppTheme.successTextOf(context);
+                final confirmed = await showConfirmDialog(
+                  context: context,
+                  title: l10n.inventoryDeleteTitle,
+                  message: l10n.inventoryDeleteConfirm(item.name),
+                  confirmLabel: l10n.actionDelete,
+                  isDestructive: true,
+                );
+                if (confirmed) {
+                  await provider.deleteInventoryItem(item.id);
+                  messenger
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: bgColor,
+                      margin: const EdgeInsets.fromLTRB(AppTheme.space16, 0, AppTheme.space16, AppTheme.space16),
+                      content: Row(children: [
+                        Icon(Icons.check_circle_outline_rounded,
+                            color: textColor, size: 20),
+                        const SizedBox(width: 10),
+                        Text(successMsg,
+                            style: TextStyle(
+                                color: textColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500)),
+                      ]),
+                    ));
+                }
+              },
+              icon: Icon(Icons.delete_outlined, size: 18, color: AppTheme.dangerTextOf(context)),
             ),
           ],
         )),
@@ -1571,7 +1658,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
             alignment: Alignment.topLeft,
             child: Material(
               elevation: 4,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 240, maxWidth: 420),
                 child: ListView.builder(
@@ -1618,7 +1705,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
 
     return Dialog(
       insetPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          const EdgeInsets.symmetric(horizontal: AppTheme.space16, vertical: AppTheme.space24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
         child: Column(
@@ -1635,10 +1722,10 @@ class _InventoryDialogState extends State<_InventoryDialog> {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(AppTheme.space8),
                     decoration: BoxDecoration(
                       color: AppTheme.accentLightOf(context),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
                     child: Icon(Icons.inventory_2_outlined,
                         color: AppTheme.accentTextOf(context), size: 20),
@@ -1722,7 +1809,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                             alignment: Alignment.topLeft,
                             child: Material(
                               elevation: 4,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                               child: ConstrainedBox(
                                 constraints: const BoxConstraints(maxHeight: 200, maxWidth: 280),
                                 child: ListView.builder(
@@ -2190,12 +2277,12 @@ class _StockGroupTileState extends State<_StockGroupTile> {
                 // Summen-Chip
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      const EdgeInsets.symmetric(horizontal: AppTheme.space8, vertical: AppTheme.space2),
                   decoration: BoxDecoration(
                     color: hasCritical
                         ? AppTheme.dangerBgOf(context)
                         : AppTheme.successBgOf(context),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                   ),
                   child: Text(
                     l10n.stockGroupTotalQuantity(widget.totalQty),

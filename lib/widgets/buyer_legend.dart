@@ -38,6 +38,7 @@ class BuyerLegend extends StatelessWidget {
                     InkWell(
                       onTap: () => showDialog(
                         context: context,
+                        barrierDismissible: false,
                         builder: (_) => const AddEditBuyerDialog(),
                       ),
                       borderRadius: BorderRadius.circular(6),
@@ -127,6 +128,7 @@ class BuyerLegend extends StatelessWidget {
                           InkWell(
                             onTap: () => showDialog(
                               context: context,
+                              barrierDismissible: false,
                               builder: (_) => AddEditBuyerDialog(buyer: b),
                             ),
                             borderRadius: BorderRadius.circular(4),

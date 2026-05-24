@@ -210,4 +210,83 @@ void main() {
       expect(provider.lastError, isNull);
     });
   });
+
+  // ── B0 — initialLoadAttempted API ─────────────────────────────────────────
+
+  group('InboxProvider.initialLoadAttempted (B0)', () {
+    late _FakeRepository repo;
+    late InboxProvider provider;
+
+    setUp(() {
+      repo = _FakeRepository();
+      provider = InboxProvider(repository: repo);
+    });
+
+    tearDown(() => provider.dispose());
+
+    test('initialLoadAttempted is false before any refresh call', () {
+      expect(provider.initialLoadAttempted, isFalse);
+    });
+
+    test('initialLoadAttempted is true after successful refresh', () async {
+      await provider.refresh();
+      expect(provider.initialLoadAttempted, isTrue);
+    });
+
+    test('initialLoadAttempted is true after refresh throws (error path)',
+        () async {
+      final failingProvider =
+          InboxProvider(repository: _FailingInboxRepository());
+      addTearDown(failingProvider.dispose);
+
+      expect(failingProvider.initialLoadAttempted, isFalse);
+      await failingProvider.refresh();
+      expect(failingProvider.initialLoadAttempted, isTrue);
+      expect(failingProvider.lastError, isNotNull);
+    });
+
+    test('initialLoadAttempted resets to false after clear', () async {
+      await provider.refresh();
+      expect(provider.initialLoadAttempted, isTrue);
+
+      provider.clear();
+      expect(provider.initialLoadAttempted, isFalse);
+    });
+  });
+}
+
+// ── Fake-Repository that always throws on loadMailboxAccounts ────────────────
+
+class _FailingInboxRepository extends SupabaseRepository {
+  _FailingInboxRepository() : super.forTesting();
+
+  @override
+  String? get activeWorkspaceId => 'workspace-fail';
+
+  @override
+  Future<List<MailboxAccount>> loadMailboxAccounts() async =>
+      throw Exception('simulated network failure');
+
+  @override
+  Future<List<PendingDealSuggestion>> loadPendingSuggestions({
+    bool unresolvedOnly = true,
+    int limit = 100,
+    int daysBack = 30,
+  }) async =>
+      [];
+
+  @override
+  Future<List<ParsedMessage>> loadParsedMessages({
+    Set<ParsedMessageStatus>? statuses,
+    int limit = 100,
+    int daysBack = 30,
+  }) async =>
+      [];
+
+  @override
+  Future<List<InboxDismissal>> loadInboxDismissals() async => [];
+
+  @override
+  Future<Set<String>> loadInboxReads({required String workspaceId}) async =>
+      {};
 }

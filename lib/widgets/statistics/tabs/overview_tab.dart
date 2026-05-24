@@ -109,7 +109,10 @@ class OverviewTab extends StatelessWidget {
           title: '${l10n.statsLabelProfit} & ${l10n.statsLabelRevenue}',
           icon: Icons.show_chart,
           trailing: const ProfitChartLegend(),
-          child: ProfitLineChart(series: stats.timeSeries),
+          child: ProfitLineChart(
+            series: stats.timeSeries,
+            title: '${l10n.statsLabelProfit} & ${l10n.statsLabelRevenue}',
+          ),
         ),
         const SizedBox(height: 16),
         LayoutBuilder(
@@ -121,12 +124,16 @@ class OverviewTab extends StatelessWidget {
               child: MonthlyBarChart(
                 series: stats.timeSeries,
                 comparison: compare ? stats.previousTimeSeries : null,
+                title: l10n.statsProfitPerBucket,
               ),
             );
             final right = StatPanel(
               title: l10n.statsLabelMargin,
               icon: Icons.timeline,
-              child: MarginLineChart(series: stats.timeSeries),
+              child: MarginLineChart(
+                series: stats.timeSeries,
+                title: l10n.statsLabelMargin,
+              ),
             );
             if (wide) {
               return Row(
@@ -153,6 +160,7 @@ class OverviewTab extends StatelessWidget {
               child: DonutChart(
                 data: byBuyer,
                 centerLabel: l10n.statsTotal,
+                title: l10n.statsProfitByBuyer,
               ),
             );
             final right = StatPanel(
@@ -161,6 +169,7 @@ class OverviewTab extends StatelessWidget {
               child: DonutChart(
                 data: byShop,
                 centerLabel: l10n.statsTotal,
+                title: l10n.statsRevenueByShop,
               ),
             );
             if (wide) {

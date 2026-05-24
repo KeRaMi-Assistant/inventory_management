@@ -9,6 +9,7 @@ import '../models/inbox_message.dart';
 import '../models/live_tracking_status.dart';
 import '../models/tracking_confidence.dart';
 import '../providers/inbox_provider.dart';
+import 'app_feedback.dart';
 import 'tracking_status_block.dart';
 
 /// Vollbild-fähiges Bottom-Sheet, das Header + extrahierte Felder einer
@@ -147,7 +148,7 @@ class InboxMessageDetails extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              message.subject ?? '— ohne Betreff —',
+              message.subject ?? AppLocalizations.of(ctx).inboxDetailNoSubject,
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
@@ -156,18 +157,24 @@ class InboxMessageDetails extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Von: ${message.fromAddress ?? "—"}',
+              AppLocalizations.of(ctx).inboxDetailFrom(
+                message.fromAddress ?? '—',
+              ),
               style: TextStyle(
                   fontSize: 12, color: AppTheme.textSecondaryOf(ctx)),
             ),
             Text(
-              'Empfangen: ${df.format(message.receivedAt.toLocal())}',
+              AppLocalizations.of(ctx).inboxDetailReceived(
+                df.format(message.receivedAt.toLocal()),
+              ),
               style: TextStyle(
                   fontSize: 12, color: AppTheme.textSecondaryOf(ctx)),
             ),
             if (message.processedAt != null)
               Text(
-                'Verarbeitet: ${df.format(message.processedAt!.toLocal())}',
+                AppLocalizations.of(ctx).inboxDetailProcessed(
+                  df.format(message.processedAt!.toLocal()),
+                ),
                 style: TextStyle(
                     fontSize: 12, color: AppTheme.textSecondaryOf(ctx)),
               ),
@@ -262,6 +269,9 @@ class InboxMessageDetails extends StatelessWidget {
     PendingDealSuggestion sug,
   ) async {
     final l10n = AppLocalizations.of(context);
+    // Capture messenger before showDialog so the SnackBar survives the
+    // bottom-sheet context lifecycle (Dialog-Context-Pattern).
+    final messenger = ScaffoldMessenger.of(context);
     final ctrl = TextEditingController(text: sug.tracking ?? '');
     final newValue = await showDialog<String>(
       context: context,
@@ -297,14 +307,13 @@ class InboxMessageDetails extends StatelessWidget {
           .updateSuggestionTrackingManually(sug.id, newValue);
       if (context.mounted) Navigator.pop(context);
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).trackingUpdateError(e.toString())),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      debugPrint('updateSuggestionTrackingManually failed: $e');
+      if (!context.mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.trackingUpdateFailed,
+        rootContext: context,
+      );
     }
   }
 
@@ -312,20 +321,22 @@ class InboxMessageDetails extends StatelessWidget {
     BuildContext context,
     PendingDealSuggestion sug,
   ) async {
+    // Capture messenger before the async gap (Dialog-Context-Pattern).
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
     try {
       await context
           .read<InboxProvider>()
           .acceptSuggestionTrackingAsManual(sug.id);
       if (context.mounted) Navigator.pop(context);
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).trackingAcceptError(e.toString())),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      debugPrint('acceptSuggestionTrackingAsManual failed: $e');
+      if (!context.mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.trackingAcceptFailed,
+        rootContext: context,
+      );
     }
   }
 
@@ -333,20 +344,22 @@ class InboxMessageDetails extends StatelessWidget {
     BuildContext context,
     PendingDealSuggestion sug,
   ) async {
+    // Capture messenger before the async gap (Dialog-Context-Pattern).
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
     try {
       await context
           .read<InboxProvider>()
           .discardSuggestionTracking(sug.id);
       if (context.mounted) Navigator.pop(context);
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).trackingDiscardError(e.toString())),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      debugPrint('discardSuggestionTracking failed: $e');
+      if (!context.mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.trackingDiscardFailed,
+        rootContext: context,
+      );
     }
   }
 
@@ -372,32 +385,37 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final (label, color) = switch (status) {
       ParsedMessageStatus.matched =>
-        ('Aktualisiert', AppTheme.successTextOf(context)),
+        (l10n.inboxStatusMatched, AppTheme.successTextOf(context)),
       ParsedMessageStatus.suggested =>
-        ('Vorschlag', AppTheme.accentTextOf(context)),
+        (l10n.inboxStatusSuggested, AppTheme.accentTextOf(context)),
       ParsedMessageStatus.unclassified =>
-        ('Unklassifiziert', AppTheme.warningTextOf(context)),
+        (l10n.inboxStatusUnclassified, AppTheme.warningTextOf(context)),
       ParsedMessageStatus.failed =>
-        ('Fehler', AppTheme.dangerTextOf(context)),
+        (l10n.inboxStatusFailed, AppTheme.dangerTextOf(context)),
       ParsedMessageStatus.dismissed =>
-        ('Verworfen', AppTheme.textMutedOf(context)),
+        (l10n.inboxStatusDismissed, AppTheme.textMutedOf(context)),
       ParsedMessageStatus.pending =>
-        ('In Arbeit', AppTheme.textSecondaryOf(context)),
+        (l10n.inboxStatusPending, AppTheme.textSecondaryOf(context)),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withAlpha(30),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
+    return Semantics(
+      label: 'Status: $label',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withAlpha(30),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
         ),
       ),
     );
@@ -468,7 +486,7 @@ class _DetailRow extends StatelessWidget {
               padding: EdgeInsets.zero,
               constraints:
                   const BoxConstraints.tightFor(width: 28, height: 28),
-              tooltip: 'Kopieren',
+              tooltip: AppLocalizations.of(context).actionCopy,
               onPressed: () => Clipboard.setData(ClipboardData(text: value)),
             ),
         ],

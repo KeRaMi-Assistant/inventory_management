@@ -299,7 +299,7 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
       icon: Icons.person_outline_rounded,
       iconColor: AppTheme.info,
       title: b.name,
-      subtitle: 'Käufer · Deals filtern',
+      subtitle: AppLocalizations.of(context).globalSearchBuyerFilterSubtitle,
       onTap: () {
         final filters = context.read<FilterProvider>();
         filters
@@ -387,7 +387,7 @@ class _SearchField extends StatelessWidget {
         autofocus: true,
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.search, size: 20),
-          hintText: 'Suchen über Deals, Lager, Tickets, Käufer, Lieferanten…',
+          hintText: AppLocalizations.of(context).globalSearchHint,
           hintStyle: const TextStyle(fontSize: 14),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           contentPadding:

@@ -7,6 +7,7 @@ import '../models/stocktake.dart';
 import '../models/warehouse.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/app_screen_scaffold.dart';
 import 'stocktake_detail_screen.dart';
 
@@ -48,6 +49,8 @@ class StocktakeScreen extends StatelessWidget {
         final fab = canEdit
             ? FloatingActionButton.extended(
                 key: const Key('stocktakeNewFab'),
+                // D4: tooltip → explicit Semantics-Label for screen readers.
+                tooltip: l10n.stocktakeNew,
                 onPressed: () => _openNewDialog(context, provider),
                 icon: const Icon(Icons.add, size: 18),
                 label: Text(l10n.stocktakeNew),
@@ -109,13 +112,7 @@ class StocktakeScreen extends StatelessWidget {
     } catch (e) {
       if (!context.mounted) return;
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.stocktakeStartError),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppTheme.danger,
-        ),
-      );
+      AppFeedback.error(context, l10n.stocktakeStartError);
     }
   }
 }
@@ -261,18 +258,22 @@ class StocktakeStatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final (label, bg, fg) = _resolve(context, status, l10n);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: fg,
+    return Semantics(
+      label: 'Status: $label',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: fg,
+          ),
         ),
       ),
     );

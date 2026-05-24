@@ -70,6 +70,22 @@ class _FakeRepository extends SupabaseRepository {
   }
 }
 
+// ── Fake-Repository that always throws on loadAll ────────────────────────────
+
+class _FailingRepository extends SupabaseRepository {
+  _FailingRepository() : super.forTesting();
+
+  @override
+  String? get activeWorkspaceId => 'ws-fail';
+
+  @override
+  Future<CloudSnapshot> loadAll() async =>
+      throw Exception('simulated network failure');
+
+  @override
+  Future<List<ProductStock>> loadProductStock(String workspaceId) async => [];
+}
+
 // ── Hilfsfunktionen ──────────────────────────────────────────────────────────
 
 Product _makeProduct({
@@ -408,6 +424,40 @@ void main() {
       // darf man ihn nicht für produkt-verknüpfte Rows verwenden.
       // Der Getter selbst bleibt unverändert.
       expect(linked.isCritical, isTrue);
+    });
+  });
+
+  // ── B0 — initialLoadAttempted API ────────────────────────────────────────────
+
+  group('InventoryProvider.initialLoadAttempted (B0)', () {
+    test('initialLoadAttempted is false before any loadData call', () {
+      expect(provider.initialLoadAttempted, isFalse);
+    });
+
+    test('initialLoadAttempted is true after successful loadData', () async {
+      await provider.loadData();
+      expect(provider.initialLoadAttempted, isTrue);
+    });
+
+    test('initialLoadAttempted is true after loadData throws (error path)',
+        () async {
+      // Override to throw on loadAll.
+      final failingRepo = _FailingRepository();
+      final failingProvider = InventoryProvider(repository: failingRepo);
+      addTearDown(failingProvider.dispose);
+
+      expect(failingProvider.initialLoadAttempted, isFalse);
+      await failingProvider.loadData();
+      expect(failingProvider.initialLoadAttempted, isTrue);
+      expect(failingProvider.lastError, isNotNull);
+    });
+
+    test('initialLoadAttempted resets to false after clearLocalState', () async {
+      await provider.loadData();
+      expect(provider.initialLoadAttempted, isTrue);
+
+      provider.clearLocalState();
+      expect(provider.initialLoadAttempted, isFalse);
     });
   });
 }

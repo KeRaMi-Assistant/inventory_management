@@ -2,26 +2,35 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../services/statistics_service.dart';
 
 /// Linien-Chart mit zwei Linien: Umsatz (blau) und Profit (grün).
 class ProfitLineChart extends StatelessWidget {
   final List<TimeBucket> series;
   final double height;
+  /// Optionaler Titel — wird als Teil des Semantics-Labels für Screen-Reader genutzt.
+  final String? title;
   const ProfitLineChart({
     super.key,
     required this.series,
     this.height = 240,
+    this.title,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (series.isEmpty) {
-      return SizedBox(
-        height: height,
-        child: const Center(
-          child: Text('Keine Daten im Zeitraum.',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+      return Semantics(
+        label: l10n.semanticsChartLoading,
+        excludeSemantics: true,
+        child: SizedBox(
+          height: height,
+          child: const Center(
+            child: Text('Keine Daten im Zeitraum.',
+                style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+          ),
         ),
       );
     }
@@ -33,6 +42,7 @@ class ProfitLineChart extends StatelessWidget {
     final profitSpots = <FlSpot>[];
     double maxY = 0;
     double minY = 0;
+    TimeBucket? topRevenueBucket;
     for (var i = 0; i < series.length; i++) {
       final b = series[i];
       revenueSpots.add(FlSpot(i.toDouble(), b.revenue));
@@ -40,11 +50,24 @@ class ProfitLineChart extends StatelessWidget {
       if (b.revenue > maxY) maxY = b.revenue;
       if (b.profit > maxY) maxY = b.profit;
       if (b.profit < minY) minY = b.profit;
+      if (topRevenueBucket == null || b.revenue > topRevenueBucket.revenue) {
+        topRevenueBucket = b;
+      }
     }
     if (maxY == 0) maxY = 100;
     final yPadding = (maxY - minY) * 0.1;
 
-    return SizedBox(
+    final semanticsLabel = l10n.semanticsChartLine(
+      title ?? '',
+      series.length,
+      topRevenueBucket != null ? money.format(topRevenueBucket.revenue) : '—',
+      topRevenueBucket != null ? dateFmt.format(topRevenueBucket.date) : '—',
+    );
+
+    return Semantics(
+      label: semanticsLabel,
+      excludeSemantics: true,
+      child: SizedBox(
       height: height,
       child: LineChart(
         LineChartData(
@@ -149,7 +172,8 @@ class ProfitLineChart extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ), // SizedBox
+    ); // Semantics
   }
 
   DateFormat _dateFormatFor(Granularity g) {

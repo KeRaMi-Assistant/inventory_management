@@ -62,10 +62,25 @@ class InboxProvider extends ChangeNotifier {
   /// IDs aller parsed_messages, die der eingeloggte User bereits gesehen hat.
   Set<String> _readMessageIds = {};
 
+  /// Vorschlag-IDs, die lokal als "zu-verwerfen" markiert sind, aber noch
+  /// nicht per DB-Call committed wurden. Wird verwendet für Optimistic-Undo.
+  final Set<String> _pendingRejectIds = {};
+
+  /// Timers, die nach Ablauf den DB-Commit auslösen (4 Sek. Default).
+  final Map<String, Timer> _pendingRejectTimers = {};
+
   bool _loading = false;
+  bool _initialLoadAttempted = false;
   Object? _lastError;
 
   bool get isLoading => _loading;
+
+  /// True as soon as the first [refresh] call has returned — regardless of
+  /// whether it succeeded or failed. Used by skeleton-loading logic to
+  /// distinguish the cold-start race (provider not yet fired) from the
+  /// empty-state after a completed load.
+  bool get initialLoadAttempted => _initialLoadAttempted;
+
   Object? get lastError => _lastError;
 
   /// Wann die letzten DB-Daten reingekommen sind. Der Countdown der UI
@@ -74,8 +89,15 @@ class InboxProvider extends ChangeNotifier {
   DateTime get lastRefreshedAt => _lastRefreshedAt;
 
   List<MailboxAccount> get accounts => List.unmodifiable(_accounts);
-  List<PendingDealSuggestion> get pendingSuggestions =>
-      List.unmodifiable(_suggestions);
+
+  /// Sichtbare Vorschläge — ohne die, die gerade optimistisch als verworfen
+  /// markiert sind (pending-reject via [rejectSuggestionWithUndo]).
+  List<PendingDealSuggestion> get pendingSuggestions {
+    if (_pendingRejectIds.isEmpty) return List.unmodifiable(_suggestions);
+    return List.unmodifiable(
+      _suggestions.where((s) => !_pendingRejectIds.contains(s.id)),
+    );
+  }
   List<ParsedMessage> get recentMessages => List.unmodifiable(_recent);
 
   // ── Read-Status-Helpers ──────────────────────────────────────────────────
@@ -229,6 +251,7 @@ class InboxProvider extends ChangeNotifier {
       if (kDebugMode) debugPrint('InboxProvider.refresh failed: $e');
     } finally {
       _loading = false;
+      _initialLoadAttempted = true;
       notifyListeners();
     }
   }
@@ -830,7 +853,105 @@ class InboxProvider extends ChangeNotifier {
 
   static const Object _kSentinel = Object();
 
+  // ── Optimistic-Undo: Suggestion-Verwerfen ───────────────────────────────
+
+  /// Markiert [suggestionId] lokal als pending-reject und startet einen Timer,
+  /// der nach [delay] den echten DB-Commit ([markSuggestionRejected]) ausführt.
+  ///
+  /// Solange der Timer läuft, filtert [pendingSuggestions] die Suggestion
+  /// aus der UI-Liste heraus — sie ist damit sofort "weg", ohne DB-Touch.
+  ///
+  /// Aufruf von [cancelPendingReject] stoppt den Timer und lässt die
+  /// Suggestion wieder erscheinen (Undo).
+  ///
+  /// Bei Fehler im Delayed-Commit wird der Marker trotzdem entfernt, damit
+  /// die Suggestion wieder sichtbar wird — der User kann es erneut versuchen.
+  void rejectSuggestionWithUndo(
+    String suggestionId, {
+    Duration delay = const Duration(seconds: 4),
+  }) {
+    // Kein Doppel-Commit: falls schon pending, ignorieren.
+    if (_pendingRejectIds.contains(suggestionId)) return;
+    _pendingRejectIds.add(suggestionId);
+    notifyListeners();
+
+    final timer = Timer(delay, () async {
+      _pendingRejectTimers.remove(suggestionId);
+      try {
+        await markSuggestionRejected(suggestionId);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('InboxProvider: delayed reject commit failed: $e');
+        }
+      } finally {
+        _pendingRejectIds.remove(suggestionId);
+        notifyListeners();
+      }
+    });
+    _pendingRejectTimers[suggestionId] = timer;
+  }
+
+  /// Bricht den pendenden Reject für [suggestionId] ab (Undo).
+  /// Der DB-Commit wird NICHT ausgeführt — die Suggestion erscheint
+  /// sofort wieder in [pendingSuggestions].
+  void cancelPendingReject(String suggestionId) {
+    final timer = _pendingRejectTimers.remove(suggestionId);
+    timer?.cancel();
+    if (_pendingRejectIds.remove(suggestionId)) {
+      notifyListeners();
+    }
+  }
+
+  // ── Optimistic-Undo: Discard-Filter leeren ──────────────────────────────
+
+  /// Leert den Verworfen-Filter rein lokal und gibt einen Snapshot des
+  /// vorherigen Zustands zurück.
+  ///
+  /// Der DB-DELETE (`clearInboxDismissals`) muss NICHT sofort aufgerufen
+  /// werden — die UI zeigt die Dismissals jetzt als nicht mehr aktiv an.
+  /// Mit [restoreDismissals] kann der vorherige Zustand wiederhergestellt
+  /// werden (Undo, kein DB-Touch).
+  ///
+  /// Falls kein Undo gedrückt wird, ruft die UI [clearDismissals] auf dem
+  /// Provider auf, sobald die SnackBar geschlossen wird.
+  ({Set<String> keys, int count}) clearDismissalsOptimistic() {
+    final snapshot = (keys: _dismissalKeys, count: _dismissalCount);
+    _dismissalKeys = const {};
+    _dismissalCount = 0;
+    _recomputeViews();
+    notifyListeners();
+    return snapshot;
+  }
+
+  /// Stellt einen vorherigen Dismissal-Snapshot wieder her (Undo nach
+  /// [clearDismissalsOptimistic]).
+  void restoreDismissals(Set<String> keys, int count) {
+    _dismissalKeys = keys;
+    _dismissalCount = count;
+    _recomputeViews();
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    // Alle laufenden pending-reject Timers abbrechen, damit keine
+    // DB-Calls nach dispose() mehr gefeuert werden.
+    for (final timer in _pendingRejectTimers.values) {
+      timer.cancel();
+    }
+    _pendingRejectTimers.clear();
+    _pendingRejectIds.clear();
+    super.dispose();
+  }
+
   void clear() {
+    // Alle pending-reject Timers abbrechen.
+    for (final timer in _pendingRejectTimers.values) {
+      timer.cancel();
+    }
+    _pendingRejectTimers.clear();
+    _pendingRejectIds.clear();
+
     _accounts = [];
     _suggestionsRaw = [];
     _suggestions = [];
@@ -842,6 +963,7 @@ class InboxProvider extends ChangeNotifier {
     _shopFilter = null;
     _statusFilter = null;
     _lastError = null;
+    _initialLoadAttempted = false;
     notifyListeners();
   }
 }

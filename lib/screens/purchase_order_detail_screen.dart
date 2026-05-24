@@ -9,7 +9,9 @@ import '../models/product.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/purchase_order_pdf_service.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/barcode_scanner_sheet.dart';
+import '../widgets/confirm_dialog.dart';
 import 'purchase_orders_screen.dart' show PurchaseOrderStatusBadge;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,7 +92,6 @@ class _PurchaseOrderDetailScreenState
 
   Future<void> _bookGoodsReceipt() async {
     final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     final provider = Provider.of<InventoryProvider>(context, listen: false);
     final items = _items;
     if (items == null || items.isEmpty) return;
@@ -103,25 +104,14 @@ class _PurchaseOrderDetailScreenState
     }
 
     if (toBook.isEmpty) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.purchaseOrderItemsEmpty),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppFeedback.info(context, l10n.purchaseOrderItemsEmpty);
       return;
     }
 
     // Prüfe Produkt-Verknüpfung für alle zu buchenden Positionen
     for (final item in toBook.keys) {
       if (item.productId == null) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.goodsReceiptNoProduct),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppTheme.danger,
-          ),
-        );
+        AppFeedback.error(context, l10n.goodsReceiptNoProduct);
         return;
       }
     }
@@ -147,12 +137,7 @@ class _PurchaseOrderDetailScreenState
           }
         });
 
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.goodsReceiptSuccess),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppFeedback.success(context, l10n.goodsReceiptSuccess);
 
         // Reload order to get updated status
         final refreshed =
@@ -165,21 +150,15 @@ class _PurchaseOrderDetailScreenState
       // Rohe Exception nicht im UI rendern (Information-Disclosure) —
       // generische lokalisierte Meldung, Detail nur ins Debug-Log.
       debugPrint('bookGoodsReceipt failed: $e');
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.goodsReceiptError),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppTheme.danger,
-        ),
-      );
+      if (mounted) AppFeedback.error(context, l10n.goodsReceiptError);
     }
   }
 
   // ── Barcode-Einsprung ──────────────────────────────────────────────────────
 
-  Future<void> _scanBarcode(BuildContext context) async {
+  Future<void> _scanBarcode() async {
+    // Use State's own context — safe because all async gaps check `mounted`.
     final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     final provider = Provider.of<InventoryProvider>(context, listen: false);
 
     final code = await BarcodeScannerSheet.show(
@@ -203,12 +182,7 @@ class _PurchaseOrderDetailScreenState
     }
 
     if (matchedProduct == null) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.purchaseOrderScanNoMatch),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppFeedback.info(context, l10n.purchaseOrderScanNoMatch);
       return;
     }
 
@@ -216,18 +190,12 @@ class _PurchaseOrderDetailScreenState
     final mp = matchedProduct;
     final matchedItem =
         items.where((i) => i.productId == mp.id).firstOrNull;
-    if (matchedItem != null && mounted) {
+    if (matchedItem != null) {
       setState(() {
         final current = _receivedQty[matchedItem.id] ?? 0;
         _receivedQty[matchedItem.id] = current + 1;
       });
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('${mp.name} +1'),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      AppFeedback.info(context, l10n.purchaseOrderScanItemAdded(mp.name));
     }
   }
 
@@ -235,24 +203,16 @@ class _PurchaseOrderDetailScreenState
 
   Future<void> _setStatus(PurchaseOrderStatus newStatus) async {
     final l10n = AppLocalizations.of(context);
+    // Capture messenger before dialog opens (dialog-context pattern).
     final messenger = ScaffoldMessenger.of(context);
     final provider = Provider.of<InventoryProvider>(context, listen: false);
 
-    final ok = await showDialog<bool>(
+    final ok = await showConfirmDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(l10n.purchaseOrderStatusChangeConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.actionConfirm),
-          ),
-        ],
-      ),
+      title: l10n.purchaseOrderStatusChangeConfirm,
+      message: l10n.purchaseOrderStatusChangeBody,
+      confirmLabel: l10n.actionConfirm,
+      cancelLabel: l10n.actionCancel,
     );
     if (ok != true || !mounted) return;
 
@@ -265,13 +225,13 @@ class _PurchaseOrderDetailScreenState
     } catch (e) {
       // Rohe Exception nicht im UI rendern — generische Meldung.
       debugPrint('setStatus failed: $e');
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.purchaseOrderStatusChangeError),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppTheme.danger,
-        ),
-      );
+      if (mounted) {
+        AppFeedback.errorOn(
+          messenger,
+          l10n.purchaseOrderStatusChangeError,
+          rootContext: context,
+        );
+      }
     }
   }
 
@@ -279,7 +239,6 @@ class _PurchaseOrderDetailScreenState
 
   Future<void> _exportPdf() async {
     final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     final provider = Provider.of<InventoryProvider>(context, listen: false);
 
     final supplier = _order.supplierId != null
@@ -331,13 +290,7 @@ class _PurchaseOrderDetailScreenState
       // Rohe Exception nicht im UI rendern — generische Meldung.
       debugPrint('exportPdf failed: $e');
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.purchaseOrderPdfExportError),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppTheme.danger,
-          ),
-        );
+        AppFeedback.error(context, l10n.purchaseOrderPdfExportError);
       }
     }
   }
@@ -349,26 +302,13 @@ class _PurchaseOrderDetailScreenState
     final navigator = Navigator.of(context);
     final provider = Provider.of<InventoryProvider>(context, listen: false);
 
-    final ok = await showDialog<bool>(
+    final ok = await showConfirmDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(l10n.purchaseOrderDelete),
-        content: Text(l10n.purchaseOrderDeletePrompt(_order.orderNumber)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.danger,
-              foregroundColor: Colors.white, // justified: white on danger-red
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.actionDelete),
-          ),
-        ],
-      ),
+      title: l10n.purchaseOrderDelete,
+      message: l10n.purchaseOrderDeletePrompt(_order.orderNumber),
+      confirmLabel: l10n.actionDelete,
+      cancelLabel: l10n.actionCancel,
+      isDestructive: true,
     );
     if (ok != true || !mounted) return;
 
@@ -472,7 +412,7 @@ class _PurchaseOrderDetailScreenState
                       child: IconButton(
                         icon: const Icon(Icons.qr_code_scanner_outlined),
                         tooltip: l10n.purchaseOrderScanBarcode,
-                        onPressed: () => _scanBarcode(context),
+                        onPressed: _scanBarcode,
                       ),
                     ),
                 ],

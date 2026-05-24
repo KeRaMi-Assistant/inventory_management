@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/deal_comment.dart';
 import '../providers/auth_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/error_messages.dart';
 
 /// Notiz-/Kommentar-Thread, der unter einem persistierten Deal angezeigt wird.
 /// Lädt beim ersten Build alle Kommentare zum Deal und erlaubt das Hinzufügen
@@ -48,7 +49,7 @@ class _DealCommentsSectionState extends State<DealCommentsSection> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = sanitizeError(e));
     }
   }
 
@@ -72,8 +73,9 @@ class _DealCommentsSectionState extends State<DealCommentsSection> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(
-                AppLocalizations.of(context).dealCommentSaveFailed('$e'))),
+          content: Text(AppLocalizations.of(context)
+              .dealCommentSaveFailed(sanitizeError(e))),
+        ),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -110,7 +112,9 @@ class _DealCommentsSectionState extends State<DealCommentsSection> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.dealCommentDeleteFailed('$e'))),
+        SnackBar(
+          content: Text(l10n.dealCommentDeleteFailed(sanitizeError(e))),
+        ),
       );
     }
   }

@@ -24,8 +24,11 @@ import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../services/push_service.dart';
 import '../services/workspace_service.dart';
+import '../utils/error_messages.dart';
 import '../utils/role_labels.dart';
 import '../widgets/add_edit_buyer_dialog.dart';
+import '../widgets/app_feedback.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/invite_member_dialog.dart';
 import '../widgets/member_remove_confirm_dialog.dart';
 import '../widgets/workspace_switcher.dart';
@@ -56,11 +59,11 @@ class SettingsScreen extends StatelessWidget {
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white60,
                 tabs: [
-                  Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.settingsTabBuyers),
+                  Tab(icon: const Icon(Icons.people_outlined, size: 18), text: l10n.settingsTabBuyers),
                   Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
                   Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
                   Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
-                  const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
+                  Tab(icon: const Icon(Icons.mail_outlined, size: 18), text: l10n.settingsTabMailbox),
                   Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
                   Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
                   Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
@@ -77,11 +80,11 @@ class SettingsScreen extends StatelessWidget {
                 unselectedLabelColor: AppTheme.textMutedOf(context),
                 dividerColor: AppTheme.borderOf(context),
                 tabs: [
-                  Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.settingsTabBuyers),
+                  Tab(icon: const Icon(Icons.people_outlined, size: 18), text: l10n.settingsTabBuyers),
                   Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
                   Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
                   Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
-                  const Tab(icon: Icon(Icons.mail_outline, size: 18), text: 'Postfach'),
+                  Tab(icon: const Icon(Icons.mail_outlined, size: 18), text: l10n.settingsTabMailbox),
                   Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
                   Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
                   Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
@@ -148,8 +151,11 @@ class _BuyersTab extends StatelessWidget {
           backgroundColor: AppTheme.bgAppOf(context),
           floatingActionButton: FloatingActionButton.extended(
             heroTag: 'addBuyer',
+            // D4: tooltip → explicit Semantics-Label for screen readers.
+            tooltip: l10n.buyersAdd,
             onPressed: () => showDialog(
               context: context,
+              barrierDismissible: false,
               builder: (_) => const AddEditBuyerDialog(),
             ),
             icon: const Icon(Icons.person_add_outlined),
@@ -232,9 +238,10 @@ class _BuyersTab extends StatelessWidget {
                             IconButton(
                               icon:
                                   const Icon(Icons.edit_outlined, size: 20),
-                              color: const Color(0xFF64748B),
+                              color: AppTheme.textMutedOf(context),
                               onPressed: () => showDialog(
                                 context: context,
+                                barrierDismissible: false,
                                 builder: (_) =>
                                     AddEditBuyerDialog(buyer: buyer),
                               ),
@@ -242,7 +249,7 @@ class _BuyersTab extends StatelessWidget {
                             IconButton(
                               icon: const Icon(Icons.delete_outline,
                                   size: 20),
-                              color: Colors.red[400],
+                              color: AppTheme.dangerTextOf(context),
                               onPressed: () => _confirmDeleteBuyer(
                                   context, provider, buyer.id, buyer.name),
                             ),
@@ -257,31 +264,38 @@ class _BuyersTab extends StatelessWidget {
     );
   }
 
-  void _confirmDeleteBuyer(BuildContext context, InventoryProvider provider,
-      String id, String name) {
+  Future<void> _confirmDeleteBuyer(BuildContext context,
+      InventoryProvider provider, String id, String name) async {
     final l10n = AppLocalizations.of(context);
-    showDialog(
+    // Capture before async gap (Dialog-Context-Pattern).
+    final messenger = ScaffoldMessenger.of(context);
+    final successMsg = l10n.buyersDeletedSuccess;
+    final errorMsg = l10n.buyersDeleteFailed;
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(l10n.buyersDeleteTitle),
-        content: Text(l10n.buyersDeleteConfirm(name)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.actionCancel)),
-          ElevatedButton(
-            onPressed: () {
-              provider.deleteBuyer(id);
-              Navigator.pop(context);
-            },
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(l10n.actionDelete,
-                style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      title: l10n.buyersDeleteTitle,
+      message: l10n.buyersDeleteConfirm(name),
+      confirmLabel: l10n.actionDelete,
+      isDestructive: true,
     );
+    if (confirmed != true) return;
+    try {
+      await provider.deleteBuyer(id);
+      // Use messenger directly — context is a method parameter (no mounted guard).
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(successMsg),
+          behavior: SnackBarBehavior.floating,
+        ));
+    } catch (_) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(errorMsg),
+          behavior: SnackBarBehavior.floating,
+        ));
+    }
   }
 }
 
@@ -297,21 +311,23 @@ class _ShopsTab extends StatelessWidget {
     BuildContext context,
     InventoryProvider provider,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
     try {
       final result = await provider.seedAmazonShops();
-      messenger.showSnackBar(SnackBar(
-        content: Text(result.added == 0
-            ? 'Amazon-Shops sind bereits vorhanden (${result.skipped} übersprungen).'
-            : '${result.added} Amazon-Shops hinzugefügt'
-                '${result.skipped > 0 ? ', ${result.skipped} bereits vorhanden' : ''}.'),
-        behavior: SnackBarBehavior.floating,
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text('Fehler beim Hinzufügen: $e'),
-        behavior: SnackBarBehavior.floating,
-      ));
+      if (!context.mounted) return;
+      final String message;
+      if (result.added == 0) {
+        message = l10n.settingsShopsAmazonAlreadyPresent(result.skipped);
+      } else {
+        final suffix = result.skipped > 0
+            ? l10n.settingsShopsAmazonSkippedSuffix(result.skipped)
+            : '';
+        message = l10n.settingsShopsAmazonAdded(result.added, suffix);
+      }
+      AppFeedback.success(context, message);
+    } catch (_) {
+      if (!context.mounted) return;
+      AppFeedback.error(context, l10n.settingsShopsAddError);
     }
   }
 
@@ -331,8 +347,11 @@ class _ShopsTab extends StatelessWidget {
           backgroundColor: AppTheme.bgAppOf(context),
           floatingActionButton: FloatingActionButton.extended(
             heroTag: 'addShop',
+            // D4: tooltip → explicit Semantics-Label for screen readers.
+            tooltip: l10n.shopsAdd,
             onPressed: () => showDialog(
               context: context,
+              barrierDismissible: false,
               builder: (_) => const AddEditShopDialog(),
             ),
             icon: const Icon(Icons.add_business_outlined),
@@ -365,12 +384,13 @@ class _ShopsTab extends StatelessWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.store_outlined,
-                                size: 52, color: Color(0xFFCBD5E1)),
+                            Icon(Icons.store_outlined,
+                                size: 52,
+                                color: AppTheme.textDisabledOf(context)),
                             const SizedBox(height: 12),
                             Text(l10n.shopsEmpty,
-                                style:
-                                    const TextStyle(color: Color(0xFF94A3B8))),
+                                style: TextStyle(
+                                    color: AppTheme.textMutedOf(context))),
                           ],
                         ),
                       )
@@ -382,6 +402,7 @@ class _ShopsTab extends StatelessWidget {
                               shops: amazonShops,
                               onEdit: (shop) => showDialog(
                                 context: context,
+                                barrierDismissible: false,
                                 builder: (_) => AddEditShopDialog(shop: shop),
                               ),
                               onDelete: (shop) => _confirmDeleteShop(
@@ -394,6 +415,7 @@ class _ShopsTab extends StatelessWidget {
                               shop: shop,
                               onEdit: () => showDialog(
                                 context: context,
+                                barrierDismissible: false,
                                 builder: (_) => AddEditShopDialog(shop: shop),
                               ),
                               onDelete: () => _confirmDeleteShop(
@@ -411,31 +433,38 @@ class _ShopsTab extends StatelessWidget {
     );
   }
 
-  void _confirmDeleteShop(BuildContext context, InventoryProvider provider,
-      String id, String name) {
+  Future<void> _confirmDeleteShop(BuildContext context,
+      InventoryProvider provider, String id, String name) async {
     final l10n = AppLocalizations.of(context);
-    showDialog(
+    // Capture before async gap (Dialog-Context-Pattern).
+    final messenger = ScaffoldMessenger.of(context);
+    final successMsg = l10n.shopsDeletedSuccess;
+    final errorMsg = l10n.shopsDeleteFailed;
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(l10n.shopsDeleteTitle),
-        content: Text(l10n.shopsDeleteConfirm(name)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.actionCancel)),
-          ElevatedButton(
-            onPressed: () {
-              provider.deleteShop(id);
-              Navigator.pop(context);
-            },
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(l10n.actionDelete,
-                style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      title: l10n.shopsDeleteTitle,
+      message: l10n.shopsDeleteConfirm(name),
+      confirmLabel: l10n.actionDelete,
+      isDestructive: true,
     );
+    if (confirmed != true) return;
+    try {
+      await provider.deleteShop(id);
+      // Use messenger directly — context is a method parameter (no mounted guard).
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(successMsg),
+          behavior: SnackBarBehavior.floating,
+        ));
+    } catch (_) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(errorMsg),
+          behavior: SnackBarBehavior.floating,
+        ));
+    }
   }
 }
 
@@ -542,7 +571,12 @@ class _AmazonShopsGroup extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimaryOf(context))),
         subtitle: Text(
-          '${shops.length} ${shops.length == 1 ? "Country-Account" : "Country-Accounts"}',
+          AppLocalizations.of(context).settingsShopsAmazonCountAccounts(
+            shops.length,
+            shops.length == 1
+                ? AppLocalizations.of(context).settingsShopsAmazonAccountSingular
+                : AppLocalizations.of(context).settingsShopsAmazonAccountPlural,
+          ),
           style: TextStyle(
               fontSize: 12, color: AppTheme.textMutedOf(context)),
         ),
@@ -767,24 +801,14 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
 
   Future<void> _onReload() async {
     final l10n = AppLocalizations.of(context);
+    // Capture messenger before async gap (Dialog-Context-Pattern).
     final messenger = ScaffoldMessenger.of(context);
     final inventory = context.read<InventoryProvider>();
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.settingsDemoReloadConfirmTitle),
-        content: Text(l10n.settingsDemoReloadConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.settingsDemoReload),
-          ),
-        ],
-      ),
+      title: l10n.settingsDemoReloadConfirmTitle,
+      message: l10n.settingsDemoReloadConfirm,
+      confirmLabel: l10n.settingsDemoReload,
     );
     if (confirmed != true || !mounted) return;
     setState(() => _loading = true);
@@ -800,13 +824,17 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
       }
       await inventory.loadData();
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.settingsDemoReloadSuccess)),
+      AppFeedback.successOn(
+        messenger,
+        l10n.settingsDemoReloadSuccess,
+        rootContext: context,
       );
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.settingsDemoReloadError(e.toString()))),
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context,
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -825,7 +853,7 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
             final info = Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.refresh, color: Color(0xFF2563EB)),
+                Icon(Icons.refresh, color: AppTheme.accentTextOf(context)),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -838,8 +866,9 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
                       const SizedBox(height: 6),
                       Text(
                         l10n.settingsDemoReloadDescription,
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF64748B)),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textMutedOf(context)),
                       ),
                     ],
                   ),
@@ -920,28 +949,18 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
 
   Future<void> _wipe() async {
     final l10n = AppLocalizations.of(context);
+    // Capture messenger before async gap (Dialog-Context-Pattern).
     final messenger = ScaffoldMessenger.of(context);
     final ob = context.read<OnboardingProvider>();
     final activeWs = context.read<ActiveWorkspaceProvider>();
     final inv = context.read<InventoryProvider>();
     final wsId = activeWs.active?.id;
     if (wsId == null) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.settingsDemoWipeConfirmTitle),
-        content: Text(l10n.settingsDemoWipeConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.settingsDemoWipe),
-          ),
-        ],
-      ),
+      title: l10n.settingsDemoWipeConfirmTitle,
+      message: l10n.settingsDemoWipeConfirm,
+      confirmLabel: l10n.settingsDemoWipe,
     );
     if (confirmed != true || !mounted) return;
     setState(() => _wiping = true);
@@ -949,17 +968,19 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
     if (!mounted) return;
     setState(() => _wiping = false);
     if (result == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(
-          l10n.settingsDemoWipeError(ob.lastError ?? ''),
-        )),
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context,
       );
       return;
     }
     await inv.loadData();
     if (!mounted) return;
-    messenger.showSnackBar(
-      SnackBar(content: Text(l10n.settingsDemoWipeSuccess(result.total))),
+    AppFeedback.successOn(
+      messenger,
+      l10n.settingsDemoWipeSuccess(result.total),
+      rootContext: context,
     );
     await _refresh();
   }
@@ -983,8 +1004,8 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
                 final info = Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.delete_sweep_outlined,
-                        color: Color(0xFFD97706)),
+                    Icon(Icons.delete_sweep_outlined,
+                        color: AppTheme.warningTextOf(context)),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -998,8 +1019,9 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
                           const SizedBox(height: 6),
                           Text(
                             l10n.settingsDemoWipeDescription,
-                            style: const TextStyle(
-                                fontSize: 12, color: Color(0xFF64748B)),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textMutedOf(context)),
                           ),
                         ],
                       ),
@@ -1064,7 +1086,7 @@ class _LogoutCard extends StatelessWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD97706)),
+                backgroundColor: AppTheme.warning),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.accountMenuSignOut),
           ),
@@ -1084,7 +1106,7 @@ class _LogoutCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(Icons.logout, color: Color(0xFFD97706)),
+            Icon(Icons.logout, color: AppTheme.warningTextOf(context)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1092,16 +1114,17 @@ class _LogoutCard extends StatelessWidget {
                 children: [
                   Text(
                     l10n.accountMenuSignOut,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFFB45309),
+                      color: AppTheme.warningTextOf(context),
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     '${l10n.accountMenuSignedInAs} $email',
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMutedOf(context)),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -1111,8 +1134,9 @@ class _LogoutCard extends StatelessWidget {
             OutlinedButton(
               onPressed: () => _confirmLogout(context),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFD97706),
-                side: const BorderSide(color: Color(0xFFD97706)),
+                foregroundColor: AppTheme.warningTextOf(context),
+                side: BorderSide(
+                    color: AppTheme.warningTextOf(context)),
               ),
               child: Text(l10n.accountMenuSignOut),
             ),
@@ -1133,10 +1157,10 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF6B7280),
+          color: AppTheme.textMutedOf(context),
           letterSpacing: 0.7,
         ),
       ),
@@ -1274,56 +1298,15 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
 
   Future<void> _confirmDelete() async {
     final l10n = AppLocalizations.of(context);
-    final confirmCtrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: Text(l10n.deleteAccountTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l10n.deleteAccountText),
-              const SizedBox(height: 16),
-              Text(
-                l10n.deleteAccountConfirmInstruction,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: confirmCtrl,
-                autofocus: true,
-                onChanged: (_) => setS(() {}),
-                decoration: InputDecoration(
-                  hintText: l10n.deleteAccountConfirmKeyword,
-                  border: const OutlineInputBorder(),
-                  isDense: true,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.actionCancel),
-            ),
-            ElevatedButton(
-              onPressed: confirmCtrl.text.trim() ==
-                      l10n.deleteAccountConfirmKeyword
-                  ? () => Navigator.pop(ctx, true)
-                  : null,
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFC0392B)),
-              child: Text(l10n.accountMenuDeleteAccount),
-            ),
-          ],
-        ),
-      ),
+      title: l10n.deleteAccountTitle,
+      message: l10n.deleteAccountText,
+      confirmLabel: l10n.accountMenuDeleteAccount,
+      isDestructive: true,
+      requireTypeName: l10n.deleteAccountConfirmKeyword,
     );
 
-    confirmCtrl.dispose();
     if (confirmed != true || !mounted) return;
 
     setState(() => _loading = true);
@@ -1333,13 +1316,7 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
     setState(() => _loading = false);
 
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error),
-          backgroundColor: const Color(0xFFC0392B),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppFeedback.error(context, l10n.deleteAccountFailed);
     }
   }
 
@@ -1351,7 +1328,8 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(Icons.delete_forever_outlined, color: Color(0xFFC0392B)),
+            Icon(Icons.delete_forever_outlined,
+                color: AppTheme.dangerTextOf(context)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1359,16 +1337,17 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
                 children: [
                   Text(
                     l10n.accountMenuDeleteAccount,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFFC0392B),
+                      color: AppTheme.dangerTextOf(context),
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     l10n.deleteAccountSubtitle,
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMutedOf(context)),
                   ),
                 ],
               ),
@@ -1383,8 +1362,9 @@ class _DeleteAccountCardState extends State<_DeleteAccountCard> {
                 : OutlinedButton(
                     onPressed: _confirmDelete,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFC0392B),
-                      side: const BorderSide(color: Color(0xFFC0392B)),
+                      foregroundColor: AppTheme.dangerTextOf(context),
+                      side: BorderSide(
+                          color: AppTheme.dangerTextOf(context)),
                     ),
                     child: Text(l10n.actionDelete),
                   ),
@@ -1415,7 +1395,7 @@ class _SettingsCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFF2563EB)),
+            Icon(icon, color: AppTheme.accentTextOf(context)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1423,7 +1403,10 @@ class _SettingsCard extends StatelessWidget {
                 children: [
                   Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
                   const SizedBox(height: 3),
-                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                  Text(subtitle,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textMutedOf(context))),
                 ],
               ),
             ),
@@ -1473,14 +1456,11 @@ class _NotificationsTabState extends State<_NotificationsTab> {
     });
     try {
       await context.read<NotificationPreferencesService>().save(next);
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).pushSaveFailed('$e')),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFDC2626),
-        ),
+      AppFeedback.error(
+        context,
+        AppLocalizations.of(context).appFeedbackErrorDefault,
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -1618,14 +1598,14 @@ class _NotificationsTabState extends State<_NotificationsTab> {
             title: l10n.pushSectionInfo,
             children: [
               ListTile(
-                leading: const Icon(Icons.schedule,
-                    size: 20, color: Color(0xFF64748B)),
+                leading: Icon(Icons.schedule,
+                    size: 20, color: AppTheme.textMutedOf(context)),
                 title: Text(l10n.pushDailyCheckTitle),
                 subtitle: Text(l10n.pushDailyCheckSubtitle),
               ),
               ListTile(
-                leading: const Icon(Icons.fingerprint,
-                    size: 20, color: Color(0xFF64748B)),
+                leading: Icon(Icons.fingerprint,
+                    size: 20, color: AppTheme.textMutedOf(context)),
                 title: Text(l10n.pushDedupTitle),
                 subtitle: Text(l10n.pushDedupSubtitle),
               ),
@@ -1738,7 +1718,7 @@ class _TeamTabState extends State<_TeamTab> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString();
+        _error = sanitizeError(e);
       });
     }
   }
@@ -1755,20 +1735,13 @@ class _TeamTabState extends State<_TeamTab> {
     final isPersonal = ws.isPersonal ||
         ws.name.trim().toLowerCase() == 'personal';
     if (isPersonal) {
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showConfirmDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(l10n.teamRenamePersonalWarnTitle),
-          content: Text(l10n.teamRenamePersonalWarn),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(l10n.commonCancel)),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(l10n.commonConfirm)),
-          ],
-        ),
+        title: l10n.teamRenamePersonalWarnTitle,
+        message: l10n.teamRenamePersonalWarn,
+        confirmLabel: l10n.commonConfirm,
+        cancelLabel: l10n.commonCancel,
+        isDestructive: false,
       );
       if (confirmed != true || !mounted) return;
     }
@@ -1800,6 +1773,8 @@ class _TeamTabState extends State<_TeamTab> {
     ctrl.dispose();
     if (newName == null || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
+    final renameSuccess = l10n.teamRenameSuccess;
+    final renameError = l10n.appFeedbackErrorDefault;
     final activeWs = context.read<ActiveWorkspaceProvider>();
     final uid = context.read<AuthProvider>().currentUser?.id;
     try {
@@ -1812,11 +1787,21 @@ class _TeamTabState extends State<_TeamTab> {
       }
       if (!mounted) return;
       await _load();
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.teamRenameSuccess)));
-    } catch (e) {
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.teamRenameFailed('$e'))));
+      if (!mounted) return;
+      AppFeedback.successOn(
+        messenger,
+        renameSuccess,
+        // ignore: use_build_context_synchronously
+        rootContext: context,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        renameError,
+        // ignore: use_build_context_synchronously
+        rootContext: context,
+      );
     }
   }
 
@@ -1899,9 +1884,7 @@ class _TeamTabState extends State<_TeamTab> {
                     await Clipboard.setData(
                         ClipboardData(text: ws.id));
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.teamCopyIdSnack)),
-                    );
+                    AppFeedback.success(context, l10n.teamCopyIdSnack);
                   },
                 ),
                 if (canManage) ...[
@@ -1948,16 +1931,38 @@ class _TeamTabState extends State<_TeamTab> {
                         onPressed: () async {
                           final email = m.email ?? m.userId;
                           final svc = context.read<WorkspaceService>();
+                          // Capture before async gap (Dialog-Context-Pattern).
+                          final messenger = ScaffoldMessenger.of(context);
+                          final removeSuccess = l10n.teamMemberRemovedSuccess;
+                          final removeFailed = l10n.teamMemberRemoveFailed;
                           final confirmed = await MemberRemoveConfirmDialog.show(
                             context,
                             email,
                           );
                           if (!confirmed || !mounted) return;
-                          await svc.removeMember(
-                            workspaceId: ws.id,
-                            userId: m.userId,
-                          );
-                          if (mounted) await _load();
+                          try {
+                            await svc.removeMember(
+                              workspaceId: ws.id,
+                              userId: m.userId,
+                            );
+                            if (!mounted) return;
+                            await _load();
+                            if (!mounted) return;
+                            AppFeedback.successOn(
+                              messenger,
+                              removeSuccess,
+                              // ignore: use_build_context_synchronously
+                              rootContext: context,
+                            );
+                          } catch (_) {
+                            if (!mounted) return;
+                            AppFeedback.errorOn(
+                              messenger,
+                              removeFailed,
+                              // ignore: use_build_context_synchronously
+                              rootContext: context,
+                            );
+                          }
                         },
                       )
                     : null,
@@ -1996,10 +2001,31 @@ class _TeamTabState extends State<_TeamTab> {
                               color: AppTheme.dangerTextOf(context),
                               size: 18),
                           onPressed: () async {
-                            await context
-                                .read<WorkspaceService>()
-                                .revokeInvite(inv.id);
-                            if (mounted) await _load();
+                            // Capture before async gap (Dialog-Context-Pattern).
+                            final messenger = ScaffoldMessenger.of(context);
+                            final revokedSuccess = l10n.teamInviteRevokedSuccess;
+                            final revokeFailed = l10n.teamInviteRevokeFailed;
+                            final svcR = context.read<WorkspaceService>();
+                            try {
+                              await svcR.revokeInvite(inv.id);
+                              if (!mounted) return;
+                              await _load();
+                              if (!mounted) return;
+                              AppFeedback.successOn(
+                                messenger,
+                                revokedSuccess,
+                                // ignore: use_build_context_synchronously
+                                rootContext: context,
+                              );
+                            } catch (_) {
+                              if (!mounted) return;
+                              AppFeedback.errorOn(
+                                messenger,
+                                revokeFailed,
+                                // ignore: use_build_context_synchronously
+                                rootContext: context,
+                              );
+                            }
                           },
                         )
                       : null,
@@ -2071,6 +2097,7 @@ class _PlanSectionState extends State<_PlanSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final billing = context.watch<BillingProvider>();
     final profile = billing.profile;
     final plan = billing.currentPlan;
@@ -2079,8 +2106,8 @@ class _PlanSectionState extends State<_PlanSection> {
     final accent = theme.colorScheme.primary;
 
     final priceLabel = plan == BillingPlan.free
-        ? 'kostenlos'
-        : '${_fmtEur(pricing.monthlyPriceEur)} / Monat';
+        ? l10n.settingsBillingPriceFree
+        : l10n.settingsBillingPricePerMonth(_fmtEur(pricing.monthlyPriceEur));
 
     final addressMissing =
         plan.isPaid && (profile == null || !profile.hasCompleteBillingAddress);
@@ -2088,7 +2115,7 @@ class _PlanSectionState extends State<_PlanSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(title: 'Plan & Abrechnung'),
+        _SectionHeader(title: l10n.settingsBillingSectionTitle),
         const SizedBox(height: 8),
         Card(
           clipBehavior: Clip.antiAlias,
@@ -2131,7 +2158,7 @@ class _PlanSectionState extends State<_PlanSection> {
                                   borderRadius: BorderRadius.circular(999),
                                 ),
                                 child: Text(
-                                  'Most Popular',
+                                  l10n.settingsBillingMostPopular,
                                   style: TextStyle(
                                       color: accent,
                                       fontSize: 10,
@@ -2143,21 +2170,25 @@ class _PlanSectionState extends State<_PlanSection> {
                         const SizedBox(height: 3),
                         Text(
                           priceLabel,
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF64748B)),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textMutedOf(context)),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    plan == BillingPlan.free ? 'Upgrade' : 'Verwalten',
+                    plan == BillingPlan.free
+                        ? l10n.settingsBillingActionUpgrade
+                        : l10n.settingsBillingActionManage,
                     style: TextStyle(
                       color: accent,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                  Icon(Icons.chevron_right,
+                      color: AppTheme.textMutedOf(context)),
                 ],
               ),
             ),
@@ -2176,32 +2207,33 @@ class _PlanSectionState extends State<_PlanSection> {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const Icon(Icons.receipt_long_outlined,
-                      color: Color(0xFF2563EB)),
+                  Icon(Icons.receipt_long_outlined,
+                      color: AppTheme.accentTextOf(context)),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Rechnungsdaten',
-                            style: TextStyle(fontWeight: FontWeight.w800)),
+                        Text(l10n.settingsBillingDetailsTitle,
+                            style: const TextStyle(fontWeight: FontWeight.w800)),
                         const SizedBox(height: 3),
                         Text(
-                          _billingSubtitle(profile, plan, addressMissing),
+                          _billingSubtitle(profile, plan, addressMissing, l10n),
                           style: TextStyle(
                             fontSize: 12,
                             color: addressMissing
-                                ? Colors.red.shade600
-                                : const Color(0xFF64748B),
+                                ? AppTheme.dangerTextOf(context)
+                                : AppTheme.textMutedOf(context),
                           ),
                         ),
                       ],
                     ),
                   ),
                   if (addressMissing)
-                    const Icon(Icons.warning_amber_rounded,
-                        color: Colors.orange),
-                  const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                    Icon(Icons.warning_amber_rounded,
+                        color: AppTheme.warningTextOf(context)),
+                  Icon(Icons.chevron_right,
+                      color: AppTheme.textMutedOf(context)),
                 ],
               ),
             ),
@@ -2212,14 +2244,14 @@ class _PlanSectionState extends State<_PlanSection> {
   }
 
   static String _billingSubtitle(
-      BillingProfile? p, BillingPlan plan, bool missing) {
+      BillingProfile? p, BillingPlan plan, bool missing, AppLocalizations l10n) {
     if (missing) {
-      return 'Pflichtangaben unvollständig — bitte ergänzen';
+      return l10n.settingsBillingAddressMissing;
     }
     if (p == null || (p.fullName ?? '').trim().isEmpty) {
       return plan.isPaid
-          ? 'Adresse hinterlegen'
-          : 'Optional — wird erst beim Upgrade benötigt';
+          ? l10n.settingsBillingAddressAdd
+          : l10n.settingsBillingAddressOptional;
     }
     final parts = <String>[
       p.fullName!.trim(),
@@ -2263,41 +2295,36 @@ class _MailboxTabState extends State<_MailboxTab> {
     InboxProvider provider,
     MailboxAccount account,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final l10n = AppLocalizations.of(context);
+    // Capture messenger and l10n strings before any async gap
+    // (Dialog-Context-Pattern — avoids use_build_context_synchronously).
+    final messenger = ScaffoldMessenger.of(context);
+    final successMsg = l10n.settingsMailboxRemovedFeedback;
+    final errorMsg = l10n.settingsMailboxDeleteError;
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) {
-        final l10n = AppLocalizations.of(ctx);
-        return AlertDialog(
-          title: const Text('Postfach entfernen'),
-          content: Text(
-              'Soll das IMAP-Konto "${account.label}" wirklich gelöscht werden? '
-              'Auch alle aus diesem Postfach importierten Mails (Vorschläge + '
-              'Unklassifizierte) werden gelöscht. Bereits in Deals übernommene '
-              'Bestellungen bleiben unberührt.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.actionCancel),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: Text(l10n.actionDelete,
-                  style: const TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
+      title: l10n.settingsMailboxRemoveTitle,
+      message: l10n.settingsMailboxRemoveBody(account.label),
+      confirmLabel: l10n.actionDelete,
+      isDestructive: true,
+      requireTypeName: account.label,
     );
     if (confirmed != true) return;
     try {
       await provider.deleteAccount(account.id);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Löschen fehlgeschlagen: $e')),
-        );
-      }
+      if (!mounted) return;
+      AppFeedback.successOn(
+        messenger,
+        successMsg,
+        rootContext: this.context,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        errorMsg,
+        rootContext: this.context,
+      );
     }
   }
 
@@ -2305,6 +2332,7 @@ class _MailboxTabState extends State<_MailboxTab> {
   Widget build(BuildContext context) {
     return Consumer2<InboxProvider, BillingProvider>(
       builder: (context, provider, billing, _) {
+        final l10n = AppLocalizations.of(context);
         final pricing = PricingPlan.forBillingPlan(billing.currentPlan);
         final mailboxLimit = pricing.mailboxLimit; // -1 = unlimited
         final hasInbox = pricing.hasInbox;
@@ -2315,18 +2343,24 @@ class _MailboxTabState extends State<_MailboxTab> {
           floatingActionButton: hasInbox
               ? FloatingActionButton.extended(
                   heroTag: 'addMailbox',
+                  // D4: tooltip mirrors the visible label text so screen
+                  // readers get an explicit semantics label in both states.
+                  tooltip: atLimit
+                      ? l10n.settingsMailboxLimitLabel(mailboxLimit)
+                      : l10n.settingsMailboxAddLabel,
                   onPressed: atLimit
                       ? () => _showMailboxLimitReached(
                           context, billing.currentPlan, mailboxLimit)
                       : () => showDialog(
                             context: context,
+                            barrierDismissible: false,
                             builder: (_) => const AddEditMailboxDialog(),
                           ),
                   backgroundColor: atLimit ? Colors.grey : null,
                   icon: Icon(atLimit ? Icons.lock_outline : Icons.add),
                   label: Text(atLimit
-                      ? 'Limit erreicht ($mailboxLimit)'
-                      : 'IMAP-Konto'),
+                      ? l10n.settingsMailboxLimitLabel(mailboxLimit)
+                      : l10n.settingsMailboxAddLabel),
                 )
               : null,
           body: !hasInbox
@@ -2365,6 +2399,7 @@ class _MailboxTabState extends State<_MailboxTab> {
                               account: account,
                               onEdit: () => showDialog(
                                 context: context,
+                                barrierDismissible: false,
                                 builder: (_) =>
                                     AddEditMailboxDialog(existing: account),
                               ),
@@ -2386,11 +2421,15 @@ void _showMailboxLimitReached(
     builder: (ctx) {
       final l10n = AppLocalizations.of(ctx);
       return AlertDialog(
-        title: const Text('Postfach-Limit erreicht'),
+        title: Text(l10n.settingsMailboxLimitDialogTitle),
         content: Text(
-          'Dein ${plan.label}-Plan erlaubt $limit '
-          '${limit == 1 ? "Postfach" : "Postfächer"}. '
-          'Upgrade auf einen höheren Plan, um weitere zu verbinden.',
+          l10n.settingsMailboxLimitDialogBody(
+            plan.label,
+            limit,
+            limit == 1
+                ? l10n.settingsMailboxWordSingular
+                : l10n.settingsMailboxWordPlural,
+          ),
         ),
         actions: [
           TextButton(
@@ -2404,7 +2443,7 @@ void _showMailboxLimitReached(
                 MaterialPageRoute(builder: (_) => const PricingScreen()),
               );
             },
-            child: const Text('Plan upgraden'),
+            child: Text(l10n.teamWorkspacesLimitReachedCta),
           ),
         ],
       );
@@ -2424,17 +2463,20 @@ class _MailboxIntroCard extends StatelessWidget {
     required this.visibilityDays,
   });
 
-  String _quotaLine() {
+  String _quotaLine(AppLocalizations l10n) {
     final limitLabel = mailboxLimit < 0
-        ? 'unbegrenzt'
+        ? l10n.settingsMailboxQuotaUnlimited
         : '$used / $mailboxLimit';
-    return '${plan.label}-Plan: $limitLabel '
-        'Postf${(mailboxLimit == 1) ? "ach" : "ächer"} · '
-        '$visibilityDays Tage Inbox-Verlauf';
+    final mailboxWord = mailboxLimit == 1
+        ? l10n.settingsMailboxWordSingular
+        : l10n.settingsMailboxWordPlural;
+    return l10n.settingsMailboxQuotaLine(
+        plan.label, limitLabel, mailboxWord, visibilityDays);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       elevation: 0,
       color: AppTheme.accentLightOf(context),
@@ -2454,7 +2496,7 @@ class _MailboxIntroCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Postfach-Integration',
+                    l10n.settingsMailboxIntegrationTitle,
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       color: AppTheme.accentTextOf(context),
@@ -2462,11 +2504,7 @@ class _MailboxIntroCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Hinterlege ein IMAP-Konto, um Bestell- und Versand-Mails '
-                    'automatisch erkennen zu lassen. Polling läuft alle 5 min '
-                    'serverseitig — Passwörter werden mit pgp_sym_encrypt '
-                    'verschlüsselt gespeichert. Im Inbox-Tab kannst du '
-                    'erkannte Deals annehmen.',
+                    l10n.settingsMailboxIntegrationDesc,
                     style: TextStyle(
                       fontSize: 12,
                       color: AppTheme.textSecondaryOf(context),
@@ -2475,7 +2513,7 @@ class _MailboxIntroCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _quotaLine(),
+                    _quotaLine(l10n),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -2503,13 +2541,13 @@ class _MailboxAccountTile extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  String _statusLabel() {
-    if (!account.enabled) return 'Pausiert';
+  String _statusLabel(AppLocalizations l10n) {
+    if (!account.enabled) return l10n.settingsMailboxStatusPaused;
     if (account.lastError != null && account.lastError!.isNotEmpty) {
-      return 'Fehler';
+      return l10n.settingsMailboxStatusError;
     }
-    if (account.lastPolledAt == null) return 'Noch nicht gepollt';
-    return 'Zuletzt gepollt: ${_relative(account.lastPolledAt!)}';
+    if (account.lastPolledAt == null) return l10n.settingsMailboxStatusNeverPolled;
+    return l10n.settingsMailboxStatusLastPolled(_relative(l10n, account.lastPolledAt!));
   }
 
   Color _statusColor(BuildContext context) {
@@ -2520,16 +2558,17 @@ class _MailboxAccountTile extends StatelessWidget {
     return AppTheme.successTextOf(context);
   }
 
-  static String _relative(DateTime ts) {
+  static String _relative(AppLocalizations l10n, DateTime ts) {
     final delta = DateTime.now().difference(ts);
-    if (delta.inMinutes < 1) return 'gerade eben';
-    if (delta.inMinutes < 60) return 'vor ${delta.inMinutes} min';
-    if (delta.inHours < 24) return 'vor ${delta.inHours} h';
-    return 'vor ${delta.inDays} d';
+    if (delta.inMinutes < 1) return l10n.settingsRelativeJustNow;
+    if (delta.inMinutes < 60) return l10n.settingsRelativeMinutes(delta.inMinutes);
+    if (delta.inHours < 24) return l10n.settingsRelativeHours(delta.inHours);
+    return l10n.settingsRelativeDays(delta.inDays);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -2572,7 +2611,7 @@ class _MailboxAccountTile extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              _statusLabel(),
+              _statusLabel(l10n),
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
@@ -2640,7 +2679,7 @@ class _MailboxEmptyState extends StatelessWidget {
               size: 52, color: AppTheme.textDisabledOf(context)),
           const SizedBox(height: 12),
           Text(
-            'Noch kein Postfach hinterlegt.',
+            AppLocalizations.of(context).settingsMailboxEmptyHint,
             style: TextStyle(color: AppTheme.textMutedOf(context)),
           ),
         ],
@@ -2658,6 +2697,7 @@ class _MailboxFreePlanGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Center(
@@ -2677,20 +2717,22 @@ class _MailboxFreePlanGate extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(10),
+                      Builder(
+                        builder: (ctx) => Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppTheme.warningBgOf(ctx),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.lock_outline,
+                              color: AppTheme.warningTextOf(ctx)),
                         ),
-                        child: const Icon(Icons.lock_outline,
-                            color: Color(0xFFB45309)),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Postfach im Free-Plan nicht enthalten',
-                          style: TextStyle(
+                          l10n.settingsMailboxFreePlanTitle,
+                          style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 16,
                           ),
@@ -2699,34 +2741,32 @@ class _MailboxFreePlanGate extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  Text(
-                    'Dein aktueller Plan: ${plan.label}. '
-                    'Die automatische Erkennung von Bestell- und Versand-'
-                    'Mails ist ab dem Starter-Plan verfügbar — höhere '
-                    'Pläne erlauben mehr Postfächer und längeren Inbox-'
-                    'Verlauf.',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF334155),
-                      height: 1.5,
+                  Builder(
+                    builder: (ctx) => Text(
+                      l10n.settingsMailboxFreePlanDesc(plan.label),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textSecondaryOf(ctx),
+                        height: 1.5,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const _PlanComparisonRow(
+                  _PlanComparisonRow(
                     label: 'Starter',
-                    value: '1 Postfach · 7 Tage',
+                    value: l10n.settingsMailboxPlanStarter,
                   ),
-                  const _PlanComparisonRow(
+                  _PlanComparisonRow(
                     label: 'Pro',
-                    value: '3 Postfächer · 14 Tage',
+                    value: l10n.settingsMailboxPlanPro,
                   ),
-                  const _PlanComparisonRow(
+                  _PlanComparisonRow(
                     label: 'Business',
-                    value: '10 Postfächer · 30 Tage',
+                    value: l10n.settingsMailboxPlanBusiness,
                   ),
-                  const _PlanComparisonRow(
+                  _PlanComparisonRow(
                     label: 'Ultimate',
-                    value: '15 Postfächer · 90 Tage',
+                    value: l10n.settingsMailboxPlanUltimate,
                   ),
                   const SizedBox(height: 18),
                   SizedBox(
@@ -2738,7 +2778,7 @@ class _MailboxFreePlanGate extends StatelessWidget {
                         ),
                       ),
                       icon: const Icon(Icons.upgrade),
-                      label: const Text('Plan upgraden'),
+                      label: Text(l10n.teamWorkspacesLimitReachedCta),
                     ),
                   ),
                 ],
@@ -2766,19 +2806,19 @@ class _PlanComparisonRow extends StatelessWidget {
             width: 80,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
-                color: Color(0xFF2563EB),
+                color: AppTheme.accentTextOf(context),
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF334155),
+                color: AppTheme.textSecondaryOf(context),
               ),
             ),
           ),
@@ -2837,7 +2877,7 @@ class _ShippingTabState extends State<_ShippingTab> {
                 enableSuggestions: false,
                 autocorrect: false,
                 decoration: InputDecoration(
-                  labelText: 'API-Key',
+                  labelText: l10n.settingsShippingApiKeyLabel,
                   hintText: existing?.masked,
                 ),
                 validator: (v) {
@@ -2876,24 +2916,41 @@ class _ShippingTabState extends State<_ShippingTab> {
       ),
     );
     if (saved != true || !context.mounted) return;
+    // Capture messenger + navigator before async gap (Dialog-Context-Pattern).
     final messenger = ScaffoldMessenger.of(context);
     final navigatorRef = Navigator.of(context);
+    final rootCtx = context;
     try {
       await context.read<CarrierCredentialsProvider>().setApiKey(
             carrierId: carrierId,
             apiKey: controller.text.trim(),
           );
       if (!context.mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.shippingKeySaved)));
+      AppFeedback.successOn(
+        messenger,
+        l10n.shippingKeySaved,
+        rootContext: rootCtx,
+      );
     } on PostgrestException catch (e) {
       final isMasterKey = e.code == 'P0001' &&
           e.message.contains('carrier_master_key');
       if (isMasterKey) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.shippingSetupError),
+        // Master-key setup error: keep SnackBarAction for Help navigation
+        // (AppFeedback doesn't support custom navigation actions).
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+            key: const Key('appFeedbackError'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppTheme.dangerBgOf(rootCtx),
+            duration: const Duration(seconds: 8),
+            content: Text(
+              l10n.shippingSetupError,
+              style: TextStyle(color: AppTheme.dangerTextOf(rootCtx)),
+            ),
             action: SnackBarAction(
               label: l10n.shippingSetupHelpAction,
+              textColor: AppTheme.dangerTextOf(rootCtx),
               onPressed: () {
                 navigatorRef.push(
                   MaterialPageRoute<void>(
@@ -2902,14 +2959,20 @@ class _ShippingTabState extends State<_ShippingTab> {
                 );
               },
             ),
-            duration: const Duration(seconds: 8),
-          ),
-        );
+          ));
       } else {
-        messenger.showSnackBar(SnackBar(content: Text('$e')));
+        AppFeedback.errorOn(
+          messenger,
+          l10n.appFeedbackErrorDefault,
+          rootContext: rootCtx,
+        );
       }
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    } catch (_) {
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: rootCtx,
+      );
     }
   }
 
@@ -2918,36 +2981,33 @@ class _ShippingTabState extends State<_ShippingTab> {
     required String carrierId,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
+    // Capture messenger before async gap (Dialog-Context-Pattern).
+    final messenger = ScaffoldMessenger.of(context);
+    final rootCtx = context;
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.shippingDeleteKey),
-        content: Text(
-          '${labelForCarrierId(carrierId)}: API-Key wirklich entfernen?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(
-              l10n.shippingDeleteKey,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+      title: l10n.shippingDeleteKey,
+      message: l10n.settingsShippingDeleteKeyConfirmBody(
+          labelForCarrierId(carrierId)),
+      confirmLabel: l10n.shippingDeleteKey,
+      isDestructive: true,
     );
     if (confirmed != true || !context.mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await context.read<CarrierCredentialsProvider>().deleteApiKey(carrierId);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.shippingKeyDeleted)));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('$e')));
+      if (!context.mounted) return;
+      AppFeedback.successOn(
+        messenger,
+        l10n.shippingKeyDeleted,
+        rootContext: rootCtx,
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: rootCtx,
+      );
     }
   }
 
@@ -3269,15 +3329,17 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
       );
       wsProv.applyUpdate(updated);
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.publicProfileSaved)),
+      AppFeedback.successOn(
+        messenger,
+        l10n.publicProfileSaved,
+        rootContext: context,
       );
     } catch (e) {
       if (!mounted) return;
       final msg = _isUniqueViolation(e)
           ? l10n.publicProfileHandleTaken
-          : l10n.publicProfileSaveFailed(e.toString());
-      messenger.showSnackBar(SnackBar(content: Text(msg)));
+          : l10n.appFeedbackErrorDefault;
+      AppFeedback.errorOn(messenger, msg, rootContext: context);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -3377,11 +3439,9 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
                           ? null
                           : (v) {
                               if (v && (ws.handle == null || ws.handle!.isEmpty)) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content:
-                                        Text(l10n.publicProfileNeedsHandle),
-                                  ),
+                                AppFeedback.info(
+                                  context,
+                                  l10n.publicProfileNeedsHandle,
                                 );
                                 return;
                               }
@@ -3409,11 +3469,9 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
                               await Clipboard.setData(
                                   ClipboardData(text: publicUrl));
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content:
-                                      Text(l10n.publicProfileLinkCopied),
-                                ),
+                              AppFeedback.success(
+                                context,
+                                l10n.publicProfileLinkCopied,
                               );
                             },
                           ),
@@ -3453,14 +3511,11 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
                               await inv.updateInventoryItem(
                                 item.copyWith(isPublic: next),
                               );
-                            } catch (e) {
+                            } catch (_) {
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                      l10n.publicProfileSaveFailed(
-                                          e.toString())),
-                                ),
+                              AppFeedback.error(
+                                context,
+                                l10n.appFeedbackErrorDefault,
                               );
                             }
                           },
@@ -3582,28 +3637,16 @@ class _TrackingReparseTileState extends State<_TrackingReparseTile> {
         context.read<ActiveWorkspaceProvider>().active?.id;
 
     if (activeWorkspaceId == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.trackingReparseFailed)),
-      );
+      AppFeedback.errorOn(messenger, l10n.trackingReparseFailed,
+          rootContext: context);
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.trackingReparseConfirmTitle),
-        content: Text(l10n.trackingReparseConfirmBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.trackingReparseCta),
-          ),
-        ],
-      ),
+      title: l10n.trackingReparseConfirmTitle,
+      message: l10n.trackingReparseConfirmBody,
+      confirmLabel: l10n.trackingReparseCta,
     );
     if (confirmed != true || !mounted) return;
 
@@ -3625,20 +3668,14 @@ class _TrackingReparseTileState extends State<_TrackingReparseTile> {
                 (res.data as Map)['retry_after_seconds'] is num)
             ? ((res.data as Map)['retry_after_seconds'] as num).toInt()
             : 60;
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              '${l10n.trackingReparseFailed} ($retry s)',
-            ),
-          ),
-        );
+        AppFeedback.errorOn(messenger, l10n.trackingReparseRateLimit(retry),
+            rootContext: context);
         return;
       }
 
       if (status >= 400) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.trackingReparseFailed)),
-        );
+        AppFeedback.errorOn(messenger, l10n.trackingReparseFailed,
+            rootContext: context);
         return;
       }
 
@@ -3646,23 +3683,21 @@ class _TrackingReparseTileState extends State<_TrackingReparseTile> {
       final updatedCount =
           (data is Map && data['updated'] is num) ? (data['updated'] as num).toInt() : 0;
 
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.trackingReparseSuccessCount(updatedCount))),
-      );
+      AppFeedback.successOn(
+          messenger, l10n.trackingReparseSuccessCount(updatedCount),
+          rootContext: context);
 
       // T7: nach Re-Parse InboxProvider refreshen, damit neue Trackings
       // sofort in der Inbox sichtbar sind.
       await inboxProvider.refresh();
     } on FunctionException catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.trackingReparseFailed)),
-      );
+      AppFeedback.errorOn(messenger, l10n.trackingReparseFailed,
+          rootContext: context);
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.trackingReparseOffline)),
-      );
+      AppFeedback.errorOn(messenger, l10n.trackingReparseOffline,
+          rootContext: context);
     } finally {
       if (mounted) setState(() => _running = false);
     }
@@ -3726,51 +3761,19 @@ class _InboxResetTileState extends State<_InboxResetTile> {
         context.read<ActiveWorkspaceProvider>().active?.id;
 
     if (activeWorkspaceId == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.inboxResetFailed)),
-      );
+      AppFeedback.errorOn(messenger, l10n.inboxResetFailed,
+          rootContext: context);
       return;
     }
 
-    final controller = TextEditingController();
-    final confirmed = await showDialog<bool>(
+    // Destructive confirm with requireTypeName — user must type "RESET".
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.inboxResetConfirmTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.inboxResetConfirmBody),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: l10n.inboxResetConfirmInputLabel,
-                hintText: 'RESET',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(
-              ctx,
-              controller.text.trim().toUpperCase() == 'RESET',
-            ),
-            child: Text(
-              l10n.inboxResetCta,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+      title: l10n.inboxResetConfirmTitle,
+      message: l10n.inboxResetConfirmBody,
+      confirmLabel: l10n.inboxResetCta,
+      isDestructive: true,
+      requireTypeName: 'RESET',
     );
     if (confirmed != true || !mounted) return;
 
@@ -3780,21 +3783,16 @@ class _InboxResetTileState extends State<_InboxResetTile> {
           .read<SupabaseRepository>()
           .triggerInboxReset(workspaceId: activeWorkspaceId);
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.inboxResetSuccess(result.deletedMessages),
-          ),
-        ),
-      );
+      AppFeedback.successOn(
+          messenger, l10n.inboxResetSuccess(result.deletedMessages),
+          rootContext: context);
       // Nach Reset Inbox refreshen — UI zeigt sofort leere Liste,
       // der naechste IMAP-Poll laedt Mails neu.
       await inboxProvider.refresh();
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.inboxResetFailed)),
-      );
+      AppFeedback.errorOn(messenger, l10n.inboxResetFailed,
+          rootContext: context);
     } finally {
       if (mounted) setState(() => _running = false);
     }

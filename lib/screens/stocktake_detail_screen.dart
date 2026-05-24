@@ -9,7 +9,9 @@ import '../models/stocktake.dart';
 import '../models/stocktake_item.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/barcode_scanner_sheet.dart';
+import '../widgets/confirm_dialog.dart';
 import 'stocktake_screen.dart' show StocktakeStatusBadge;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -151,13 +153,14 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
 
   // ── Barcode-Einsprung ──────────────────────────────────────────────────────
 
-  Future<void> _scanBarcode(BuildContext context) async {
-    final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final provider = Provider.of<InventoryProvider>(context, listen: false);
+  Future<void> _scanBarcode(BuildContext ctx) async {
+    // Capture context-dependent objects before any async gap.
+    final l10n = AppLocalizations.of(ctx);
+    final messenger = ScaffoldMessenger.of(ctx);
+    final provider = Provider.of<InventoryProvider>(ctx, listen: false);
 
     final code = await BarcodeScannerSheet.show(
-      context,
+      ctx,
       title: l10n.stocktakeScanBarcode,
     );
     if (code == null || !mounted) return;
@@ -177,11 +180,10 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
     }
 
     if (matched == null) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.stocktakeScanNoMatch),
-          behavior: SnackBarBehavior.floating,
-        ),
+      AppFeedback.infoOn(
+        messenger,
+        l10n.stocktakeScanNoMatch,
+        rootContext: context,
       );
       return;
     }
@@ -191,11 +193,10 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
     final matchedItem =
         items.where((i) => i.productId == mp.id).firstOrNull;
     if (matchedItem == null) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.stocktakeScanNoMatch),
-          behavior: SnackBarBehavior.floating,
-        ),
+      AppFeedback.infoOn(
+        messenger,
+        l10n.stocktakeScanNoMatch,
+        rootContext: context,
       );
       return;
     }
@@ -214,17 +215,16 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
         curve: Curves.easeInOut,
       );
     }
+    if (!mounted) return;
 
     // Menge um 1 erhöhen (Scan = ein weiteres Stück gezählt).
     final current = _localCounted[matchedItem.id] ?? 0;
     _saveCounted(matchedItem, current + 1);
 
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text('${mp.name} +1'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
+    AppFeedback.successOn(
+      messenger,
+      l10n.stocktakeScanIncrement(mp.name),
+      rootContext: context,
     );
   }
 
@@ -232,33 +232,20 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
 
   Future<void> _closeStocktake() async {
     final l10n = AppLocalizations.of(context);
+    // Capture messenger before async gap (Dialog-Context-Pattern).
     final messenger = ScaffoldMessenger.of(context);
     final provider = Provider.of<InventoryProvider>(context, listen: false);
     final items = _items;
     if (items == null) return;
 
-    final ok = await showDialog<bool>(
+    final ok = await showConfirmDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(l10n.stocktakeCloseConfirm),
-        content: Text(l10n.stocktakeCloseConfirmHint),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accent,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(l10n.stocktakeCloseAction),
-          ),
-        ],
-      ),
+      title: l10n.stocktakeCloseConfirm,
+      message: l10n.stocktakeCloseConfirmHint,
+      confirmLabel: l10n.stocktakeCloseAction,
+      isDestructive: false,
     );
-    if (ok != true || !mounted) return;
+    if (!ok || !mounted) return;
 
     try {
       // Aktualisierte Items mit lokal gepufferten Werten übergeben.
@@ -276,22 +263,19 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
           _stocktake = closed;
           _showDiffReport = true;
         });
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.stocktakeCloseSuccess),
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppFeedback.successOn(
+          messenger,
+          l10n.stocktakeCloseSuccess,
+          rootContext: context,
         );
       }
     } catch (e) {
       debugPrint('closeStocktake failed: $e');
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.stocktakeCloseError),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppTheme.danger,
-          ),
+        AppFeedback.errorOn(
+          messenger,
+          l10n.stocktakeCloseError,
+          rootContext: context,
         );
       }
     }

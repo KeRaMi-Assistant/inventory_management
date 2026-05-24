@@ -8,6 +8,7 @@ import '../models/workspace.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/billing_provider.dart';
 import '../services/workspace_service.dart';
+import 'app_feedback.dart';
 import 'limit_reached_dialog.dart';
 
 /// Bottom-Sheet zum Anlegen eines neuen Workspace.
@@ -64,9 +65,26 @@ class _CreateWorkspaceDialogState extends State<CreateWorkspaceDialog> {
       _loading = true;
     });
 
+    // Dialog-Context-Pattern: capture messenger + rootContext before any
+    // Navigator.pop() call so the SnackBar is shown on the root Scaffold,
+    // not on the already-closing bottom-sheet context.
+    final messenger = ScaffoldMessenger.of(context);
+    final rootContext = context;
+
     try {
       final currentUserId =
-          Supabase.instance.client.auth.currentUser!.id;
+          Supabase.instance.client.auth.currentUser?.id;
+      if (currentUserId == null) {
+        if (!mounted) return;
+        Navigator.of(context).pop(null);
+        if (!rootContext.mounted) return;
+        AppFeedback.errorOn(
+          messenger,
+          l10n.appFeedbackErrorDefault,
+          rootContext: rootContext,
+        );
+        return;
+      }
       final wsProvider =
           Provider.of<ActiveWorkspaceProvider>(context, listen: false);
       final ws = await wsProvider.createAndSwitchTo(
@@ -78,29 +96,26 @@ class _CreateWorkspaceDialogState extends State<CreateWorkspaceDialog> {
     } on WorkspaceLimitException {
       if (!mounted) return;
       Navigator.of(context).pop(null);
-      await LimitReachedDialog.show(context);
+      if (!rootContext.mounted) return;
+      await LimitReachedDialog.show(rootContext);
     } on ArgumentError {
       if (!mounted) return;
-      final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.teamWorkspacesCreateFailed(
-              l10n.teamWorkspacesCreateValidationLength,
-            ),
-          ),
-        ),
-      );
       Navigator.of(context).pop(null);
-    } catch (e) {
+      if (!rootContext.mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.teamWorkspacesCreateValidationLength,
+        rootContext: rootContext,
+      );
+    } catch (_) {
       if (!mounted) return;
-      final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.teamWorkspacesCreateFailed(e.toString())),
-        ),
-      );
       Navigator.of(context).pop(null);
+      if (!rootContext.mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: rootContext,
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -196,7 +211,6 @@ class _CreateWorkspaceDialogState extends State<CreateWorkspaceDialog> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
                           ),
                         )
                       : Text(l10n.teamWorkspacesCreateSubmit),

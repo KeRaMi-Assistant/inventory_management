@@ -12,6 +12,7 @@ import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../utils/responsive.dart';
+import '../widgets/app_feedback.dart';
 
 /// First-time-user-Flow als Phone-First-PageView. 6 Steps:
 ///   1. Willkommen
@@ -91,16 +92,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final wsId = activeWs.active?.id;
     if (wsId == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.onboardingErrorNoWorkspace)),
+      AppFeedback.errorOn(
+        messenger,
+        l10n.onboardingErrorNoWorkspace,
+        rootContext: context,
       );
       return;
     }
     final ok = await ob.skipOnboarding(activeWs: activeWs, workspaceId: wsId);
     if (!mounted) return;
     if (!ok) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.onboardingErrorGeneric(ob.lastError ?? ''))),
+      AppFeedback.errorOn(
+        messenger,
+        l10n.onboardingErrorGeneric(ob.lastError ?? ''),
+        rootContext: context,
       );
     }
   }
@@ -113,8 +118,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final wsId = activeWs.active?.id;
     if (wsId == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.onboardingErrorNoWorkspace)),
+      AppFeedback.errorOn(
+        messenger,
+        l10n.onboardingErrorNoWorkspace,
+        rootContext: context,
       );
       return;
     }
@@ -170,8 +177,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
     if (!mounted) return;
     if (!ok) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.onboardingErrorGeneric(ob.lastError ?? ''))),
+      AppFeedback.errorOn(
+        messenger,
+        l10n.onboardingErrorGeneric(ob.lastError ?? ''),
+        rootContext: context,
       );
     }
   }
@@ -286,26 +295,43 @@ class _OnboardingBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // ── Top bar: Back + Skip ──────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+          padding: const EdgeInsets.fromLTRB(4, 8, 8, 0),
           child: Row(
             children: [
-              IconButton(
-                tooltip: l10n.onboardingBack,
-                onPressed: index == 0 ? null : onBack,
-                icon: const Icon(Icons.arrow_back),
+              // Back button — 48×48 touch target
+              SizedBox(
+                width: 48,
+                height: 48,
+                child: IconButton(
+                  tooltip: l10n.onboardingBack,
+                  onPressed: index == 0 ? null : onBack,
+                  icon: const Icon(Icons.arrow_back),
+                  padding: EdgeInsets.zero,
+                ),
               ),
               const Spacer(),
+              // Skip — secondary TextButton, min 48dp height via padding
               TextButton(
                 onPressed: ob.busy ? null : onSkip,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
                 child: Text(l10n.onboardingSkip),
               ),
             ],
           ),
         ),
         const SizedBox(height: 8),
-        _StepDots(count: stepCount, current: index),
-        const SizedBox(height: 12),
+        // ── Progress indicator + step label ──────────────────────────────
+        _StepProgressBar(
+          stepCount: stepCount,
+          currentIndex: index,
+        ),
+        const SizedBox(height: 8),
+        // ── PageView (slides per swipe / button) ─────────────────────────
         Expanded(
           child: PageView(
             controller: pageController,
@@ -313,17 +339,32 @@ class _OnboardingBody extends StatelessWidget {
             children: children,
           ),
         ),
+        // ── Primary action button ─────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
           child: SizedBox(
-            height: 48,
+            height: 52,
             child: ElevatedButton(
               onPressed: ob.busy ? null : onNext,
+              style: ElevatedButton.styleFrom(
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               child: ob.busy
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Theme.of(context)
+                            .elevatedButtonTheme
+                            .style
+                            ?.foregroundColor
+                            ?.resolve({}) ??
+                            AppTheme.bgSurfaceOf(context),
+                      ),
                     )
                   : Text(isLast ? l10n.onboardingFinish : l10n.onboardingNext),
             ),
@@ -334,36 +375,67 @@ class _OnboardingBody extends StatelessWidget {
   }
 }
 
-class _StepDots extends StatelessWidget {
-  final int count;
-  final int current;
-  const _StepDots({required this.count, required this.current});
+/// Animated LinearProgressIndicator + step label replacing the dot-row.
+///
+/// The progress value animates smoothly via [TweenAnimationBuilder] whenever
+/// [currentIndex] changes. The step label ("Schritt X von Y") sits right-
+/// aligned next to the bar so the user always knows how many steps remain.
+class _StepProgressBar extends StatelessWidget {
+  final int stepCount;
+  final int currentIndex;
+  const _StepProgressBar({
+    required this.stepCount,
+    required this.currentIndex,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (i) {
-        final active = i == current;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOut,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          height: 8,
-          width: active ? 24 : 8,
-          decoration: BoxDecoration(
-            color: active
-                ? AppTheme.accent
-                : AppTheme.borderStrongOf(context),
-            borderRadius: BorderRadius.circular(4),
+    final l10n = AppLocalizations.of(context);
+    // Progress goes from 1/N (first step shown) to N/N (last step).
+    final targetValue = (currentIndex + 1) / stepCount;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Step label — right-aligned, muted text
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              l10n.onboardingStepLabel(currentIndex + 1, stepCount),
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.textMutedOf(context),
+              ),
+            ),
           ),
-        );
-      }),
+          const SizedBox(height: 6),
+          // Animated progress bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: targetValue),
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) {
+                return LinearProgressIndicator(
+                  value: value,
+                  minHeight: 6,
+                  backgroundColor: AppTheme.borderOf(context),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(AppTheme.accent),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _StepFrame extends StatelessWidget {
+class _StepFrame extends StatefulWidget {
   final String title;
   final String subtitle;
   final Widget child;
@@ -374,33 +446,71 @@ class _StepFrame extends StatelessWidget {
   });
 
   @override
+  State<_StepFrame> createState() => _StepFrameState();
+}
+
+class _StepFrameState extends State<_StepFrame>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.04),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-        24,
-        8,
-        24,
-        24 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
+    return FadeTransition(
+      opacity: _opacity,
+      child: SlideTransition(
+        position: _slide,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            8,
+            24,
+            24 + MediaQuery.viewInsetsOf(context).bottom,
           ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(
-                fontSize: 14, color: AppTheme.textSecondaryOf(context)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                widget.title,
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.subtitle,
+                style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textSecondaryOf(context)),
+              ),
+              const SizedBox(height: 24),
+              widget.child,
+            ],
           ),
-          const SizedBox(height: 24),
-          child,
-        ],
+        ),
       ),
     );
   }

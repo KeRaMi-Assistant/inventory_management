@@ -10,6 +10,7 @@ import '../models/product.dart';
 import '../models/supplier.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/app_screen_scaffold.dart';
 import 'purchase_order_detail_screen.dart';
 
@@ -51,6 +52,8 @@ class PurchaseOrdersScreen extends StatelessWidget {
         final fab = canEdit
             ? FloatingActionButton.extended(
                 key: const Key('poNewFab'),
+                // D4: tooltip → explicit Semantics-Label for screen readers.
+                tooltip: l10n.purchaseOrderNew,
                 onPressed: () => _openNewOrderDialog(context),
                 icon: const Icon(Icons.add, size: 18),
                 label: Text(l10n.purchaseOrderNew),
@@ -230,18 +233,22 @@ class PurchaseOrderStatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final (label, bg, fg) = _resolve(context, status, l10n);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: fg,
+    return Semantics(
+      label: 'Status: $label',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: fg,
+          ),
         ),
       ),
     );
@@ -441,6 +448,11 @@ class _AddEditOrderDialogState extends State<_AddEditOrderDialog> {
       _error = null;
     });
 
+    // Capture messenger before async gap (dialog-context pattern).
+    // The dialog will be popped before AppFeedback can use the dialog's
+    // ScaffoldMessenger, so we capture the root messenger here.
+    final messenger = ScaffoldMessenger.of(context);
+
     try {
       final provider = Provider.of<InventoryProvider>(context, listen: false);
       final wsProvider =
@@ -479,12 +491,23 @@ class _AddEditOrderDialogState extends State<_AddEditOrderDialog> {
         await provider.addPurchaseOrderItem(item);
       }
 
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context);
+        // Show success feedback via root messenger after dialog is closed.
+        // context is State.context — safe to use inside mounted guard.
+        AppFeedback.successOn(
+          messenger,
+          l10n.purchaseOrderCreatedSuccess,
+          rootContext: context,
+        );
+      }
     } catch (e) {
-      setState(() {
-        _saving = false;
-        _error = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = l10n.purchaseOrderCreateError;
+        });
+      }
     }
   }
 

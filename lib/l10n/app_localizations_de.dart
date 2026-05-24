@@ -184,6 +184,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get navMoreSheetTitle => 'Weitere Bereiche';
 
   @override
+  String get navMoreSearchHint => 'Bereich suchen…';
+
+  @override
+  String get navMoreSearchNoResults => 'Kein Bereich gefunden';
+
+  @override
+  String get navMoreSectionManage => 'Verwalten';
+
+  @override
+  String get navMoreSectionTools => 'Analyse & Tools';
+
+  @override
+  String get navMoreSectionAccount => 'Konto';
+
+  @override
   String get navWarehouse => 'Warenwirtschaft';
 
   @override
@@ -556,6 +571,12 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get buyersDeletedSuccess => 'Käufer entfernt.';
+
+  @override
+  String get buyersDeleteFailed => 'Löschen fehlgeschlagen.';
+
+  @override
   String get shopsEmpty => 'Noch keine Shops angelegt.';
 
   @override
@@ -568,6 +589,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String shopsDeleteConfirm(Object name) {
     return 'Shop „$name\" wirklich löschen?';
   }
+
+  @override
+  String get shopsDeletedSuccess => 'Shop entfernt.';
+
+  @override
+  String get shopsDeleteFailed => 'Löschen fehlgeschlagen.';
 
   @override
   String teamLoadFailed(Object error) {
@@ -659,7 +686,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get teamMemberFallbackLabel => 'diesem Mitglied';
 
   @override
+  String get teamMemberRemovedSuccess => 'Mitglied entfernt.';
+
+  @override
+  String get teamMemberRemoveFailed => 'Entfernen fehlgeschlagen.';
+
+  @override
   String get teamInviteRevoke => 'Einladung zurückziehen';
+
+  @override
+  String get teamInviteRevokedSuccess => 'Einladung zurückgezogen.';
+
+  @override
+  String get teamInviteRevokeFailed => 'Zurückziehen fehlgeschlagen.';
 
   @override
   String get teamSwitchWorkspace => 'Workspace wechseln';
@@ -1199,6 +1238,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String dealDeleteConfirm(Object product, int id) {
     return '„$product\" (ID: $id) wirklich löschen?';
   }
+
+  @override
+  String get dealDeleteConfirmTitle => 'Deal löschen?';
+
+  @override
+  String get dealDeleteConfirmMessage =>
+      'Diese Aktion entfernt den Deal. Du hast 4 Sekunden, um es rückgängig zu machen.';
+
+  @override
+  String get dealDeletedFeedback => 'Deal gelöscht';
 
   @override
   String get bulkStatus => 'Status';
@@ -2462,6 +2511,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ticketsArchiveLongPressHint => 'Lang drücken zum Wiedereröffnen';
 
   @override
+  String ticketsReopenSuccess(String ticketNumber) {
+    return 'Ticket $ticketNumber wieder geöffnet';
+  }
+
+  @override
+  String get ticketsReopenFailed => 'Wiedereröffnen fehlgeschlagen';
+
+  @override
+  String ticketsEditSaved(String ticketNumber) {
+    return 'Ticket $ticketNumber gespeichert';
+  }
+
+  @override
+  String get ticketsEditFailed => 'Speichern fehlgeschlagen';
+
+  @override
   String get inventoryTitle => 'Lager';
 
   @override
@@ -2485,6 +2550,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String inventoryDeleteConfirm(Object name) {
     return 'Artikel „$name\" wirklich löschen?';
+  }
+
+  @override
+  String inventoryBarcodeFound(Object name) {
+    return 'Gefunden: $name';
   }
 
   @override
@@ -3120,6 +3190,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String invitesDeclineFailed(Object error) {
+    return 'Ablehnen fehlgeschlagen: $error';
+  }
+
+  @override
   String invitesExpiresOn(Object date) {
     return 'Läuft am $date ab';
   }
@@ -3376,6 +3451,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String onboardingStepLabel(Object current, Object total) {
+    return 'Schritt $current von $total';
+  }
+
+  @override
   String get dashboardEmptyTitle => 'Noch keine Daten';
 
   @override
@@ -3470,6 +3550,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trackingReparseFailed => 'Neubewertung fehlgeschlagen';
+
+  @override
+  String trackingReparseRateLimit(int seconds) {
+    return 'Zu viele Anfragen — bitte in $seconds s erneut versuchen';
+  }
 
   @override
   String get trackingReparseOffline =>
@@ -4156,6 +4241,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get purchaseOrderStatusChangeConfirm => 'Status wirklich ändern?';
 
   @override
+  String get purchaseOrderStatusChangeBody =>
+      'Der Bestellstatus wird geändert. Diese Aktion kann nicht rückgängig gemacht werden.';
+
+  @override
   String get purchaseOrderDetailTitle => 'Bestelldetails';
 
   @override
@@ -4225,6 +4314,13 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get purchaseOrderPdfExportError =>
       'PDF-Beleg konnte nicht erstellt werden.';
+
+  @override
+  String get purchaseOrderCreatedSuccess => 'Bestellung angelegt.';
+
+  @override
+  String get purchaseOrderCreateError =>
+      'Bestellung konnte nicht angelegt werden.';
 
   @override
   String get purchaseOrderStatusChangeError =>
@@ -4538,4 +4634,850 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get detailPaneNoSelectionHint =>
       'Wähle links einen Artikel aus, um Details zu sehen.';
+
+  @override
+  String confirmTypeNamePrompt(String name) {
+    return 'Gib „$name“ ein, um zu bestätigen.';
+  }
+
+  @override
+  String get appFeedbackUndoAction => 'Rückgängig';
+
+  @override
+  String get appFeedbackSuccessDefault => 'Gespeichert';
+
+  @override
+  String get appFeedbackErrorDefault =>
+      'Etwas ist schiefgegangen. Bitte erneut versuchen.';
+
+  @override
+  String get errorNetworkOffline =>
+      'Keine Internetverbindung. Bitte prüfe deine Verbindung.';
+
+  @override
+  String get errorTimeout => 'Zeitüberschreitung. Bitte erneut versuchen.';
+
+  @override
+  String get errorAuthExpired => 'Anmeldung abgelaufen. Bitte erneut anmelden.';
+
+  @override
+  String get errorFormatInvalid => 'Ungültiges Datenformat.';
+
+  @override
+  String get errorUnknown => 'Ein unbekannter Fehler ist aufgetreten.';
+
+  @override
+  String inboxTabSuggestions(int count) {
+    return 'Vorschläge ($count)';
+  }
+
+  @override
+  String inboxTabUpdated(int count) {
+    return 'Aktualisiert ($count)';
+  }
+
+  @override
+  String inboxTabUnclassified(int count) {
+    return 'Unklassifiziert ($count)';
+  }
+
+  @override
+  String inboxMailboxConnectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Postfächer verbunden',
+      one: '1 Postfach verbunden',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get inboxMailboxNone => 'Noch kein Postfach verbunden';
+
+  @override
+  String get inboxPollingHint =>
+      'Polling alle 5 min — nur Bestellbestätigungen, Versand- und Stornierungs-Mails der konfigurierten Shops landen hier.';
+
+  @override
+  String get inboxMailboxNoneHint =>
+      'Lege unter Einstellungen → Postfach ein IMAP-Konto an.';
+
+  @override
+  String get inboxDismissalFilterTooltipEmpty => 'Verworfen-Filter (0)';
+
+  @override
+  String inboxDismissalFilterTooltipCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Einträge',
+      one: '1 Eintrag',
+    );
+    return 'Verworfen-Filter zurücksetzen ($_temp0)';
+  }
+
+  @override
+  String inboxImportingTooltip(int count) {
+    return 'Importiere Mails… ($count bisher)';
+  }
+
+  @override
+  String get inboxPollNowTooltip => 'Jetzt pollen (statt 5 min warten)';
+
+  @override
+  String get inboxConnectFirstTooltip =>
+      'Erst Postfach in den Einstellungen verbinden';
+
+  @override
+  String get inboxReparseTrackingTitle => 'Tracking-Daten neu auslesen';
+
+  @override
+  String get inboxReparseTrackingSubtitle =>
+      'Wendet die aktuelle Adapter-Registry erneut auf alle Vorschläge an. Korrigiert falsch extrahierte Tracking-Nummern (z.B. wenn ein Adapter-Bug eine interne Shipment-ID statt der echten Carrier-Nr gespeichert hat).';
+
+  @override
+  String get inboxFilterAllShops => 'Alle Shops';
+
+  @override
+  String get inboxFilterAllStatus => 'Alle Status';
+
+  @override
+  String inboxFilterResetBodyCount(int count) {
+    return '$count verworfene Einträge werden wieder angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.';
+  }
+
+  @override
+  String get inboxDiscardFilterCleared => 'Verworfen-Filter geleert.';
+
+  @override
+  String inboxClearDismissalsFailed(String error) {
+    return 'Zurücksetzen fehlgeschlagen: $error';
+  }
+
+  @override
+  String get inboxPolling => 'Pollt das Postfach…';
+
+  @override
+  String inboxPollingFailed(String error) {
+    return 'Polling fehlgeschlagen: $error';
+  }
+
+  @override
+  String inboxPollFetched(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Mails geholt',
+      one: '1 Mail geholt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String inboxPollStored(int count) {
+    return '$count aufgenommen';
+  }
+
+  @override
+  String inboxPollSuggestedMerged(int suggested, int matched) {
+    return '$suggested Vorschl. / $matched gemerged';
+  }
+
+  @override
+  String get inboxPollUpToDate =>
+      'Keine neuen passenden Mails. Postfach ist aktuell.';
+
+  @override
+  String get inboxRetracking => 'Liest Tracking-Daten neu aus…';
+
+  @override
+  String inboxReparseFailed(String error) {
+    return 'Re-Parse fehlgeschlagen: $error';
+  }
+
+  @override
+  String inboxReparseRescued(int rescued, int scanned) {
+    String _temp0 = intl.Intl.pluralLogic(
+      rescued,
+      locale: localeName,
+      other: '$rescued Vorschläge',
+      one: '1 Vorschlag',
+    );
+    return '$_temp0 korrigiert ($scanned geprüft).';
+  }
+
+  @override
+  String inboxReparseNoCorrections(int scanned) {
+    return 'Keine Korrekturen nötig ($scanned geprüft).';
+  }
+
+  @override
+  String get inboxDiscardMailTitle => 'Mail verwerfen?';
+
+  @override
+  String inboxDiscardMailBody(String subject) {
+    return 'Die Mail „$subject\" wird aus der Inbox entfernt und nicht mehr angezeigt.';
+  }
+
+  @override
+  String get inboxMailDiscarded => 'Mail verworfen.';
+
+  @override
+  String inboxDiscardFailed(String error) {
+    return 'Verwerfen fehlgeschlagen: $error';
+  }
+
+  @override
+  String inboxSuggestionCompleteFailed(String error) {
+    return 'Konnte Vorschlag nicht abschließen: $error';
+  }
+
+  @override
+  String inboxSuggestionRejectFailed(String error) {
+    return 'Ablehnen fehlgeschlagen: $error';
+  }
+
+  @override
+  String inboxTrackingAdopted(int dealId) {
+    return 'Tracking auf Deal #$dealId übernommen.';
+  }
+
+  @override
+  String inboxTrackingAdoptionFailed(String error) {
+    return 'Tracking-Übernahme fehlgeschlagen: $error';
+  }
+
+  @override
+  String get inboxApplyTrackingToDeal => 'Tracking auf Deal anwenden';
+
+  @override
+  String inboxApplyTrackingHint(String tracking) {
+    return 'Tracking $tracking → Deal-Tracking, Status wird auf „Unterwegs\" gesetzt.';
+  }
+
+  @override
+  String inboxApplyTrackingHintShort(String tracking) {
+    return 'Tracking $tracking → Deal-Tracking.';
+  }
+
+  @override
+  String get inboxLinkToDealTitle => 'Vorschlag zu Deal zuweisen';
+
+  @override
+  String get inboxLinkToDealHint =>
+      'Order-ID, Tracking und ETA werden in den ausgewählten Deal übernommen, der Vorschlag wird abgehakt.';
+
+  @override
+  String inboxSuggestionLinked(int dealId) {
+    return 'Vorschlag mit Deal #$dealId verknüpft.';
+  }
+
+  @override
+  String inboxLinkFailed(String error) {
+    return 'Zuweisung fehlgeschlagen: $error';
+  }
+
+  @override
+  String get inboxDetailsAndTracking => 'Details & Tracking anzeigen';
+
+  @override
+  String get inboxLinkToExistingDeal => 'Zu bestehendem Deal zuweisen';
+
+  @override
+  String inboxDealCreatedFromMail(int dealId) {
+    return 'Deal #$dealId aus Mail angelegt.';
+  }
+
+  @override
+  String get inboxCreateDeal => 'Deal anlegen';
+
+  @override
+  String get inboxApplyTrackingToDealShort => 'Tracking → Deal';
+
+  @override
+  String get inboxShowDetails => 'Details anzeigen';
+
+  @override
+  String get inboxCountdownToday => 'Heute weg';
+
+  @override
+  String get inboxCountdownOneDay => 'Noch 1 Tag';
+
+  @override
+  String inboxCountdownDays(int days) {
+    return 'Noch $days Tage';
+  }
+
+  @override
+  String inboxCountdownTooltip(int totalDays) {
+    return 'Inbox-Sichtbarkeit $totalDays Tage. Aktualisiert sich beim nächsten Refresh.';
+  }
+
+  @override
+  String get inboxTrackingCopied => 'Tracking-Nummer kopiert.';
+
+  @override
+  String get inboxSuggestionRejectedFeedback => 'Vorschlag verworfen';
+
+  @override
+  String get inboxDiscardFilterClearedFeedback => 'Filter zurückgesetzt';
+
+  @override
+  String get settingsTabMailbox => 'Postfach';
+
+  @override
+  String get settingsBillingSectionTitle => 'Plan & Abrechnung';
+
+  @override
+  String get settingsBillingPriceFree => 'kostenlos';
+
+  @override
+  String settingsBillingPricePerMonth(String price) {
+    return '$price / Monat';
+  }
+
+  @override
+  String get settingsBillingMostPopular => 'Most Popular';
+
+  @override
+  String get settingsBillingActionUpgrade => 'Upgrade';
+
+  @override
+  String get settingsBillingActionManage => 'Verwalten';
+
+  @override
+  String get settingsBillingDetailsTitle => 'Rechnungsdaten';
+
+  @override
+  String get settingsBillingAddressMissing =>
+      'Pflichtangaben unvollständig — bitte ergänzen';
+
+  @override
+  String get settingsBillingAddressAdd => 'Adresse hinterlegen';
+
+  @override
+  String get settingsBillingAddressOptional =>
+      'Optional — wird erst beim Upgrade benötigt';
+
+  @override
+  String get settingsMailboxRemoveTitle => 'Postfach entfernen';
+
+  @override
+  String settingsMailboxRemoveBody(String label) {
+    return 'Soll das IMAP-Konto \"$label\" wirklich gelöscht werden? Auch alle aus diesem Postfach importierten Mails (Vorschläge + Unklassifizierte) werden gelöscht. Bereits in Deals übernommene Bestellungen bleiben unberührt.';
+  }
+
+  @override
+  String get settingsMailboxDeleteError => 'Löschen fehlgeschlagen';
+
+  @override
+  String get settingsMailboxRemovedFeedback => 'Postfach entfernt';
+
+  @override
+  String get settingsMailboxAddLabel => 'IMAP-Konto';
+
+  @override
+  String settingsMailboxLimitLabel(int limit) {
+    return 'Limit erreicht ($limit)';
+  }
+
+  @override
+  String get settingsMailboxLimitDialogTitle => 'Postfach-Limit erreicht';
+
+  @override
+  String settingsMailboxLimitDialogBody(
+    String plan,
+    int limit,
+    String mailboxWord,
+  ) {
+    return 'Dein $plan-Plan erlaubt $limit $mailboxWord. Upgrade auf einen höheren Plan, um weitere zu verbinden.';
+  }
+
+  @override
+  String get settingsMailboxWordSingular => 'Postfach';
+
+  @override
+  String get settingsMailboxWordPlural => 'Postfächer';
+
+  @override
+  String get settingsMailboxQuotaUnlimited => 'unbegrenzt';
+
+  @override
+  String get settingsMailboxIntegrationTitle => 'Postfach-Integration';
+
+  @override
+  String get settingsMailboxIntegrationDesc =>
+      'Hinterlege ein IMAP-Konto, um Bestell- und Versand-Mails automatisch erkennen zu lassen. Polling läuft alle 5 min serverseitig — Passwörter werden mit pgp_sym_encrypt verschlüsselt gespeichert. Im Inbox-Tab kannst du erkannte Deals annehmen.';
+
+  @override
+  String settingsMailboxQuotaLine(
+    String plan,
+    String quota,
+    String mailboxWord,
+    int days,
+  ) {
+    return '$plan-Plan: $quota $mailboxWord · $days Tage Inbox-Verlauf';
+  }
+
+  @override
+  String get settingsMailboxStatusPaused => 'Pausiert';
+
+  @override
+  String get settingsMailboxStatusError => 'Fehler';
+
+  @override
+  String get settingsMailboxStatusNeverPolled => 'Noch nicht gepollt';
+
+  @override
+  String settingsMailboxStatusLastPolled(String relative) {
+    return 'Zuletzt gepollt: $relative';
+  }
+
+  @override
+  String get settingsRelativeJustNow => 'gerade eben';
+
+  @override
+  String settingsRelativeMinutes(int minutes) {
+    return 'vor $minutes min';
+  }
+
+  @override
+  String settingsRelativeHours(int hours) {
+    return 'vor $hours h';
+  }
+
+  @override
+  String settingsRelativeDays(int days) {
+    return 'vor $days d';
+  }
+
+  @override
+  String get settingsMailboxEmptyHint => 'Noch kein Postfach hinterlegt.';
+
+  @override
+  String get settingsMailboxFreePlanTitle =>
+      'Postfach im Free-Plan nicht enthalten';
+
+  @override
+  String settingsMailboxFreePlanDesc(String plan) {
+    return 'Dein aktueller Plan: $plan. Die automatische Erkennung von Bestell- und Versand-Mails ist ab dem Starter-Plan verfügbar — höhere Pläne erlauben mehr Postfächer und längeren Inbox-Verlauf.';
+  }
+
+  @override
+  String get settingsMailboxPlanStarter => '1 Postfach · 7 Tage';
+
+  @override
+  String get settingsMailboxPlanPro => '3 Postfächer · 14 Tage';
+
+  @override
+  String get settingsMailboxPlanBusiness => '10 Postfächer · 30 Tage';
+
+  @override
+  String get settingsMailboxPlanUltimate => '15 Postfächer · 90 Tage';
+
+  @override
+  String settingsShopsAmazonAlreadyPresent(int skipped) {
+    return 'Amazon-Shops sind bereits vorhanden ($skipped übersprungen).';
+  }
+
+  @override
+  String settingsShopsAmazonAdded(int added, String skippedSuffix) {
+    return '$added Amazon-Shops hinzugefügt$skippedSuffix.';
+  }
+
+  @override
+  String settingsShopsAmazonSkippedSuffix(int skipped) {
+    return ', $skipped bereits vorhanden';
+  }
+
+  @override
+  String get settingsShopsAddError => 'Fehler beim Hinzufügen';
+
+  @override
+  String settingsShopsAmazonCountAccounts(int count, String word) {
+    return '$count $word';
+  }
+
+  @override
+  String get settingsShopsAmazonAccountSingular => 'Country-Account';
+
+  @override
+  String get settingsShopsAmazonAccountPlural => 'Country-Accounts';
+
+  @override
+  String get settingsShippingApiKeyLabel => 'API-Key';
+
+  @override
+  String settingsShippingDeleteKeyConfirmBody(String carrier) {
+    return '$carrier: API-Key wirklich entfernen?';
+  }
+
+  @override
+  String get unsavedChangesDiscardTitle =>
+      'Ungespeicherte Änderungen verwerfen?';
+
+  @override
+  String get unsavedChangesDiscardMessage => 'Deine Änderungen gehen verloren.';
+
+  @override
+  String get unsavedChangesDiscardLabel => 'Verwerfen';
+
+  @override
+  String purchaseOrderScanItemAdded(String name) {
+    return '$name +1';
+  }
+
+  @override
+  String stocktakeScanIncrement(String name) {
+    return '$name +1';
+  }
+
+  @override
+  String suppliersSeedSuccess(int added) {
+    return '$added Versanddienste hinzugefügt.';
+  }
+
+  @override
+  String suppliersSeedAlreadyPresent(int skipped) {
+    return 'Versanddienste sind bereits vorhanden ($skipped übersprungen).';
+  }
+
+  @override
+  String get suppliersAddCarriersFailed =>
+      'Fehler beim Hinzufügen der Versanddienste.';
+
+  @override
+  String get suppliersDeleted => 'Lieferant gelöscht.';
+
+  @override
+  String get suppliersDeleteFailed => 'Löschen fehlgeschlagen.';
+
+  @override
+  String get categoryDeleted => 'Warengruppe gelöscht.';
+
+  @override
+  String get categoryDeleteFailed => 'Löschen fehlgeschlagen.';
+
+  @override
+  String get warehouseDeleteTitle => 'Lager löschen';
+
+  @override
+  String get warehouseDeleted => 'Lager gelöscht.';
+
+  @override
+  String get warehouseDeleteFailed => 'Löschen fehlgeschlagen.';
+
+  @override
+  String get warehouseSaved => 'Lager gespeichert.';
+
+  @override
+  String get warehouseSaveFailed => 'Speichern fehlgeschlagen.';
+
+  @override
+  String get inboxDetailNoSubject => '— ohne Betreff —';
+
+  @override
+  String inboxDetailFrom(Object address) {
+    return 'Von: $address';
+  }
+
+  @override
+  String inboxDetailReceived(Object date) {
+    return 'Empfangen: $date';
+  }
+
+  @override
+  String inboxDetailProcessed(Object date) {
+    return 'Verarbeitet: $date';
+  }
+
+  @override
+  String get inboxStatusMatched => 'Aktualisiert';
+
+  @override
+  String get inboxStatusSuggested => 'Vorschlag';
+
+  @override
+  String get inboxStatusUnclassified => 'Unklassifiziert';
+
+  @override
+  String get inboxStatusFailed => 'Fehler';
+
+  @override
+  String get inboxStatusDismissed => 'Verworfen';
+
+  @override
+  String get inboxStatusPending => 'In Arbeit';
+
+  @override
+  String get trackingUpdateFailed => 'Tracking-Update fehlgeschlagen.';
+
+  @override
+  String get trackingAcceptFailed => 'Tracking-Akzeptanz fehlgeschlagen.';
+
+  @override
+  String get trackingDiscardFailed => 'Tracking verwerfen fehlgeschlagen.';
+
+  @override
+  String get billingProfileRequiredField =>
+      'Pflichtfeld für kostenpflichtige Pläne';
+
+  @override
+  String get billingProfilePaidHint =>
+      'Für kostenpflichtige Pläne benötigen wir eine vollständige Rechnungsadresse (Pflichtfelder mit *).';
+
+  @override
+  String get billingProfileFieldFullName => 'Vollständiger Name';
+
+  @override
+  String get billingProfileFieldStreet => 'Straße & Hausnummer';
+
+  @override
+  String get billingProfileDataNotice =>
+      'Diese Daten werden ausschließlich für Rechnungen und gesetzlich vorgeschriebene Pflichtangaben verwendet.';
+
+  @override
+  String get billingProfileSaved => 'Rechnungsdaten gespeichert.';
+
+  @override
+  String get billingProfileSaveFailed => 'Speichern fehlgeschlagen.';
+
+  @override
+  String get billingProfileSaving => 'Speichern…';
+
+  @override
+  String get planMenuSelect => 'Plan auswählen';
+
+  @override
+  String get planMenuManage => 'Plan verwalten';
+
+  @override
+  String planMenuCurrent(String label) {
+    return 'Aktuell: $label';
+  }
+
+  @override
+  String get planMenuUpgradeBadge => 'Upgrade';
+
+  @override
+  String get pricingSelectPlan => 'Plan auswählen';
+
+  @override
+  String get pricingActivePlan => 'Aktiver Plan';
+
+  @override
+  String get pricingSwitchToFree => 'Auf Free wechseln';
+
+  @override
+  String pricingUpgradeToTitle(String plan) {
+    return 'Auf $plan upgraden?';
+  }
+
+  @override
+  String get pricingDowngradeToFreeTitle => 'Auf Free wechseln?';
+
+  @override
+  String get pricingDowngradeLoseAccess =>
+      'Du verlierst Zugang zu Pro-Features. Bestehende Daten bleiben erhalten.';
+
+  @override
+  String get pricingDemoCheckoutNotice =>
+      'Hinweis: Dies ist ein Demo-Switch ohne Zahlungsabwicklung. Sobald Stripe/Paddle integriert ist, läuft hier der echte Checkout.';
+
+  @override
+  String get pricingActivatePlan => 'Plan aktivieren';
+
+  @override
+  String get pricingDoSwitch => 'Wechseln';
+
+  @override
+  String get pricingCycleMonthly => 'Monatlich';
+
+  @override
+  String get pricingCycleYearly => 'Jährlich · –17%';
+
+  @override
+  String get trackingCarrierPickTitle => 'Versanddienst wählen';
+
+  @override
+  String get trackingAmazonCountryTitle => 'Amazon · Land wählen';
+
+  @override
+  String get trackingTooltipUnknown =>
+      'Tracking — Versanddienst nicht erkannt (lange drücken zum Auswählen)';
+
+  @override
+  String trackingTooltipKnown(String carrier) {
+    return '$carrier · lange drücken zum Wechseln';
+  }
+
+  @override
+  String get globalSearchHint =>
+      'Suchen über Deals, Lager, Tickets, Käufer, Lieferanten…';
+
+  @override
+  String get globalSearchBuyerFilterSubtitle => 'Käufer · Deals filtern';
+
+  @override
+  String get dealPickerSearchHint =>
+      'Suche nach Produkt, Ticket, Shop oder Käufer …';
+
+  @override
+  String get dealPickerEmpty => 'Kein passender Deal gefunden.';
+
+  @override
+  String get mailboxDialogEditTitle => 'Postfach bearbeiten';
+
+  @override
+  String get mailboxDialogAddTitle => 'IMAP-Konto hinzufügen';
+
+  @override
+  String get mailboxDialogPasswordEditLabel =>
+      'App-Passwort (leer lassen, wenn unverändert)';
+
+  @override
+  String get productInvalidNumber => 'Ungültige Zahl';
+
+  @override
+  String inventoryPiecesCount(int quantity) {
+    return '$quantity Stück';
+  }
+
+  @override
+  String get heatmapTapHint => 'Tippe auf einen Tag für Details';
+
+  @override
+  String get billingProfileSectionContact => 'Kontaktperson';
+
+  @override
+  String get billingProfileSectionAddress => 'Rechnungsadresse';
+
+  @override
+  String get billingProfileFieldCompany => 'Firma (optional)';
+
+  @override
+  String get billingProfileFieldVatId => 'USt-IdNr. (optional)';
+
+  @override
+  String get billingProfileFieldPhone => 'Telefon';
+
+  @override
+  String get billingProfileFieldAddr2 => 'Adresszusatz (optional)';
+
+  @override
+  String get billingProfileFieldPostal => 'PLZ';
+
+  @override
+  String get billingProfileFieldCity => 'Ort';
+
+  @override
+  String get billingProfileFieldRegion => 'Bundesland (optional)';
+
+  @override
+  String get billingProfileFieldCountry => 'Land';
+
+  @override
+  String get billingProfileCountryValidation => 'ISO 2-Buchstaben';
+
+  @override
+  String pricingPlanActivated(String plan) {
+    return 'Plan $plan aktiviert.';
+  }
+
+  @override
+  String get pricingActivationFailed => 'Aktivierung fehlgeschlagen.';
+
+  @override
+  String get heatmapLess => 'Weniger';
+
+  @override
+  String get heatmapMore => 'Mehr';
+
+  @override
+  String get validationInvalidEmail => 'Ungültige E-Mail-Adresse';
+
+  @override
+  String get validationInvalidPort => 'Port muss zwischen 1 und 65535 liegen';
+
+  @override
+  String get mailboxDialogLabelLabel => 'Bezeichnung';
+
+  @override
+  String get mailboxDialogLabelHint => 'z. B. \"Gmail Reseller\"';
+
+  @override
+  String get mailboxDialogHostLabel => 'IMAP-Server';
+
+  @override
+  String get mailboxDialogPortLabel => 'Port';
+
+  @override
+  String get mailboxDialogUsernameLabel => 'Benutzername / Mail-Adresse';
+
+  @override
+  String get mailboxDialogPasswordNewLabel => 'App-Passwort';
+
+  @override
+  String get mailboxDialogPasswordHelper =>
+      'Bei Gmail/Outlook: separates App-Passwort generieren.';
+
+  @override
+  String get mailboxDialogFolderLabel => 'Ordner';
+
+  @override
+  String get mailboxDialogSslLabel => 'SSL/TLS verwenden';
+
+  @override
+  String get mailboxDialogPollingLabel => 'Polling aktiv';
+
+  @override
+  String get mailboxDialogPollingSubtitle =>
+      'Wird alle 5 Minuten von der Edge Function abgefragt.';
+
+  @override
+  String get mailboxDialogRequiredError =>
+      'Bezeichnung, Server und Benutzername sind Pflichtfelder.';
+
+  @override
+  String get mailboxDialogPasswordRequiredError =>
+      'Passwort ist beim Anlegen Pflicht.';
+
+  @override
+  String mailboxDialogSaveFailed(String error) {
+    return 'Speichern fehlgeschlagen: $error';
+  }
+
+  @override
+  String semanticsChartBar(
+    String title,
+    int count,
+    String topValue,
+    String topLabel,
+  ) {
+    return 'Säulendiagramm. $title. $count Werte. Höchster Wert: $topValue für $topLabel.';
+  }
+
+  @override
+  String semanticsChartLine(
+    String title,
+    int count,
+    String topValue,
+    String topLabel,
+  ) {
+    return 'Liniendiagramm. $title. $count Datenpunkte. Höchster Wert: $topValue für $topLabel.';
+  }
+
+  @override
+  String semanticsChartPie(
+    String title,
+    int count,
+    String topLabel,
+    String topPct,
+  ) {
+    return 'Tortendiagramm. $title. $count Segmente. Dominantes Segment: $topLabel mit $topPct%.';
+  }
+
+  @override
+  String get semanticsChartLoading => 'Diagramm lädt.';
 }

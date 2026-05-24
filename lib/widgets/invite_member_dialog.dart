@@ -8,6 +8,8 @@ import '../models/billing_profile.dart';
 import '../models/workspace.dart';
 import '../providers/billing_provider.dart';
 import '../services/workspace_service.dart';
+import '../utils/error_messages.dart';
+import 'app_feedback.dart';
 
 // ---------------------------------------------------------------------------
 // InviteMemberDialog — Bottom-Sheet zum Einladen eines Teammitglieds
@@ -80,6 +82,14 @@ class _InviteMemberDialogState extends State<InviteMemberDialog> {
   Future<void> _submit() async {
     if (!_validateEmail()) return;
 
+    // Capture root Scaffold-Messenger and l10n before the async gap
+    // (Dialog-Context-Pattern: the modal bottom sheet may be gone by the
+    // time the await returns, so we must not call ScaffoldMessenger.of(context)
+    // after any await).
+    final messenger = ScaffoldMessenger.of(context);
+    final rootContext = context;
+    final l10n = AppLocalizations.of(context);
+
     setState(() => _loading = true);
     try {
       final invite = await widget.workspaceService.createInvite(
@@ -90,10 +100,11 @@ class _InviteMemberDialogState extends State<InviteMemberDialog> {
       if (!mounted) return;
       Navigator.of(context).pop(invite);
     } catch (e) {
-      if (!mounted) return;
-      final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.teamInviteFailed(e.toString()))),
+      if (!rootContext.mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.teamInviteFailed(sanitizeError(e, l10n: l10n)),
+        rootContext: rootContext,
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -379,16 +390,25 @@ class InviteSuccessSheet extends StatelessWidget {
                   child: FilledButton(
                     key: const Key('invite-success-copy-btn'),
                     onPressed: () async {
+                      // Capture messenger + rootContext before the async gap
+                      // (Dialog-Context-Pattern — bottom sheet context may be
+                      // detached after Clipboard.setData returns).
+                      final messenger = ScaffoldMessenger.of(context);
+                      final rootContext = context;
                       try {
                         await Clipboard.setData(ClipboardData(text: token));
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.teamInviteCopyLinkSnack)),
+                        if (!rootContext.mounted) return;
+                        AppFeedback.successOn(
+                          messenger,
+                          l10n.teamInviteCopyLinkSnack,
+                          rootContext: rootContext,
                         );
                       } catch (_) {
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.teamInviteCopyFailed)),
+                        if (!rootContext.mounted) return;
+                        AppFeedback.errorOn(
+                          messenger,
+                          l10n.teamInviteCopyFailed,
+                          rootContext: rootContext,
                         );
                       }
                     },

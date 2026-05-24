@@ -153,9 +153,13 @@ class DealCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  _StatusPill(
-                      label: localizeDealStatus(context, deal.status),
-                      style: status),
+                  Semantics(
+                    label: 'Status: ${localizeDealStatus(context, deal.status)}',
+                    excludeSemantics: true,
+                    child: _StatusPill(
+                        label: localizeDealStatus(context, deal.status),
+                        style: status),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -282,7 +286,7 @@ class DealCard extends StatelessWidget {
                     tooltip: l10n.actionDelete,
                     visualDensity: VisualDensity.compact,
                     onPressed: () => _confirmDelete(context),
-                    icon: Icon(Icons.delete_outline,
+                    icon: Icon(Icons.delete_outlined,
                         size: 18, color: AppTheme.dangerTextOf(context)),
                   ),
                 ],

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -14,9 +15,12 @@ import '../utils/mail_link.dart';
 import '../utils/responsive.dart';
 import '../utils/url_helper.dart';
 import '../widgets/add_edit_deal_dialog.dart';
+import '../widgets/app_feedback.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/deal_picker_dialog.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/inbox_message_details.dart';
+import '../widgets/skeletons/list_skeleton.dart';
 import '../widgets/tracking_banner_improved_detection.dart';
 
 /// Postfach-Inbox: Vorschläge → vorausgefüllter Edit-Dialog beim Annehmen,
@@ -90,8 +94,8 @@ class _InboxScreenState extends State<InboxScreen> {
                               Icons.add_box_outlined,
                               size: 18),
                         ),
-                        text:
-                            'Vorschläge (${provider.pendingSuggestions.length})',
+                        text: AppLocalizations.of(context)
+                            .inboxTabSuggestions(provider.pendingSuggestions.length),
                       ),
                       Tab(
                         icon: Badge.count(
@@ -100,8 +104,8 @@ class _InboxScreenState extends State<InboxScreen> {
                               provider.unreadMatchedCount > 0,
                           child: const Icon(Icons.sync, size: 18),
                         ),
-                        text:
-                            'Aktualisiert (${provider.matchedRecently.length})',
+                        text: AppLocalizations.of(context)
+                            .inboxTabUpdated(provider.matchedRecently.length),
                       ),
                       Tab(
                         icon: Badge.count(
@@ -112,8 +116,8 @@ class _InboxScreenState extends State<InboxScreen> {
                               Icons.help_outline,
                               size: 18),
                         ),
-                        text:
-                            'Unklassifiziert (${provider.unclassified.length})',
+                        text: AppLocalizations.of(context)
+                            .inboxTabUnclassified(provider.unclassified.length),
                       ),
                     ],
                   ),
@@ -126,17 +130,23 @@ class _InboxScreenState extends State<InboxScreen> {
                         accounts: provider.accounts,
                         onRefresh: _refresh,
                         onGoToDeals: widget.onGoToDealsReview,
+                        isLoading: provider.isLoading,
+                        initialLoadAttempted: provider.initialLoadAttempted,
                       ),
                       _MatchedTab(
                         messages: provider.matchedRecently,
                         accounts: provider.accounts,
                         onRefresh: _refresh,
                         onOpenTicket: widget.onOpenTicket,
+                        isLoading: provider.isLoading,
+                        initialLoadAttempted: provider.initialLoadAttempted,
                       ),
                       _UnclassifiedTab(
                         messages: provider.unclassified,
                         accounts: provider.accounts,
                         onRefresh: _refresh,
+                        isLoading: provider.isLoading,
+                        initialLoadAttempted: provider.initialLoadAttempted,
                       ),
                     ],
                   ),
@@ -176,9 +186,9 @@ class _InboxHeader extends StatelessWidget {
               children: [
                 Text(
                   hasAccount
-                      ? '${provider.accounts.length} Postfach'
-                          '${provider.accounts.length == 1 ? "" : "er"} verbunden'
-                      : 'Noch kein Postfach verbunden',
+                      ? AppLocalizations.of(context)
+                          .inboxMailboxConnectedCount(provider.accounts.length)
+                      : AppLocalizations.of(context).inboxMailboxNone,
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
@@ -188,10 +198,8 @@ class _InboxHeader extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   hasAccount
-                      ? 'Polling alle 5 min — nur Bestellbestätigungen, '
-                          'Versand- und Stornierungs-Mails der konfigurierten '
-                          'Shops landen hier.'
-                      : 'Lege unter Einstellungen → Postfach ein IMAP-Konto an.',
+                      ? AppLocalizations.of(context).inboxPollingHint
+                      : AppLocalizations.of(context).inboxMailboxNoneHint,
                   style: TextStyle(
                       fontSize: 11,
                       color: AppTheme.textSecondaryOf(context)),
@@ -201,10 +209,9 @@ class _InboxHeader extends StatelessWidget {
           ),
           IconButton(
             tooltip: provider.dismissalCount == 0
-                ? 'Verworfen-Filter (0)'
-                : 'Verworfen-Filter zurücksetzen '
-                    '(${provider.dismissalCount} '
-                    '${provider.dismissalCount == 1 ? "Eintrag" : "Einträge"})',
+                ? AppLocalizations.of(context).inboxDismissalFilterTooltipEmpty
+                : AppLocalizations.of(context)
+                    .inboxDismissalFilterTooltipCount(provider.dismissalCount),
             icon: Icon(
               provider.dismissalCount == 0
                   ? Icons.filter_alt_outlined
@@ -230,10 +237,11 @@ class _InboxHeader extends StatelessWidget {
           ),
           IconButton(
             tooltip: provider.isPumping
-                ? 'Importiere Mails… (${provider.pumpStored} bisher)'
+                ? AppLocalizations.of(context)
+                    .inboxImportingTooltip(provider.pumpStored)
                 : hasAccount
-                    ? 'Jetzt pollen (statt 5 min warten)'
-                    : 'Erst Postfach in den Einstellungen verbinden',
+                    ? AppLocalizations.of(context).inboxPollNowTooltip
+                    : AppLocalizations.of(context).inboxConnectFirstTooltip,
             icon: provider.isPumping
                 ? const SizedBox(
                     width: 18,
@@ -250,7 +258,7 @@ class _InboxHeader extends StatelessWidget {
                     : () => _triggerPoll(context, provider),
           ),
           IconButton(
-            tooltip: 'Aktualisieren',
+            tooltip: AppLocalizations.of(context).actionRefresh,
             icon: provider.isLoading
                 ? const SizedBox(
                     width: 18,
@@ -261,7 +269,7 @@ class _InboxHeader extends StatelessWidget {
             onPressed: provider.isLoading ? null : onRefresh,
           ),
           PopupMenuButton<String>(
-            tooltip: 'Mehr',
+            tooltip: AppLocalizations.of(context).navMore,
             icon: const Icon(Icons.more_vert),
             enabled: !provider.isLoading && !provider.isPumping,
             onSelected: (value) {
@@ -269,22 +277,20 @@ class _InboxHeader extends StatelessWidget {
                 _triggerReparseTracking(context, provider);
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem<String>(
-                value: 'reparse-tracking',
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.refresh_outlined),
-                  title: Text('Tracking-Daten neu auslesen'),
-                  subtitle: Text(
-                    'Wendet die aktuelle Adapter-Registry erneut auf alle '
-                    'Vorschläge an. Korrigiert falsch extrahierte Tracking-'
-                    'Nummern (z.B. wenn ein Adapter-Bug eine interne '
-                    'Shipment-ID statt der echten Carrier-Nr gespeichert hat).',
+            itemBuilder: (ctx) {
+              final l10n = AppLocalizations.of(ctx);
+              return [
+                PopupMenuItem<String>(
+                  value: 'reparse-tracking',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.refresh_outlined),
+                    title: Text(l10n.inboxReparseTrackingTitle),
+                    subtitle: Text(l10n.inboxReparseTrackingSubtitle),
                   ),
                 ),
-              ),
-            ],
+              ];
+            },
           ),
         ],
       ),
@@ -314,7 +320,7 @@ class _InboxFilterBar extends StatelessWidget {
           _FilterPill(
             icon: Icons.store_outlined,
             label: provider.shopFilter == null
-                ? 'Alle Shops'
+                ? AppLocalizations.of(context).inboxFilterAllShops
                 : provider.shopLabelFor(provider.shopFilter!),
             active: provider.shopFilter != null,
             onTap: () => _pickShop(context, provider, shopKeys),
@@ -326,7 +332,7 @@ class _InboxFilterBar extends StatelessWidget {
           _FilterPill(
             icon: Icons.local_shipping_outlined,
             label: provider.statusFilter == null
-                ? 'Alle Status'
+                ? AppLocalizations.of(context).inboxFilterAllStatus
                 : provider.statusFilter!.label(),
             active: provider.statusFilter != null,
             onTap: () => _pickStatus(context, provider),
@@ -358,13 +364,13 @@ class _InboxFilterBar extends StatelessWidget {
   ) async {
     final picked = await showModalBottomSheet<String?>(
       context: context,
-      builder: (_) => SafeArea(
+      builder: (sheetCtx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.all_inbox),
-              title: const Text('Alle Shops'),
+              title: Text(AppLocalizations.of(sheetCtx).inboxFilterAllShops),
               trailing: provider.shopFilter == null
                   ? const Icon(Icons.check, color: Color(0xFF2563EB))
                   : null,
@@ -396,13 +402,13 @@ class _InboxFilterBar extends StatelessWidget {
     // Cancel (null) sauber unterscheiden können.
     final picked = await showModalBottomSheet<Object?>(
       context: context,
-      builder: (_) => SafeArea(
+      builder: (sheetCtx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.all_inbox),
-              title: const Text('Alle Status'),
+              title: Text(AppLocalizations.of(sheetCtx).inboxFilterAllStatus),
               trailing: provider.statusFilter == null
                   ? const Icon(Icons.check, color: Color(0xFF2563EB))
                   : null,
@@ -519,44 +525,42 @@ Future<void> _confirmClearDismissals(
   BuildContext context,
   InboxProvider provider,
 ) async {
+  final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
-  final ok = await showDialog<bool>(
+
+  final confirmed = await showConfirmDialog(
     context: context,
-    builder: (ctx) {
-      final l10n = AppLocalizations.of(ctx);
-      return AlertDialog(
-        title: Text(l10n.inboxFilterResetTitle),
-        content: Text(
-          '${provider.dismissalCount} verworfene Einträge werden wieder '
-          'angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut '
-          'gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.actionReset),
-          ),
-        ],
-      );
+    title: l10n.inboxFilterResetTitle,
+    message: l10n.inboxFilterResetBodyCount(provider.dismissalCount),
+    confirmLabel: l10n.actionReset,
+  );
+  if (!confirmed) return;
+
+  // Snapshot vor dem optimistischen Clear für Undo.
+  if (!context.mounted) return;
+  final snapshot = provider.clearDismissalsOptimistic();
+  bool undone = false;
+
+  AppFeedback.successOn(
+    messenger,
+    l10n.inboxDiscardFilterClearedFeedback,
+    rootContext: context,
+    onUndo: () {
+      undone = true;
+      provider.restoreDismissals(snapshot.keys, snapshot.count);
     },
   );
-  if (ok != true) return;
-  try {
-    await provider.clearDismissals();
-    messenger.showSnackBar(const SnackBar(
-      content: Text('Verworfen-Filter geleert.'),
-      behavior: SnackBarBehavior.floating,
-    ));
-  } catch (e) {
-    messenger.showSnackBar(SnackBar(
-      content: Text('Zurücksetzen fehlgeschlagen: $e'),
-      behavior: SnackBarBehavior.floating,
-    ));
-  }
+
+  // DB-DELETE nach SnackBar-Timeout: 4,5 Sek. damit der Undo-Callback
+  // garantiert zuerst läuft, falls der User ihn drückt.
+  Future.delayed(const Duration(milliseconds: 4500), () async {
+    if (undone) return; // Undo wurde gedrückt — kein DB-DELETE.
+    try {
+      await provider.clearDismissals();
+    } catch (e) {
+      if (kDebugMode) debugPrint('clearDismissals delayed commit failed: $e');
+    }
+  });
 }
 
 Future<void> _confirmMarkAllRead(
@@ -566,75 +570,61 @@ Future<void> _confirmMarkAllRead(
   final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final unreadCount = provider.unreadCount;
-  final ok = await showDialog<bool>(
+
+  final confirmed = await showConfirmDialog(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(l10n.inboxMarkAllReadConfirmTitle),
-      content: Text(l10n.inboxMarkAllReadConfirmBody(unreadCount)),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: Text(l10n.actionCancel),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: Text(l10n.inboxMarkAllRead),
-        ),
-      ],
-    ),
+    title: l10n.inboxMarkAllReadConfirmTitle,
+    message: l10n.inboxMarkAllReadConfirmBody(unreadCount),
+    confirmLabel: l10n.inboxMarkAllRead,
   );
-  if (ok != true) return;
+  if (!confirmed) return;
+
   try {
     await provider.markAllRead();
+    if (!context.mounted) return;
     final markedCount = unreadCount - provider.unreadCount;
-    messenger.showSnackBar(SnackBar(
-      content: Text(l10n.inboxMarkAllReadSuccess(
-          markedCount > 0 ? markedCount : unreadCount)),
-      behavior: SnackBarBehavior.floating,
-    ));
-  } catch (e) {
-    messenger.showSnackBar(SnackBar(
-      content: Text(l10n.inboxMarkAllReadFailure(e.toString())),
-      behavior: SnackBarBehavior.floating,
-    ));
+    AppFeedback.successOn(
+      messenger,
+      l10n.inboxMarkAllReadSuccess(markedCount > 0 ? markedCount : unreadCount),
+      rootContext: context,
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+    AppFeedback.errorOn(
+      messenger,
+      l10n.appFeedbackErrorDefault,
+      rootContext: context,
+    );
   }
 }
 
 Future<void> _triggerPoll(BuildContext context, InboxProvider provider) async {
   final messenger = ScaffoldMessenger.of(context);
-  messenger.showSnackBar(const SnackBar(
-    content: Text('Pollt das Postfach…'),
-    behavior: SnackBarBehavior.floating,
-    duration: Duration(seconds: 2),
-  ));
+  final l10n = AppLocalizations.of(context);
+  // Info-SnackBar vor dem async Poll (kein mounted-Problem).
+  AppFeedback.infoOn(messenger, l10n.inboxPolling, rootContext: context);
   final result = await provider.pollNow();
+  if (!context.mounted) return;
+  // Ab hier: context.mounted garantiert — direkte AppFeedback-Variante nutzen.
   if (result != null) {
     final parts = <String>[];
     if (result.fetched > 0) {
-      parts.add('${result.fetched} Mail${result.fetched == 1 ? "" : "s"} geholt');
+      parts.add(l10n.inboxPollFetched(result.fetched));
     }
     if (result.stored > 0) {
-      parts.add('${result.stored} aufgenommen');
+      parts.add(l10n.inboxPollStored(result.stored));
     }
     final s = result.suggested ?? 0;
     final m = result.matched ?? 0;
     if (s > 0 || m > 0) {
-      parts.add('$s Vorschl. / $m gemerged');
+      parts.add(l10n.inboxPollSuggestedMerged(s, m));
     }
     final msg = parts.isEmpty
-        ? 'Keine neuen passenden Mails. Postfach ist aktuell.'
-        : '${parts.join(", ")}.';
-    messenger.showSnackBar(SnackBar(
-      content: Text(msg),
-      behavior: SnackBarBehavior.floating,
-    ));
+        ? l10n.inboxPollUpToDate
+        : '${parts.join(', ')}.';
+    AppFeedback.success(context, msg); // ignore: use_build_context_synchronously
   } else if (provider.lastError != null) {
-    messenger.showSnackBar(SnackBar(
-      content: Text('Polling fehlgeschlagen: ${provider.lastError}'),
-      backgroundColor: AppTheme.danger,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 8),
-    ));
+    AppFeedback.error(context, l10n.appFeedbackErrorDefault); // ignore: use_build_context_synchronously
   }
 }
 
@@ -643,28 +633,21 @@ Future<void> _triggerReparseTracking(
   InboxProvider provider,
 ) async {
   final messenger = ScaffoldMessenger.of(context);
-  messenger.showSnackBar(const SnackBar(
-    content: Text('Liest Tracking-Daten neu aus…'),
-    behavior: SnackBarBehavior.floating,
-    duration: Duration(seconds: 2),
-  ));
+  final l10n = AppLocalizations.of(context);
+  AppFeedback.infoOn(messenger, l10n.inboxRetracking, rootContext: context);
   final result = await provider.reparseTracking();
+  if (!context.mounted) return;
   if (result != null) {
     final msg = result.rescued > 0
-        ? '${result.rescued} Vorschlag${result.rescued == 1 ? "" : "äge"}'
-            ' korrigiert (${result.scanned} geprüft).'
-        : 'Keine Korrekturen nötig (${result.scanned} geprüft).';
-    messenger.showSnackBar(SnackBar(
-      content: Text(msg),
-      behavior: SnackBarBehavior.floating,
-    ));
+        ? l10n.inboxReparseRescued(result.rescued, result.scanned)
+        : l10n.inboxReparseNoCorrections(result.scanned);
+    AppFeedback.successOn(messenger, msg, rootContext: context);
   } else if (provider.lastError != null) {
-    messenger.showSnackBar(SnackBar(
-      content: Text('Re-Parse fehlgeschlagen: ${provider.lastError}'),
-      backgroundColor: AppTheme.danger,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 8),
-    ));
+    AppFeedback.errorOn(
+      messenger,
+      l10n.appFeedbackErrorDefault,
+      rootContext: context,
+    );
   }
 }
 
@@ -685,23 +668,22 @@ Future<void> _openMail(
   required String? messageId,
   required String? imapHost,
 }) async {
-  final messenger = ScaffoldMessenger.of(context);
   final url = buildMailDeepLink(messageId: messageId, imapHost: imapHost);
   if (url == null) {
     if (messageId != null && messageId.isNotEmpty) {
       await Clipboard.setData(ClipboardData(text: messageId));
       if (context.mounted) {
-        messenger.showSnackBar(SnackBar(
-          content: Text(AppLocalizations.of(context).inboxCopyMessageIdSnackbar),
-          behavior: SnackBarBehavior.floating,
-        ));
+        AppFeedback.info(
+          context,
+          AppLocalizations.of(context).inboxCopyMessageIdSnackbar,
+        );
       }
     } else {
       if (context.mounted) {
-        messenger.showSnackBar(SnackBar(
-          content: Text(AppLocalizations.of(context).inboxNoMailLinkSnackbar),
-          behavior: SnackBarBehavior.floating,
-        ));
+        AppFeedback.info(
+          context,
+          AppLocalizations.of(context).inboxNoMailLinkSnackbar,
+        );
       }
     }
     return;
@@ -710,48 +692,36 @@ Future<void> _openMail(
   await openUrlWithFallback(context, url);
 }
 
+/// Verwirft eine ParsedMessage nach Bestätigung durch einen Confirm-Dialog.
+///
+/// **Kein Undo** — per A7-Audit-Verdict ist `parsed_messages` nicht
+/// über den User-Client UPDATE-bar (keine `FOR UPDATE`-RLS-Policy).
+/// Nur Confirm-Dialog + Standard-SnackBar.
 Future<void> _confirmDismissMessage(
   BuildContext context,
   ParsedMessage message,
 ) async {
   final inbox = context.read<InboxProvider>();
   final messenger = ScaffoldMessenger.of(context);
-  final ok = await showDialog<bool>(
+  final l10n = AppLocalizations.of(context);
+
+  // Messenger vor showConfirmDialog sichern (Dialog-Context-Pattern).
+  final confirmed = await showConfirmDialog(
     context: context,
-    builder: (ctx) {
-      final l10n = AppLocalizations.of(ctx);
-      return AlertDialog(
-        title: const Text('Mail verwerfen?'),
-        content: Text(
-          'Die Mail "${message.subject ?? ""}" wird aus der Inbox entfernt '
-          'und nicht mehr angezeigt.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Verwerfen', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      );
-    },
+    title: l10n.inboxDiscardMailTitle,
+    message: l10n.inboxDiscardMailBody(message.subject ?? ''),
+    confirmLabel: l10n.inboxSuggestionDismiss,
+    isDestructive: true,
   );
-  if (ok != true) return;
+  if (!confirmed) return;
+
   try {
     await inbox.dismissParsedMessage(message.id);
-    messenger.showSnackBar(const SnackBar(
-      content: Text('Mail verworfen.'),
-      behavior: SnackBarBehavior.floating,
-    ));
-  } catch (e) {
-    messenger.showSnackBar(SnackBar(
-      content: Text('Verwerfen fehlgeschlagen: $e'),
-      behavior: SnackBarBehavior.floating,
-    ));
+    // ignore: use_build_context_synchronously
+    AppFeedback.successOn(messenger, l10n.inboxMailDiscarded, rootContext: context);
+  } catch (_) {
+    // ignore: use_build_context_synchronously
+    AppFeedback.errorOn(messenger, l10n.appFeedbackErrorDefault, rootContext: context);
   }
 }
 
@@ -773,42 +743,59 @@ class _SuggestionsTab extends StatelessWidget {
   final List<MailboxAccount> accounts;
   final Future<void> Function() onRefresh;
   final VoidCallback? onGoToDeals;
+  final bool isLoading;
+  final bool initialLoadAttempted;
   const _SuggestionsTab({
     required this.suggestions,
     required this.accounts,
     required this.onRefresh,
+    required this.isLoading,
+    required this.initialLoadAttempted,
     this.onGoToDeals,
   });
 
   @override
   Widget build(BuildContext context) {
+    final showSkeleton = shouldShowSkeleton(
+      isLoading: isLoading,
+      hasData: suggestions.isNotEmpty,
+      initialLoadAttempted: initialLoadAttempted,
+    );
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: suggestions.isEmpty
-          ? CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverFillRemaining(
-                  child: EmptyState(
-                    icon: Icons.check_circle_outline,
-                    title: AppLocalizations.of(context).inboxSuggestionsEmpty,
-                    subtitle:
-                        AppLocalizations.of(context).inboxSuggestionsEmptyHint,
-                    keySlug: 'inboxSuggestionsEmpty',
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: showSkeleton
+            ? const ListSkeleton(key: ValueKey('skeleton'), itemCount: 6)
+            : suggestions.isEmpty
+                ? CustomScrollView(
+                    key: const ValueKey('content'),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverFillRemaining(
+                        child: EmptyState(
+                          icon: Icons.check_circle_outline,
+                          title:
+                              AppLocalizations.of(context).inboxSuggestionsEmpty,
+                          subtitle: AppLocalizations.of(context)
+                              .inboxSuggestionsEmptyHint,
+                          keySlug: 'inboxSuggestionsEmpty',
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.separated(
+                    key: const ValueKey('content'),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: suggestions.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, i) => _SuggestionCard(
+                      suggestion: suggestions[i],
+                      imapHost: _imapHostFor(accounts),
+                      onGoToDeals: onGoToDeals,
+                    ),
                   ),
-                ),
-              ],
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: suggestions.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, i) => _SuggestionCard(
-                suggestion: suggestions[i],
-                imapHost: _imapHostFor(accounts),
-                onGoToDeals: onGoToDeals,
-              ),
-            ),
+      ),
     );
   }
 }
@@ -860,44 +847,41 @@ class _SuggestionCard extends StatelessWidget {
     );
     // saved.id == unsavedId → User hat den Dialog ohne Speichern verlassen.
     if (saved == null || saved.id == Deal.unsavedId) return;
+    // Messenger und l10n wurden vor den async-Gaps gesichert (Dialog-Context-Pattern).
+    // rootContext nach dem Dialog-Close noch valide (StatelessWidget, kein mounted).
     try {
       await inbox.markSuggestionAccepted(suggestion.id, createdDealId: saved.id);
       final tracking = suggestion.tracking;
       final snackContent = (tracking != null && tracking.isNotEmpty)
           ? l10n.inboxAcceptedSnack(tracking, saved.id)
           : l10n.inboxAcceptedSnackNoTracking(saved.id);
-      messenger.showSnackBar(SnackBar(
-        key: const Key('inboxAcceptedSnack'),
-        content: Text(snackContent),
-        duration: const Duration(seconds: 6),
-        behavior: SnackBarBehavior.floating,
-        action: goToDeals != null
-            ? SnackBarAction(
-                key: const Key('inboxAcceptedShowDealAction'),
-                label: l10n.inboxAcceptedShowDeal,
-                onPressed: goToDeals,
-              )
-            : null,
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text('Konnte Vorschlag nicht abschließen: $e'),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.successOn( // ignore: use_build_context_synchronously
+        messenger, snackContent,
+        rootContext: context, // ignore: use_build_context_synchronously
+        onUndo: goToDeals,
+        undoLabel: goToDeals != null ? l10n.inboxAcceptedShowDeal : null,
+      );
+    } catch (_) {
+      AppFeedback.errorOn( // ignore: use_build_context_synchronously
+        messenger, l10n.appFeedbackErrorDefault,
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
     }
   }
 
-  Future<void> _reject(BuildContext context) async {
+  void _reject(BuildContext context) {
     final inbox = context.read<InboxProvider>();
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await inbox.markSuggestionRejected(suggestion.id);
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text('Ablehnen fehlgeschlagen: $e'),
-        behavior: SnackBarBehavior.floating,
-      ));
-    }
+    final l10n = AppLocalizations.of(context);
+    final id = suggestion.id;
+
+    // Optimistic-Local-Restore: sofort aus UI entfernen, DB-Commit nach 4 Sek.
+    inbox.rejectSuggestionWithUndo(id);
+
+    AppFeedback.success(
+      context,
+      l10n.inboxSuggestionRejectedFeedback,
+      onUndo: () => inbox.cancelPendingReject(id),
+    );
   }
 
   /// Opens AddEditDealDialog prefilled with suggestion data.
@@ -919,24 +903,19 @@ class _SuggestionCard extends StatelessWidget {
       final snackContent = (tracking != null && tracking.isNotEmpty)
           ? l10n.inboxAcceptedSnack(tracking, saved.id)
           : l10n.inboxAcceptedSnackNoTracking(saved.id);
-      messenger.showSnackBar(SnackBar(
-        key: const Key('inboxAcceptedSnack'),
-        content: Text(snackContent),
-        duration: const Duration(seconds: 6),
-        behavior: SnackBarBehavior.floating,
-        action: goToDeals != null
-            ? SnackBarAction(
-                key: const Key('inboxAcceptedShowDealAction'),
-                label: l10n.inboxAcceptedShowDeal,
-                onPressed: goToDeals,
-              )
-            : null,
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text('Konnte Vorschlag nicht abschließen: $e'),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.successOn(
+        messenger,
+        snackContent,
+        rootContext: context, // ignore: use_build_context_synchronously
+        onUndo: goToDeals,
+        undoLabel: goToDeals != null ? l10n.inboxAcceptedShowDeal : null,
+      );
+    } catch (_) {
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
     }
   }
 
@@ -993,34 +972,34 @@ class _SuggestionCard extends StatelessWidget {
   }
 
   Future<void> _applyTracking(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final inbox = context.read<InboxProvider>();
+    final l10n = AppLocalizations.of(context);
     if (suggestion.tracking == null || suggestion.tracking!.isEmpty) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(AppLocalizations.of(context).inboxNoTrackingSnackbar),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.info(context, l10n.inboxNoTrackingSnackbar);
       return;
     }
     final deal = await DealPickerDialog.show(
       context,
-      title: 'Tracking auf Deal anwenden',
-      hint: 'Tracking ${suggestion.tracking} → Deal-Tracking, '
-          'Status wird auf "Unterwegs" gesetzt.',
+      title: l10n.inboxApplyTrackingToDeal,
+      hint: l10n.inboxApplyTrackingHint(suggestion.tracking!),
     );
     if (deal == null) return;
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await inbox.applyTrackingFromSuggestion(
           suggestion: suggestion, dealId: deal.id);
-      messenger.showSnackBar(SnackBar(
-        content: Text('Tracking auf Deal #${deal.id} übernommen.'),
-        behavior: SnackBarBehavior.floating,
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text('Tracking-Übernahme fehlgeschlagen: $e'),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.successOn(
+        messenger,
+        l10n.inboxTrackingAdopted(deal.id),
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
+    } catch (_) {
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
     }
   }
 
@@ -1055,26 +1034,29 @@ class _SuggestionCard extends StatelessWidget {
   }
 
   Future<void> _linkToDeal(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final inbox = context.read<InboxProvider>();
+    final l10n = AppLocalizations.of(context);
     final deal = await DealPickerDialog.show(
       context,
-      title: 'Vorschlag zu Deal zuweisen',
-      hint: 'Order-ID, Tracking und ETA werden in den ausgewählten Deal '
-          'übernommen, der Vorschlag wird abgehakt.',
+      title: l10n.inboxLinkToDealTitle,
+      hint: l10n.inboxLinkToDealHint,
     );
     if (deal == null) return;
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await inbox.linkSuggestionToDeal(suggestion: suggestion, dealId: deal.id);
-      messenger.showSnackBar(SnackBar(
-        content: Text('Vorschlag mit Deal #${deal.id} verknüpft.'),
-        behavior: SnackBarBehavior.floating,
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text('Zuweisung fehlgeschlagen: $e'),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.successOn(
+        messenger,
+        l10n.inboxSuggestionLinked(deal.id),
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
+    } catch (_) {
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
     }
   }
 
@@ -1132,27 +1114,27 @@ class _SuggestionCard extends StatelessWidget {
                   itemBuilder: (ctx) {
                     final l10n = AppLocalizations.of(ctx);
                     return [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'details',
                       child: ListTile(
-                        leading: Icon(Icons.info_outline),
-                        title: Text('Details & Tracking anzeigen'),
+                        leading: const Icon(Icons.info_outline),
+                        title: Text(l10n.inboxDetailsAndTracking),
                         dense: true,
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'tracking',
                       child: ListTile(
-                        leading: Icon(Icons.local_shipping_outlined),
-                        title: Text('Tracking auf Deal anwenden'),
+                        leading: const Icon(Icons.local_shipping_outlined),
+                        title: Text(l10n.inboxApplyTrackingToDeal),
                         dense: true,
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'link',
                       child: ListTile(
-                        leading: Icon(Icons.link),
-                        title: Text('Zu bestehendem Deal zuweisen'),
+                        leading: const Icon(Icons.link),
+                        title: Text(l10n.inboxLinkToExistingDeal),
                         dense: true,
                       ),
                     ),
@@ -1165,12 +1147,12 @@ class _SuggestionCard extends StatelessWidget {
                           dense: true,
                         ),
                       ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'reject',
                       child: ListTile(
-                        leading: Icon(Icons.delete_outline,
+                        leading: const Icon(Icons.delete_outlined,
                             color: Color(0xFFB91C1C)),
-                        title: Text('Verwerfen'),
+                        title: Text(l10n.inboxSuggestionDismiss),
                         dense: true,
                       ),
                     ),
@@ -1343,37 +1325,52 @@ class _MatchedTab extends StatelessWidget {
   final List<MailboxAccount> accounts;
   final Future<void> Function() onRefresh;
   final void Function(String ticket)? onOpenTicket;
+  final bool isLoading;
+  final bool initialLoadAttempted;
   const _MatchedTab({
     required this.messages,
     required this.accounts,
     required this.onRefresh,
+    required this.isLoading,
+    required this.initialLoadAttempted,
     this.onOpenTicket,
   });
 
   @override
   Widget build(BuildContext context) {
+    final showSkeleton = shouldShowSkeleton(
+      isLoading: isLoading,
+      hasData: messages.isNotEmpty,
+      initialLoadAttempted: initialLoadAttempted,
+    );
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: messages.isEmpty
-          ? CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverFillRemaining(
-                  child: EmptyState(
-                    icon: Icons.inbox_outlined,
-                    title: AppLocalizations.of(context).inboxUpdatedEmpty,
-                    subtitle:
-                        AppLocalizations.of(context).inboxUpdatedEmptyHint,
-                    keySlug: 'inboxUpdatedEmpty',
-                  ),
-                ),
-              ],
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: messages.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, i) {
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: showSkeleton
+            ? const ListSkeleton(key: ValueKey('skeleton'), itemCount: 6)
+            : messages.isEmpty
+                ? CustomScrollView(
+                    key: const ValueKey('content'),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverFillRemaining(
+                        child: EmptyState(
+                          icon: Icons.inbox_outlined,
+                          title: AppLocalizations.of(context).inboxUpdatedEmpty,
+                          subtitle: AppLocalizations.of(context)
+                              .inboxUpdatedEmptyHint,
+                          keySlug: 'inboxUpdatedEmpty',
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.separated(
+                    key: const ValueKey('content'),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, i) {
                 final msg = messages[i];
                 final payload = msg.parsedPayload ?? const {};
                 final orderId = payload['order_id'] as String?;
@@ -1441,7 +1438,8 @@ class _MatchedTab extends StatelessWidget {
                   ),
                 );
               },
-            ),
+                  ),
+      ),
     );
   }
 
@@ -1476,8 +1474,8 @@ class _MatchedTab extends StatelessWidget {
           },
         ),
       OutlinedButton.icon(
-        icon: const Icon(Icons.delete_outline, size: 16),
-        label: const Text('Verwerfen'),
+        icon: const Icon(Icons.delete_outlined, size: 16),
+        label: Text(AppLocalizations.of(context).inboxSuggestionDismiss),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppTheme.dangerTextOf(context),
         ),
@@ -1496,40 +1494,58 @@ class _UnclassifiedTab extends StatelessWidget {
   final List<ParsedMessage> messages;
   final List<MailboxAccount> accounts;
   final Future<void> Function() onRefresh;
+  final bool isLoading;
+  final bool initialLoadAttempted;
   const _UnclassifiedTab({
     required this.messages,
     required this.accounts,
     required this.onRefresh,
+    required this.isLoading,
+    required this.initialLoadAttempted,
   });
 
   @override
   Widget build(BuildContext context) {
+    final showSkeleton = shouldShowSkeleton(
+      isLoading: isLoading,
+      hasData: messages.isNotEmpty,
+      initialLoadAttempted: initialLoadAttempted,
+    );
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: messages.isEmpty
-          ? CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverFillRemaining(
-                  child: EmptyState(
-                    icon: Icons.help_outline,
-                    title: AppLocalizations.of(context).inboxUnclassifiedEmpty,
-                    subtitle:
-                        AppLocalizations.of(context).inboxUnclassifiedEmptyHint,
-                    keySlug: 'inboxUnclassifiedEmpty',
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: showSkeleton
+            ? const ListSkeleton(key: ValueKey('skeleton'), itemCount: 6)
+            : messages.isEmpty
+                ? CustomScrollView(
+                    key: const ValueKey('content'),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverFillRemaining(
+                        child: EmptyState(
+                          icon: Icons.help_outline,
+                          title: AppLocalizations.of(context)
+                              .inboxUnclassifiedEmpty,
+                          subtitle: AppLocalizations.of(context)
+                              .inboxUnclassifiedEmptyHint,
+                          keySlug: 'inboxUnclassifiedEmpty',
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.separated(
+                    key: const ValueKey('content'),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, i) => _UnclassifiedRow(
+                      message: messages[i],
+                      imapHost: _imapHostFor(
+                          accounts, accountId: messages[i].accountId),
+                    ),
                   ),
-                ),
-              ],
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: messages.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, i) => _UnclassifiedRow(
-                message: messages[i],
-                imapHost: _imapHostFor(accounts, accountId: messages[i].accountId),
-              ),
-            ),
+      ),
     );
   }
 }
@@ -1570,30 +1586,29 @@ class _UnclassifiedRow extends StatelessWidget {
     );
     if (saved == null || saved.id == Deal.unsavedId) return;
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Deal #${saved.id} aus Mail angelegt.'),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.success(
+        context,
+        AppLocalizations.of(context).inboxDealCreatedFromMail(saved.id),
+      );
     }
   }
 
   Future<void> _applyTracking(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final inbox = context.read<InboxProvider>();
+    final l10n = AppLocalizations.of(context);
     final tn = _trackingFromMessage();
     if (tn == null || tn.isEmpty) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(AppLocalizations.of(context).inboxNoTrackingSnackbar),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.info(context, l10n.inboxNoTrackingSnackbar);
       return;
     }
     final deal = await DealPickerDialog.show(
       context,
-      title: 'Tracking auf Deal anwenden',
-      hint: 'Tracking $tn → Deal-Tracking.',
+      title: l10n.inboxApplyTrackingToDeal,
+      hint: l10n.inboxApplyTrackingHintShort(tn),
     );
     if (deal == null) return;
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await inbox.applyTrackingFromMessage(
         message: message,
@@ -1602,15 +1617,17 @@ class _UnclassifiedRow extends StatelessWidget {
         carrier: _carrierFromMessage(),
         eta: _etaFromMessage(),
       );
-      messenger.showSnackBar(SnackBar(
-        content: Text('Tracking auf Deal #${deal.id} übernommen.'),
-        behavior: SnackBarBehavior.floating,
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text('Tracking-Übernahme fehlgeschlagen: $e'),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.successOn(
+        messenger,
+        l10n.inboxTrackingAdopted(deal.id),
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
+    } catch (_) {
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
     }
   }
 
@@ -1626,7 +1643,7 @@ class _UnclassifiedRow extends StatelessWidget {
       actions: [
         ElevatedButton.icon(
           icon: const Icon(Icons.add, size: 16),
-          label: const Text('Deal anlegen'),
+          label: Text(AppLocalizations.of(context).inboxCreateDeal),
           onPressed: () {
             Navigator.pop(context);
             _createDeal(context);
@@ -1635,7 +1652,7 @@ class _UnclassifiedRow extends StatelessWidget {
         if (_trackingFromMessage() != null)
           OutlinedButton.icon(
             icon: const Icon(Icons.local_shipping_outlined, size: 16),
-            label: const Text('Tracking → Deal'),
+            label: Text(AppLocalizations.of(context).inboxApplyTrackingToDealShort),
             onPressed: () {
               Navigator.pop(context);
               _applyTracking(context);
@@ -1655,8 +1672,8 @@ class _UnclassifiedRow extends StatelessWidget {
             },
           ),
         OutlinedButton.icon(
-          icon: const Icon(Icons.delete_outline, size: 16),
-          label: const Text('Verwerfen'),
+          icon: const Icon(Icons.delete_outlined, size: 16),
+          label: Text(AppLocalizations.of(context).inboxSuggestionDismiss),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppTheme.dangerTextOf(context),
           ),
@@ -1730,28 +1747,28 @@ class _UnclassifiedRow extends StatelessWidget {
           itemBuilder: (ctx) {
             final l10n = AppLocalizations.of(ctx);
             return [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'create',
               child: ListTile(
-                leading: Icon(Icons.add),
-                title: Text('Deal anlegen'),
+                leading: const Icon(Icons.add),
+                title: Text(l10n.inboxCreateDeal),
                 dense: true,
               ),
             ),
             if (_trackingFromMessage() != null)
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'tracking',
                 child: ListTile(
-                  leading: Icon(Icons.local_shipping_outlined),
-                  title: Text('Tracking auf Deal anwenden'),
+                  leading: const Icon(Icons.local_shipping_outlined),
+                  title: Text(l10n.inboxApplyTrackingToDeal),
                   dense: true,
                 ),
               ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'details',
               child: ListTile(
-                leading: Icon(Icons.info_outline),
-                title: Text('Details anzeigen'),
+                leading: const Icon(Icons.info_outline),
+                title: Text(l10n.inboxShowDetails),
                 dense: true,
               ),
             ),
@@ -1764,12 +1781,12 @@ class _UnclassifiedRow extends StatelessWidget {
                   dense: true,
                 ),
               ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'dismiss',
               child: ListTile(
-                leading:
-                    Icon(Icons.delete_outline, color: Color(0xFFB91C1C)),
-                title: Text('Verwerfen'),
+                leading: const Icon(
+                    Icons.delete_outlined, color: Color(0xFFB91C1C)),
+                title: Text(l10n.inboxSuggestionDismiss),
                 dense: true,
               ),
             ),
@@ -1826,15 +1843,14 @@ class _CountdownPill extends StatelessWidget {
         : clamped <= 7
             ? (AppTheme.warningBgOf(context), AppTheme.warningTextOf(context))
             : (AppTheme.infoBgOf(context), AppTheme.infoTextOf(context));
+    final l10n = AppLocalizations.of(context);
     final label = clamped == 0
-        ? 'Heute weg'
+        ? l10n.inboxCountdownToday
         : clamped == 1
-            ? 'Noch 1 Tag'
-            : 'Noch $clamped Tage';
+            ? l10n.inboxCountdownOneDay
+            : l10n.inboxCountdownDays(clamped);
     return Tooltip(
-      message:
-          'Inbox-Sichtbarkeit $totalDays Tage. '
-          'Aktualisiert sich beim nächsten Refresh.',
+      message: l10n.inboxCountdownTooltip(totalDays),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
         decoration: BoxDecoration(
@@ -1979,10 +1995,10 @@ class _TrackingPill extends StatelessWidget {
         onTap: () async {
           await Clipboard.setData(ClipboardData(text: tracking));
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Tracking-Nummer kopiert.'),
-              behavior: SnackBarBehavior.floating,
-            ));
+            AppFeedback.info(
+              context,
+              AppLocalizations.of(context).inboxTrackingCopied,
+            );
           }
         },
         borderRadius: BorderRadius.circular(8),

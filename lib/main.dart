@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:accessibility_tools/accessibility_tools.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -211,6 +212,13 @@ class InventoryApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+          // Debug-only: A11y-Checker — zero overhead in production.
+          builder: kDebugMode
+              ? (context, child) => AccessibilityTools(
+                    checkSemanticLabels: true,
+                    child: child,
+                  )
+              : null,
           home: publicProfileHandle != null
               ? PublicProfileScreen(handle: publicProfileHandle!)
               : const _ActivityListener(

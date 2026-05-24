@@ -13,7 +13,7 @@ import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/csv_service.dart';
 import '../widgets/add_edit_deal_dialog.dart';
-import '../widgets/brand_logo.dart';
+import '../widgets/app_nav_rail.dart';
 import '../widgets/global_search_dialog.dart';
 import '../widgets/invites_bell.dart';
 import 'activity_screen.dart';
@@ -46,7 +46,7 @@ class _MainScreenState extends State<MainScreen> {
     (Icons.dashboard_outlined, Icons.dashboard_rounded),
     (Icons.list_alt_outlined, Icons.list_alt_rounded),
     (Icons.confirmation_number_outlined, Icons.confirmation_number_rounded),
-    (Icons.mail_outline, Icons.mail_rounded),
+    (Icons.mail_outlined, Icons.mail_rounded),
     (Icons.inventory_2_outlined, Icons.inventory_2_rounded),
     (Icons.local_shipping_outlined, Icons.local_shipping),
     (Icons.bar_chart_outlined, Icons.bar_chart_rounded),
@@ -288,6 +288,10 @@ class _MainScreenState extends State<MainScreen> {
           Navigator.pop(sheetCtx);
           setState(() => _selectedIndex = tab);
         },
+        onSearch: () {
+          Navigator.pop(sheetCtx);
+          _openSearch();
+        },
         badgeCounts: const {},
         sheetTitle: l10n.navMoreSheetTitle,
       ),
@@ -347,23 +351,41 @@ class _MainScreenState extends State<MainScreen> {
             ? {MainTab.inbox: trackingBadgeCount}
             : const <MainTab, int>{};
 
-        final fab =
-            _selectedIndex == MainTab.deals || _selectedIndex == MainTab.tickets
-                ? FloatingActionButton.extended(
-                    onPressed: () => showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (_) => AddEditDealDialog(
-                        initialTicketNumber:
-                            _selectedIndex == MainTab.tickets
-                                ? _selectedTicket
-                                : null,
-                      ),
-                    ),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: Text(l10n.dealNew),
-                  )
-                : null;
+        // G2: FAB covers deals, tickets AND inventory (phone-reachability).
+        // Suppliers has its own FAB in suppliers_screen.dart.
+        final Widget? fab;
+        if (_selectedIndex == MainTab.deals ||
+            _selectedIndex == MainTab.tickets) {
+          fab = FloatingActionButton.extended(
+            // D4: tooltip → explicit Semantics-Label for screen readers
+            // and desktop long-press. NavigationBar items do NOT need
+            // additional Semantics wrapping — M3 NavigationBar already
+            // emits Semantics(role: tab, selected: …) per destination
+            // (Flutter SDK navigation_bar.dart lines 304-306).
+            tooltip: l10n.dealNew,
+            onPressed: () => showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => AddEditDealDialog(
+                initialTicketNumber:
+                    _selectedIndex == MainTab.tickets ? _selectedTicket : null,
+              ),
+            ),
+            icon: const Icon(Icons.add, size: 18),
+            label: Text(l10n.dealNew),
+          );
+        } else if (narrow && _selectedIndex == MainTab.inventory) {
+          // G2: On phone only — inventory header button scrolls out of view.
+          // Desktop keeps the ElevatedButton in the header row.
+          fab = FloatingActionButton.extended(
+            tooltip: l10n.inventoryAddItem,
+            onPressed: () => InventoryScreen.showAddDialog(context),
+            icon: const Icon(Icons.add, size: 18),
+            label: Text(l10n.inventoryAddItem),
+          );
+        } else {
+          fab = null;
+        }
 
         final scaffold = narrow
             ? Scaffold(
@@ -379,7 +401,7 @@ class _MainScreenState extends State<MainScreen> {
                     IconButton(
                       key: const Key('appBar-help-action'),
                       tooltip: l10n.actionHelp,
-                      icon: const Icon(Icons.help_outline),
+                      icon: const Icon(Icons.help_outlined),
                       onPressed: () =>
                           setState(() => _selectedIndex = MainTab.help),
                     ),
@@ -419,14 +441,39 @@ class _MainScreenState extends State<MainScreen> {
                 floatingActionButton: fab,
                 body: Row(
                   children: [
-                    _Sidebar(
-                      selectedIndex: _selectedIndex,
-                      icons: _navIcons,
-                      labels: labels,
+                    AppNavRail(
+                      tabs: MainTab.values,
                       visibility: visibility,
-                      extended: extended,
+                      selectedTab: _selectedIndex,
                       onSelect: _select,
-                      badgeCounts: navBadgeCounts,
+                      extended: extended,
+                      iconBuilder: (tab, selected) {
+                        final (outlined, filled) = _navIcons[tab.index];
+                        return Icon(selected ? filled : outlined);
+                      },
+                      labelBuilder: (tab) => labels[tab.index],
+                      badgeBuilder: (tab) {
+                        final count = navBadgeCounts[tab] ?? 0;
+                        if (count <= 0) return null;
+                        // Minimal Marker — wird von AppNavRail via
+                        // Stack/Positioned über das Icon gelegt.
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.warning,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     Expanded(
                       child: Column(
@@ -457,207 +504,6 @@ class _MainScreenState extends State<MainScreen> {
           child: Focus(autofocus: true, child: scaffold),
         );
       },
-    );
-  }
-}
-
-// ─── Custom Sidebar ────────────────────────────────────────────────────────────
-
-class _Sidebar extends StatelessWidget {
-  final MainTab selectedIndex;
-  final List<(IconData, IconData)> icons;
-  final List<String> labels;
-  /// Pro Tab: true = sichtbar, false = ausblenden (z.B. Inbox auf Free).
-  final Map<MainTab, bool> visibility;
-  final bool extended;
-  final ValueChanged<MainTab> onSelect;
-  /// Optional badge counts per tab. Key = MainTab, value = count > 0.
-  final Map<MainTab, int> badgeCounts;
-
-  const _Sidebar({
-    required this.selectedIndex,
-    required this.icons,
-    required this.labels,
-    required this.visibility,
-    required this.extended,
-    required this.onSelect,
-    this.badgeCounts = const {},
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final width = extended ? 220.0 : 64.0;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: width,
-      color: AppTheme.navBg,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Branding Header: BrandMark + optional Wordmark.
-          // Sidebar-Hintergrund ist navBg (fix dunkel), darum onDark=true.
-          SizedBox(
-            height: 56,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: extended ? 14 : 10),
-              child: Row(
-                mainAxisAlignment: extended
-                    ? MainAxisAlignment.start
-                    : MainAxisAlignment.center,
-                children: [
-                  const BrandMark(size: 28, withBackground: true),
-                  if (extended) ...[
-                    const SizedBox(width: 10),
-                    const BrandWordmark(
-                      fontSize: 16,
-                      onDark: true,
-                      canColor: Colors.white,
-                      logisticsColor: Color(0xCCFFFFFF),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          Container(height: 1, color: Colors.white.withAlpha(20)),
-          const SizedBox(height: 8),
-          // Nav items — versteckte Tabs (z.B. Inbox auf Free)
-          // werden hier rausgefiltert; der Enum-Wert bleibt stabil.
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                for (final tab in MainTab.values)
-                  if (visibility[tab] != false)
-                    _NavItem(
-                      key: Key('main-tab-${tab.name}'),
-                      icon: icons[tab.index].$1,
-                      activeIcon: icons[tab.index].$2,
-                      label: labels[tab.index],
-                      isSelected: selectedIndex == tab,
-                      extended: extended,
-                      onTap: () => onSelect(tab),
-                      badgeCount: badgeCounts[tab] ?? 0,
-                      badgeKey: tab == MainTab.inbox
-                          ? const Key('mobile-nav-inbox-badge')
-                          : null,
-                    ),
-              ],
-            ),
-          ),
-          Container(height: 1, color: Colors.white.withAlpha(20)),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatefulWidget {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final bool isSelected;
-  final bool extended;
-  final VoidCallback onTap;
-  /// When > 0, shows a badge on the icon.
-  final int badgeCount;
-  /// Optional key for the Badge widget (used by browser-tester / widget-tests).
-  final Key? badgeKey;
-
-  const _NavItem({
-    super.key,
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.isSelected,
-    required this.extended,
-    required this.onTap,
-    this.badgeCount = 0,
-    this.badgeKey,
-  });
-
-  @override
-  State<_NavItem> createState() => _NavItemState();
-}
-
-class _NavItemState extends State<_NavItem> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final iconColor = widget.isSelected ? Colors.white : AppTheme.navIcon;
-    final labelColor = widget.isSelected ? Colors.white : AppTheme.navLabel;
-    final bgColor = widget.isSelected
-        ? Colors.white.withAlpha(20)
-        : _hovered
-            ? Colors.white.withAlpha(13)
-            : Colors.transparent;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: Tooltip(
-        message: widget.extended ? '' : widget.label,
-        preferBelow: false,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            height: 44,
-            decoration: BoxDecoration(
-              color: bgColor,
-              border: Border(
-                left: BorderSide(
-                  color:
-                      widget.isSelected ? AppTheme.accent : Colors.transparent,
-                  width: 3,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: widget.isSelected ? 61 : 64,
-                  child: Center(
-                    child: Badge(
-                      key: widget.badgeKey,
-                      isLabelVisible: widget.badgeCount > 0,
-                      label: Text(
-                        '${widget.badgeCount}',
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      backgroundColor: AppTheme.warning,
-                      child: Icon(
-                        widget.isSelected ? widget.activeIcon : widget.icon,
-                        color: iconColor,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-                if (widget.extended)
-                  Expanded(
-                    child: Text(
-                      widget.label,
-                      style: TextStyle(
-                        color: labelColor,
-                        fontSize: 13,
-                        fontWeight: widget.isSelected
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -846,13 +692,13 @@ class _AccountMenu extends StatelessWidget {
                   children: [
                     Text(
                       plan == BillingPlan.free
-                          ? 'Plan auswählen'
-                          : 'Plan verwalten',
+                          ? l10n.planMenuSelect
+                          : l10n.planMenuManage,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Aktuell: ${plan.label}',
+                      l10n.planMenuCurrent(plan.label),
                       style: TextStyle(
                           fontSize: 11, color: AppTheme.textMutedOf(context)),
                     ),
@@ -869,7 +715,9 @@ class _AccountMenu extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  plan == BillingPlan.free ? 'Upgrade' : plan.label,
+                  plan == BillingPlan.free
+                      ? l10n.planMenuUpgradeBadge
+                      : plan.label,
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
@@ -1063,14 +911,41 @@ class _AccountMenu extends StatelessWidget {
 // Shown when the user taps the "Mehr" slot in the Phone NavigationBar.
 // Renders every tab that is NOT already shown in the bottom-nav
 // (Suppliers, Stats, Activity, Settings, Help by default).
+//
+// G1 polish (2026-05-24):
+//  • Drag-handle (4×40 dp) for sheet affordance.
+//  • Quick-search TextField filters items by label substring.
+//  • Section headers group tabs thematically.
+//  • Chevron trailing on each item.
+//  • SafeArea + MediaQuery.viewInsetsOf for keyboard awareness.
 
-class _MoreNavSheet extends StatelessWidget {
+// Section assignment — determines which header a tab falls under.
+_MoreNavSection _tabSection(MainTab tab) => switch (tab) {
+      MainTab.inventory ||
+      MainTab.suppliers ||
+      MainTab.warehouse =>
+        _MoreNavSection.manage,
+      MainTab.stats || MainTab.activity => _MoreNavSection.tools,
+      MainTab.settings || MainTab.help => _MoreNavSection.account,
+      // dashboard/deals/tickets/inbox are typically pinned in bottom-nav
+      // and won't show here, but fall back gracefully.
+      _ => _MoreNavSection.manage,
+    };
+
+enum _MoreNavSection { manage, tools, account }
+
+class _MoreNavSheet extends StatefulWidget {
   final List<(IconData, IconData)> icons;
   final List<String> labels;
   final Map<MainTab, bool> visibility;
+
   /// Tabs already present in the bottom-nav — excluded from this sheet.
   final List<MainTab> excludeTabs;
   final ValueChanged<MainTab> onSelect;
+
+  /// Called when the user taps the search tile — sheet pops then global
+  /// search opens (handled by the caller so context is correct).
+  final VoidCallback onSearch;
   final Map<MainTab, int> badgeCounts;
   final String sheetTitle;
 
@@ -1081,58 +956,177 @@ class _MoreNavSheet extends StatelessWidget {
     required this.visibility,
     required this.excludeTabs,
     required this.onSelect,
+    required this.onSearch,
     required this.sheetTitle,
     this.badgeCounts = const {},
   });
 
   @override
-  Widget build(BuildContext context) {
-    // All tabs visible but not pinned in the bottom-nav.
-    final sheetTabs = MainTab.values
-        .where((t) => visibility[t] != false && !excludeTabs.contains(t))
+  State<_MoreNavSheet> createState() => _MoreNavSheetState();
+}
+
+class _MoreNavSheetState extends State<_MoreNavSheet> {
+  String _query = '';
+
+  List<MainTab> get _allSheetTabs => MainTab.values
+      .where((t) =>
+          widget.visibility[t] != false &&
+          !widget.excludeTabs.contains(t))
+      .toList();
+
+  List<MainTab> _filtered(List<MainTab> tabs) {
+    if (_query.isEmpty) return tabs;
+    final q = _query.toLowerCase();
+    return tabs
+        .where((t) => widget.labels[t.index].toLowerCase().contains(q))
         .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final allTabs = _allSheetTabs;
+    final filtered = _filtered(allTabs);
+
+    // Group filtered tabs by section — only render a section header if
+    // at least one tab in that section survived the filter.
+    final Map<_MoreNavSection, List<MainTab>> sections = {};
+    for (final tab in filtered) {
+      sections.putIfAbsent(_tabSection(tab), () => []).add(tab);
+    }
+
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Handle + Title ────────────────────────────────────────────
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(60),
-                borderRadius: BorderRadius.circular(2),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: keyboardInset),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Drag handle ────────────────────────────────────────────
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 10, bottom: 6),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  // navBg is always dark — white/60 is appropriate here.
+                  color: Colors.white.withAlpha(60),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-            child: Text(
-              sheetTitle,
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.2,
+            // ── Sheet title ────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 2, 20, 10),
+              child: Text(
+                widget.sheetTitle,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
               ),
             ),
-          ),
-          Container(height: 1, color: Colors.white.withAlpha(20)),
-          // ── Nav items ────────────────────────────────────────────────
-          for (final tab in sheetTabs)
-            _MoreNavSheetItem(
-              key: Key('moreNavSheet-${tab.name}'),
-              icon: icons[tab.index].$1,
-              label: labels[tab.index],
-              badgeCount: badgeCounts[tab] ?? 0,
-              onTap: () => onSelect(tab),
+            // ── Quick search field ─────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: TextField(
+                key: const Key('moreNavSheet-searchField'),
+                style: const TextStyle(color: Colors.white, fontSize: 15),
+                cursorColor: Colors.white,
+                decoration: InputDecoration(
+                  hintText: l10n.navMoreSearchHint,
+                  hintStyle: TextStyle(
+                    color: Colors.white.withAlpha(100),
+                    fontSize: 15,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: Colors.white.withAlpha(140),
+                    size: 20,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withAlpha(18),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide:
+                        BorderSide(color: Colors.white.withAlpha(30)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide:
+                        BorderSide(color: Colors.white.withAlpha(80)),
+                  ),
+                ),
+                onChanged: (v) => setState(() => _query = v),
+              ),
             ),
-          const SizedBox(height: 8),
-        ],
+            Container(height: 1, color: Colors.white.withAlpha(20)),
+            // ── Sectioned nav items ────────────────────────────────────
+            if (filtered.isEmpty)
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                child: Text(
+                  l10n.navMoreSearchNoResults,
+                  style: TextStyle(
+                    color: Colors.white.withAlpha(100),
+                    fontSize: 14,
+                  ),
+                ),
+              )
+            else
+              for (final section in _MoreNavSection.values)
+                if (sections[section] != null) ...[
+                  _MoreNavSectionHeader(
+                    label: switch (section) {
+                      _MoreNavSection.manage => l10n.navMoreSectionManage,
+                      _MoreNavSection.tools => l10n.navMoreSectionTools,
+                      _MoreNavSection.account => l10n.navMoreSectionAccount,
+                    },
+                  ),
+                  for (final tab in sections[section]!)
+                    _MoreNavSheetItem(
+                      key: Key('moreNavSheet-${tab.name}'),
+                      icon: widget.icons[tab.index].$1,
+                      label: widget.labels[tab.index],
+                      badgeCount: widget.badgeCounts[tab] ?? 0,
+                      onTap: () => widget.onSelect(tab),
+                    ),
+                ],
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MoreNavSectionHeader extends StatelessWidget {
+  final String label;
+  const _MoreNavSectionHeader({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          color: Colors.white.withAlpha(100),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
@@ -1157,6 +1151,8 @@ class _MoreNavSheetItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
+        // min 48 dp touch target: 14+20 = 34 inner height → icon 20 dp →
+        // vertical padding 14 dp each side = 48 dp total.
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(
           children: [
@@ -1171,13 +1167,20 @@ class _MoreNavSheetItem extends StatelessWidget {
               child: Icon(icon, size: 20, color: AppTheme.navIcon),
             ),
             const SizedBox(width: 16),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
+            ),
+            Icon(
+              Icons.chevron_right_outlined,
+              size: 18,
+              color: Colors.white.withAlpha(80),
             ),
           ],
         ),

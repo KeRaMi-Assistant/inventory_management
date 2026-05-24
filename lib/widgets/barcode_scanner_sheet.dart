@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/error_messages.dart';
 
 /// Bottom-Sheet, das die Kamera öffnet, einen Barcode scannt und den
 /// erkannten Wert per `Navigator.pop` zurückliefert. Hauptsächlich für EAN/GTIN
@@ -78,7 +79,10 @@ class _BarcodeScannerSheetState extends State<BarcodeScannerSheet> {
             controller: _controller,
             onDetect: _onDetect,
             errorBuilder: (context, error) {
-              _error = error.errorDetails?.message ?? error.toString();
+              _error = error.errorDetails?.message?.isNotEmpty == true
+                  ? error.errorDetails!.message!
+                  : sanitizeError(error,
+                      l10n: AppLocalizations.of(context));
               return _ErrorState(message: _error!);
             },
           ),

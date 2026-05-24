@@ -66,6 +66,11 @@
   "navSettings": "Einstellungen",
   "navMore": "Mehr",
   "navMoreSheetTitle": "Weitere Bereiche",
+  "navMoreSearchHint": "Bereich suchen…",
+  "navMoreSearchNoResults": "Kein Bereich gefunden",
+  "navMoreSectionManage": "Verwalten",
+  "navMoreSectionTools": "Analyse & Tools",
+  "navMoreSectionAccount": "Konto",
   "navWarehouse": "Warenwirtschaft",
   "warehouseHubTitle": "Warenwirtschaft",
   "warehouseHubComingSoon": "Bald verfügbar",
@@ -227,12 +232,16 @@
   "buyersDeleteTitle": "Käufer löschen",
   "buyersDeleteConfirm": "Käufer „{name}\" wirklich löschen?",
   "@buyersDeleteConfirm": { "placeholders": { "name": {} } },
+  "buyersDeletedSuccess": "Käufer entfernt.",
+  "buyersDeleteFailed": "Löschen fehlgeschlagen.",
 
   "shopsEmpty": "Noch keine Shops angelegt.",
   "shopsAdd": "Shop hinzufügen",
   "shopsDeleteTitle": "Shop löschen",
   "shopsDeleteConfirm": "Shop „{name}\" wirklich löschen?",
   "@shopsDeleteConfirm": { "placeholders": { "name": {} } },
+  "shopsDeletedSuccess": "Shop entfernt.",
+  "shopsDeleteFailed": "Löschen fehlgeschlagen.",
 
   "teamLoadFailed": "Team-Daten konnten nicht geladen werden: {error}",
   "@teamLoadFailed": { "placeholders": { "error": {} } },
@@ -268,7 +277,11 @@
   "teamMemberRemove": "Entfernen",
   "teamMemberFallbackLabel": "diesem Mitglied",
   "@teamMemberFallbackLabel": { "description": "Fallback-Bezeichnung wenn Email eines Mitglieds nicht bekannt ist (z.B. im Entfernen-Dialog)." },
+  "teamMemberRemovedSuccess": "Mitglied entfernt.",
+  "teamMemberRemoveFailed": "Entfernen fehlgeschlagen.",
   "teamInviteRevoke": "Einladung zurückziehen",
+  "teamInviteRevokedSuccess": "Einladung zurückgezogen.",
+  "teamInviteRevokeFailed": "Zurückziehen fehlgeschlagen.",
   "teamSwitchWorkspace": "Workspace wechseln",
   "teamRoleOwner": "Eigentümer:in",
   "teamRoleAdmin": "Admin",
@@ -534,6 +547,9 @@
   "dealDeleteTitle": "Eintrag löschen",
   "dealDeleteConfirm": "„{product}\" (ID: {id}) wirklich löschen?",
   "@dealDeleteConfirm": { "placeholders": { "product": {}, "id": { "type": "int" } } },
+  "dealDeleteConfirmTitle": "Deal löschen?",
+  "dealDeleteConfirmMessage": "Diese Aktion entfernt den Deal. Du hast 4 Sekunden, um es rückgängig zu machen.",
+  "dealDeletedFeedback": "Deal gelöscht",
 
   "bulkStatus": "Status",
   "bulkBuyer": "Käufer",
@@ -957,6 +973,12 @@
   "ticketsArchiveMonthProfit": "Profit: {profit}",
   "@ticketsArchiveMonthProfit": { "placeholders": { "profit": {} } },
   "ticketsArchiveLongPressHint": "Lang drücken zum Wiedereröffnen",
+  "ticketsReopenSuccess": "Ticket {ticketNumber} wieder geöffnet",
+  "@ticketsReopenSuccess": { "placeholders": { "ticketNumber": { "type": "String" } } },
+  "ticketsReopenFailed": "Wiedereröffnen fehlgeschlagen",
+  "ticketsEditSaved": "Ticket {ticketNumber} gespeichert",
+  "@ticketsEditSaved": { "placeholders": { "ticketNumber": { "type": "String" } } },
+  "ticketsEditFailed": "Speichern fehlgeschlagen",
 
   "inventoryTitle": "Lager",
   "inventorySearchHint": "Name, SKU, EAN, Lagerort suchen",
@@ -967,6 +989,8 @@
   "inventoryDeleteTitle": "Lagerartikel löschen",
   "inventoryDeleteConfirm": "Artikel „{name}\" wirklich löschen?",
   "@inventoryDeleteConfirm": { "placeholders": { "name": {} } },
+  "inventoryBarcodeFound": "Gefunden: {name}",
+  "@inventoryBarcodeFound": { "placeholders": { "name": {} } },
   "inventoryNoEan": "Kein Artikel mit dieser EAN",
   "inventoryCreate": "Anlegen",
   "inventoryKpiTotalItems": "Gesamtartikel",
@@ -1217,6 +1241,8 @@
   "invitesDeclinedSnack": "Einladung abgelehnt.",
   "invitesAcceptFailed": "Beitritt fehlgeschlagen: {error}",
   "@invitesAcceptFailed": { "placeholders": { "error": {} } },
+  "invitesDeclineFailed": "Ablehnen fehlgeschlagen: {error}",
+  "@invitesDeclineFailed": { "placeholders": { "error": {} } },
   "invitesExpiresOn": "Läuft am {date} ab",
   "@invitesExpiresOn": { "placeholders": { "date": {} } },
   "invitesRoleLabel": "Rolle: {role}",
@@ -1303,6 +1329,8 @@
   "onboardingErrorNoWorkspace": "Kein aktiver Workspace gefunden. Bitte ausloggen und erneut anmelden.",
   "onboardingErrorGeneric": "Onboarding fehlgeschlagen: {error}",
   "@onboardingErrorGeneric": { "placeholders": { "error": {} } },
+  "onboardingStepLabel": "Schritt {current} von {total}",
+  "@onboardingStepLabel": { "placeholders": { "current": {}, "total": {} } },
 
   "dashboardEmptyTitle": "Noch keine Daten",
   "dashboardEmptySubtitle": "Lade ein paar Beispiel-Tickets, Käufer und Lagerartikel, um dich in der App zurechtzufinden.",
@@ -1337,6 +1365,13 @@
   "trackingReparseConfirmBody": "Bestehende Sendungsnummern werden mit der verbesserten Erkennung neu geprüft. Manuelle Einträge bleiben unverändert.",
   "trackingReparseConfirmTitle": "Neubewertung starten?",
   "trackingReparseFailed": "Neubewertung fehlgeschlagen",
+  "@trackingReparseFailed": { "description": "SnackBar-Text wenn die Tracking-Neubewertung fehlschlägt." },
+
+  "trackingReparseRateLimit": "Zu viele Anfragen — bitte in {seconds} s erneut versuchen",
+  "@trackingReparseRateLimit": {
+    "description": "SnackBar-Text wenn die Tracking-Neubewertung durch Rate-Limiting abgelehnt wird.",
+    "placeholders": { "seconds": { "type": "int" } }
+  },
   "trackingReparseOffline": "Keine Verbindung — bitte später erneut versuchen",
   "trackingReparseRunning": "Sendungsnummern werden neu bewertet…",
   "trackingReparseSuccessCount": "{count, plural, =0{Keine Sendungsnummer aktualisiert} =1{1 Sendungsnummer aktualisiert} other{{count} Sendungsnummern aktualisiert}}",
@@ -1612,6 +1647,7 @@
   "purchaseOrderStatusToOrdered": "Als bestellt markieren",
   "purchaseOrderStatusToCancelled": "Stornieren",
   "purchaseOrderStatusChangeConfirm": "Status wirklich ändern?",
+  "purchaseOrderStatusChangeBody": "Der Bestellstatus wird geändert. Diese Aktion kann nicht rückgängig gemacht werden.",
   "purchaseOrderDetailTitle": "Bestelldetails",
   "purchaseOrderDetailSectionHead": "Bestellkopf",
   "purchaseOrderLabelNumber": "Bestellnummer",
@@ -1634,6 +1670,8 @@
   "purchaseOrderPdfExport": "PDF-Beleg",
   "purchaseOrderPdfExportComingSoon": "PDF-Export kommt in einem späteren Update.",
   "purchaseOrderPdfExportError": "PDF-Beleg konnte nicht erstellt werden.",
+  "purchaseOrderCreatedSuccess": "Bestellung angelegt.",
+  "purchaseOrderCreateError": "Bestellung konnte nicht angelegt werden.",
   "purchaseOrderStatusChangeError": "Status konnte nicht geändert werden.",
   "purchaseOrderViewerHint": "Du hast nur Lesezugriff — Buchungsaktionen nicht verfügbar.",
   "purchaseOrderStatusAutoManaged": "Dieser Status wird automatisch gepflegt.",
@@ -1756,5 +1794,916 @@
   "stocktakeDiffReportNoDiff": "Keine Differenzen — Bestand ist korrekt.",
   "stocktakeNoItems": "Keine Positionen",
   "detailPaneNoSelection": "Kein Eintrag ausgewählt",
-  "detailPaneNoSelectionHint": "Wähle links einen Artikel aus, um Details zu sehen."
+  "detailPaneNoSelectionHint": "Wähle links einen Artikel aus, um Details zu sehen.",
+
+  "confirmTypeNamePrompt": "Gib „{name}“ ein, um zu bestätigen.",
+  "@confirmTypeNamePrompt": {
+    "description": "Aufforderung zur Texteingabe im requireTypeName-Modus des ConfirmDialog. Verwendet deutsche typografische Anführungszeichen (U+201E/U+201C).",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "appFeedbackUndoAction": "Rückgängig",
+  "appFeedbackSuccessDefault": "Gespeichert",
+  "appFeedbackErrorDefault": "Etwas ist schiefgegangen. Bitte erneut versuchen.",
+
+  "errorNetworkOffline": "Keine Internetverbindung. Bitte prüfe deine Verbindung.",
+  "errorTimeout": "Zeitüberschreitung. Bitte erneut versuchen.",
+  "errorAuthExpired": "Anmeldung abgelaufen. Bitte erneut anmelden.",
+  "errorFormatInvalid": "Ungültiges Datenformat.",
+  "errorUnknown": "Ein unbekannter Fehler ist aufgetreten.",
+
+  "inboxTabSuggestions": "Vorschläge ({count})",
+  "@inboxTabSuggestions": {
+    "description": "Tab-Label für Vorschläge mit Anzahl.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxTabUpdated": "Aktualisiert ({count})",
+  "@inboxTabUpdated": {
+    "description": "Tab-Label für aktualisierte Deals mit Anzahl.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxTabUnclassified": "Unklassifiziert ({count})",
+  "@inboxTabUnclassified": {
+    "description": "Tab-Label für unklassifizierte Mails mit Anzahl.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxMailboxConnectedCount": "{count, plural, =1{1 Postfach verbunden} other{{count} Postfächer verbunden}}",
+  "@inboxMailboxConnectedCount": {
+    "description": "Header-Text wenn Postfächer verbunden sind.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxMailboxNone": "Noch kein Postfach verbunden",
+  "@inboxMailboxNone": {
+    "description": "Header-Text wenn kein Postfach verbunden ist."
+  },
+  "inboxPollingHint": "Polling alle 5 min — nur Bestellbestätigungen, Versand- und Stornierungs-Mails der konfigurierten Shops landen hier.",
+  "@inboxPollingHint": {
+    "description": "Erklärtext unter dem Postfach-Header wenn Postfach verbunden."
+  },
+  "inboxMailboxNoneHint": "Lege unter Einstellungen → Postfach ein IMAP-Konto an.",
+  "@inboxMailboxNoneHint": {
+    "description": "Hinweistext wenn noch kein Postfach verbunden ist."
+  },
+  "inboxDismissalFilterTooltipEmpty": "Verworfen-Filter (0)",
+  "@inboxDismissalFilterTooltipEmpty": {
+    "description": "Tooltip des Verworfen-Filter-Buttons wenn keine verworfenen Einträge vorhanden."
+  },
+  "inboxDismissalFilterTooltipCount": "Verworfen-Filter zurücksetzen ({count, plural, =1{1 Eintrag} other{{count} Einträge}})",
+  "@inboxDismissalFilterTooltipCount": {
+    "description": "Tooltip des Verworfen-Filter-Buttons mit Anzahl verworfener Einträge.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxImportingTooltip": "Importiere Mails… ({count} bisher)",
+  "@inboxImportingTooltip": {
+    "description": "Tooltip des Import-Buttons während des Imports.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxPollNowTooltip": "Jetzt pollen (statt 5 min warten)",
+  "@inboxPollNowTooltip": {
+    "description": "Tooltip des Poll-Buttons wenn Postfach verbunden und bereit."
+  },
+  "inboxConnectFirstTooltip": "Erst Postfach in den Einstellungen verbinden",
+  "@inboxConnectFirstTooltip": {
+    "description": "Tooltip des Poll-Buttons wenn noch kein Postfach verbunden."
+  },
+  "inboxReparseTrackingTitle": "Tracking-Daten neu auslesen",
+  "@inboxReparseTrackingTitle": {
+    "description": "Titel des Re-Parse-Tracking-Menüeintrags im Header-PopupMenu."
+  },
+  "inboxReparseTrackingSubtitle": "Wendet die aktuelle Adapter-Registry erneut auf alle Vorschläge an. Korrigiert falsch extrahierte Tracking-Nummern (z.B. wenn ein Adapter-Bug eine interne Shipment-ID statt der echten Carrier-Nr gespeichert hat).",
+  "@inboxReparseTrackingSubtitle": {
+    "description": "Untertitel des Re-Parse-Tracking-Menüeintrags."
+  },
+  "inboxFilterAllShops": "Alle Shops",
+  "@inboxFilterAllShops": {
+    "description": "Label im Shop-Filter-Sheet wenn kein Shop-Filter aktiv."
+  },
+  "inboxFilterAllStatus": "Alle Status",
+  "@inboxFilterAllStatus": {
+    "description": "Label im Status-Filter-Sheet wenn kein Status-Filter aktiv."
+  },
+  "inboxFilterResetBodyCount": "{count} verworfene Einträge werden wieder angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.",
+  "@inboxFilterResetBodyCount": {
+    "description": "Body-Text des Dialogs zum Zurücksetzen des Verworfen-Filters.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxDiscardFilterCleared": "Verworfen-Filter geleert.",
+  "@inboxDiscardFilterCleared": {
+    "description": "SnackBar-Text nach erfolgreichem Leeren des Verworfen-Filters."
+  },
+  "inboxClearDismissalsFailed": "Zurücksetzen fehlgeschlagen: {error}",
+  "@inboxClearDismissalsFailed": {
+    "description": "SnackBar-Text wenn das Leeren des Verworfen-Filters fehlschlägt.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxPolling": "Pollt das Postfach…",
+  "@inboxPolling": {
+    "description": "SnackBar-Text wenn das Postfach gerade gepollt wird."
+  },
+  "inboxPollingFailed": "Polling fehlgeschlagen: {error}",
+  "@inboxPollingFailed": {
+    "description": "SnackBar-Text wenn das Polling fehlschlägt.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxPollFetched": "{count, plural, =1{1 Mail geholt} other{{count} Mails geholt}}",
+  "@inboxPollFetched": {
+    "description": "Poll-Ergebnis: Anzahl geholter Mails.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxPollStored": "{count} aufgenommen",
+  "@inboxPollStored": {
+    "description": "Poll-Ergebnis: Anzahl gespeicherter Mails.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxPollSuggestedMerged": "{suggested} Vorschl. / {matched} gemerged",
+  "@inboxPollSuggestedMerged": {
+    "description": "Poll-Ergebnis: Anzahl Vorschläge und gemergter Mails.",
+    "placeholders": {
+      "suggested": { "type": "int" },
+      "matched": { "type": "int" }
+    }
+  },
+  "inboxPollUpToDate": "Keine neuen passenden Mails. Postfach ist aktuell.",
+  "@inboxPollUpToDate": {
+    "description": "SnackBar-Text wenn das Polling keine neuen Mails findet."
+  },
+  "inboxRetracking": "Liest Tracking-Daten neu aus…",
+  "@inboxRetracking": {
+    "description": "SnackBar-Text beim Start des Re-Parse-Trackings."
+  },
+  "inboxReparseFailed": "Re-Parse fehlgeschlagen: {error}",
+  "@inboxReparseFailed": {
+    "description": "SnackBar-Text wenn der Re-Parse fehlschlägt.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxReparseRescued": "{rescued, plural, =1{1 Vorschlag} other{{rescued} Vorschläge}} korrigiert ({scanned} geprüft).",
+  "@inboxReparseRescued": {
+    "description": "SnackBar-Text nach Re-Parse wenn Korrekturen vorgenommen wurden.",
+    "placeholders": {
+      "rescued": { "type": "int" },
+      "scanned": { "type": "int" }
+    }
+  },
+  "inboxReparseNoCorrections": "Keine Korrekturen nötig ({scanned} geprüft).",
+  "@inboxReparseNoCorrections": {
+    "description": "SnackBar-Text nach Re-Parse wenn keine Korrekturen nötig waren.",
+    "placeholders": {
+      "scanned": { "type": "int" }
+    }
+  },
+  "inboxDiscardMailTitle": "Mail verwerfen?",
+  "@inboxDiscardMailTitle": {
+    "description": "Titel des Dialogs zum Verwerfen einer Mail."
+  },
+  "inboxDiscardMailBody": "Die Mail „{subject}\" wird aus der Inbox entfernt und nicht mehr angezeigt.",
+  "@inboxDiscardMailBody": {
+    "description": "Body-Text des Dialogs zum Verwerfen einer Mail.",
+    "placeholders": {
+      "subject": { "type": "String" }
+    }
+  },
+  "inboxMailDiscarded": "Mail verworfen.",
+  "@inboxMailDiscarded": {
+    "description": "SnackBar-Text nach erfolgreichem Verwerfen einer Mail."
+  },
+  "inboxDiscardFailed": "Verwerfen fehlgeschlagen: {error}",
+  "@inboxDiscardFailed": {
+    "description": "SnackBar-Text wenn das Verwerfen einer Mail fehlschlägt.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxSuggestionCompleteFailed": "Konnte Vorschlag nicht abschließen: {error}",
+  "@inboxSuggestionCompleteFailed": {
+    "description": "SnackBar-Text wenn das Abschließen eines Vorschlags fehlschlägt.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxSuggestionRejectFailed": "Ablehnen fehlgeschlagen: {error}",
+  "@inboxSuggestionRejectFailed": {
+    "description": "SnackBar-Text wenn das Ablehnen eines Vorschlags fehlschlägt.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxTrackingAdopted": "Tracking auf Deal #{dealId} übernommen.",
+  "@inboxTrackingAdopted": {
+    "description": "SnackBar-Text nach erfolgreicher Tracking-Übernahme auf einen Deal.",
+    "placeholders": {
+      "dealId": { "type": "int" }
+    }
+  },
+  "inboxTrackingAdoptionFailed": "Tracking-Übernahme fehlgeschlagen: {error}",
+  "@inboxTrackingAdoptionFailed": {
+    "description": "SnackBar-Text wenn die Tracking-Übernahme fehlschlägt.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxApplyTrackingToDeal": "Tracking auf Deal anwenden",
+  "@inboxApplyTrackingToDeal": {
+    "description": "Label für den Menüeintrag und Dialog-Titel zum Anwenden eines Trackings auf einen Deal."
+  },
+  "inboxApplyTrackingHint": "Tracking {tracking} → Deal-Tracking, Status wird auf „Unterwegs\" gesetzt.",
+  "@inboxApplyTrackingHint": {
+    "description": "Hint-Text im DealPickerDialog beim Anwenden eines Trackings.",
+    "placeholders": {
+      "tracking": { "type": "String" }
+    }
+  },
+  "inboxApplyTrackingHintShort": "Tracking {tracking} → Deal-Tracking.",
+  "@inboxApplyTrackingHintShort": {
+    "description": "Kurzer Hint-Text im DealPickerDialog beim Anwenden eines Trackings aus unklassifizierter Mail.",
+    "placeholders": {
+      "tracking": { "type": "String" }
+    }
+  },
+  "inboxLinkToDealTitle": "Vorschlag zu Deal zuweisen",
+  "@inboxLinkToDealTitle": {
+    "description": "Dialog-Titel beim Zuweisen eines Vorschlags zu einem Deal."
+  },
+  "inboxLinkToDealHint": "Order-ID, Tracking und ETA werden in den ausgewählten Deal übernommen, der Vorschlag wird abgehakt.",
+  "@inboxLinkToDealHint": {
+    "description": "Hint-Text im DealPickerDialog beim Zuweisen eines Vorschlags."
+  },
+  "inboxSuggestionLinked": "Vorschlag mit Deal #{dealId} verknüpft.",
+  "@inboxSuggestionLinked": {
+    "description": "SnackBar-Text nach erfolgreicher Verknüpfung eines Vorschlags mit einem Deal.",
+    "placeholders": {
+      "dealId": { "type": "int" }
+    }
+  },
+  "inboxLinkFailed": "Zuweisung fehlgeschlagen: {error}",
+  "@inboxLinkFailed": {
+    "description": "SnackBar-Text wenn die Zuweisung eines Vorschlags zu einem Deal fehlschlägt.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxDetailsAndTracking": "Details & Tracking anzeigen",
+  "@inboxDetailsAndTracking": {
+    "description": "Tooltip und Menü-Label zum Anzeigen von Details und Tracking-Informationen."
+  },
+  "inboxLinkToExistingDeal": "Zu bestehendem Deal zuweisen",
+  "@inboxLinkToExistingDeal": {
+    "description": "Menü-Label zum Zuweisen eines Vorschlags zu einem bestehenden Deal."
+  },
+  "inboxDealCreatedFromMail": "Deal #{dealId} aus Mail angelegt.",
+  "@inboxDealCreatedFromMail": {
+    "description": "SnackBar-Text nach erfolgreichem Anlegen eines Deals aus einer unklassifizierten Mail.",
+    "placeholders": {
+      "dealId": { "type": "int" }
+    }
+  },
+  "inboxCreateDeal": "Deal anlegen",
+  "@inboxCreateDeal": {
+    "description": "Menü-Label und Button-Label zum Anlegen eines Deals aus einer Mail."
+  },
+  "inboxApplyTrackingToDealShort": "Tracking → Deal",
+  "@inboxApplyTrackingToDealShort": {
+    "description": "Kurzes Button-Label zum Anwenden eines Trackings auf einen Deal."
+  },
+  "inboxShowDetails": "Details anzeigen",
+  "@inboxShowDetails": {
+    "description": "Menü-Label zum Anzeigen der Mail-Details."
+  },
+  "inboxCountdownToday": "Heute weg",
+  "@inboxCountdownToday": {
+    "description": "CountdownPill-Label wenn die Suggestion heute aus der Inbox verschwindet."
+  },
+  "inboxCountdownOneDay": "Noch 1 Tag",
+  "@inboxCountdownOneDay": {
+    "description": "CountdownPill-Label wenn noch 1 Tag Inbox-Sichtbarkeit verbleibt."
+  },
+  "inboxCountdownDays": "Noch {days} Tage",
+  "@inboxCountdownDays": {
+    "description": "CountdownPill-Label wenn noch mehrere Tage Inbox-Sichtbarkeit verbleiben.",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "inboxCountdownTooltip": "Inbox-Sichtbarkeit {totalDays} Tage. Aktualisiert sich beim nächsten Refresh.",
+  "@inboxCountdownTooltip": {
+    "description": "Tooltip der CountdownPill mit Gesamtsichtbarkeitsfenster.",
+    "placeholders": {
+      "totalDays": { "type": "int" }
+    }
+  },
+  "inboxTrackingCopied": "Tracking-Nummer kopiert.",
+  "@inboxTrackingCopied": {
+    "description": "SnackBar-Text nach erfolgreichem Kopieren der Tracking-Nummer."
+  },
+
+  "inboxSuggestionRejectedFeedback": "Vorschlag verworfen",
+  "@inboxSuggestionRejectedFeedback": {
+    "description": "SnackBar-Text nach Verwerfen eines Inbox-Vorschlags (mit Undo-Option)."
+  },
+
+  "inboxDiscardFilterClearedFeedback": "Filter zurückgesetzt",
+  "@inboxDiscardFilterClearedFeedback": {
+    "description": "SnackBar-Text nach Zurücksetzen des Verworfen-Filters (mit Undo-Option)."
+  },
+
+  "settingsTabMailbox": "Postfach",
+  "@settingsTabMailbox": { "description": "Tab-Label für den Postfach/IMAP-Tab in den Einstellungen." },
+
+  "settingsBillingSectionTitle": "Plan & Abrechnung",
+  "@settingsBillingSectionTitle": { "description": "Section-Header für Plan & Abrechnung in den Einstellungen." },
+
+  "settingsBillingPriceFree": "kostenlos",
+  "@settingsBillingPriceFree": { "description": "Preis-Label für den Free-Plan." },
+
+  "settingsBillingPricePerMonth": "{price} / Monat",
+  "@settingsBillingPricePerMonth": {
+    "description": "Preis-Label für bezahlte Pläne mit Monats-Suffix.",
+    "placeholders": { "price": { "type": "String" } }
+  },
+
+  "settingsBillingMostPopular": "Most Popular",
+  "@settingsBillingMostPopular": { "description": "Badge-Label für den beliebtesten Plan." },
+
+  "settingsBillingActionUpgrade": "Upgrade",
+  "@settingsBillingActionUpgrade": { "description": "Button-Text für Free-Plan-Upgrade-Aktion." },
+
+  "settingsBillingActionManage": "Verwalten",
+  "@settingsBillingActionManage": { "description": "Button-Text für bezahlten Plan (Plan verwalten)." },
+
+  "settingsBillingDetailsTitle": "Rechnungsdaten",
+  "@settingsBillingDetailsTitle": { "description": "Titel der Rechnungsdaten-Sektion in den Einstellungen." },
+
+  "settingsBillingAddressMissing": "Pflichtangaben unvollständig — bitte ergänzen",
+  "@settingsBillingAddressMissing": { "description": "Subtitle wenn Rechnungsadresse bei bezahltem Plan fehlt." },
+
+  "settingsBillingAddressAdd": "Adresse hinterlegen",
+  "@settingsBillingAddressAdd": { "description": "Subtitle wenn noch keine Rechnungsadresse hinterlegt ist (bezahlter Plan)." },
+
+  "settingsBillingAddressOptional": "Optional — wird erst beim Upgrade benötigt",
+  "@settingsBillingAddressOptional": { "description": "Subtitle Rechnungsadresse auf Free-Plan (optional)." },
+
+  "settingsMailboxRemoveTitle": "Postfach entfernen",
+  "@settingsMailboxRemoveTitle": { "description": "Titel des Bestätigungs-Dialogs zum Löschen eines IMAP-Kontos." },
+
+  "settingsMailboxRemoveBody": "Soll das IMAP-Konto \"{label}\" wirklich gelöscht werden? Auch alle aus diesem Postfach importierten Mails (Vorschläge + Unklassifizierte) werden gelöscht. Bereits in Deals übernommene Bestellungen bleiben unberührt.",
+  "@settingsMailboxRemoveBody": {
+    "description": "Body-Text des Bestätigungs-Dialogs zum Löschen eines IMAP-Kontos.",
+    "placeholders": { "label": { "type": "String" } }
+  },
+
+  "settingsMailboxDeleteError": "Löschen fehlgeschlagen",
+  "@settingsMailboxDeleteError": { "description": "SnackBar-Text wenn Postfach-Löschen fehlschlägt." },
+
+  "settingsMailboxRemovedFeedback": "Postfach entfernt",
+  "@settingsMailboxRemovedFeedback": { "description": "SnackBar-Text nach erfolgreichem Entfernen eines IMAP-Kontos." },
+
+  "settingsMailboxAddLabel": "IMAP-Konto",
+  "@settingsMailboxAddLabel": { "description": "FAB-Label zum Hinzufügen eines neuen IMAP-Kontos." },
+
+  "settingsMailboxLimitLabel": "Limit erreicht ({limit})",
+  "@settingsMailboxLimitLabel": {
+    "description": "FAB-Label wenn das Postfach-Limit erreicht ist.",
+    "placeholders": { "limit": { "type": "int" } }
+  },
+
+  "settingsMailboxLimitDialogTitle": "Postfach-Limit erreicht",
+  "@settingsMailboxLimitDialogTitle": { "description": "Titel des Dialogs wenn das Postfach-Limit erreicht ist." },
+
+  "settingsMailboxLimitDialogBody": "Dein {plan}-Plan erlaubt {limit} {mailboxWord}. Upgrade auf einen höheren Plan, um weitere zu verbinden.",
+  "@settingsMailboxLimitDialogBody": {
+    "description": "Body des Postfach-Limit-Dialogs.",
+    "placeholders": {
+      "plan": { "type": "String" },
+      "limit": { "type": "int" },
+      "mailboxWord": { "type": "String" }
+    }
+  },
+
+  "settingsMailboxWordSingular": "Postfach",
+  "@settingsMailboxWordSingular": { "description": "Singular von Postfach für Plural-Logik." },
+
+  "settingsMailboxWordPlural": "Postfächer",
+  "@settingsMailboxWordPlural": { "description": "Plural von Postfach für Plural-Logik." },
+
+  "settingsMailboxQuotaUnlimited": "unbegrenzt",
+  "@settingsMailboxQuotaUnlimited": { "description": "Label für unlimitierte Postfach-Quota." },
+
+  "settingsMailboxIntegrationTitle": "Postfach-Integration",
+  "@settingsMailboxIntegrationTitle": { "description": "Titel der Postfach-Integrations-Karte." },
+
+  "settingsMailboxIntegrationDesc": "Hinterlege ein IMAP-Konto, um Bestell- und Versand-Mails automatisch erkennen zu lassen. Polling läuft alle 5 min serverseitig — Passwörter werden mit pgp_sym_encrypt verschlüsselt gespeichert. Im Inbox-Tab kannst du erkannte Deals annehmen.",
+  "@settingsMailboxIntegrationDesc": { "description": "Beschreibungstext der Postfach-Integrations-Karte." },
+
+  "settingsMailboxQuotaLine": "{plan}-Plan: {quota} {mailboxWord} · {days} Tage Inbox-Verlauf",
+  "@settingsMailboxQuotaLine": {
+    "description": "Quota-Zeile in der Postfach-Integrations-Karte.",
+    "placeholders": {
+      "plan": { "type": "String" },
+      "quota": { "type": "String" },
+      "mailboxWord": { "type": "String" },
+      "days": { "type": "int" }
+    }
+  },
+
+  "settingsMailboxStatusPaused": "Pausiert",
+  "@settingsMailboxStatusPaused": { "description": "Status-Label wenn ein Postfach-Konto pausiert ist." },
+
+  "settingsMailboxStatusError": "Fehler",
+  "@settingsMailboxStatusError": { "description": "Status-Label wenn ein Postfach-Konto einen Fehler hat." },
+
+  "settingsMailboxStatusNeverPolled": "Noch nicht gepollt",
+  "@settingsMailboxStatusNeverPolled": { "description": "Status-Label wenn ein Postfach noch nie gepollt wurde." },
+
+  "settingsMailboxStatusLastPolled": "Zuletzt gepollt: {relative}",
+  "@settingsMailboxStatusLastPolled": {
+    "description": "Status-Label mit letztem Poll-Zeitpunkt.",
+    "placeholders": { "relative": { "type": "String" } }
+  },
+
+  "settingsRelativeJustNow": "gerade eben",
+  "@settingsRelativeJustNow": { "description": "Relative Zeitangabe: eben jetzt." },
+
+  "settingsRelativeMinutes": "vor {minutes} min",
+  "@settingsRelativeMinutes": {
+    "description": "Relative Zeitangabe in Minuten.",
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+
+  "settingsRelativeHours": "vor {hours} h",
+  "@settingsRelativeHours": {
+    "description": "Relative Zeitangabe in Stunden.",
+    "placeholders": { "hours": { "type": "int" } }
+  },
+
+  "settingsRelativeDays": "vor {days} d",
+  "@settingsRelativeDays": {
+    "description": "Relative Zeitangabe in Tagen.",
+    "placeholders": { "days": { "type": "int" } }
+  },
+
+  "settingsMailboxEmptyHint": "Noch kein Postfach hinterlegt.",
+  "@settingsMailboxEmptyHint": { "description": "Hinweis wenn noch kein Postfach-Konto angelegt ist." },
+
+  "settingsMailboxFreePlanTitle": "Postfach im Free-Plan nicht enthalten",
+  "@settingsMailboxFreePlanTitle": { "description": "Titel der Free-Plan-Gate-Karte im Postfach-Tab." },
+
+  "settingsMailboxFreePlanDesc": "Dein aktueller Plan: {plan}. Die automatische Erkennung von Bestell- und Versand-Mails ist ab dem Starter-Plan verfügbar — höhere Pläne erlauben mehr Postfächer und längeren Inbox-Verlauf.",
+  "@settingsMailboxFreePlanDesc": {
+    "description": "Beschreibungstext der Free-Plan-Gate-Karte im Postfach-Tab.",
+    "placeholders": { "plan": { "type": "String" } }
+  },
+
+  "settingsMailboxPlanStarter": "1 Postfach · 7 Tage",
+  "@settingsMailboxPlanStarter": { "description": "Plan-Vergleichszeile Starter im Postfach-Tab." },
+
+  "settingsMailboxPlanPro": "3 Postfächer · 14 Tage",
+  "@settingsMailboxPlanPro": { "description": "Plan-Vergleichszeile Pro im Postfach-Tab." },
+
+  "settingsMailboxPlanBusiness": "10 Postfächer · 30 Tage",
+  "@settingsMailboxPlanBusiness": { "description": "Plan-Vergleichszeile Business im Postfach-Tab." },
+
+  "settingsMailboxPlanUltimate": "15 Postfächer · 90 Tage",
+  "@settingsMailboxPlanUltimate": { "description": "Plan-Vergleichszeile Ultimate im Postfach-Tab." },
+
+  "settingsShopsAmazonAlreadyPresent": "Amazon-Shops sind bereits vorhanden ({skipped} übersprungen).",
+  "@settingsShopsAmazonAlreadyPresent": {
+    "description": "SnackBar wenn keine neuen Amazon-Shops hinzugefügt wurden.",
+    "placeholders": { "skipped": { "type": "int" } }
+  },
+
+  "settingsShopsAmazonAdded": "{added} Amazon-Shops hinzugefügt{skippedSuffix}.",
+  "@settingsShopsAmazonAdded": {
+    "description": "SnackBar nach erfolgreichem Hinzufügen von Amazon-Shops.",
+    "placeholders": {
+      "added": { "type": "int" },
+      "skippedSuffix": { "type": "String" }
+    }
+  },
+
+  "settingsShopsAmazonSkippedSuffix": ", {skipped} bereits vorhanden",
+  "@settingsShopsAmazonSkippedSuffix": {
+    "description": "Optionaler Suffix wenn einige Amazon-Shops bereits vorhanden waren.",
+    "placeholders": { "skipped": { "type": "int" } }
+  },
+
+  "settingsShopsAddError": "Fehler beim Hinzufügen",
+  "@settingsShopsAddError": { "description": "SnackBar-Text wenn das Hinzufügen von Shops fehlschlägt." },
+
+  "settingsShopsAmazonCountAccounts": "{count} {word}",
+  "@settingsShopsAmazonCountAccounts": {
+    "description": "Amazon Country-Account Zähler.",
+    "placeholders": {
+      "count": { "type": "int" },
+      "word": { "type": "String" }
+    }
+  },
+
+  "settingsShopsAmazonAccountSingular": "Country-Account",
+  "@settingsShopsAmazonAccountSingular": { "description": "Singular Country-Account für Amazon-Shops." },
+
+  "settingsShopsAmazonAccountPlural": "Country-Accounts",
+  "@settingsShopsAmazonAccountPlural": { "description": "Plural Country-Accounts für Amazon-Shops." },
+
+  "settingsShippingApiKeyLabel": "API-Key",
+  "@settingsShippingApiKeyLabel": { "description": "Label für das API-Key-Textfeld im Versand-Tab." },
+
+  "settingsShippingDeleteKeyConfirmBody": "{carrier}: API-Key wirklich entfernen?",
+  "@settingsShippingDeleteKeyConfirmBody": {
+    "description": "Bestätigungs-Dialog-Text zum Löschen eines Carrier-API-Keys.",
+    "placeholders": { "carrier": { "type": "String" } }
+  },
+
+  "unsavedChangesDiscardTitle": "Ungespeicherte Änderungen verwerfen?",
+  "@unsavedChangesDiscardTitle": { "description": "Titel des Discard-Confirm-Dialogs im UnsavedChangesGuard." },
+
+  "unsavedChangesDiscardMessage": "Deine Änderungen gehen verloren.",
+  "@unsavedChangesDiscardMessage": { "description": "Body-Text des Discard-Confirm-Dialogs im UnsavedChangesGuard." },
+
+  "unsavedChangesDiscardLabel": "Verwerfen",
+  "@unsavedChangesDiscardLabel": { "description": "Label des Confirm-Buttons im Discard-Dialog." },
+
+  "purchaseOrderScanItemAdded": "{name} +1",
+  "@purchaseOrderScanItemAdded": {
+    "description": "SnackBar-Text wenn ein Artikel per Barcode-Scan zur Wareneingangs-Liste hinzugefügt wird.",
+    "placeholders": { "name": { "type": "String" } }
+  },
+
+  "stocktakeScanIncrement": "{name} +1",
+  "@stocktakeScanIncrement": {
+    "description": "SnackBar-Text wenn ein Artikel per Barcode-Scan bei der Inventur inkrementiert wird.",
+    "placeholders": { "name": { "type": "String" } }
+  },
+
+  "suppliersSeedSuccess": "{added} Versanddienste hinzugefügt.",
+  "@suppliersSeedSuccess": {
+    "description": "SnackBar-Text wenn Carrier-Lieferanten erfolgreich angelegt wurden.",
+    "placeholders": { "added": { "type": "int" } }
+  },
+
+  "suppliersSeedAlreadyPresent": "Versanddienste sind bereits vorhanden ({skipped} übersprungen).",
+  "@suppliersSeedAlreadyPresent": {
+    "description": "SnackBar-Text wenn alle Carrier-Lieferanten bereits existieren.",
+    "placeholders": { "skipped": { "type": "int" } }
+  },
+
+  "suppliersAddCarriersFailed": "Fehler beim Hinzufügen der Versanddienste.",
+  "@suppliersAddCarriersFailed": { "description": "Fehler-SnackBar beim Seeden der Carrier-Lieferanten." },
+
+  "suppliersDeleted": "Lieferant gelöscht.",
+  "@suppliersDeleted": { "description": "Erfolgs-SnackBar nach dem Löschen eines Lieferanten." },
+
+  "suppliersDeleteFailed": "Löschen fehlgeschlagen.",
+  "@suppliersDeleteFailed": { "description": "Fehler-SnackBar beim Löschen eines Lieferanten." },
+
+  "categoryDeleted": "Warengruppe gelöscht.",
+  "@categoryDeleted": { "description": "Erfolgs-SnackBar nach dem Löschen einer Warengruppe." },
+
+  "categoryDeleteFailed": "Löschen fehlgeschlagen.",
+  "@categoryDeleteFailed": { "description": "Fehler-SnackBar beim Löschen einer Warengruppe." },
+
+  "warehouseDeleteTitle": "Lager löschen",
+  "@warehouseDeleteTitle": { "description": "Titel des Bestätigungs-Dialogs beim Löschen eines Lagers." },
+
+  "warehouseDeleted": "Lager gelöscht.",
+  "@warehouseDeleted": { "description": "Erfolgs-SnackBar nach dem Löschen eines Lagers." },
+
+  "warehouseDeleteFailed": "Löschen fehlgeschlagen.",
+  "@warehouseDeleteFailed": { "description": "Fehler-SnackBar beim Löschen eines Lagers." },
+
+  "warehouseSaved": "Lager gespeichert.",
+  "@warehouseSaved": { "description": "Erfolgs-SnackBar nach dem Speichern eines Lagers." },
+
+  "warehouseSaveFailed": "Speichern fehlgeschlagen.",
+  "@warehouseSaveFailed": { "description": "Fehler-SnackBar beim Speichern eines Lagers." },
+
+  "inboxDetailNoSubject": "— ohne Betreff —",
+  "@inboxDetailNoSubject": { "description": "Platzhalter wenn eine Inbox-Mail keinen Betreff hat." },
+
+  "inboxDetailFrom": "Von: {address}",
+  "@inboxDetailFrom": {
+    "description": "Absender-Zeile im Inbox-Mail-Detail.",
+    "placeholders": { "address": {} }
+  },
+
+  "inboxDetailReceived": "Empfangen: {date}",
+  "@inboxDetailReceived": {
+    "description": "Empfangsdatum im Inbox-Mail-Detail.",
+    "placeholders": { "date": {} }
+  },
+
+  "inboxDetailProcessed": "Verarbeitet: {date}",
+  "@inboxDetailProcessed": {
+    "description": "Verarbeitungsdatum im Inbox-Mail-Detail.",
+    "placeholders": { "date": {} }
+  },
+
+  "inboxStatusMatched": "Aktualisiert",
+  "@inboxStatusMatched": { "description": "Status-Badge im Inbox-Mail-Detail: Deal wurde aktualisiert." },
+
+  "inboxStatusSuggested": "Vorschlag",
+  "@inboxStatusSuggested": { "description": "Status-Badge im Inbox-Mail-Detail: Vorschlag für neuen Deal." },
+
+  "inboxStatusUnclassified": "Unklassifiziert",
+  "@inboxStatusUnclassified": { "description": "Status-Badge im Inbox-Mail-Detail: Mail nicht zugeordnet." },
+
+  "inboxStatusFailed": "Fehler",
+  "@inboxStatusFailed": { "description": "Status-Badge im Inbox-Mail-Detail: Verarbeitung fehlgeschlagen." },
+
+  "inboxStatusDismissed": "Verworfen",
+  "@inboxStatusDismissed": { "description": "Status-Badge im Inbox-Mail-Detail: Mail verworfen." },
+
+  "inboxStatusPending": "In Arbeit",
+  "@inboxStatusPending": { "description": "Status-Badge im Inbox-Mail-Detail: Mail wird verarbeitet." },
+
+  "trackingUpdateFailed": "Tracking-Update fehlgeschlagen.",
+  "@trackingUpdateFailed": { "description": "Fehler-SnackBar wenn das manuelle Tracking-Update scheitert." },
+
+  "trackingAcceptFailed": "Tracking-Akzeptanz fehlgeschlagen.",
+  "@trackingAcceptFailed": { "description": "Fehler-SnackBar wenn das Akzeptieren eines Trackings scheitert." },
+
+  "trackingDiscardFailed": "Tracking verwerfen fehlgeschlagen.",
+  "@trackingDiscardFailed": { "description": "Fehler-SnackBar wenn das Verwerfen eines Trackings scheitert." },
+
+  "billingProfileRequiredField": "Pflichtfeld für kostenpflichtige Pläne",
+  "@billingProfileRequiredField": { "description": "Validator-Meldung für Pflichtfelder im Rechnungsformular bei kostenpflichtigen Plänen." },
+
+  "billingProfilePaidHint": "Für kostenpflichtige Pläne benötigen wir eine vollständige Rechnungsadresse (Pflichtfelder mit *).",
+  "@billingProfilePaidHint": { "description": "Hinweis-Banner im Rechnungsformular wenn ein kostenpflichtiger Plan aktiv ist." },
+
+  "billingProfileFieldFullName": "Vollständiger Name",
+  "@billingProfileFieldFullName": { "description": "Label für das Feld 'Vollständiger Name' im Rechnungsformular." },
+
+  "billingProfileFieldStreet": "Straße & Hausnummer",
+  "@billingProfileFieldStreet": { "description": "Label für das Straße-&-Hausnummer-Feld im Rechnungsformular." },
+
+  "billingProfileDataNotice": "Diese Daten werden ausschließlich für Rechnungen und gesetzlich vorgeschriebene Pflichtangaben verwendet.",
+  "@billingProfileDataNotice": { "description": "Datenschutz-Hinweis am Ende des Rechnungsformulars." },
+
+  "billingProfileSaved": "Rechnungsdaten gespeichert.",
+  "@billingProfileSaved": { "description": "SnackBar-Text nach erfolgreichem Speichern der Rechnungsdaten." },
+
+  "billingProfileSaveFailed": "Speichern fehlgeschlagen.",
+  "@billingProfileSaveFailed": { "description": "SnackBar-Text wenn das Speichern der Rechnungsdaten fehlschlägt." },
+
+  "billingProfileSaving": "Speichern…",
+  "@billingProfileSaving": { "description": "Button-Text während die Rechnungsdaten gespeichert werden." },
+
+  "planMenuSelect": "Plan auswählen",
+  "@planMenuSelect": { "description": "Menü-Eintrag für Free-User zum Plan auswählen." },
+
+  "planMenuManage": "Plan verwalten",
+  "@planMenuManage": { "description": "Menü-Eintrag für zahlende User zum Plan verwalten." },
+
+  "planMenuCurrent": "Aktuell: {label}",
+  "@planMenuCurrent": {
+    "description": "Untertitel im Plan-Menü-Eintrag mit dem aktuellen Plan-Namen.",
+    "placeholders": { "label": { "type": "String" } }
+  },
+
+  "planMenuUpgradeBadge": "Upgrade",
+  "@planMenuUpgradeBadge": { "description": "Badge-Text im Plan-Menü für Free-User." },
+
+  "pricingSelectPlan": "Plan auswählen",
+  "@pricingSelectPlan": { "description": "Button-Label auf der Pricing-Seite zum Auswählen eines Plans." },
+
+  "pricingActivePlan": "Aktiver Plan",
+  "@pricingActivePlan": { "description": "Button-Label auf der Pricing-Seite wenn der Plan bereits aktiv ist." },
+
+  "pricingSwitchToFree": "Auf Free wechseln",
+  "@pricingSwitchToFree": { "description": "Button-Label auf der Pricing-Seite zum Wechsel auf den Free-Plan." },
+
+  "pricingUpgradeToTitle": "Auf {plan} upgraden?",
+  "@pricingUpgradeToTitle": {
+    "description": "Dialog-Titel beim Upgrade auf einen kostenpflichtigen Plan.",
+    "placeholders": { "plan": { "type": "String" } }
+  },
+
+  "pricingDowngradeToFreeTitle": "Auf Free wechseln?",
+  "@pricingDowngradeToFreeTitle": { "description": "Dialog-Titel beim Downgrade auf den Free-Plan." },
+
+  "pricingDowngradeLoseAccess": "Du verlierst Zugang zu Pro-Features. Bestehende Daten bleiben erhalten.",
+  "@pricingDowngradeLoseAccess": { "description": "Dialog-Body beim Downgrade auf den Free-Plan." },
+
+  "pricingDemoCheckoutNotice": "Hinweis: Dies ist ein Demo-Switch ohne Zahlungsabwicklung. Sobald Stripe/Paddle integriert ist, läuft hier der echte Checkout.",
+  "@pricingDemoCheckoutNotice": { "description": "Dialog-Body beim Upgrade auf einen kostenpflichtigen Plan (Demo-Modus)." },
+
+  "pricingActivatePlan": "Plan aktivieren",
+  "@pricingActivatePlan": { "description": "Bestätigungs-Button im Upgrade-Dialog." },
+
+  "pricingDoSwitch": "Wechseln",
+  "@pricingDoSwitch": { "description": "Bestätigungs-Button im Downgrade-zu-Free-Dialog." },
+
+  "pricingCycleMonthly": "Monatlich",
+  "@pricingCycleMonthly": { "description": "Toggle-Chip-Label für monatliche Abrechnung auf der Pricing-Seite." },
+
+  "pricingCycleYearly": "Jährlich · –17%",
+  "@pricingCycleYearly": { "description": "Toggle-Chip-Label für jährliche Abrechnung auf der Pricing-Seite (mit Rabatt-Hinweis)." },
+
+  "trackingCarrierPickTitle": "Versanddienst wählen",
+  "@trackingCarrierPickTitle": { "description": "Header im Carrier-Override-Popup-Menü des Tracking-Chips." },
+
+  "trackingAmazonCountryTitle": "Amazon · Land wählen",
+  "@trackingAmazonCountryTitle": { "description": "Header im Amazon-Country-Picker-Popup des Tracking-Chips." },
+
+  "trackingTooltipUnknown": "Tracking — Versanddienst nicht erkannt (lange drücken zum Auswählen)",
+  "@trackingTooltipUnknown": { "description": "Tooltip des Tracking-Chips wenn der Carrier unbekannt ist." },
+
+  "trackingTooltipKnown": "{carrier} · lange drücken zum Wechseln",
+  "@trackingTooltipKnown": {
+    "description": "Tooltip des Tracking-Chips wenn ein Carrier erkannt wurde.",
+    "placeholders": { "carrier": { "type": "String" } }
+  },
+
+  "globalSearchHint": "Suchen über Deals, Lager, Tickets, Käufer, Lieferanten…",
+  "@globalSearchHint": { "description": "Placeholder-Text im Suchfeld des globalen Suchdialogs." },
+
+  "globalSearchBuyerFilterSubtitle": "Käufer · Deals filtern",
+  "@globalSearchBuyerFilterSubtitle": { "description": "Untertitel eines Käufer-Suchergebnisses im globalen Suchdialog." },
+
+  "dealPickerSearchHint": "Suche nach Produkt, Ticket, Shop oder Käufer …",
+  "@dealPickerSearchHint": { "description": "Placeholder-Text im Suchfeld des Deal-Picker-Dialogs." },
+
+  "dealPickerEmpty": "Kein passender Deal gefunden.",
+  "@dealPickerEmpty": { "description": "Leerer-Zustand-Text im Deal-Picker-Dialog wenn die Suche keine Treffer ergibt." },
+
+  "mailboxDialogEditTitle": "Postfach bearbeiten",
+  "@mailboxDialogEditTitle": { "description": "Dialog-Titel beim Bearbeiten eines bestehenden IMAP-Kontos." },
+
+  "mailboxDialogAddTitle": "IMAP-Konto hinzufügen",
+  "@mailboxDialogAddTitle": { "description": "Dialog-Titel beim Hinzufügen eines neuen IMAP-Kontos." },
+
+  "mailboxDialogPasswordEditLabel": "App-Passwort (leer lassen, wenn unverändert)",
+  "@mailboxDialogPasswordEditLabel": { "description": "Passwort-Feld-Label im Mailbox-Bearbeiten-Dialog (beim Bearbeiten)." },
+
+  "productInvalidNumber": "Ungültige Zahl",
+  "@productInvalidNumber": { "description": "Validator-Fehlermeldung wenn eine Zahl im Produkt-Formular nicht parsebar ist." },
+
+  "inventoryPiecesCount": "{quantity} Stück",
+  "@inventoryPiecesCount": {
+    "description": "Stückzahl-Anzeige in der Inventarliste (z. B. '5 Stück').",
+    "placeholders": { "quantity": { "type": "int" } }
+  },
+
+  "heatmapTapHint": "Tippe auf einen Tag für Details",
+  "@heatmapTapHint": { "description": "Hinweis-Text in der Profit-Heatmap wenn noch kein Tag ausgewählt ist." },
+
+  "billingProfileSectionContact": "Kontaktperson",
+  "@billingProfileSectionContact": { "description": "Abschnittsheader 'Kontaktperson' im Rechnungsformular." },
+
+  "billingProfileSectionAddress": "Rechnungsadresse",
+  "@billingProfileSectionAddress": { "description": "Abschnittsheader 'Rechnungsadresse' im Rechnungsformular." },
+
+  "billingProfileFieldCompany": "Firma (optional)",
+  "@billingProfileFieldCompany": { "description": "Label für das Firma-Feld im Rechnungsformular." },
+
+  "billingProfileFieldVatId": "USt-IdNr. (optional)",
+  "@billingProfileFieldVatId": { "description": "Label für das Umsatzsteuer-ID-Feld im Rechnungsformular." },
+
+  "billingProfileFieldPhone": "Telefon",
+  "@billingProfileFieldPhone": { "description": "Label für das Telefon-Feld im Rechnungsformular." },
+
+  "billingProfileFieldAddr2": "Adresszusatz (optional)",
+  "@billingProfileFieldAddr2": { "description": "Label für das Adresszusatz-Feld im Rechnungsformular." },
+
+  "billingProfileFieldPostal": "PLZ",
+  "@billingProfileFieldPostal": { "description": "Label für das PLZ-Feld im Rechnungsformular." },
+
+  "billingProfileFieldCity": "Ort",
+  "@billingProfileFieldCity": { "description": "Label für das Ort-Feld im Rechnungsformular." },
+
+  "billingProfileFieldRegion": "Bundesland (optional)",
+  "@billingProfileFieldRegion": { "description": "Label für das Bundesland-Feld im Rechnungsformular." },
+
+  "billingProfileFieldCountry": "Land",
+  "@billingProfileFieldCountry": { "description": "Label für das Land-Feld im Rechnungsformular (ISO-2-Code)." },
+
+  "billingProfileCountryValidation": "ISO 2-Buchstaben",
+  "@billingProfileCountryValidation": { "description": "Validator-Meldung wenn das Länderfeld keinen gültigen ISO-2-Code enthält." },
+
+  "pricingPlanActivated": "Plan {plan} aktiviert.",
+  "@pricingPlanActivated": {
+    "description": "SnackBar-Text nach erfolgreicher Plan-Aktivierung.",
+    "placeholders": { "plan": { "type": "String" } }
+  },
+
+  "pricingActivationFailed": "Aktivierung fehlgeschlagen.",
+  "@pricingActivationFailed": { "description": "SnackBar-Text wenn die Plan-Aktivierung fehlschlägt." },
+
+  "heatmapLess": "Weniger",
+  "@heatmapLess": { "description": "Legende-Label 'Weniger' in der Profit-Heatmap (linke Seite der Farb-Skala)." },
+
+  "heatmapMore": "Mehr",
+  "@heatmapMore": { "description": "Legende-Label 'Mehr' in der Profit-Heatmap (rechte Seite der Farb-Skala)." },
+
+  "validationInvalidEmail": "Ungültige E-Mail-Adresse",
+  "@validationInvalidEmail": { "description": "Inline-Validierungsfehler für E-Mail-Felder." },
+
+  "validationInvalidPort": "Port muss zwischen 1 und 65535 liegen",
+  "@validationInvalidPort": { "description": "Inline-Validierungsfehler für den IMAP-Port." },
+
+  "mailboxDialogLabelLabel": "Bezeichnung",
+  "@mailboxDialogLabelLabel": { "description": "Label-Feld-Label im Mailbox-Dialog." },
+
+  "mailboxDialogLabelHint": "z. B. \"Gmail Reseller\"",
+  "@mailboxDialogLabelHint": { "description": "Hint-Text für das Label-Feld im Mailbox-Dialog." },
+
+  "mailboxDialogHostLabel": "IMAP-Server",
+  "@mailboxDialogHostLabel": { "description": "Feld-Label für den IMAP-Server-Host im Mailbox-Dialog." },
+
+  "mailboxDialogPortLabel": "Port",
+  "@mailboxDialogPortLabel": { "description": "Feld-Label für den IMAP-Port im Mailbox-Dialog." },
+
+  "mailboxDialogUsernameLabel": "Benutzername / Mail-Adresse",
+  "@mailboxDialogUsernameLabel": { "description": "Feld-Label für den Benutzernamen im Mailbox-Dialog." },
+
+  "mailboxDialogPasswordNewLabel": "App-Passwort",
+  "@mailboxDialogPasswordNewLabel": { "description": "Passwort-Feld-Label im Mailbox-Hinzufügen-Dialog." },
+
+  "mailboxDialogPasswordHelper": "Bei Gmail/Outlook: separates App-Passwort generieren.",
+  "@mailboxDialogPasswordHelper": { "description": "Helper-Text unter dem Passwort-Feld im Mailbox-Dialog beim Anlegen." },
+
+  "mailboxDialogFolderLabel": "Ordner",
+  "@mailboxDialogFolderLabel": { "description": "Feld-Label für den IMAP-Ordner im Mailbox-Dialog." },
+
+  "mailboxDialogSslLabel": "SSL/TLS verwenden",
+  "@mailboxDialogSslLabel": { "description": "SwitchListTile-Label für SSL im Mailbox-Dialog." },
+
+  "mailboxDialogPollingLabel": "Polling aktiv",
+  "@mailboxDialogPollingLabel": { "description": "SwitchListTile-Label für Polling im Mailbox-Dialog." },
+
+  "mailboxDialogPollingSubtitle": "Wird alle 5 Minuten von der Edge Function abgefragt.",
+  "@mailboxDialogPollingSubtitle": { "description": "Untertitel des Polling-Switches im Mailbox-Dialog." },
+
+  "mailboxDialogRequiredError": "Bezeichnung, Server und Benutzername sind Pflichtfelder.",
+  "@mailboxDialogRequiredError": { "description": "Fehlermeldung wenn Pflichtfelder fehlen." },
+
+  "mailboxDialogPasswordRequiredError": "Passwort ist beim Anlegen Pflicht.",
+  "@mailboxDialogPasswordRequiredError": { "description": "Fehlermeldung wenn beim Anlegen kein Passwort angegeben wurde." },
+
+  "mailboxDialogSaveFailed": "Speichern fehlgeschlagen: {error}",
+  "@mailboxDialogSaveFailed": {
+    "description": "Fehlermeldung wenn das Speichern eines IMAP-Kontos fehlschlägt.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "semanticsChartBar": "Säulendiagramm. {title}. {count} Werte. Höchster Wert: {topValue} für {topLabel}.",
+  "@semanticsChartBar": {
+    "description": "Semantics-Label für Säulendiagramme (Screen-Reader).",
+    "placeholders": {
+      "title": { "type": "String" },
+      "count": { "type": "int" },
+      "topValue": { "type": "String" },
+      "topLabel": { "type": "String" }
+    }
+  },
+
+  "semanticsChartLine": "Liniendiagramm. {title}. {count} Datenpunkte. Höchster Wert: {topValue} für {topLabel}.",
+  "@semanticsChartLine": {
+    "description": "Semantics-Label für Liniendiagramme (Screen-Reader).",
+    "placeholders": {
+      "title": { "type": "String" },
+      "count": { "type": "int" },
+      "topValue": { "type": "String" },
+      "topLabel": { "type": "String" }
+    }
+  },
+
+  "semanticsChartPie": "Tortendiagramm. {title}. {count} Segmente. Dominantes Segment: {topLabel} mit {topPct}%.",
+  "@semanticsChartPie": {
+    "description": "Semantics-Label für Tortendiagramme / Donut-Charts (Screen-Reader).",
+    "placeholders": {
+      "title": { "type": "String" },
+      "count": { "type": "int" },
+      "topLabel": { "type": "String" },
+      "topPct": { "type": "String" }
+    }
+  },
+
+  "semanticsChartLoading": "Diagramm lädt.",
+  "@semanticsChartLoading": { "description": "Fallback-Semantics-Label während ein Diagramm noch lädt." }
 }

@@ -58,10 +58,20 @@ class ProductDetailScreen extends StatefulWidget {
   /// `plans/2026-05-22_ui-ux-responsive-overhaul.md` §T3.3a.
   final bool embedded;
 
+  /// Hero-Tag für die Phone-Navigation-Animation (F4).
+  ///
+  /// Wird vom [InventoryScreen] gesetzt wenn `isPhoneViewport && !isMasterDetail`.
+  /// Muss mit dem Tag auf der Quell-Card in der Item-Liste übereinstimmen:
+  /// `'product-hero-${item.id}'`.
+  ///
+  /// `null` bedeutet keine Hero-Animation (Desktop oder embedded).
+  final String? heroTag;
+
   const ProductDetailScreen({
     super.key,
     required this.item,
     this.embedded = false,
+    this.heroTag,
   });
 
   @override
@@ -225,9 +235,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return scrollView;
     }
 
+    // F4: Hero-Animation für AppBar-Titel (nur im Standalone-Modus mit Tag).
+    // Der Hero matched den Card-Container in inventory_screen.dart.
+    // Embedded-Modus ist immer Desktop → kein Hero dort.
+    final titleWidget = widget.heroTag != null
+        ? Hero(
+            tag: widget.heroTag!,
+            // FlutterLogo-Workaround: Hero über Text braucht DefaultTextStyle-
+            // Wrapper damit Material-Übergang korrekt rendert.
+            flightShuttleBuilder: (_, animation, _, fromCtx, toCtx) {
+              return AnimatedBuilder(
+                animation: animation,
+                builder: (_, _) => DefaultTextStyle(
+                  style: DefaultTextStyle.of(toCtx).style,
+                  child: toCtx.widget,
+                ),
+              );
+            },
+            child: Text(l10n.productDetailTitle),
+          )
+        : Text(l10n.productDetailTitle);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.productDetailTitle),
+        title: titleWidget,
       ),
       body: SafeArea(child: scrollView),
     );

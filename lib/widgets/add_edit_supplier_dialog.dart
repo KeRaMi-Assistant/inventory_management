@@ -6,8 +6,53 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/supplier.dart';
 import '../providers/inventory_provider.dart';
+import '../utils/error_messages.dart';
 import '../utils/validators.dart';
+import 'unsaved_changes_guard.dart';
 
+/// Snapshot der Initialwerte für die Dirty-Detection im Lieferanten-Dialog.
+class _SupplierFormSnapshot {
+  const _SupplierFormSnapshot({
+    required this.name,
+    required this.contact,
+    required this.email,
+    required this.phone,
+    required this.website,
+    required this.note,
+    required this.active,
+    required this.street,
+    required this.zip,
+    required this.city,
+    required this.country,
+    required this.vatId,
+    required this.customerNumber,
+    required this.paymentTerms,
+    required this.leadTime,
+    required this.minOrderValue,
+  });
+
+  final String name;
+  final String contact;
+  final String email;
+  final String phone;
+  final String website;
+  final String note;
+  final bool active;
+  final String street;
+  final String zip;
+  final String city;
+  final String country;
+  final String vatId;
+  final String customerNumber;
+  final String paymentTerms;
+  final String leadTime;
+  final String minOrderValue;
+}
+
+/// Dialog zum Anlegen und Bearbeiten eines Lieferanten.
+///
+/// **UnsavedChangesGuard:** `barrierDismissible: false` ist beim showDialog-Aufrufer
+/// Pflicht (z.B. in `suppliers_screen.dart`), damit der Guard greifen kann.
 class AddEditSupplierDialog extends StatefulWidget {
   final Supplier? supplier;
   const AddEditSupplierDialog({super.key, this.supplier});
@@ -40,6 +85,29 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
   final _minOrderValueCtrl = TextEditingController();
 
   bool _advancedExpanded = false;
+
+  // ── Dirty-Detection ───────────────────────────────────────────────────────
+  late _SupplierFormSnapshot _initialSnapshot;
+  bool _wasDirty = false;
+
+  /// Alle TextController — zum komfortablen Listener-Management.
+  List<TextEditingController> get _allCtrls => [
+        _nameCtrl,
+        _contactCtrl,
+        _emailCtrl,
+        _phoneCtrl,
+        _websiteCtrl,
+        _noteCtrl,
+        _streetCtrl,
+        _zipCtrl,
+        _cityCtrl,
+        _countryCtrl,
+        _vatIdCtrl,
+        _customerNumberCtrl,
+        _paymentTermsCtrl,
+        _leadTimeCtrl,
+        _minOrderValueCtrl,
+      ];
 
   @override
   void initState() {
@@ -78,26 +146,73 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
         _advancedExpanded = true;
       }
     }
+
+    // Snapshot direkt nach dem Befüllen festhalten.
+    _initialSnapshot = _captureSnapshot();
+
+    // Dirty-Listener: setState nur wenn sich _isDirty ändert.
+    for (final ctrl in _allCtrls) {
+      ctrl.addListener(_checkDirtyChanged);
+    }
   }
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
-    _contactCtrl.dispose();
-    _emailCtrl.dispose();
-    _phoneCtrl.dispose();
-    _websiteCtrl.dispose();
-    _noteCtrl.dispose();
-    _streetCtrl.dispose();
-    _zipCtrl.dispose();
-    _cityCtrl.dispose();
-    _countryCtrl.dispose();
-    _vatIdCtrl.dispose();
-    _customerNumberCtrl.dispose();
-    _paymentTermsCtrl.dispose();
-    _leadTimeCtrl.dispose();
-    _minOrderValueCtrl.dispose();
+    for (final ctrl in _allCtrls) {
+      ctrl.removeListener(_checkDirtyChanged);
+      ctrl.dispose();
+    }
     super.dispose();
+  }
+
+  // ── Dirty-Detection Helpers ───────────────────────────────────────────────
+
+  _SupplierFormSnapshot _captureSnapshot() => _SupplierFormSnapshot(
+        name: _nameCtrl.text,
+        contact: _contactCtrl.text,
+        email: _emailCtrl.text,
+        phone: _phoneCtrl.text,
+        website: _websiteCtrl.text,
+        note: _noteCtrl.text,
+        active: _active,
+        street: _streetCtrl.text,
+        zip: _zipCtrl.text,
+        city: _cityCtrl.text,
+        country: _countryCtrl.text,
+        vatId: _vatIdCtrl.text,
+        customerNumber: _customerNumberCtrl.text,
+        paymentTerms: _paymentTermsCtrl.text,
+        leadTime: _leadTimeCtrl.text,
+        minOrderValue: _minOrderValueCtrl.text,
+      );
+
+  bool get _isDirty {
+    final s = _initialSnapshot;
+    return _nameCtrl.text != s.name ||
+        _contactCtrl.text != s.contact ||
+        _emailCtrl.text != s.email ||
+        _phoneCtrl.text != s.phone ||
+        _websiteCtrl.text != s.website ||
+        _noteCtrl.text != s.note ||
+        _active != s.active ||
+        _streetCtrl.text != s.street ||
+        _zipCtrl.text != s.zip ||
+        _cityCtrl.text != s.city ||
+        _countryCtrl.text != s.country ||
+        _vatIdCtrl.text != s.vatId ||
+        _customerNumberCtrl.text != s.customerNumber ||
+        _paymentTermsCtrl.text != s.paymentTerms ||
+        _leadTimeCtrl.text != s.leadTime ||
+        _minOrderValueCtrl.text != s.minOrderValue;
+  }
+
+  /// setState nur bei Dirty-Status-Wechsel — nicht bei jedem Tastendruck.
+  void _checkDirtyChanged() {
+    if (!mounted) return;
+    final nowDirty = _isDirty;
+    if (nowDirty != _wasDirty) {
+      setState(() => _wasDirty = nowDirty);
+    }
   }
 
   Future<void> _save() async {
@@ -146,7 +261,7 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
       if (context.mounted) {
         messenger.showSnackBar(
           SnackBar(
-            content: Text(l10n.pushSaveFailed('$e')),
+            content: Text(l10n.pushSaveFailed(sanitizeError(e, l10n: l10n))),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -157,7 +272,9 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Dialog(
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      child: Dialog(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460),
         child: SafeArea(
@@ -188,7 +305,8 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close, size: 20),
-                        onPressed: () => Navigator.pop(context),
+                        // maybePop damit UnsavedChangesGuard greifen kann
+                        onPressed: () => Navigator.maybePop(context),
                         tooltip: l10n.actionClose,
                       ),
                     ],
@@ -276,7 +394,10 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
                           ),
                           SwitchListTile(
                             value: _active,
-                            onChanged: (v) => setState(() => _active = v),
+                            onChanged: (v) {
+                              setState(() => _active = v);
+                              _checkDirtyChanged();
+                            },
                             title: Text(l10n.supplierActive),
                             contentPadding: EdgeInsets.zero,
                           ),
@@ -456,7 +577,8 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       TextButton(
-                        onPressed: () => Navigator.pop(context),
+                        // maybePop damit UnsavedChangesGuard greifen kann
+                        onPressed: () => Navigator.maybePop(context),
                         child: Text(l10n.actionCancel),
                       ),
                       const SizedBox(width: 8),
@@ -469,8 +591,9 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
             ),
           ),
         ),
-      ),
-    );
+      ), // ConstrainedBox
+    ), // Dialog
+    ); // UnsavedChangesGuard
   }
 }
 

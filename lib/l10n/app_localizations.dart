@@ -416,6 +416,36 @@ abstract class AppLocalizations {
   /// **'Weitere Bereiche'**
   String get navMoreSheetTitle;
 
+  /// No description provided for @navMoreSearchHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Bereich suchen…'**
+  String get navMoreSearchHint;
+
+  /// No description provided for @navMoreSearchNoResults.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Bereich gefunden'**
+  String get navMoreSearchNoResults;
+
+  /// No description provided for @navMoreSectionManage.
+  ///
+  /// In de, this message translates to:
+  /// **'Verwalten'**
+  String get navMoreSectionManage;
+
+  /// No description provided for @navMoreSectionTools.
+  ///
+  /// In de, this message translates to:
+  /// **'Analyse & Tools'**
+  String get navMoreSectionTools;
+
+  /// No description provided for @navMoreSectionAccount.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto'**
+  String get navMoreSectionAccount;
+
   /// No description provided for @navWarehouse.
   ///
   /// In de, this message translates to:
@@ -1094,6 +1124,18 @@ abstract class AppLocalizations {
   /// **'Käufer „{name}\" wirklich löschen?'**
   String buyersDeleteConfirm(Object name);
 
+  /// No description provided for @buyersDeletedSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Käufer entfernt.'**
+  String get buyersDeletedSuccess;
+
+  /// No description provided for @buyersDeleteFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen.'**
+  String get buyersDeleteFailed;
+
   /// No description provided for @shopsEmpty.
   ///
   /// In de, this message translates to:
@@ -1117,6 +1159,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Shop „{name}\" wirklich löschen?'**
   String shopsDeleteConfirm(Object name);
+
+  /// No description provided for @shopsDeletedSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Shop entfernt.'**
+  String get shopsDeletedSuccess;
+
+  /// No description provided for @shopsDeleteFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen.'**
+  String get shopsDeleteFailed;
 
   /// No description provided for @teamLoadFailed.
   ///
@@ -1268,11 +1322,35 @@ abstract class AppLocalizations {
   /// **'diesem Mitglied'**
   String get teamMemberFallbackLabel;
 
+  /// No description provided for @teamMemberRemovedSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Mitglied entfernt.'**
+  String get teamMemberRemovedSuccess;
+
+  /// No description provided for @teamMemberRemoveFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Entfernen fehlgeschlagen.'**
+  String get teamMemberRemoveFailed;
+
   /// No description provided for @teamInviteRevoke.
   ///
   /// In de, this message translates to:
   /// **'Einladung zurückziehen'**
   String get teamInviteRevoke;
+
+  /// No description provided for @teamInviteRevokedSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Einladung zurückgezogen.'**
+  String get teamInviteRevokedSuccess;
+
+  /// No description provided for @teamInviteRevokeFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurückziehen fehlgeschlagen.'**
+  String get teamInviteRevokeFailed;
 
   /// No description provided for @teamSwitchWorkspace.
   ///
@@ -2245,6 +2323,24 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'„{product}\" (ID: {id}) wirklich löschen?'**
   String dealDeleteConfirm(Object product, int id);
+
+  /// No description provided for @dealDeleteConfirmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal löschen?'**
+  String get dealDeleteConfirmTitle;
+
+  /// No description provided for @dealDeleteConfirmMessage.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Aktion entfernt den Deal. Du hast 4 Sekunden, um es rückgängig zu machen.'**
+  String get dealDeleteConfirmMessage;
+
+  /// No description provided for @dealDeletedFeedback.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal gelöscht'**
+  String get dealDeletedFeedback;
 
   /// No description provided for @bulkStatus.
   ///
@@ -4448,6 +4544,30 @@ abstract class AppLocalizations {
   /// **'Lang drücken zum Wiedereröffnen'**
   String get ticketsArchiveLongPressHint;
 
+  /// No description provided for @ticketsReopenSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Ticket {ticketNumber} wieder geöffnet'**
+  String ticketsReopenSuccess(String ticketNumber);
+
+  /// No description provided for @ticketsReopenFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Wiedereröffnen fehlgeschlagen'**
+  String get ticketsReopenFailed;
+
+  /// No description provided for @ticketsEditSaved.
+  ///
+  /// In de, this message translates to:
+  /// **'Ticket {ticketNumber} gespeichert'**
+  String ticketsEditSaved(String ticketNumber);
+
+  /// No description provided for @ticketsEditFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen'**
+  String get ticketsEditFailed;
+
   /// No description provided for @inventoryTitle.
   ///
   /// In de, this message translates to:
@@ -4495,6 +4615,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Artikel „{name}\" wirklich löschen?'**
   String inventoryDeleteConfirm(Object name);
+
+  /// No description provided for @inventoryBarcodeFound.
+  ///
+  /// In de, this message translates to:
+  /// **'Gefunden: {name}'**
+  String inventoryBarcodeFound(Object name);
 
   /// No description provided for @inventoryNoEan.
   ///
@@ -5702,6 +5828,12 @@ abstract class AppLocalizations {
   /// **'Beitritt fehlgeschlagen: {error}'**
   String invitesAcceptFailed(Object error);
 
+  /// No description provided for @invitesDeclineFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Ablehnen fehlgeschlagen: {error}'**
+  String invitesDeclineFailed(Object error);
+
   /// No description provided for @invitesExpiresOn.
   ///
   /// In de, this message translates to:
@@ -6152,6 +6284,12 @@ abstract class AppLocalizations {
   /// **'Onboarding fehlgeschlagen: {error}'**
   String onboardingErrorGeneric(Object error);
 
+  /// No description provided for @onboardingStepLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Schritt {current} von {total}'**
+  String onboardingStepLabel(Object current, Object total);
+
   /// No description provided for @dashboardEmptyTitle.
   ///
   /// In de, this message translates to:
@@ -6308,11 +6446,17 @@ abstract class AppLocalizations {
   /// **'Neubewertung starten?'**
   String get trackingReparseConfirmTitle;
 
-  /// No description provided for @trackingReparseFailed.
+  /// SnackBar-Text wenn die Tracking-Neubewertung fehlschlägt.
   ///
   /// In de, this message translates to:
   /// **'Neubewertung fehlgeschlagen'**
   String get trackingReparseFailed;
+
+  /// SnackBar-Text wenn die Tracking-Neubewertung durch Rate-Limiting abgelehnt wird.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu viele Anfragen — bitte in {seconds} s erneut versuchen'**
+  String trackingReparseRateLimit(int seconds);
 
   /// No description provided for @trackingReparseOffline.
   ///
@@ -7508,6 +7652,12 @@ abstract class AppLocalizations {
   /// **'Status wirklich ändern?'**
   String get purchaseOrderStatusChangeConfirm;
 
+  /// No description provided for @purchaseOrderStatusChangeBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Bestellstatus wird geändert. Diese Aktion kann nicht rückgängig gemacht werden.'**
+  String get purchaseOrderStatusChangeBody;
+
   /// No description provided for @purchaseOrderDetailTitle.
   ///
   /// In de, this message translates to:
@@ -7639,6 +7789,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'PDF-Beleg konnte nicht erstellt werden.'**
   String get purchaseOrderPdfExportError;
+
+  /// No description provided for @purchaseOrderCreatedSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellung angelegt.'**
+  String get purchaseOrderCreatedSuccess;
+
+  /// No description provided for @purchaseOrderCreateError.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellung konnte nicht angelegt werden.'**
+  String get purchaseOrderCreateError;
 
   /// No description provided for @purchaseOrderStatusChangeError.
   ///
@@ -8221,6 +8383,1332 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Wähle links einen Artikel aus, um Details zu sehen.'**
   String get detailPaneNoSelectionHint;
+
+  /// Aufforderung zur Texteingabe im requireTypeName-Modus des ConfirmDialog. Verwendet deutsche typografische Anführungszeichen (U+201E/U+201C).
+  ///
+  /// In de, this message translates to:
+  /// **'Gib „{name}“ ein, um zu bestätigen.'**
+  String confirmTypeNamePrompt(String name);
+
+  /// No description provided for @appFeedbackUndoAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Rückgängig'**
+  String get appFeedbackUndoAction;
+
+  /// No description provided for @appFeedbackSuccessDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Gespeichert'**
+  String get appFeedbackSuccessDefault;
+
+  /// No description provided for @appFeedbackErrorDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Etwas ist schiefgegangen. Bitte erneut versuchen.'**
+  String get appFeedbackErrorDefault;
+
+  /// No description provided for @errorNetworkOffline.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Internetverbindung. Bitte prüfe deine Verbindung.'**
+  String get errorNetworkOffline;
+
+  /// No description provided for @errorTimeout.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeitüberschreitung. Bitte erneut versuchen.'**
+  String get errorTimeout;
+
+  /// No description provided for @errorAuthExpired.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung abgelaufen. Bitte erneut anmelden.'**
+  String get errorAuthExpired;
+
+  /// No description provided for @errorFormatInvalid.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungültiges Datenformat.'**
+  String get errorFormatInvalid;
+
+  /// No description provided for @errorUnknown.
+  ///
+  /// In de, this message translates to:
+  /// **'Ein unbekannter Fehler ist aufgetreten.'**
+  String get errorUnknown;
+
+  /// Tab-Label für Vorschläge mit Anzahl.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschläge ({count})'**
+  String inboxTabSuggestions(int count);
+
+  /// Tab-Label für aktualisierte Deals mit Anzahl.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktualisiert ({count})'**
+  String inboxTabUpdated(int count);
+
+  /// Tab-Label für unklassifizierte Mails mit Anzahl.
+  ///
+  /// In de, this message translates to:
+  /// **'Unklassifiziert ({count})'**
+  String inboxTabUnclassified(int count);
+
+  /// Header-Text wenn Postfächer verbunden sind.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Postfach verbunden} other{{count} Postfächer verbunden}}'**
+  String inboxMailboxConnectedCount(int count);
+
+  /// Header-Text wenn kein Postfach verbunden ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch kein Postfach verbunden'**
+  String get inboxMailboxNone;
+
+  /// Erklärtext unter dem Postfach-Header wenn Postfach verbunden.
+  ///
+  /// In de, this message translates to:
+  /// **'Polling alle 5 min — nur Bestellbestätigungen, Versand- und Stornierungs-Mails der konfigurierten Shops landen hier.'**
+  String get inboxPollingHint;
+
+  /// Hinweistext wenn noch kein Postfach verbunden ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege unter Einstellungen → Postfach ein IMAP-Konto an.'**
+  String get inboxMailboxNoneHint;
+
+  /// Tooltip des Verworfen-Filter-Buttons wenn keine verworfenen Einträge vorhanden.
+  ///
+  /// In de, this message translates to:
+  /// **'Verworfen-Filter (0)'**
+  String get inboxDismissalFilterTooltipEmpty;
+
+  /// Tooltip des Verworfen-Filter-Buttons mit Anzahl verworfener Einträge.
+  ///
+  /// In de, this message translates to:
+  /// **'Verworfen-Filter zurücksetzen ({count, plural, =1{1 Eintrag} other{{count} Einträge}})'**
+  String inboxDismissalFilterTooltipCount(int count);
+
+  /// Tooltip des Import-Buttons während des Imports.
+  ///
+  /// In de, this message translates to:
+  /// **'Importiere Mails… ({count} bisher)'**
+  String inboxImportingTooltip(int count);
+
+  /// Tooltip des Poll-Buttons wenn Postfach verbunden und bereit.
+  ///
+  /// In de, this message translates to:
+  /// **'Jetzt pollen (statt 5 min warten)'**
+  String get inboxPollNowTooltip;
+
+  /// Tooltip des Poll-Buttons wenn noch kein Postfach verbunden.
+  ///
+  /// In de, this message translates to:
+  /// **'Erst Postfach in den Einstellungen verbinden'**
+  String get inboxConnectFirstTooltip;
+
+  /// Titel des Re-Parse-Tracking-Menüeintrags im Header-PopupMenu.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Daten neu auslesen'**
+  String get inboxReparseTrackingTitle;
+
+  /// Untertitel des Re-Parse-Tracking-Menüeintrags.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendet die aktuelle Adapter-Registry erneut auf alle Vorschläge an. Korrigiert falsch extrahierte Tracking-Nummern (z.B. wenn ein Adapter-Bug eine interne Shipment-ID statt der echten Carrier-Nr gespeichert hat).'**
+  String get inboxReparseTrackingSubtitle;
+
+  /// Label im Shop-Filter-Sheet wenn kein Shop-Filter aktiv.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Shops'**
+  String get inboxFilterAllShops;
+
+  /// Label im Status-Filter-Sheet wenn kein Status-Filter aktiv.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Status'**
+  String get inboxFilterAllStatus;
+
+  /// Body-Text des Dialogs zum Zurücksetzen des Verworfen-Filters.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} verworfene Einträge werden wieder angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.'**
+  String inboxFilterResetBodyCount(int count);
+
+  /// SnackBar-Text nach erfolgreichem Leeren des Verworfen-Filters.
+  ///
+  /// In de, this message translates to:
+  /// **'Verworfen-Filter geleert.'**
+  String get inboxDiscardFilterCleared;
+
+  /// SnackBar-Text wenn das Leeren des Verworfen-Filters fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurücksetzen fehlgeschlagen: {error}'**
+  String inboxClearDismissalsFailed(String error);
+
+  /// SnackBar-Text wenn das Postfach gerade gepollt wird.
+  ///
+  /// In de, this message translates to:
+  /// **'Pollt das Postfach…'**
+  String get inboxPolling;
+
+  /// SnackBar-Text wenn das Polling fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Polling fehlgeschlagen: {error}'**
+  String inboxPollingFailed(String error);
+
+  /// Poll-Ergebnis: Anzahl geholter Mails.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Mail geholt} other{{count} Mails geholt}}'**
+  String inboxPollFetched(int count);
+
+  /// Poll-Ergebnis: Anzahl gespeicherter Mails.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} aufgenommen'**
+  String inboxPollStored(int count);
+
+  /// Poll-Ergebnis: Anzahl Vorschläge und gemergter Mails.
+  ///
+  /// In de, this message translates to:
+  /// **'{suggested} Vorschl. / {matched} gemerged'**
+  String inboxPollSuggestedMerged(int suggested, int matched);
+
+  /// SnackBar-Text wenn das Polling keine neuen Mails findet.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine neuen passenden Mails. Postfach ist aktuell.'**
+  String get inboxPollUpToDate;
+
+  /// SnackBar-Text beim Start des Re-Parse-Trackings.
+  ///
+  /// In de, this message translates to:
+  /// **'Liest Tracking-Daten neu aus…'**
+  String get inboxRetracking;
+
+  /// SnackBar-Text wenn der Re-Parse fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Re-Parse fehlgeschlagen: {error}'**
+  String inboxReparseFailed(String error);
+
+  /// SnackBar-Text nach Re-Parse wenn Korrekturen vorgenommen wurden.
+  ///
+  /// In de, this message translates to:
+  /// **'{rescued, plural, =1{1 Vorschlag} other{{rescued} Vorschläge}} korrigiert ({scanned} geprüft).'**
+  String inboxReparseRescued(int rescued, int scanned);
+
+  /// SnackBar-Text nach Re-Parse wenn keine Korrekturen nötig waren.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Korrekturen nötig ({scanned} geprüft).'**
+  String inboxReparseNoCorrections(int scanned);
+
+  /// Titel des Dialogs zum Verwerfen einer Mail.
+  ///
+  /// In de, this message translates to:
+  /// **'Mail verwerfen?'**
+  String get inboxDiscardMailTitle;
+
+  /// Body-Text des Dialogs zum Verwerfen einer Mail.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Mail „{subject}\" wird aus der Inbox entfernt und nicht mehr angezeigt.'**
+  String inboxDiscardMailBody(String subject);
+
+  /// SnackBar-Text nach erfolgreichem Verwerfen einer Mail.
+  ///
+  /// In de, this message translates to:
+  /// **'Mail verworfen.'**
+  String get inboxMailDiscarded;
+
+  /// SnackBar-Text wenn das Verwerfen einer Mail fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Verwerfen fehlgeschlagen: {error}'**
+  String inboxDiscardFailed(String error);
+
+  /// SnackBar-Text wenn das Abschließen eines Vorschlags fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Konnte Vorschlag nicht abschließen: {error}'**
+  String inboxSuggestionCompleteFailed(String error);
+
+  /// SnackBar-Text wenn das Ablehnen eines Vorschlags fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Ablehnen fehlgeschlagen: {error}'**
+  String inboxSuggestionRejectFailed(String error);
+
+  /// SnackBar-Text nach erfolgreicher Tracking-Übernahme auf einen Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking auf Deal #{dealId} übernommen.'**
+  String inboxTrackingAdopted(int dealId);
+
+  /// SnackBar-Text wenn die Tracking-Übernahme fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Übernahme fehlgeschlagen: {error}'**
+  String inboxTrackingAdoptionFailed(String error);
+
+  /// Label für den Menüeintrag und Dialog-Titel zum Anwenden eines Trackings auf einen Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking auf Deal anwenden'**
+  String get inboxApplyTrackingToDeal;
+
+  /// Hint-Text im DealPickerDialog beim Anwenden eines Trackings.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking {tracking} → Deal-Tracking, Status wird auf „Unterwegs\" gesetzt.'**
+  String inboxApplyTrackingHint(String tracking);
+
+  /// Kurzer Hint-Text im DealPickerDialog beim Anwenden eines Trackings aus unklassifizierter Mail.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking {tracking} → Deal-Tracking.'**
+  String inboxApplyTrackingHintShort(String tracking);
+
+  /// Dialog-Titel beim Zuweisen eines Vorschlags zu einem Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschlag zu Deal zuweisen'**
+  String get inboxLinkToDealTitle;
+
+  /// Hint-Text im DealPickerDialog beim Zuweisen eines Vorschlags.
+  ///
+  /// In de, this message translates to:
+  /// **'Order-ID, Tracking und ETA werden in den ausgewählten Deal übernommen, der Vorschlag wird abgehakt.'**
+  String get inboxLinkToDealHint;
+
+  /// SnackBar-Text nach erfolgreicher Verknüpfung eines Vorschlags mit einem Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschlag mit Deal #{dealId} verknüpft.'**
+  String inboxSuggestionLinked(int dealId);
+
+  /// SnackBar-Text wenn die Zuweisung eines Vorschlags zu einem Deal fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Zuweisung fehlgeschlagen: {error}'**
+  String inboxLinkFailed(String error);
+
+  /// Tooltip und Menü-Label zum Anzeigen von Details und Tracking-Informationen.
+  ///
+  /// In de, this message translates to:
+  /// **'Details & Tracking anzeigen'**
+  String get inboxDetailsAndTracking;
+
+  /// Menü-Label zum Zuweisen eines Vorschlags zu einem bestehenden Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu bestehendem Deal zuweisen'**
+  String get inboxLinkToExistingDeal;
+
+  /// SnackBar-Text nach erfolgreichem Anlegen eines Deals aus einer unklassifizierten Mail.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal #{dealId} aus Mail angelegt.'**
+  String inboxDealCreatedFromMail(int dealId);
+
+  /// Menü-Label und Button-Label zum Anlegen eines Deals aus einer Mail.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal anlegen'**
+  String get inboxCreateDeal;
+
+  /// Kurzes Button-Label zum Anwenden eines Trackings auf einen Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking → Deal'**
+  String get inboxApplyTrackingToDealShort;
+
+  /// Menü-Label zum Anzeigen der Mail-Details.
+  ///
+  /// In de, this message translates to:
+  /// **'Details anzeigen'**
+  String get inboxShowDetails;
+
+  /// CountdownPill-Label wenn die Suggestion heute aus der Inbox verschwindet.
+  ///
+  /// In de, this message translates to:
+  /// **'Heute weg'**
+  String get inboxCountdownToday;
+
+  /// CountdownPill-Label wenn noch 1 Tag Inbox-Sichtbarkeit verbleibt.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch 1 Tag'**
+  String get inboxCountdownOneDay;
+
+  /// CountdownPill-Label wenn noch mehrere Tage Inbox-Sichtbarkeit verbleiben.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch {days} Tage'**
+  String inboxCountdownDays(int days);
+
+  /// Tooltip der CountdownPill mit Gesamtsichtbarkeitsfenster.
+  ///
+  /// In de, this message translates to:
+  /// **'Inbox-Sichtbarkeit {totalDays} Tage. Aktualisiert sich beim nächsten Refresh.'**
+  String inboxCountdownTooltip(int totalDays);
+
+  /// SnackBar-Text nach erfolgreichem Kopieren der Tracking-Nummer.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Nummer kopiert.'**
+  String get inboxTrackingCopied;
+
+  /// SnackBar-Text nach Verwerfen eines Inbox-Vorschlags (mit Undo-Option).
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschlag verworfen'**
+  String get inboxSuggestionRejectedFeedback;
+
+  /// SnackBar-Text nach Zurücksetzen des Verworfen-Filters (mit Undo-Option).
+  ///
+  /// In de, this message translates to:
+  /// **'Filter zurückgesetzt'**
+  String get inboxDiscardFilterClearedFeedback;
+
+  /// Tab-Label für den Postfach/IMAP-Tab in den Einstellungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach'**
+  String get settingsTabMailbox;
+
+  /// Section-Header für Plan & Abrechnung in den Einstellungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan & Abrechnung'**
+  String get settingsBillingSectionTitle;
+
+  /// Preis-Label für den Free-Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'kostenlos'**
+  String get settingsBillingPriceFree;
+
+  /// Preis-Label für bezahlte Pläne mit Monats-Suffix.
+  ///
+  /// In de, this message translates to:
+  /// **'{price} / Monat'**
+  String settingsBillingPricePerMonth(String price);
+
+  /// Badge-Label für den beliebtesten Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'Most Popular'**
+  String get settingsBillingMostPopular;
+
+  /// Button-Text für Free-Plan-Upgrade-Aktion.
+  ///
+  /// In de, this message translates to:
+  /// **'Upgrade'**
+  String get settingsBillingActionUpgrade;
+
+  /// Button-Text für bezahlten Plan (Plan verwalten).
+  ///
+  /// In de, this message translates to:
+  /// **'Verwalten'**
+  String get settingsBillingActionManage;
+
+  /// Titel der Rechnungsdaten-Sektion in den Einstellungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Rechnungsdaten'**
+  String get settingsBillingDetailsTitle;
+
+  /// Subtitle wenn Rechnungsadresse bei bezahltem Plan fehlt.
+  ///
+  /// In de, this message translates to:
+  /// **'Pflichtangaben unvollständig — bitte ergänzen'**
+  String get settingsBillingAddressMissing;
+
+  /// Subtitle wenn noch keine Rechnungsadresse hinterlegt ist (bezahlter Plan).
+  ///
+  /// In de, this message translates to:
+  /// **'Adresse hinterlegen'**
+  String get settingsBillingAddressAdd;
+
+  /// Subtitle Rechnungsadresse auf Free-Plan (optional).
+  ///
+  /// In de, this message translates to:
+  /// **'Optional — wird erst beim Upgrade benötigt'**
+  String get settingsBillingAddressOptional;
+
+  /// Titel des Bestätigungs-Dialogs zum Löschen eines IMAP-Kontos.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach entfernen'**
+  String get settingsMailboxRemoveTitle;
+
+  /// Body-Text des Bestätigungs-Dialogs zum Löschen eines IMAP-Kontos.
+  ///
+  /// In de, this message translates to:
+  /// **'Soll das IMAP-Konto \"{label}\" wirklich gelöscht werden? Auch alle aus diesem Postfach importierten Mails (Vorschläge + Unklassifizierte) werden gelöscht. Bereits in Deals übernommene Bestellungen bleiben unberührt.'**
+  String settingsMailboxRemoveBody(String label);
+
+  /// SnackBar-Text wenn Postfach-Löschen fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen'**
+  String get settingsMailboxDeleteError;
+
+  /// SnackBar-Text nach erfolgreichem Entfernen eines IMAP-Kontos.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach entfernt'**
+  String get settingsMailboxRemovedFeedback;
+
+  /// FAB-Label zum Hinzufügen eines neuen IMAP-Kontos.
+  ///
+  /// In de, this message translates to:
+  /// **'IMAP-Konto'**
+  String get settingsMailboxAddLabel;
+
+  /// FAB-Label wenn das Postfach-Limit erreicht ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Limit erreicht ({limit})'**
+  String settingsMailboxLimitLabel(int limit);
+
+  /// Titel des Dialogs wenn das Postfach-Limit erreicht ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach-Limit erreicht'**
+  String get settingsMailboxLimitDialogTitle;
+
+  /// Body des Postfach-Limit-Dialogs.
+  ///
+  /// In de, this message translates to:
+  /// **'Dein {plan}-Plan erlaubt {limit} {mailboxWord}. Upgrade auf einen höheren Plan, um weitere zu verbinden.'**
+  String settingsMailboxLimitDialogBody(
+    String plan,
+    int limit,
+    String mailboxWord,
+  );
+
+  /// Singular von Postfach für Plural-Logik.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach'**
+  String get settingsMailboxWordSingular;
+
+  /// Plural von Postfach für Plural-Logik.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfächer'**
+  String get settingsMailboxWordPlural;
+
+  /// Label für unlimitierte Postfach-Quota.
+  ///
+  /// In de, this message translates to:
+  /// **'unbegrenzt'**
+  String get settingsMailboxQuotaUnlimited;
+
+  /// Titel der Postfach-Integrations-Karte.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach-Integration'**
+  String get settingsMailboxIntegrationTitle;
+
+  /// Beschreibungstext der Postfach-Integrations-Karte.
+  ///
+  /// In de, this message translates to:
+  /// **'Hinterlege ein IMAP-Konto, um Bestell- und Versand-Mails automatisch erkennen zu lassen. Polling läuft alle 5 min serverseitig — Passwörter werden mit pgp_sym_encrypt verschlüsselt gespeichert. Im Inbox-Tab kannst du erkannte Deals annehmen.'**
+  String get settingsMailboxIntegrationDesc;
+
+  /// Quota-Zeile in der Postfach-Integrations-Karte.
+  ///
+  /// In de, this message translates to:
+  /// **'{plan}-Plan: {quota} {mailboxWord} · {days} Tage Inbox-Verlauf'**
+  String settingsMailboxQuotaLine(
+    String plan,
+    String quota,
+    String mailboxWord,
+    int days,
+  );
+
+  /// Status-Label wenn ein Postfach-Konto pausiert ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Pausiert'**
+  String get settingsMailboxStatusPaused;
+
+  /// Status-Label wenn ein Postfach-Konto einen Fehler hat.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler'**
+  String get settingsMailboxStatusError;
+
+  /// Status-Label wenn ein Postfach noch nie gepollt wurde.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch nicht gepollt'**
+  String get settingsMailboxStatusNeverPolled;
+
+  /// Status-Label mit letztem Poll-Zeitpunkt.
+  ///
+  /// In de, this message translates to:
+  /// **'Zuletzt gepollt: {relative}'**
+  String settingsMailboxStatusLastPolled(String relative);
+
+  /// Relative Zeitangabe: eben jetzt.
+  ///
+  /// In de, this message translates to:
+  /// **'gerade eben'**
+  String get settingsRelativeJustNow;
+
+  /// Relative Zeitangabe in Minuten.
+  ///
+  /// In de, this message translates to:
+  /// **'vor {minutes} min'**
+  String settingsRelativeMinutes(int minutes);
+
+  /// Relative Zeitangabe in Stunden.
+  ///
+  /// In de, this message translates to:
+  /// **'vor {hours} h'**
+  String settingsRelativeHours(int hours);
+
+  /// Relative Zeitangabe in Tagen.
+  ///
+  /// In de, this message translates to:
+  /// **'vor {days} d'**
+  String settingsRelativeDays(int days);
+
+  /// Hinweis wenn noch kein Postfach-Konto angelegt ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch kein Postfach hinterlegt.'**
+  String get settingsMailboxEmptyHint;
+
+  /// Titel der Free-Plan-Gate-Karte im Postfach-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach im Free-Plan nicht enthalten'**
+  String get settingsMailboxFreePlanTitle;
+
+  /// Beschreibungstext der Free-Plan-Gate-Karte im Postfach-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'Dein aktueller Plan: {plan}. Die automatische Erkennung von Bestell- und Versand-Mails ist ab dem Starter-Plan verfügbar — höhere Pläne erlauben mehr Postfächer und längeren Inbox-Verlauf.'**
+  String settingsMailboxFreePlanDesc(String plan);
+
+  /// Plan-Vergleichszeile Starter im Postfach-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'1 Postfach · 7 Tage'**
+  String get settingsMailboxPlanStarter;
+
+  /// Plan-Vergleichszeile Pro im Postfach-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'3 Postfächer · 14 Tage'**
+  String get settingsMailboxPlanPro;
+
+  /// Plan-Vergleichszeile Business im Postfach-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'10 Postfächer · 30 Tage'**
+  String get settingsMailboxPlanBusiness;
+
+  /// Plan-Vergleichszeile Ultimate im Postfach-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'15 Postfächer · 90 Tage'**
+  String get settingsMailboxPlanUltimate;
+
+  /// SnackBar wenn keine neuen Amazon-Shops hinzugefügt wurden.
+  ///
+  /// In de, this message translates to:
+  /// **'Amazon-Shops sind bereits vorhanden ({skipped} übersprungen).'**
+  String settingsShopsAmazonAlreadyPresent(int skipped);
+
+  /// SnackBar nach erfolgreichem Hinzufügen von Amazon-Shops.
+  ///
+  /// In de, this message translates to:
+  /// **'{added} Amazon-Shops hinzugefügt{skippedSuffix}.'**
+  String settingsShopsAmazonAdded(int added, String skippedSuffix);
+
+  /// Optionaler Suffix wenn einige Amazon-Shops bereits vorhanden waren.
+  ///
+  /// In de, this message translates to:
+  /// **', {skipped} bereits vorhanden'**
+  String settingsShopsAmazonSkippedSuffix(int skipped);
+
+  /// SnackBar-Text wenn das Hinzufügen von Shops fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Hinzufügen'**
+  String get settingsShopsAddError;
+
+  /// Amazon Country-Account Zähler.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} {word}'**
+  String settingsShopsAmazonCountAccounts(int count, String word);
+
+  /// Singular Country-Account für Amazon-Shops.
+  ///
+  /// In de, this message translates to:
+  /// **'Country-Account'**
+  String get settingsShopsAmazonAccountSingular;
+
+  /// Plural Country-Accounts für Amazon-Shops.
+  ///
+  /// In de, this message translates to:
+  /// **'Country-Accounts'**
+  String get settingsShopsAmazonAccountPlural;
+
+  /// Label für das API-Key-Textfeld im Versand-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'API-Key'**
+  String get settingsShippingApiKeyLabel;
+
+  /// Bestätigungs-Dialog-Text zum Löschen eines Carrier-API-Keys.
+  ///
+  /// In de, this message translates to:
+  /// **'{carrier}: API-Key wirklich entfernen?'**
+  String settingsShippingDeleteKeyConfirmBody(String carrier);
+
+  /// Titel des Discard-Confirm-Dialogs im UnsavedChangesGuard.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungespeicherte Änderungen verwerfen?'**
+  String get unsavedChangesDiscardTitle;
+
+  /// Body-Text des Discard-Confirm-Dialogs im UnsavedChangesGuard.
+  ///
+  /// In de, this message translates to:
+  /// **'Deine Änderungen gehen verloren.'**
+  String get unsavedChangesDiscardMessage;
+
+  /// Label des Confirm-Buttons im Discard-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Verwerfen'**
+  String get unsavedChangesDiscardLabel;
+
+  /// SnackBar-Text wenn ein Artikel per Barcode-Scan zur Wareneingangs-Liste hinzugefügt wird.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} +1'**
+  String purchaseOrderScanItemAdded(String name);
+
+  /// SnackBar-Text wenn ein Artikel per Barcode-Scan bei der Inventur inkrementiert wird.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} +1'**
+  String stocktakeScanIncrement(String name);
+
+  /// SnackBar-Text wenn Carrier-Lieferanten erfolgreich angelegt wurden.
+  ///
+  /// In de, this message translates to:
+  /// **'{added} Versanddienste hinzugefügt.'**
+  String suppliersSeedSuccess(int added);
+
+  /// SnackBar-Text wenn alle Carrier-Lieferanten bereits existieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Versanddienste sind bereits vorhanden ({skipped} übersprungen).'**
+  String suppliersSeedAlreadyPresent(int skipped);
+
+  /// Fehler-SnackBar beim Seeden der Carrier-Lieferanten.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Hinzufügen der Versanddienste.'**
+  String get suppliersAddCarriersFailed;
+
+  /// Erfolgs-SnackBar nach dem Löschen eines Lieferanten.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferant gelöscht.'**
+  String get suppliersDeleted;
+
+  /// Fehler-SnackBar beim Löschen eines Lieferanten.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen.'**
+  String get suppliersDeleteFailed;
+
+  /// Erfolgs-SnackBar nach dem Löschen einer Warengruppe.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppe gelöscht.'**
+  String get categoryDeleted;
+
+  /// Fehler-SnackBar beim Löschen einer Warengruppe.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen.'**
+  String get categoryDeleteFailed;
+
+  /// Titel des Bestätigungs-Dialogs beim Löschen eines Lagers.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager löschen'**
+  String get warehouseDeleteTitle;
+
+  /// Erfolgs-SnackBar nach dem Löschen eines Lagers.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager gelöscht.'**
+  String get warehouseDeleted;
+
+  /// Fehler-SnackBar beim Löschen eines Lagers.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen.'**
+  String get warehouseDeleteFailed;
+
+  /// Erfolgs-SnackBar nach dem Speichern eines Lagers.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager gespeichert.'**
+  String get warehouseSaved;
+
+  /// Fehler-SnackBar beim Speichern eines Lagers.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen.'**
+  String get warehouseSaveFailed;
+
+  /// Platzhalter wenn eine Inbox-Mail keinen Betreff hat.
+  ///
+  /// In de, this message translates to:
+  /// **'— ohne Betreff —'**
+  String get inboxDetailNoSubject;
+
+  /// Absender-Zeile im Inbox-Mail-Detail.
+  ///
+  /// In de, this message translates to:
+  /// **'Von: {address}'**
+  String inboxDetailFrom(Object address);
+
+  /// Empfangsdatum im Inbox-Mail-Detail.
+  ///
+  /// In de, this message translates to:
+  /// **'Empfangen: {date}'**
+  String inboxDetailReceived(Object date);
+
+  /// Verarbeitungsdatum im Inbox-Mail-Detail.
+  ///
+  /// In de, this message translates to:
+  /// **'Verarbeitet: {date}'**
+  String inboxDetailProcessed(Object date);
+
+  /// Status-Badge im Inbox-Mail-Detail: Deal wurde aktualisiert.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktualisiert'**
+  String get inboxStatusMatched;
+
+  /// Status-Badge im Inbox-Mail-Detail: Vorschlag für neuen Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschlag'**
+  String get inboxStatusSuggested;
+
+  /// Status-Badge im Inbox-Mail-Detail: Mail nicht zugeordnet.
+  ///
+  /// In de, this message translates to:
+  /// **'Unklassifiziert'**
+  String get inboxStatusUnclassified;
+
+  /// Status-Badge im Inbox-Mail-Detail: Verarbeitung fehlgeschlagen.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler'**
+  String get inboxStatusFailed;
+
+  /// Status-Badge im Inbox-Mail-Detail: Mail verworfen.
+  ///
+  /// In de, this message translates to:
+  /// **'Verworfen'**
+  String get inboxStatusDismissed;
+
+  /// Status-Badge im Inbox-Mail-Detail: Mail wird verarbeitet.
+  ///
+  /// In de, this message translates to:
+  /// **'In Arbeit'**
+  String get inboxStatusPending;
+
+  /// Fehler-SnackBar wenn das manuelle Tracking-Update scheitert.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Update fehlgeschlagen.'**
+  String get trackingUpdateFailed;
+
+  /// Fehler-SnackBar wenn das Akzeptieren eines Trackings scheitert.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Akzeptanz fehlgeschlagen.'**
+  String get trackingAcceptFailed;
+
+  /// Fehler-SnackBar wenn das Verwerfen eines Trackings scheitert.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking verwerfen fehlgeschlagen.'**
+  String get trackingDiscardFailed;
+
+  /// Validator-Meldung für Pflichtfelder im Rechnungsformular bei kostenpflichtigen Plänen.
+  ///
+  /// In de, this message translates to:
+  /// **'Pflichtfeld für kostenpflichtige Pläne'**
+  String get billingProfileRequiredField;
+
+  /// Hinweis-Banner im Rechnungsformular wenn ein kostenpflichtiger Plan aktiv ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Für kostenpflichtige Pläne benötigen wir eine vollständige Rechnungsadresse (Pflichtfelder mit *).'**
+  String get billingProfilePaidHint;
+
+  /// Label für das Feld 'Vollständiger Name' im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Vollständiger Name'**
+  String get billingProfileFieldFullName;
+
+  /// Label für das Straße-&-Hausnummer-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Straße & Hausnummer'**
+  String get billingProfileFieldStreet;
+
+  /// Datenschutz-Hinweis am Ende des Rechnungsformulars.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Daten werden ausschließlich für Rechnungen und gesetzlich vorgeschriebene Pflichtangaben verwendet.'**
+  String get billingProfileDataNotice;
+
+  /// SnackBar-Text nach erfolgreichem Speichern der Rechnungsdaten.
+  ///
+  /// In de, this message translates to:
+  /// **'Rechnungsdaten gespeichert.'**
+  String get billingProfileSaved;
+
+  /// SnackBar-Text wenn das Speichern der Rechnungsdaten fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen.'**
+  String get billingProfileSaveFailed;
+
+  /// Button-Text während die Rechnungsdaten gespeichert werden.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern…'**
+  String get billingProfileSaving;
+
+  /// Menü-Eintrag für Free-User zum Plan auswählen.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan auswählen'**
+  String get planMenuSelect;
+
+  /// Menü-Eintrag für zahlende User zum Plan verwalten.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan verwalten'**
+  String get planMenuManage;
+
+  /// Untertitel im Plan-Menü-Eintrag mit dem aktuellen Plan-Namen.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktuell: {label}'**
+  String planMenuCurrent(String label);
+
+  /// Badge-Text im Plan-Menü für Free-User.
+  ///
+  /// In de, this message translates to:
+  /// **'Upgrade'**
+  String get planMenuUpgradeBadge;
+
+  /// Button-Label auf der Pricing-Seite zum Auswählen eines Plans.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan auswählen'**
+  String get pricingSelectPlan;
+
+  /// Button-Label auf der Pricing-Seite wenn der Plan bereits aktiv ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiver Plan'**
+  String get pricingActivePlan;
+
+  /// Button-Label auf der Pricing-Seite zum Wechsel auf den Free-Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'Auf Free wechseln'**
+  String get pricingSwitchToFree;
+
+  /// Dialog-Titel beim Upgrade auf einen kostenpflichtigen Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'Auf {plan} upgraden?'**
+  String pricingUpgradeToTitle(String plan);
+
+  /// Dialog-Titel beim Downgrade auf den Free-Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'Auf Free wechseln?'**
+  String get pricingDowngradeToFreeTitle;
+
+  /// Dialog-Body beim Downgrade auf den Free-Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'Du verlierst Zugang zu Pro-Features. Bestehende Daten bleiben erhalten.'**
+  String get pricingDowngradeLoseAccess;
+
+  /// Dialog-Body beim Upgrade auf einen kostenpflichtigen Plan (Demo-Modus).
+  ///
+  /// In de, this message translates to:
+  /// **'Hinweis: Dies ist ein Demo-Switch ohne Zahlungsabwicklung. Sobald Stripe/Paddle integriert ist, läuft hier der echte Checkout.'**
+  String get pricingDemoCheckoutNotice;
+
+  /// Bestätigungs-Button im Upgrade-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan aktivieren'**
+  String get pricingActivatePlan;
+
+  /// Bestätigungs-Button im Downgrade-zu-Free-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Wechseln'**
+  String get pricingDoSwitch;
+
+  /// Toggle-Chip-Label für monatliche Abrechnung auf der Pricing-Seite.
+  ///
+  /// In de, this message translates to:
+  /// **'Monatlich'**
+  String get pricingCycleMonthly;
+
+  /// Toggle-Chip-Label für jährliche Abrechnung auf der Pricing-Seite (mit Rabatt-Hinweis).
+  ///
+  /// In de, this message translates to:
+  /// **'Jährlich · –17%'**
+  String get pricingCycleYearly;
+
+  /// Header im Carrier-Override-Popup-Menü des Tracking-Chips.
+  ///
+  /// In de, this message translates to:
+  /// **'Versanddienst wählen'**
+  String get trackingCarrierPickTitle;
+
+  /// Header im Amazon-Country-Picker-Popup des Tracking-Chips.
+  ///
+  /// In de, this message translates to:
+  /// **'Amazon · Land wählen'**
+  String get trackingAmazonCountryTitle;
+
+  /// Tooltip des Tracking-Chips wenn der Carrier unbekannt ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking — Versanddienst nicht erkannt (lange drücken zum Auswählen)'**
+  String get trackingTooltipUnknown;
+
+  /// Tooltip des Tracking-Chips wenn ein Carrier erkannt wurde.
+  ///
+  /// In de, this message translates to:
+  /// **'{carrier} · lange drücken zum Wechseln'**
+  String trackingTooltipKnown(String carrier);
+
+  /// Placeholder-Text im Suchfeld des globalen Suchdialogs.
+  ///
+  /// In de, this message translates to:
+  /// **'Suchen über Deals, Lager, Tickets, Käufer, Lieferanten…'**
+  String get globalSearchHint;
+
+  /// Untertitel eines Käufer-Suchergebnisses im globalen Suchdialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Käufer · Deals filtern'**
+  String get globalSearchBuyerFilterSubtitle;
+
+  /// Placeholder-Text im Suchfeld des Deal-Picker-Dialogs.
+  ///
+  /// In de, this message translates to:
+  /// **'Suche nach Produkt, Ticket, Shop oder Käufer …'**
+  String get dealPickerSearchHint;
+
+  /// Leerer-Zustand-Text im Deal-Picker-Dialog wenn die Suche keine Treffer ergibt.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein passender Deal gefunden.'**
+  String get dealPickerEmpty;
+
+  /// Dialog-Titel beim Bearbeiten eines bestehenden IMAP-Kontos.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach bearbeiten'**
+  String get mailboxDialogEditTitle;
+
+  /// Dialog-Titel beim Hinzufügen eines neuen IMAP-Kontos.
+  ///
+  /// In de, this message translates to:
+  /// **'IMAP-Konto hinzufügen'**
+  String get mailboxDialogAddTitle;
+
+  /// Passwort-Feld-Label im Mailbox-Bearbeiten-Dialog (beim Bearbeiten).
+  ///
+  /// In de, this message translates to:
+  /// **'App-Passwort (leer lassen, wenn unverändert)'**
+  String get mailboxDialogPasswordEditLabel;
+
+  /// Validator-Fehlermeldung wenn eine Zahl im Produkt-Formular nicht parsebar ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungültige Zahl'**
+  String get productInvalidNumber;
+
+  /// Stückzahl-Anzeige in der Inventarliste (z. B. '5 Stück').
+  ///
+  /// In de, this message translates to:
+  /// **'{quantity} Stück'**
+  String inventoryPiecesCount(int quantity);
+
+  /// Hinweis-Text in der Profit-Heatmap wenn noch kein Tag ausgewählt ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Tippe auf einen Tag für Details'**
+  String get heatmapTapHint;
+
+  /// Abschnittsheader 'Kontaktperson' im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Kontaktperson'**
+  String get billingProfileSectionContact;
+
+  /// Abschnittsheader 'Rechnungsadresse' im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Rechnungsadresse'**
+  String get billingProfileSectionAddress;
+
+  /// Label für das Firma-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Firma (optional)'**
+  String get billingProfileFieldCompany;
+
+  /// Label für das Umsatzsteuer-ID-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'USt-IdNr. (optional)'**
+  String get billingProfileFieldVatId;
+
+  /// Label für das Telefon-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Telefon'**
+  String get billingProfileFieldPhone;
+
+  /// Label für das Adresszusatz-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Adresszusatz (optional)'**
+  String get billingProfileFieldAddr2;
+
+  /// Label für das PLZ-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'PLZ'**
+  String get billingProfileFieldPostal;
+
+  /// Label für das Ort-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Ort'**
+  String get billingProfileFieldCity;
+
+  /// Label für das Bundesland-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Bundesland (optional)'**
+  String get billingProfileFieldRegion;
+
+  /// Label für das Land-Feld im Rechnungsformular (ISO-2-Code).
+  ///
+  /// In de, this message translates to:
+  /// **'Land'**
+  String get billingProfileFieldCountry;
+
+  /// Validator-Meldung wenn das Länderfeld keinen gültigen ISO-2-Code enthält.
+  ///
+  /// In de, this message translates to:
+  /// **'ISO 2-Buchstaben'**
+  String get billingProfileCountryValidation;
+
+  /// SnackBar-Text nach erfolgreicher Plan-Aktivierung.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan {plan} aktiviert.'**
+  String pricingPlanActivated(String plan);
+
+  /// SnackBar-Text wenn die Plan-Aktivierung fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierung fehlgeschlagen.'**
+  String get pricingActivationFailed;
+
+  /// Legende-Label 'Weniger' in der Profit-Heatmap (linke Seite der Farb-Skala).
+  ///
+  /// In de, this message translates to:
+  /// **'Weniger'**
+  String get heatmapLess;
+
+  /// Legende-Label 'Mehr' in der Profit-Heatmap (rechte Seite der Farb-Skala).
+  ///
+  /// In de, this message translates to:
+  /// **'Mehr'**
+  String get heatmapMore;
+
+  /// Inline-Validierungsfehler für E-Mail-Felder.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungültige E-Mail-Adresse'**
+  String get validationInvalidEmail;
+
+  /// Inline-Validierungsfehler für den IMAP-Port.
+  ///
+  /// In de, this message translates to:
+  /// **'Port muss zwischen 1 und 65535 liegen'**
+  String get validationInvalidPort;
+
+  /// Label-Feld-Label im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Bezeichnung'**
+  String get mailboxDialogLabelLabel;
+
+  /// Hint-Text für das Label-Feld im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'z. B. \"Gmail Reseller\"'**
+  String get mailboxDialogLabelHint;
+
+  /// Feld-Label für den IMAP-Server-Host im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'IMAP-Server'**
+  String get mailboxDialogHostLabel;
+
+  /// Feld-Label für den IMAP-Port im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Port'**
+  String get mailboxDialogPortLabel;
+
+  /// Feld-Label für den Benutzernamen im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Benutzername / Mail-Adresse'**
+  String get mailboxDialogUsernameLabel;
+
+  /// Passwort-Feld-Label im Mailbox-Hinzufügen-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'App-Passwort'**
+  String get mailboxDialogPasswordNewLabel;
+
+  /// Helper-Text unter dem Passwort-Feld im Mailbox-Dialog beim Anlegen.
+  ///
+  /// In de, this message translates to:
+  /// **'Bei Gmail/Outlook: separates App-Passwort generieren.'**
+  String get mailboxDialogPasswordHelper;
+
+  /// Feld-Label für den IMAP-Ordner im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Ordner'**
+  String get mailboxDialogFolderLabel;
+
+  /// SwitchListTile-Label für SSL im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'SSL/TLS verwenden'**
+  String get mailboxDialogSslLabel;
+
+  /// SwitchListTile-Label für Polling im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Polling aktiv'**
+  String get mailboxDialogPollingLabel;
+
+  /// Untertitel des Polling-Switches im Mailbox-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Wird alle 5 Minuten von der Edge Function abgefragt.'**
+  String get mailboxDialogPollingSubtitle;
+
+  /// Fehlermeldung wenn Pflichtfelder fehlen.
+  ///
+  /// In de, this message translates to:
+  /// **'Bezeichnung, Server und Benutzername sind Pflichtfelder.'**
+  String get mailboxDialogRequiredError;
+
+  /// Fehlermeldung wenn beim Anlegen kein Passwort angegeben wurde.
+  ///
+  /// In de, this message translates to:
+  /// **'Passwort ist beim Anlegen Pflicht.'**
+  String get mailboxDialogPasswordRequiredError;
+
+  /// Fehlermeldung wenn das Speichern eines IMAP-Kontos fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen: {error}'**
+  String mailboxDialogSaveFailed(String error);
+
+  /// Semantics-Label für Säulendiagramme (Screen-Reader).
+  ///
+  /// In de, this message translates to:
+  /// **'Säulendiagramm. {title}. {count} Werte. Höchster Wert: {topValue} für {topLabel}.'**
+  String semanticsChartBar(
+    String title,
+    int count,
+    String topValue,
+    String topLabel,
+  );
+
+  /// Semantics-Label für Liniendiagramme (Screen-Reader).
+  ///
+  /// In de, this message translates to:
+  /// **'Liniendiagramm. {title}. {count} Datenpunkte. Höchster Wert: {topValue} für {topLabel}.'**
+  String semanticsChartLine(
+    String title,
+    int count,
+    String topValue,
+    String topLabel,
+  );
+
+  /// Semantics-Label für Tortendiagramme / Donut-Charts (Screen-Reader).
+  ///
+  /// In de, this message translates to:
+  /// **'Tortendiagramm. {title}. {count} Segmente. Dominantes Segment: {topLabel} mit {topPct}%.'**
+  String semanticsChartPie(
+    String title,
+    int count,
+    String topLabel,
+    String topPct,
+  );
+
+  /// Fallback-Semantics-Label während ein Diagramm noch lädt.
+  ///
+  /// In de, this message translates to:
+  /// **'Diagramm lädt.'**
+  String get semanticsChartLoading;
 }
 
 class _AppLocalizationsDelegate

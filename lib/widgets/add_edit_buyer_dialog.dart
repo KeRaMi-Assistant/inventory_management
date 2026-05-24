@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../models/buyer.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/validators.dart';
+import 'unsaved_changes_guard.dart';
 
 class AddEditBuyerDialog extends StatefulWidget {
   final Buyer? buyer;
@@ -13,6 +14,22 @@ class AddEditBuyerDialog extends StatefulWidget {
   State<AddEditBuyerDialog> createState() => _AddEditBuyerDialogState();
 }
 
+/// Snapshot der Initialwerte für die Dirty-Detection.
+class _BuyerFormSnapshot {
+  const _BuyerFormSnapshot({
+    required this.name,
+    required this.sortOrder,
+    required this.selectedPalette,
+    required this.active,
+    required this.serverIds,
+  });
+  final String name;
+  final int sortOrder;
+  final int selectedPalette;
+  final bool active;
+  final List<String> serverIds;
+}
+
 class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
@@ -20,6 +37,10 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
   int _selectedPalette = 0;
   bool _active = true;
   final List<TextEditingController> _serverIdCtrls = [];
+
+  // ── Dirty-Detection ──────────────────────────────────────────────────────
+  late _BuyerFormSnapshot _initialSnapshot;
+  bool _wasDirty = false;
 
   static const List<Map<String, dynamic>> _palette = [
     {
@@ -91,10 +112,15 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
         _serverIdCtrls.add(TextEditingController(text: id));
       }
     }
+
+    // Snapshot nach dem Befüllen festhalten.
+    _initialSnapshot = _captureSnapshot();
+    _nameCtrl.addListener(_checkDirtyChanged);
   }
 
   @override
   void dispose() {
+    _nameCtrl.removeListener(_checkDirtyChanged);
     _nameCtrl.dispose();
     for (final c in _serverIdCtrls) {
       c.dispose();
@@ -102,8 +128,41 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
     super.dispose();
   }
 
+  // ── Dirty-Detection ──────────────────────────────────────────────────────
+
+  _BuyerFormSnapshot _captureSnapshot() => _BuyerFormSnapshot(
+        name: _nameCtrl.text,
+        sortOrder: _sortOrder,
+        selectedPalette: _selectedPalette,
+        active: _active,
+        serverIds: _serverIdCtrls.map((c) => c.text).toList(),
+      );
+
+  bool get _isDirty {
+    final s = _initialSnapshot;
+    final currentIds = _serverIdCtrls.map((c) => c.text).toList();
+    if (_nameCtrl.text != s.name) return true;
+    if (_sortOrder != s.sortOrder) return true;
+    if (_selectedPalette != s.selectedPalette) return true;
+    if (_active != s.active) return true;
+    if (currentIds.length != s.serverIds.length) return true;
+    for (int i = 0; i < currentIds.length; i++) {
+      if (currentIds[i] != s.serverIds[i]) return true;
+    }
+    return false;
+  }
+
+  void _checkDirtyChanged() {
+    if (!mounted) return;
+    final nowDirty = _isDirty;
+    if (nowDirty != _wasDirty) {
+      setState(() => _wasDirty = nowDirty);
+    }
+  }
+
   void _addServerId() {
     setState(() => _serverIdCtrls.add(TextEditingController()));
+    _checkDirtyChanged();
   }
 
   void _removeServerId(int index) {
@@ -111,6 +170,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
       _serverIdCtrls[index].dispose();
       _serverIdCtrls.removeAt(index);
     });
+    _checkDirtyChanged();
   }
 
   void _save() {
@@ -158,178 +218,202 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
     final l10n = AppLocalizations.of(context);
     final selected = _palette[_selectedPalette];
     final theme = Theme.of(context);
-    return AlertDialog(
-      title: Text(
-          widget.buyer != null ? l10n.buyerEditTitle : l10n.buyerNewTitle),
-      content: SizedBox(
-        width: 420,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextFormField(
-                  controller: _nameCtrl,
-                  decoration:
-                      InputDecoration(labelText: '${l10n.fieldName} *'),
-                  maxLength: Validators.maxBuyerName,
-                  onChanged: (_) => setState(() {}),
-                  validator: Validators.validateBuyerName,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  initialValue: _sortOrder.toString(),
-                  decoration:
-                      InputDecoration(labelText: l10n.buyerSortOrder),
-                  keyboardType: TextInputType.number,
-                  onChanged: (v) =>
-                      _sortOrder = int.tryParse(v) ?? _sortOrder,
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  value: _active,
-                  onChanged: (v) => setState(() => _active = v),
-                  title: Text(l10n.buyerActive),
-                  contentPadding: EdgeInsets.zero,
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: List.generate(_palette.length, (i) {
-                    final p = _palette[i];
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedPalette = i),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: p['row'] as Color,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: _selectedPalette == i
-                                ? (p['cell'] as Color)
-                                : Colors.transparent,
-                            width: 3,
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      child: AlertDialog(
+        titlePadding: const EdgeInsets.fromLTRB(24, 20, 8, 0),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                widget.buyer != null ? l10n.buyerEditTitle : l10n.buyerNewTitle,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: () => Navigator.maybePop(context),
+              tooltip: l10n.actionCancel,
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 420,
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: _nameCtrl,
+                    decoration:
+                        InputDecoration(labelText: '${l10n.fieldName} *'),
+                    maxLength: Validators.maxBuyerName,
+                    onChanged: (_) => setState(() {}),
+                    validator: Validators.validateBuyerName,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    initialValue: _sortOrder.toString(),
+                    decoration:
+                        InputDecoration(labelText: l10n.buyerSortOrder),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) {
+                      _sortOrder = int.tryParse(v) ?? _sortOrder;
+                      _checkDirtyChanged();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    value: _active,
+                    onChanged: (v) {
+                      setState(() => _active = v);
+                      _checkDirtyChanged();
+                    },
+                    title: Text(l10n.buyerActive),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: List.generate(_palette.length, (i) {
+                      final p = _palette[i];
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() => _selectedPalette = i);
+                          _checkDirtyChanged();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: p['row'] as Color,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _selectedPalette == i
+                                  ? (p['cell'] as Color)
+                                  : Colors.transparent,
+                              width: 3,
+                            ),
+                          ),
+                          child: Text(
+                            _colorLabel(l10n, p['label'] as String),
+                            style: TextStyle(
+                              color: p['cell'] as Color,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                        child: Text(
-                          _colorLabel(l10n, p['label'] as String),
-                          style: TextStyle(
-                            color: p['cell'] as Color,
-                            fontWeight: FontWeight.bold,
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(l10n.buyerPreview,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: selected['row'] as Color,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: selected['cell'] as Color,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _nameCtrl.text.isEmpty
+                                ? l10n.buyerPreview
+                                : _nameCtrl.text,
+                            style: TextStyle(
+                              color: selected['font'] as Color,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        Text(l10n.buyerSampleProduct),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Discord Server IDs section
+                  Row(
+                    children: [
+                      const Icon(Icons.discord, size: 18),
+                      const SizedBox(width: 6),
+                      Text(l10n.buyerDiscordIds,
+                          style: theme.textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700)),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: _addServerId,
+                        icon: const Icon(Icons.add, size: 16),
+                        label: Text(l10n.buyerAddIdLabel),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (_serverIdCtrls.isEmpty)
+                    Text(
+                      l10n.helpDiscordNoServerIds,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: theme.colorScheme.outline),
+                    ),
+                  ...List.generate(_serverIdCtrls.length, (i) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _serverIdCtrls[i],
+                              decoration: InputDecoration(
+                                labelText: 'Server ID ${i + 1}',
+                                isDense: true,
+                              ),
+                              keyboardType: TextInputType.number,
+                              validator: (v) =>
+                                  Validators.validateDiscordSnowflake(v),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline,
+                                color: Colors.red, size: 20),
+                            onPressed: () => _removeServerId(i),
+                            visualDensity: VisualDensity.compact,
+                            tooltip: l10n.buyerRemoveTooltip,
+                          ),
+                        ],
                       ),
                     );
                   }),
-                ),
-                const SizedBox(height: 12),
-                Text(l10n.buyerPreview,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: selected['row'] as Color,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: selected['cell'] as Color,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          _nameCtrl.text.isEmpty
-                              ? l10n.buyerPreview
-                              : _nameCtrl.text,
-                          style: TextStyle(
-                            color: selected['font'] as Color,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(l10n.buyerSampleProduct),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Discord Server IDs section
-                Row(
-                  children: [
-                    const Icon(Icons.discord, size: 18),
-                    const SizedBox(width: 6),
-                    Text(l10n.buyerDiscordIds,
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700)),
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: _addServerId,
-                      icon: const Icon(Icons.add, size: 16),
-                      label: Text(l10n.buyerAddIdLabel),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (_serverIdCtrls.isEmpty)
-                  Text(
-                    l10n.helpDiscordNoServerIds,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: theme.colorScheme.outline),
-                  ),
-                ...List.generate(_serverIdCtrls.length, (i) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _serverIdCtrls[i],
-                            decoration: InputDecoration(
-                              labelText: 'Server ID ${i + 1}',
-                              isDense: true,
-                            ),
-                            keyboardType: TextInputType.number,
-                            validator: (v) =>
-                                Validators.validateDiscordSnowflake(v),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        IconButton(
-                          icon: const Icon(Icons.remove_circle_outline,
-                              color: Colors.red, size: 20),
-                          onPressed: () => _removeServerId(i),
-                          visualDensity: VisualDensity.compact,
-                          tooltip: l10n.buyerRemoveTooltip,
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ],
+                ],
+              ),
             ),
           ),
         ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.maybePop(context),
+              child: Text(l10n.actionCancel)),
+          ElevatedButton(
+              onPressed: _save, child: Text(l10n.actionSave)),
+        ],
       ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.actionCancel)),
-        ElevatedButton(
-            onPressed: _save, child: Text(l10n.actionSave)),
-      ],
     );
   }
 }

@@ -33,6 +33,21 @@ class KpiCard extends StatelessWidget {
     this.deltaInverted = false,
   });
 
+  /// Baut das Semantics-Label für Screen-Reader.
+  ///
+  /// Format: „KPI `label`, Wert `value`" — ohne Trend wenn kein [deltaPct]
+  /// vorhanden. Mit Trend: „KPI `label`, Wert `value`, Trend `pct`%[ `deltaLabel`]".
+  String _semanticsLabel() {
+    if (deltaPct == null) {
+      return 'KPI $label, Wert $value';
+    }
+    final pctStr = '${deltaPct!.abs().toStringAsFixed(1)}%';
+    final sign = deltaPct! > 0 ? '+' : (deltaPct! < 0 ? '-' : '');
+    final trendStr =
+        deltaLabel != null ? '$sign$pctStr $deltaLabel' : '$sign$pctStr';
+    return 'KPI $label, Wert $value, Trend $trendStr';
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasDelta = deltaPct != null;
@@ -51,7 +66,10 @@ class KpiCard extends StatelessWidget {
             ? Icons.arrow_downward
             : Icons.remove;
 
-    return Container(
+    return Semantics(
+      label: _semanticsLabel(),
+      excludeSemantics: true,
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.bgSurfaceOf(context),
@@ -134,7 +152,8 @@ class KpiCard extends StatelessWidget {
             const SizedBox(height: 12),
         ],
       ),
-    );
+    ), // Container
+    ); // Semantics
   }
 }
 

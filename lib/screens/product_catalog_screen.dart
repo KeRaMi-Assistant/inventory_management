@@ -44,6 +44,7 @@ class ProductCatalogScreen extends StatelessWidget {
   void _openDialog(BuildContext context, {Product? product}) {
     showDialog<void>(
       context: context,
+      barrierDismissible: false, // UnsavedChangesGuard fängt Schließen ab
       builder: (_) => AddEditProductDialog(product: product),
     );
   }
@@ -59,6 +60,8 @@ class ProductCatalogScreen extends StatelessWidget {
         final fab = canEdit
             ? FloatingActionButton.extended(
                 key: const Key('productNewFab'),
+                // D4: tooltip → explicit Semantics-Label for screen readers.
+                tooltip: l10n.productNew,
                 onPressed: () => _openDialog(context),
                 icon: const Icon(Icons.add, size: 18),
                 label: Text(l10n.productNew),
