@@ -2077,5 +2077,15 @@
   "inboxTrackingCopied": "Tracking-Nummer kopiert.",
   "@inboxTrackingCopied": {
     "description": "SnackBar-Text nach erfolgreichem Kopieren der Tracking-Nummer."
+  },
+
+  "inboxSuggestionRejectedFeedback": "Vorschlag verworfen",
+  "@inboxSuggestionRejectedFeedback": {
+    "description": "SnackBar-Text nach Verwerfen eines Inbox-Vorschlags (mit Undo-Option)."
+  },
+
+  "inboxDiscardFilterClearedFeedback": "Filter zurückgesetzt",
+  "@inboxDiscardFilterClearedFeedback": {
+    "description": "SnackBar-Text nach Zurücksetzen des Verworfen-Filters (mit Undo-Option)."
   }
 }

@@ -689,7 +689,7 @@ möglich wo `depends` leer.
   Confirm.
   `agent: ui-builder` · `model: sonnet` · `depends: []`
 
-- [ ] **A3** Migriere `inbox_screen.dart` SnackBars (~15 Stellen)
+- [x] **A3** Migriere `inbox_screen.dart` SnackBars (~15 Stellen)
   auf `AppFeedback.*`. Migriere „Mail verwerfen"-Dialog (Z. 720ff.)
   auf `showConfirmDialog`. Undo-Action bei „Mail verwerfen" +
   „Discard-Filter geleert" (Optimistic-Restore aus A7-Audit).
@@ -889,7 +889,7 @@ möglich wo `depends` leer.
 
 ### Epic D — A11y + Keyboard-Nav (P1)
 
-- [ ] **D0** `accessibility_tools` v2.8.0 als `dev_dependency` in
+- [x] **D0** `accessibility_tools` v2.8.0 als `dev_dependency` in
   `pubspec.yaml` ergänzen. `AccessibilityTools`-Builder in
   `main.dart` (Debug-only via `kDebugMode`) einklinken.
   Subtree-Exclusion für `statistics_screen` (Charts):

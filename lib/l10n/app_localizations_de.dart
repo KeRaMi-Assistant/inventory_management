@@ -4811,4 +4811,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get inboxTrackingCopied => 'Tracking-Nummer kopiert.';
+
+  @override
+  String get inboxSuggestionRejectedFeedback => 'Vorschlag verworfen';
+
+  @override
+  String get inboxDiscardFilterClearedFeedback => 'Filter zurückgesetzt';
 }

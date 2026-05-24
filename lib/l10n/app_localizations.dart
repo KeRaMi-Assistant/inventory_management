@@ -8587,6 +8587,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Tracking-Nummer kopiert.'**
   String get inboxTrackingCopied;
+
+  /// SnackBar-Text nach Verwerfen eines Inbox-Vorschlags (mit Undo-Option).
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschlag verworfen'**
+  String get inboxSuggestionRejectedFeedback;
+
+  /// SnackBar-Text nach Zurücksetzen des Verworfen-Filters (mit Undo-Option).
+  ///
+  /// In de, this message translates to:
+  /// **'Filter zurückgesetzt'**
+  String get inboxDiscardFilterClearedFeedback;
 }
 
 class _AppLocalizationsDelegate

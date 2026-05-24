@@ -2077,5 +2077,15 @@
   "inboxTrackingCopied": "Tracking number copied.",
   "@inboxTrackingCopied": {
     "description": "SnackBar text after successfully copying the tracking number."
+  },
+
+  "inboxSuggestionRejectedFeedback": "Suggestion dismissed",
+  "@inboxSuggestionRejectedFeedback": {
+    "description": "SnackBar text after dismissing an inbox suggestion (with undo option)."
+  },
+
+  "inboxDiscardFilterClearedFeedback": "Filter cleared",
+  "@inboxDiscardFilterClearedFeedback": {
+    "description": "SnackBar text after clearing the dismissed-filter (with undo option)."
   }
 }

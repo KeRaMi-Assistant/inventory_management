@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -14,6 +15,8 @@ import '../utils/mail_link.dart';
 import '../utils/responsive.dart';
 import '../utils/url_helper.dart';
 import '../widgets/add_edit_deal_dialog.dart';
+import '../widgets/app_feedback.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/deal_picker_dialog.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/inbox_message_details.dart';
@@ -515,47 +518,42 @@ Future<void> _confirmClearDismissals(
   BuildContext context,
   InboxProvider provider,
 ) async {
+  final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
-  final ok = await showDialog<bool>(
+
+  final confirmed = await showConfirmDialog(
     context: context,
-    builder: (ctx) {
-      final l10n = AppLocalizations.of(ctx);
-      return AlertDialog(
-        title: Text(l10n.inboxFilterResetTitle),
-        content: Text(
-          l10n.inboxFilterResetBodyCount(provider.dismissalCount),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.actionReset),
-          ),
-        ],
-      );
+    title: l10n.inboxFilterResetTitle,
+    message: l10n.inboxFilterResetBodyCount(provider.dismissalCount),
+    confirmLabel: l10n.actionReset,
+  );
+  if (!confirmed) return;
+
+  // Snapshot vor dem optimistischen Clear für Undo.
+  if (!context.mounted) return;
+  final snapshot = provider.clearDismissalsOptimistic();
+  bool undone = false;
+
+  AppFeedback.successOn(
+    messenger,
+    l10n.inboxDiscardFilterClearedFeedback,
+    rootContext: context,
+    onUndo: () {
+      undone = true;
+      provider.restoreDismissals(snapshot.keys, snapshot.count);
     },
   );
-  if (ok != true) return;
-  try {
-    await provider.clearDismissals();
-    if (context.mounted) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(AppLocalizations.of(context).inboxDiscardFilterCleared),
-        behavior: SnackBarBehavior.floating,
-      ));
+
+  // DB-DELETE nach SnackBar-Timeout: 4,5 Sek. damit der Undo-Callback
+  // garantiert zuerst läuft, falls der User ihn drückt.
+  Future.delayed(const Duration(milliseconds: 4500), () async {
+    if (undone) return; // Undo wurde gedrückt — kein DB-DELETE.
+    try {
+      await provider.clearDismissals();
+    } catch (e) {
+      if (kDebugMode) debugPrint('clearDismissals delayed commit failed: $e');
     }
-  } catch (e) {
-    if (context.mounted) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(
-            AppLocalizations.of(context).inboxClearDismissalsFailed(e.toString())),
-        behavior: SnackBarBehavior.floating,
-      ));
-    }
-  }
+  });
 }
 
 Future<void> _confirmMarkAllRead(
@@ -565,50 +563,42 @@ Future<void> _confirmMarkAllRead(
   final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final unreadCount = provider.unreadCount;
-  final ok = await showDialog<bool>(
+
+  final confirmed = await showConfirmDialog(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(l10n.inboxMarkAllReadConfirmTitle),
-      content: Text(l10n.inboxMarkAllReadConfirmBody(unreadCount)),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: Text(l10n.actionCancel),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: Text(l10n.inboxMarkAllRead),
-        ),
-      ],
-    ),
+    title: l10n.inboxMarkAllReadConfirmTitle,
+    message: l10n.inboxMarkAllReadConfirmBody(unreadCount),
+    confirmLabel: l10n.inboxMarkAllRead,
   );
-  if (ok != true) return;
+  if (!confirmed) return;
+
   try {
     await provider.markAllRead();
+    if (!context.mounted) return;
     final markedCount = unreadCount - provider.unreadCount;
-    messenger.showSnackBar(SnackBar(
-      content: Text(l10n.inboxMarkAllReadSuccess(
-          markedCount > 0 ? markedCount : unreadCount)),
-      behavior: SnackBarBehavior.floating,
-    ));
-  } catch (e) {
-    messenger.showSnackBar(SnackBar(
-      content: Text(l10n.inboxMarkAllReadFailure(e.toString())),
-      behavior: SnackBarBehavior.floating,
-    ));
+    AppFeedback.successOn(
+      messenger,
+      l10n.inboxMarkAllReadSuccess(markedCount > 0 ? markedCount : unreadCount),
+      rootContext: context,
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+    AppFeedback.errorOn(
+      messenger,
+      l10n.appFeedbackErrorDefault,
+      rootContext: context,
+    );
   }
 }
 
 Future<void> _triggerPoll(BuildContext context, InboxProvider provider) async {
   final messenger = ScaffoldMessenger.of(context);
   final l10n = AppLocalizations.of(context);
-  messenger.showSnackBar(SnackBar(
-    content: Text(l10n.inboxPolling),
-    behavior: SnackBarBehavior.floating,
-    duration: const Duration(seconds: 2),
-  ));
+  // Info-SnackBar vor dem async Poll (kein mounted-Problem).
+  AppFeedback.infoOn(messenger, l10n.inboxPolling, rootContext: context);
   final result = await provider.pollNow();
   if (!context.mounted) return;
+  // Ab hier: context.mounted garantiert — direkte AppFeedback-Variante nutzen.
   if (result != null) {
     final parts = <String>[];
     if (result.fetched > 0) {
@@ -624,18 +614,10 @@ Future<void> _triggerPoll(BuildContext context, InboxProvider provider) async {
     }
     final msg = parts.isEmpty
         ? l10n.inboxPollUpToDate
-        : '${parts.join(", ")}.';
-    messenger.showSnackBar(SnackBar(
-      content: Text(msg),
-      behavior: SnackBarBehavior.floating,
-    ));
+        : '${parts.join(', ')}.';
+    AppFeedback.success(context, msg); // ignore: use_build_context_synchronously
   } else if (provider.lastError != null) {
-    messenger.showSnackBar(SnackBar(
-      content: Text(l10n.inboxPollingFailed(provider.lastError!.toString())),
-      backgroundColor: AppTheme.danger,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 8),
-    ));
+    AppFeedback.error(context, l10n.appFeedbackErrorDefault); // ignore: use_build_context_synchronously
   }
 }
 
@@ -645,28 +627,20 @@ Future<void> _triggerReparseTracking(
 ) async {
   final messenger = ScaffoldMessenger.of(context);
   final l10n = AppLocalizations.of(context);
-  messenger.showSnackBar(SnackBar(
-    content: Text(l10n.inboxRetracking),
-    behavior: SnackBarBehavior.floating,
-    duration: const Duration(seconds: 2),
-  ));
+  AppFeedback.infoOn(messenger, l10n.inboxRetracking, rootContext: context);
   final result = await provider.reparseTracking();
   if (!context.mounted) return;
   if (result != null) {
     final msg = result.rescued > 0
         ? l10n.inboxReparseRescued(result.rescued, result.scanned)
         : l10n.inboxReparseNoCorrections(result.scanned);
-    messenger.showSnackBar(SnackBar(
-      content: Text(msg),
-      behavior: SnackBarBehavior.floating,
-    ));
+    AppFeedback.successOn(messenger, msg, rootContext: context);
   } else if (provider.lastError != null) {
-    messenger.showSnackBar(SnackBar(
-      content: Text(l10n.inboxReparseFailed(provider.lastError!.toString())),
-      backgroundColor: AppTheme.danger,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 8),
-    ));
+    AppFeedback.errorOn(
+      messenger,
+      l10n.appFeedbackErrorDefault,
+      rootContext: context,
+    );
   }
 }
 
@@ -687,23 +661,22 @@ Future<void> _openMail(
   required String? messageId,
   required String? imapHost,
 }) async {
-  final messenger = ScaffoldMessenger.of(context);
   final url = buildMailDeepLink(messageId: messageId, imapHost: imapHost);
   if (url == null) {
     if (messageId != null && messageId.isNotEmpty) {
       await Clipboard.setData(ClipboardData(text: messageId));
       if (context.mounted) {
-        messenger.showSnackBar(SnackBar(
-          content: Text(AppLocalizations.of(context).inboxCopyMessageIdSnackbar),
-          behavior: SnackBarBehavior.floating,
-        ));
+        AppFeedback.info(
+          context,
+          AppLocalizations.of(context).inboxCopyMessageIdSnackbar,
+        );
       }
     } else {
       if (context.mounted) {
-        messenger.showSnackBar(SnackBar(
-          content: Text(AppLocalizations.of(context).inboxNoMailLinkSnackbar),
-          behavior: SnackBarBehavior.floating,
-        ));
+        AppFeedback.info(
+          context,
+          AppLocalizations.of(context).inboxNoMailLinkSnackbar,
+        );
       }
     }
     return;
@@ -712,55 +685,36 @@ Future<void> _openMail(
   await openUrlWithFallback(context, url);
 }
 
+/// Verwirft eine ParsedMessage nach Bestätigung durch einen Confirm-Dialog.
+///
+/// **Kein Undo** — per A7-Audit-Verdict ist `parsed_messages` nicht
+/// über den User-Client UPDATE-bar (keine `FOR UPDATE`-RLS-Policy).
+/// Nur Confirm-Dialog + Standard-SnackBar.
 Future<void> _confirmDismissMessage(
   BuildContext context,
   ParsedMessage message,
 ) async {
   final inbox = context.read<InboxProvider>();
   final messenger = ScaffoldMessenger.of(context);
-  final ok = await showDialog<bool>(
+  final l10n = AppLocalizations.of(context);
+
+  // Messenger vor showConfirmDialog sichern (Dialog-Context-Pattern).
+  final confirmed = await showConfirmDialog(
     context: context,
-    builder: (ctx) {
-      final l10n = AppLocalizations.of(ctx);
-      return AlertDialog(
-        title: Text(l10n.inboxDiscardMailTitle),
-        content: Text(
-          l10n.inboxDiscardMailBody(message.subject ?? ''),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.actionCancel),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              l10n.inboxSuggestionDismiss,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      );
-    },
+    title: l10n.inboxDiscardMailTitle,
+    message: l10n.inboxDiscardMailBody(message.subject ?? ''),
+    confirmLabel: l10n.inboxSuggestionDismiss,
+    isDestructive: true,
   );
-  if (ok != true) return;
+  if (!confirmed) return;
+
   try {
     await inbox.dismissParsedMessage(message.id);
-    if (context.mounted) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(AppLocalizations.of(context).inboxMailDiscarded),
-        behavior: SnackBarBehavior.floating,
-      ));
-    }
-  } catch (e) {
-    if (context.mounted) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(
-            AppLocalizations.of(context).inboxDiscardFailed(e.toString())),
-        behavior: SnackBarBehavior.floating,
-      ));
-    }
+    // ignore: use_build_context_synchronously
+    AppFeedback.successOn(messenger, l10n.inboxMailDiscarded, rootContext: context);
+  } catch (_) {
+    // ignore: use_build_context_synchronously
+    AppFeedback.errorOn(messenger, l10n.appFeedbackErrorDefault, rootContext: context);
   }
 }
 
@@ -869,46 +823,41 @@ class _SuggestionCard extends StatelessWidget {
     );
     // saved.id == unsavedId → User hat den Dialog ohne Speichern verlassen.
     if (saved == null || saved.id == Deal.unsavedId) return;
+    // Messenger und l10n wurden vor den async-Gaps gesichert (Dialog-Context-Pattern).
+    // rootContext nach dem Dialog-Close noch valide (StatelessWidget, kein mounted).
     try {
       await inbox.markSuggestionAccepted(suggestion.id, createdDealId: saved.id);
       final tracking = suggestion.tracking;
       final snackContent = (tracking != null && tracking.isNotEmpty)
           ? l10n.inboxAcceptedSnack(tracking, saved.id)
           : l10n.inboxAcceptedSnackNoTracking(saved.id);
-      messenger.showSnackBar(SnackBar(
-        key: const Key('inboxAcceptedSnack'),
-        content: Text(snackContent),
-        duration: const Duration(seconds: 6),
-        behavior: SnackBarBehavior.floating,
-        action: goToDeals != null
-            ? SnackBarAction(
-                key: const Key('inboxAcceptedShowDealAction'),
-                label: l10n.inboxAcceptedShowDeal,
-                onPressed: goToDeals,
-              )
-            : null,
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(
-            l10n.inboxSuggestionCompleteFailed(e.toString())),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.successOn( // ignore: use_build_context_synchronously
+        messenger, snackContent,
+        rootContext: context, // ignore: use_build_context_synchronously
+        onUndo: goToDeals,
+        undoLabel: goToDeals != null ? l10n.inboxAcceptedShowDeal : null,
+      );
+    } catch (_) {
+      AppFeedback.errorOn( // ignore: use_build_context_synchronously
+        messenger, l10n.appFeedbackErrorDefault,
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
     }
   }
 
-  Future<void> _reject(BuildContext context) async {
+  void _reject(BuildContext context) {
     final inbox = context.read<InboxProvider>();
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
-    try {
-      await inbox.markSuggestionRejected(suggestion.id);
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.inboxSuggestionRejectFailed(e.toString())),
-        behavior: SnackBarBehavior.floating,
-      ));
-    }
+    final id = suggestion.id;
+
+    // Optimistic-Local-Restore: sofort aus UI entfernen, DB-Commit nach 4 Sek.
+    inbox.rejectSuggestionWithUndo(id);
+
+    AppFeedback.success(
+      context,
+      l10n.inboxSuggestionRejectedFeedback,
+      onUndo: () => inbox.cancelPendingReject(id),
+    );
   }
 
   /// Opens AddEditDealDialog prefilled with suggestion data.
@@ -930,25 +879,19 @@ class _SuggestionCard extends StatelessWidget {
       final snackContent = (tracking != null && tracking.isNotEmpty)
           ? l10n.inboxAcceptedSnack(tracking, saved.id)
           : l10n.inboxAcceptedSnackNoTracking(saved.id);
-      messenger.showSnackBar(SnackBar(
-        key: const Key('inboxAcceptedSnack'),
-        content: Text(snackContent),
-        duration: const Duration(seconds: 6),
-        behavior: SnackBarBehavior.floating,
-        action: goToDeals != null
-            ? SnackBarAction(
-                key: const Key('inboxAcceptedShowDealAction'),
-                label: l10n.inboxAcceptedShowDeal,
-                onPressed: goToDeals,
-              )
-            : null,
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(
-            l10n.inboxSuggestionCompleteFailed(e.toString())),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.successOn(
+        messenger,
+        snackContent,
+        rootContext: context, // ignore: use_build_context_synchronously
+        onUndo: goToDeals,
+        undoLabel: goToDeals != null ? l10n.inboxAcceptedShowDeal : null,
+      );
+    } catch (_) {
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
     }
   }
 
@@ -1005,14 +948,10 @@ class _SuggestionCard extends StatelessWidget {
   }
 
   Future<void> _applyTracking(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final inbox = context.read<InboxProvider>();
     final l10n = AppLocalizations.of(context);
     if (suggestion.tracking == null || suggestion.tracking!.isEmpty) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.inboxNoTrackingSnackbar),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.info(context, l10n.inboxNoTrackingSnackbar);
       return;
     }
     final deal = await DealPickerDialog.show(
@@ -1021,18 +960,22 @@ class _SuggestionCard extends StatelessWidget {
       hint: l10n.inboxApplyTrackingHint(suggestion.tracking!),
     );
     if (deal == null) return;
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await inbox.applyTrackingFromSuggestion(
           suggestion: suggestion, dealId: deal.id);
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.inboxTrackingAdopted(deal.id)),
-        behavior: SnackBarBehavior.floating,
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.inboxTrackingAdoptionFailed(e.toString())),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.successOn(
+        messenger,
+        l10n.inboxTrackingAdopted(deal.id),
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
+    } catch (_) {
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
     }
   }
 
@@ -1067,7 +1010,6 @@ class _SuggestionCard extends StatelessWidget {
   }
 
   Future<void> _linkToDeal(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final inbox = context.read<InboxProvider>();
     final l10n = AppLocalizations.of(context);
     final deal = await DealPickerDialog.show(
@@ -1076,17 +1018,21 @@ class _SuggestionCard extends StatelessWidget {
       hint: l10n.inboxLinkToDealHint,
     );
     if (deal == null) return;
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await inbox.linkSuggestionToDeal(suggestion: suggestion, dealId: deal.id);
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.inboxSuggestionLinked(deal.id)),
-        behavior: SnackBarBehavior.floating,
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.inboxLinkFailed(e.toString())),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.successOn(
+        messenger,
+        l10n.inboxSuggestionLinked(deal.id),
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
+    } catch (_) {
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
     }
   }
 
@@ -1582,24 +1528,19 @@ class _UnclassifiedRow extends StatelessWidget {
     );
     if (saved == null || saved.id == Deal.unsavedId) return;
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-            AppLocalizations.of(context).inboxDealCreatedFromMail(saved.id)),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.success(
+        context,
+        AppLocalizations.of(context).inboxDealCreatedFromMail(saved.id),
+      );
     }
   }
 
   Future<void> _applyTracking(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final inbox = context.read<InboxProvider>();
     final l10n = AppLocalizations.of(context);
     final tn = _trackingFromMessage();
     if (tn == null || tn.isEmpty) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.inboxNoTrackingSnackbar),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.info(context, l10n.inboxNoTrackingSnackbar);
       return;
     }
     final deal = await DealPickerDialog.show(
@@ -1608,6 +1549,8 @@ class _UnclassifiedRow extends StatelessWidget {
       hint: l10n.inboxApplyTrackingHintShort(tn),
     );
     if (deal == null) return;
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await inbox.applyTrackingFromMessage(
         message: message,
@@ -1616,15 +1559,17 @@ class _UnclassifiedRow extends StatelessWidget {
         carrier: _carrierFromMessage(),
         eta: _etaFromMessage(),
       );
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.inboxTrackingAdopted(deal.id)),
-        behavior: SnackBarBehavior.floating,
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.inboxTrackingAdoptionFailed(e.toString())),
-        behavior: SnackBarBehavior.floating,
-      ));
+      AppFeedback.successOn(
+        messenger,
+        l10n.inboxTrackingAdopted(deal.id),
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
+    } catch (_) {
+      AppFeedback.errorOn(
+        messenger,
+        l10n.appFeedbackErrorDefault,
+        rootContext: context, // ignore: use_build_context_synchronously
+      );
     }
   }
 
@@ -1992,11 +1937,10 @@ class _TrackingPill extends StatelessWidget {
         onTap: () async {
           await Clipboard.setData(ClipboardData(text: tracking));
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(
-                  AppLocalizations.of(context).inboxTrackingCopied),
-              behavior: SnackBarBehavior.floating,
-            ));
+            AppFeedback.info(
+              context,
+              AppLocalizations.of(context).inboxTrackingCopied,
+            );
           }
         },
         borderRadius: BorderRadius.circular(8),
