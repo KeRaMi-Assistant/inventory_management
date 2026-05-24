@@ -4466,6 +4466,30 @@ abstract class AppLocalizations {
   /// **'Lang drücken zum Wiedereröffnen'**
   String get ticketsArchiveLongPressHint;
 
+  /// No description provided for @ticketsReopenSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Ticket {ticketNumber} wieder geöffnet'**
+  String ticketsReopenSuccess(String ticketNumber);
+
+  /// No description provided for @ticketsReopenFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Wiedereröffnen fehlgeschlagen'**
+  String get ticketsReopenFailed;
+
+  /// No description provided for @ticketsEditSaved.
+  ///
+  /// In de, this message translates to:
+  /// **'Ticket {ticketNumber} gespeichert'**
+  String ticketsEditSaved(String ticketNumber);
+
+  /// No description provided for @ticketsEditFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen'**
+  String get ticketsEditFailed;
+
   /// No description provided for @inventoryTitle.
   ///
   /// In de, this message translates to:
@@ -8599,6 +8623,303 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Filter zurückgesetzt'**
   String get inboxDiscardFilterClearedFeedback;
+
+  /// Tab-Label für den Postfach/IMAP-Tab in den Einstellungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach'**
+  String get settingsTabMailbox;
+
+  /// Section-Header für Plan & Abrechnung in den Einstellungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan & Abrechnung'**
+  String get settingsBillingSectionTitle;
+
+  /// Preis-Label für den Free-Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'kostenlos'**
+  String get settingsBillingPriceFree;
+
+  /// Preis-Label für bezahlte Pläne mit Monats-Suffix.
+  ///
+  /// In de, this message translates to:
+  /// **'{price} / Monat'**
+  String settingsBillingPricePerMonth(String price);
+
+  /// Badge-Label für den beliebtesten Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'Most Popular'**
+  String get settingsBillingMostPopular;
+
+  /// Button-Text für Free-Plan-Upgrade-Aktion.
+  ///
+  /// In de, this message translates to:
+  /// **'Upgrade'**
+  String get settingsBillingActionUpgrade;
+
+  /// Button-Text für bezahlten Plan (Plan verwalten).
+  ///
+  /// In de, this message translates to:
+  /// **'Verwalten'**
+  String get settingsBillingActionManage;
+
+  /// Titel der Rechnungsdaten-Sektion in den Einstellungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Rechnungsdaten'**
+  String get settingsBillingDetailsTitle;
+
+  /// Subtitle wenn Rechnungsadresse bei bezahltem Plan fehlt.
+  ///
+  /// In de, this message translates to:
+  /// **'Pflichtangaben unvollständig — bitte ergänzen'**
+  String get settingsBillingAddressMissing;
+
+  /// Subtitle wenn noch keine Rechnungsadresse hinterlegt ist (bezahlter Plan).
+  ///
+  /// In de, this message translates to:
+  /// **'Adresse hinterlegen'**
+  String get settingsBillingAddressAdd;
+
+  /// Subtitle Rechnungsadresse auf Free-Plan (optional).
+  ///
+  /// In de, this message translates to:
+  /// **'Optional — wird erst beim Upgrade benötigt'**
+  String get settingsBillingAddressOptional;
+
+  /// Titel des Bestätigungs-Dialogs zum Löschen eines IMAP-Kontos.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach entfernen'**
+  String get settingsMailboxRemoveTitle;
+
+  /// Body-Text des Bestätigungs-Dialogs zum Löschen eines IMAP-Kontos.
+  ///
+  /// In de, this message translates to:
+  /// **'Soll das IMAP-Konto \"{label}\" wirklich gelöscht werden? Auch alle aus diesem Postfach importierten Mails (Vorschläge + Unklassifizierte) werden gelöscht. Bereits in Deals übernommene Bestellungen bleiben unberührt.'**
+  String settingsMailboxRemoveBody(String label);
+
+  /// SnackBar-Text wenn Postfach-Löschen fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen fehlgeschlagen'**
+  String get settingsMailboxDeleteError;
+
+  /// FAB-Label zum Hinzufügen eines neuen IMAP-Kontos.
+  ///
+  /// In de, this message translates to:
+  /// **'IMAP-Konto'**
+  String get settingsMailboxAddLabel;
+
+  /// FAB-Label wenn das Postfach-Limit erreicht ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Limit erreicht ({limit})'**
+  String settingsMailboxLimitLabel(int limit);
+
+  /// Titel des Dialogs wenn das Postfach-Limit erreicht ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach-Limit erreicht'**
+  String get settingsMailboxLimitDialogTitle;
+
+  /// Body des Postfach-Limit-Dialogs.
+  ///
+  /// In de, this message translates to:
+  /// **'Dein {plan}-Plan erlaubt {limit} {mailboxWord}. Upgrade auf einen höheren Plan, um weitere zu verbinden.'**
+  String settingsMailboxLimitDialogBody(
+    String plan,
+    int limit,
+    String mailboxWord,
+  );
+
+  /// Singular von Postfach für Plural-Logik.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach'**
+  String get settingsMailboxWordSingular;
+
+  /// Plural von Postfach für Plural-Logik.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfächer'**
+  String get settingsMailboxWordPlural;
+
+  /// Label für unlimitierte Postfach-Quota.
+  ///
+  /// In de, this message translates to:
+  /// **'unbegrenzt'**
+  String get settingsMailboxQuotaUnlimited;
+
+  /// Titel der Postfach-Integrations-Karte.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach-Integration'**
+  String get settingsMailboxIntegrationTitle;
+
+  /// Beschreibungstext der Postfach-Integrations-Karte.
+  ///
+  /// In de, this message translates to:
+  /// **'Hinterlege ein IMAP-Konto, um Bestell- und Versand-Mails automatisch erkennen zu lassen. Polling läuft alle 5 min serverseitig — Passwörter werden mit pgp_sym_encrypt verschlüsselt gespeichert. Im Inbox-Tab kannst du erkannte Deals annehmen.'**
+  String get settingsMailboxIntegrationDesc;
+
+  /// Quota-Zeile in der Postfach-Integrations-Karte.
+  ///
+  /// In de, this message translates to:
+  /// **'{plan}-Plan: {quota} {mailboxWord} · {days} Tage Inbox-Verlauf'**
+  String settingsMailboxQuotaLine(
+    String plan,
+    String quota,
+    String mailboxWord,
+    int days,
+  );
+
+  /// Status-Label wenn ein Postfach-Konto pausiert ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Pausiert'**
+  String get settingsMailboxStatusPaused;
+
+  /// Status-Label wenn ein Postfach-Konto einen Fehler hat.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler'**
+  String get settingsMailboxStatusError;
+
+  /// Status-Label wenn ein Postfach noch nie gepollt wurde.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch nicht gepollt'**
+  String get settingsMailboxStatusNeverPolled;
+
+  /// Status-Label mit letztem Poll-Zeitpunkt.
+  ///
+  /// In de, this message translates to:
+  /// **'Zuletzt gepollt: {relative}'**
+  String settingsMailboxStatusLastPolled(String relative);
+
+  /// Relative Zeitangabe: eben jetzt.
+  ///
+  /// In de, this message translates to:
+  /// **'gerade eben'**
+  String get settingsRelativeJustNow;
+
+  /// Relative Zeitangabe in Minuten.
+  ///
+  /// In de, this message translates to:
+  /// **'vor {minutes} min'**
+  String settingsRelativeMinutes(int minutes);
+
+  /// Relative Zeitangabe in Stunden.
+  ///
+  /// In de, this message translates to:
+  /// **'vor {hours} h'**
+  String settingsRelativeHours(int hours);
+
+  /// Relative Zeitangabe in Tagen.
+  ///
+  /// In de, this message translates to:
+  /// **'vor {days} d'**
+  String settingsRelativeDays(int days);
+
+  /// Hinweis wenn noch kein Postfach-Konto angelegt ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch kein Postfach hinterlegt.'**
+  String get settingsMailboxEmptyHint;
+
+  /// Titel der Free-Plan-Gate-Karte im Postfach-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach im Free-Plan nicht enthalten'**
+  String get settingsMailboxFreePlanTitle;
+
+  /// Beschreibungstext der Free-Plan-Gate-Karte im Postfach-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'Dein aktueller Plan: {plan}. Die automatische Erkennung von Bestell- und Versand-Mails ist ab dem Starter-Plan verfügbar — höhere Pläne erlauben mehr Postfächer und längeren Inbox-Verlauf.'**
+  String settingsMailboxFreePlanDesc(String plan);
+
+  /// Plan-Vergleichszeile Starter im Postfach-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'1 Postfach · 7 Tage'**
+  String get settingsMailboxPlanStarter;
+
+  /// Plan-Vergleichszeile Pro im Postfach-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'3 Postfächer · 14 Tage'**
+  String get settingsMailboxPlanPro;
+
+  /// Plan-Vergleichszeile Business im Postfach-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'10 Postfächer · 30 Tage'**
+  String get settingsMailboxPlanBusiness;
+
+  /// Plan-Vergleichszeile Ultimate im Postfach-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'15 Postfächer · 90 Tage'**
+  String get settingsMailboxPlanUltimate;
+
+  /// SnackBar wenn keine neuen Amazon-Shops hinzugefügt wurden.
+  ///
+  /// In de, this message translates to:
+  /// **'Amazon-Shops sind bereits vorhanden ({skipped} übersprungen).'**
+  String settingsShopsAmazonAlreadyPresent(int skipped);
+
+  /// SnackBar nach erfolgreichem Hinzufügen von Amazon-Shops.
+  ///
+  /// In de, this message translates to:
+  /// **'{added} Amazon-Shops hinzugefügt{skippedSuffix}.'**
+  String settingsShopsAmazonAdded(int added, String skippedSuffix);
+
+  /// Optionaler Suffix wenn einige Amazon-Shops bereits vorhanden waren.
+  ///
+  /// In de, this message translates to:
+  /// **', {skipped} bereits vorhanden'**
+  String settingsShopsAmazonSkippedSuffix(int skipped);
+
+  /// SnackBar-Text wenn das Hinzufügen von Shops fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler beim Hinzufügen'**
+  String get settingsShopsAddError;
+
+  /// Amazon Country-Account Zähler.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} {word}'**
+  String settingsShopsAmazonCountAccounts(int count, String word);
+
+  /// Singular Country-Account für Amazon-Shops.
+  ///
+  /// In de, this message translates to:
+  /// **'Country-Account'**
+  String get settingsShopsAmazonAccountSingular;
+
+  /// Plural Country-Accounts für Amazon-Shops.
+  ///
+  /// In de, this message translates to:
+  /// **'Country-Accounts'**
+  String get settingsShopsAmazonAccountPlural;
+
+  /// Label für das API-Key-Textfeld im Versand-Tab.
+  ///
+  /// In de, this message translates to:
+  /// **'API-Key'**
+  String get settingsShippingApiKeyLabel;
+
+  /// Bestätigungs-Dialog-Text zum Löschen eines Carrier-API-Keys.
+  ///
+  /// In de, this message translates to:
+  /// **'{carrier}: API-Key wirklich entfernen?'**
+  String settingsShippingDeleteKeyConfirmBody(String carrier);
 }
 
 class _AppLocalizationsDelegate

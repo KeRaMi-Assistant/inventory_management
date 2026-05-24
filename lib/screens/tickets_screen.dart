@@ -12,6 +12,7 @@ import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../widgets/add_edit_deal_dialog.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/tracking_chip.dart';
 
@@ -521,15 +522,23 @@ class _ArchivedTicketCard extends StatelessWidget {
     );
     if (confirmed != true || !context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
+    final rootContext = context;
     final provider = context.read<InventoryProvider>();
     try {
       await provider.reopenTicket(ticketId);
-      if (!context.mounted) return;
-      messenger.showSnackBar(SnackBar(
-          content: Text('${l10n.ticketsArchiveReopen} · ${ticket.ticketNumber}')));
-    } catch (e) {
-      if (!context.mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.errorPrefix('$e'))));
+      if (!rootContext.mounted) return;
+      AppFeedback.successOn(
+        messenger,
+        l10n.ticketsReopenSuccess(ticket.ticketNumber),
+        rootContext: rootContext,
+      );
+    } catch (_) {
+      if (!rootContext.mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.ticketsReopenFailed,
+        rootContext: rootContext,
+      );
     }
   }
 }
@@ -1116,6 +1125,7 @@ class _TicketDetail extends StatelessWidget {
     final ids = ticket.deals.map((d) => d.id);
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
+    final rootContext = context;
     try {
       await provider.updateDealsTicket(
         ids,
@@ -1129,12 +1139,19 @@ class _TicketDetail extends StatelessWidget {
       if (result.status != null) {
         await provider.updateDealsStatus(ids, result.status!);
       }
-      if (!context.mounted) return;
-      messenger.showSnackBar(SnackBar(
-          content: Text('${l10n.actionSave} · ${ticket.ticketNumber}')));
-    } catch (e) {
-      if (!context.mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.errorPrefix('$e'))));
+      if (!rootContext.mounted) return;
+      AppFeedback.successOn(
+        messenger,
+        l10n.ticketsEditSaved(ticket.ticketNumber),
+        rootContext: rootContext,
+      );
+    } catch (_) {
+      if (!rootContext.mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.ticketsEditFailed,
+        rootContext: rootContext,
+      );
     }
   }
 }

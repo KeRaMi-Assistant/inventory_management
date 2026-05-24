@@ -2469,6 +2469,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ticketsArchiveLongPressHint => 'Long-press a ticket to reopen it';
 
   @override
+  String ticketsReopenSuccess(String ticketNumber) {
+    return 'Ticket $ticketNumber reopened';
+  }
+
+  @override
+  String get ticketsReopenFailed => 'Couldn\'t reopen ticket';
+
+  @override
+  String ticketsEditSaved(String ticketNumber) {
+    return 'Ticket $ticketNumber saved';
+  }
+
+  @override
+  String get ticketsEditFailed => 'Couldn\'t save ticket';
+
+  @override
   String get inventoryTitle => 'Inventory';
 
   @override
@@ -4788,4 +4804,191 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inboxDiscardFilterClearedFeedback => 'Filter cleared';
+
+  @override
+  String get settingsTabMailbox => 'Mailbox';
+
+  @override
+  String get settingsBillingSectionTitle => 'Plan & Billing';
+
+  @override
+  String get settingsBillingPriceFree => 'free';
+
+  @override
+  String settingsBillingPricePerMonth(String price) {
+    return '$price / month';
+  }
+
+  @override
+  String get settingsBillingMostPopular => 'Most Popular';
+
+  @override
+  String get settingsBillingActionUpgrade => 'Upgrade';
+
+  @override
+  String get settingsBillingActionManage => 'Manage';
+
+  @override
+  String get settingsBillingDetailsTitle => 'Billing Details';
+
+  @override
+  String get settingsBillingAddressMissing =>
+      'Required information incomplete — please complete';
+
+  @override
+  String get settingsBillingAddressAdd => 'Add billing address';
+
+  @override
+  String get settingsBillingAddressOptional =>
+      'Optional — only needed when upgrading';
+
+  @override
+  String get settingsMailboxRemoveTitle => 'Remove mailbox';
+
+  @override
+  String settingsMailboxRemoveBody(String label) {
+    return 'Are you sure you want to delete the IMAP account \"$label\"? All mails imported from this mailbox (suggestions + unclassified) will also be deleted. Orders already accepted into deals will remain unaffected.';
+  }
+
+  @override
+  String get settingsMailboxDeleteError => 'Deletion failed';
+
+  @override
+  String get settingsMailboxAddLabel => 'IMAP account';
+
+  @override
+  String settingsMailboxLimitLabel(int limit) {
+    return 'Limit reached ($limit)';
+  }
+
+  @override
+  String get settingsMailboxLimitDialogTitle => 'Mailbox limit reached';
+
+  @override
+  String settingsMailboxLimitDialogBody(
+    String plan,
+    int limit,
+    String mailboxWord,
+  ) {
+    return 'Your $plan plan allows $limit $mailboxWord. Upgrade to a higher plan to connect more.';
+  }
+
+  @override
+  String get settingsMailboxWordSingular => 'mailbox';
+
+  @override
+  String get settingsMailboxWordPlural => 'mailboxes';
+
+  @override
+  String get settingsMailboxQuotaUnlimited => 'unlimited';
+
+  @override
+  String get settingsMailboxIntegrationTitle => 'Mailbox Integration';
+
+  @override
+  String get settingsMailboxIntegrationDesc =>
+      'Connect an IMAP account to automatically detect order and shipping emails. Polling runs every 5 minutes server-side — passwords are stored encrypted with pgp_sym_encrypt. You can accept detected deals in the Inbox tab.';
+
+  @override
+  String settingsMailboxQuotaLine(
+    String plan,
+    String quota,
+    String mailboxWord,
+    int days,
+  ) {
+    return '$plan plan: $quota $mailboxWord · $days days inbox history';
+  }
+
+  @override
+  String get settingsMailboxStatusPaused => 'Paused';
+
+  @override
+  String get settingsMailboxStatusError => 'Error';
+
+  @override
+  String get settingsMailboxStatusNeverPolled => 'Never polled';
+
+  @override
+  String settingsMailboxStatusLastPolled(String relative) {
+    return 'Last polled: $relative';
+  }
+
+  @override
+  String get settingsRelativeJustNow => 'just now';
+
+  @override
+  String settingsRelativeMinutes(int minutes) {
+    return '$minutes min ago';
+  }
+
+  @override
+  String settingsRelativeHours(int hours) {
+    return '$hours h ago';
+  }
+
+  @override
+  String settingsRelativeDays(int days) {
+    return '$days d ago';
+  }
+
+  @override
+  String get settingsMailboxEmptyHint => 'No mailbox connected yet.';
+
+  @override
+  String get settingsMailboxFreePlanTitle =>
+      'Mailbox not included in free plan';
+
+  @override
+  String settingsMailboxFreePlanDesc(String plan) {
+    return 'Your current plan: $plan. Automatic detection of order and shipping emails is available from the Starter plan — higher plans allow more mailboxes and a longer inbox history.';
+  }
+
+  @override
+  String get settingsMailboxPlanStarter => '1 mailbox · 7 days';
+
+  @override
+  String get settingsMailboxPlanPro => '3 mailboxes · 14 days';
+
+  @override
+  String get settingsMailboxPlanBusiness => '10 mailboxes · 30 days';
+
+  @override
+  String get settingsMailboxPlanUltimate => '15 mailboxes · 90 days';
+
+  @override
+  String settingsShopsAmazonAlreadyPresent(int skipped) {
+    return 'Amazon shops already present ($skipped skipped).';
+  }
+
+  @override
+  String settingsShopsAmazonAdded(int added, String skippedSuffix) {
+    return '$added Amazon shops added$skippedSuffix.';
+  }
+
+  @override
+  String settingsShopsAmazonSkippedSuffix(int skipped) {
+    return ', $skipped already present';
+  }
+
+  @override
+  String get settingsShopsAddError => 'Failed to add';
+
+  @override
+  String settingsShopsAmazonCountAccounts(int count, String word) {
+    return '$count $word';
+  }
+
+  @override
+  String get settingsShopsAmazonAccountSingular => 'Country Account';
+
+  @override
+  String get settingsShopsAmazonAccountPlural => 'Country Accounts';
+
+  @override
+  String get settingsShippingApiKeyLabel => 'API Key';
+
+  @override
+  String settingsShippingDeleteKeyConfirmBody(String carrier) {
+    return '$carrier: really remove API key?';
+  }
 }

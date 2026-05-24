@@ -960,6 +960,12 @@
   "ticketsArchiveMonthProfit": "Profit: {profit}",
   "@ticketsArchiveMonthProfit": { "placeholders": { "profit": {} } },
   "ticketsArchiveLongPressHint": "Long-press a ticket to reopen it",
+  "ticketsReopenSuccess": "Ticket {ticketNumber} reopened",
+  "@ticketsReopenSuccess": { "placeholders": { "ticketNumber": { "type": "String" } } },
+  "ticketsReopenFailed": "Couldn't reopen ticket",
+  "ticketsEditSaved": "Ticket {ticketNumber} saved",
+  "@ticketsEditSaved": { "placeholders": { "ticketNumber": { "type": "String" } } },
+  "ticketsEditFailed": "Couldn't save ticket",
 
   "inventoryTitle": "Inventory",
   "inventorySearchHint": "Search name, SKU, EAN, location",
@@ -2087,5 +2093,209 @@
   "inboxDiscardFilterClearedFeedback": "Filter cleared",
   "@inboxDiscardFilterClearedFeedback": {
     "description": "SnackBar text after clearing the dismissed-filter (with undo option)."
+  },
+
+  "settingsTabMailbox": "Mailbox",
+  "@settingsTabMailbox": { "description": "Tab label for the mailbox/IMAP tab in settings." },
+
+  "settingsBillingSectionTitle": "Plan & Billing",
+  "@settingsBillingSectionTitle": { "description": "Section header for plan & billing in settings." },
+
+  "settingsBillingPriceFree": "free",
+  "@settingsBillingPriceFree": { "description": "Price label for the free plan." },
+
+  "settingsBillingPricePerMonth": "{price} / month",
+  "@settingsBillingPricePerMonth": {
+    "description": "Price label for paid plans with monthly suffix.",
+    "placeholders": { "price": { "type": "String" } }
+  },
+
+  "settingsBillingMostPopular": "Most Popular",
+  "@settingsBillingMostPopular": { "description": "Badge label for the most popular plan." },
+
+  "settingsBillingActionUpgrade": "Upgrade",
+  "@settingsBillingActionUpgrade": { "description": "Button text for free plan upgrade action." },
+
+  "settingsBillingActionManage": "Manage",
+  "@settingsBillingActionManage": { "description": "Button text for paid plan (manage plan)." },
+
+  "settingsBillingDetailsTitle": "Billing Details",
+  "@settingsBillingDetailsTitle": { "description": "Title of the billing details section in settings." },
+
+  "settingsBillingAddressMissing": "Required information incomplete — please complete",
+  "@settingsBillingAddressMissing": { "description": "Subtitle when billing address is missing for a paid plan." },
+
+  "settingsBillingAddressAdd": "Add billing address",
+  "@settingsBillingAddressAdd": { "description": "Subtitle when no billing address has been added yet (paid plan)." },
+
+  "settingsBillingAddressOptional": "Optional — only needed when upgrading",
+  "@settingsBillingAddressOptional": { "description": "Subtitle for billing address on free plan (optional)." },
+
+  "settingsMailboxRemoveTitle": "Remove mailbox",
+  "@settingsMailboxRemoveTitle": { "description": "Title of the confirm dialog for deleting an IMAP account." },
+
+  "settingsMailboxRemoveBody": "Are you sure you want to delete the IMAP account \"{label}\"? All mails imported from this mailbox (suggestions + unclassified) will also be deleted. Orders already accepted into deals will remain unaffected.",
+  "@settingsMailboxRemoveBody": {
+    "description": "Body text of the confirm dialog for deleting an IMAP account.",
+    "placeholders": { "label": { "type": "String" } }
+  },
+
+  "settingsMailboxDeleteError": "Deletion failed",
+  "@settingsMailboxDeleteError": { "description": "SnackBar text when mailbox deletion fails." },
+
+  "settingsMailboxAddLabel": "IMAP account",
+  "@settingsMailboxAddLabel": { "description": "FAB label for adding a new IMAP account." },
+
+  "settingsMailboxLimitLabel": "Limit reached ({limit})",
+  "@settingsMailboxLimitLabel": {
+    "description": "FAB label when the mailbox limit is reached.",
+    "placeholders": { "limit": { "type": "int" } }
+  },
+
+  "settingsMailboxLimitDialogTitle": "Mailbox limit reached",
+  "@settingsMailboxLimitDialogTitle": { "description": "Title of the dialog when the mailbox limit is reached." },
+
+  "settingsMailboxLimitDialogBody": "Your {plan} plan allows {limit} {mailboxWord}. Upgrade to a higher plan to connect more.",
+  "@settingsMailboxLimitDialogBody": {
+    "description": "Body of the mailbox limit dialog.",
+    "placeholders": {
+      "plan": { "type": "String" },
+      "limit": { "type": "int" },
+      "mailboxWord": { "type": "String" }
+    }
+  },
+
+  "settingsMailboxWordSingular": "mailbox",
+  "@settingsMailboxWordSingular": { "description": "Singular of mailbox for plural logic." },
+
+  "settingsMailboxWordPlural": "mailboxes",
+  "@settingsMailboxWordPlural": { "description": "Plural of mailbox for plural logic." },
+
+  "settingsMailboxQuotaUnlimited": "unlimited",
+  "@settingsMailboxQuotaUnlimited": { "description": "Label for unlimited mailbox quota." },
+
+  "settingsMailboxIntegrationTitle": "Mailbox Integration",
+  "@settingsMailboxIntegrationTitle": { "description": "Title of the mailbox integration card." },
+
+  "settingsMailboxIntegrationDesc": "Connect an IMAP account to automatically detect order and shipping emails. Polling runs every 5 minutes server-side — passwords are stored encrypted with pgp_sym_encrypt. You can accept detected deals in the Inbox tab.",
+  "@settingsMailboxIntegrationDesc": { "description": "Description text of the mailbox integration card." },
+
+  "settingsMailboxQuotaLine": "{plan} plan: {quota} {mailboxWord} · {days} days inbox history",
+  "@settingsMailboxQuotaLine": {
+    "description": "Quota line in the mailbox integration card.",
+    "placeholders": {
+      "plan": { "type": "String" },
+      "quota": { "type": "String" },
+      "mailboxWord": { "type": "String" },
+      "days": { "type": "int" }
+    }
+  },
+
+  "settingsMailboxStatusPaused": "Paused",
+  "@settingsMailboxStatusPaused": { "description": "Status label when a mailbox account is paused." },
+
+  "settingsMailboxStatusError": "Error",
+  "@settingsMailboxStatusError": { "description": "Status label when a mailbox account has an error." },
+
+  "settingsMailboxStatusNeverPolled": "Never polled",
+  "@settingsMailboxStatusNeverPolled": { "description": "Status label when a mailbox has never been polled." },
+
+  "settingsMailboxStatusLastPolled": "Last polled: {relative}",
+  "@settingsMailboxStatusLastPolled": {
+    "description": "Status label with last poll timestamp.",
+    "placeholders": { "relative": { "type": "String" } }
+  },
+
+  "settingsRelativeJustNow": "just now",
+  "@settingsRelativeJustNow": { "description": "Relative time: just now." },
+
+  "settingsRelativeMinutes": "{minutes} min ago",
+  "@settingsRelativeMinutes": {
+    "description": "Relative time in minutes.",
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+
+  "settingsRelativeHours": "{hours} h ago",
+  "@settingsRelativeHours": {
+    "description": "Relative time in hours.",
+    "placeholders": { "hours": { "type": "int" } }
+  },
+
+  "settingsRelativeDays": "{days} d ago",
+  "@settingsRelativeDays": {
+    "description": "Relative time in days.",
+    "placeholders": { "days": { "type": "int" } }
+  },
+
+  "settingsMailboxEmptyHint": "No mailbox connected yet.",
+  "@settingsMailboxEmptyHint": { "description": "Hint when no mailbox account has been created yet." },
+
+  "settingsMailboxFreePlanTitle": "Mailbox not included in free plan",
+  "@settingsMailboxFreePlanTitle": { "description": "Title of the free plan gate card in the mailbox tab." },
+
+  "settingsMailboxFreePlanDesc": "Your current plan: {plan}. Automatic detection of order and shipping emails is available from the Starter plan — higher plans allow more mailboxes and a longer inbox history.",
+  "@settingsMailboxFreePlanDesc": {
+    "description": "Description text of the free plan gate card in the mailbox tab.",
+    "placeholders": { "plan": { "type": "String" } }
+  },
+
+  "settingsMailboxPlanStarter": "1 mailbox · 7 days",
+  "@settingsMailboxPlanStarter": { "description": "Plan comparison row Starter in the mailbox tab." },
+
+  "settingsMailboxPlanPro": "3 mailboxes · 14 days",
+  "@settingsMailboxPlanPro": { "description": "Plan comparison row Pro in the mailbox tab." },
+
+  "settingsMailboxPlanBusiness": "10 mailboxes · 30 days",
+  "@settingsMailboxPlanBusiness": { "description": "Plan comparison row Business in the mailbox tab." },
+
+  "settingsMailboxPlanUltimate": "15 mailboxes · 90 days",
+  "@settingsMailboxPlanUltimate": { "description": "Plan comparison row Ultimate in the mailbox tab." },
+
+  "settingsShopsAmazonAlreadyPresent": "Amazon shops already present ({skipped} skipped).",
+  "@settingsShopsAmazonAlreadyPresent": {
+    "description": "SnackBar when no new Amazon shops were added.",
+    "placeholders": { "skipped": { "type": "int" } }
+  },
+
+  "settingsShopsAmazonAdded": "{added} Amazon shops added{skippedSuffix}.",
+  "@settingsShopsAmazonAdded": {
+    "description": "SnackBar after successfully adding Amazon shops.",
+    "placeholders": {
+      "added": { "type": "int" },
+      "skippedSuffix": { "type": "String" }
+    }
+  },
+
+  "settingsShopsAmazonSkippedSuffix": ", {skipped} already present",
+  "@settingsShopsAmazonSkippedSuffix": {
+    "description": "Optional suffix when some Amazon shops were already present.",
+    "placeholders": { "skipped": { "type": "int" } }
+  },
+
+  "settingsShopsAddError": "Failed to add",
+  "@settingsShopsAddError": { "description": "SnackBar text when adding shops fails." },
+
+  "settingsShopsAmazonCountAccounts": "{count} {word}",
+  "@settingsShopsAmazonCountAccounts": {
+    "description": "Amazon country account count.",
+    "placeholders": {
+      "count": { "type": "int" },
+      "word": { "type": "String" }
+    }
+  },
+
+  "settingsShopsAmazonAccountSingular": "Country Account",
+  "@settingsShopsAmazonAccountSingular": { "description": "Singular country account for Amazon shops." },
+
+  "settingsShopsAmazonAccountPlural": "Country Accounts",
+  "@settingsShopsAmazonAccountPlural": { "description": "Plural country accounts for Amazon shops." },
+
+  "settingsShippingApiKeyLabel": "API Key",
+  "@settingsShippingApiKeyLabel": { "description": "Label for the API key text field in the shipping tab." },
+
+  "settingsShippingDeleteKeyConfirmBody": "{carrier}: really remove API key?",
+  "@settingsShippingDeleteKeyConfirmBody": {
+    "description": "Confirm dialog text for deleting a carrier API key.",
+    "placeholders": { "carrier": { "type": "String" } }
   }
 }

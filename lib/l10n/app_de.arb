@@ -960,6 +960,12 @@
   "ticketsArchiveMonthProfit": "Profit: {profit}",
   "@ticketsArchiveMonthProfit": { "placeholders": { "profit": {} } },
   "ticketsArchiveLongPressHint": "Lang drücken zum Wiedereröffnen",
+  "ticketsReopenSuccess": "Ticket {ticketNumber} wieder geöffnet",
+  "@ticketsReopenSuccess": { "placeholders": { "ticketNumber": { "type": "String" } } },
+  "ticketsReopenFailed": "Wiedereröffnen fehlgeschlagen",
+  "ticketsEditSaved": "Ticket {ticketNumber} gespeichert",
+  "@ticketsEditSaved": { "placeholders": { "ticketNumber": { "type": "String" } } },
+  "ticketsEditFailed": "Speichern fehlgeschlagen",
 
   "inventoryTitle": "Lager",
   "inventorySearchHint": "Name, SKU, EAN, Lagerort suchen",
@@ -2087,5 +2093,209 @@
   "inboxDiscardFilterClearedFeedback": "Filter zurückgesetzt",
   "@inboxDiscardFilterClearedFeedback": {
     "description": "SnackBar-Text nach Zurücksetzen des Verworfen-Filters (mit Undo-Option)."
+  },
+
+  "settingsTabMailbox": "Postfach",
+  "@settingsTabMailbox": { "description": "Tab-Label für den Postfach/IMAP-Tab in den Einstellungen." },
+
+  "settingsBillingSectionTitle": "Plan & Abrechnung",
+  "@settingsBillingSectionTitle": { "description": "Section-Header für Plan & Abrechnung in den Einstellungen." },
+
+  "settingsBillingPriceFree": "kostenlos",
+  "@settingsBillingPriceFree": { "description": "Preis-Label für den Free-Plan." },
+
+  "settingsBillingPricePerMonth": "{price} / Monat",
+  "@settingsBillingPricePerMonth": {
+    "description": "Preis-Label für bezahlte Pläne mit Monats-Suffix.",
+    "placeholders": { "price": { "type": "String" } }
+  },
+
+  "settingsBillingMostPopular": "Most Popular",
+  "@settingsBillingMostPopular": { "description": "Badge-Label für den beliebtesten Plan." },
+
+  "settingsBillingActionUpgrade": "Upgrade",
+  "@settingsBillingActionUpgrade": { "description": "Button-Text für Free-Plan-Upgrade-Aktion." },
+
+  "settingsBillingActionManage": "Verwalten",
+  "@settingsBillingActionManage": { "description": "Button-Text für bezahlten Plan (Plan verwalten)." },
+
+  "settingsBillingDetailsTitle": "Rechnungsdaten",
+  "@settingsBillingDetailsTitle": { "description": "Titel der Rechnungsdaten-Sektion in den Einstellungen." },
+
+  "settingsBillingAddressMissing": "Pflichtangaben unvollständig — bitte ergänzen",
+  "@settingsBillingAddressMissing": { "description": "Subtitle wenn Rechnungsadresse bei bezahltem Plan fehlt." },
+
+  "settingsBillingAddressAdd": "Adresse hinterlegen",
+  "@settingsBillingAddressAdd": { "description": "Subtitle wenn noch keine Rechnungsadresse hinterlegt ist (bezahlter Plan)." },
+
+  "settingsBillingAddressOptional": "Optional — wird erst beim Upgrade benötigt",
+  "@settingsBillingAddressOptional": { "description": "Subtitle Rechnungsadresse auf Free-Plan (optional)." },
+
+  "settingsMailboxRemoveTitle": "Postfach entfernen",
+  "@settingsMailboxRemoveTitle": { "description": "Titel des Bestätigungs-Dialogs zum Löschen eines IMAP-Kontos." },
+
+  "settingsMailboxRemoveBody": "Soll das IMAP-Konto \"{label}\" wirklich gelöscht werden? Auch alle aus diesem Postfach importierten Mails (Vorschläge + Unklassifizierte) werden gelöscht. Bereits in Deals übernommene Bestellungen bleiben unberührt.",
+  "@settingsMailboxRemoveBody": {
+    "description": "Body-Text des Bestätigungs-Dialogs zum Löschen eines IMAP-Kontos.",
+    "placeholders": { "label": { "type": "String" } }
+  },
+
+  "settingsMailboxDeleteError": "Löschen fehlgeschlagen",
+  "@settingsMailboxDeleteError": { "description": "SnackBar-Text wenn Postfach-Löschen fehlschlägt." },
+
+  "settingsMailboxAddLabel": "IMAP-Konto",
+  "@settingsMailboxAddLabel": { "description": "FAB-Label zum Hinzufügen eines neuen IMAP-Kontos." },
+
+  "settingsMailboxLimitLabel": "Limit erreicht ({limit})",
+  "@settingsMailboxLimitLabel": {
+    "description": "FAB-Label wenn das Postfach-Limit erreicht ist.",
+    "placeholders": { "limit": { "type": "int" } }
+  },
+
+  "settingsMailboxLimitDialogTitle": "Postfach-Limit erreicht",
+  "@settingsMailboxLimitDialogTitle": { "description": "Titel des Dialogs wenn das Postfach-Limit erreicht ist." },
+
+  "settingsMailboxLimitDialogBody": "Dein {plan}-Plan erlaubt {limit} {mailboxWord}. Upgrade auf einen höheren Plan, um weitere zu verbinden.",
+  "@settingsMailboxLimitDialogBody": {
+    "description": "Body des Postfach-Limit-Dialogs.",
+    "placeholders": {
+      "plan": { "type": "String" },
+      "limit": { "type": "int" },
+      "mailboxWord": { "type": "String" }
+    }
+  },
+
+  "settingsMailboxWordSingular": "Postfach",
+  "@settingsMailboxWordSingular": { "description": "Singular von Postfach für Plural-Logik." },
+
+  "settingsMailboxWordPlural": "Postfächer",
+  "@settingsMailboxWordPlural": { "description": "Plural von Postfach für Plural-Logik." },
+
+  "settingsMailboxQuotaUnlimited": "unbegrenzt",
+  "@settingsMailboxQuotaUnlimited": { "description": "Label für unlimitierte Postfach-Quota." },
+
+  "settingsMailboxIntegrationTitle": "Postfach-Integration",
+  "@settingsMailboxIntegrationTitle": { "description": "Titel der Postfach-Integrations-Karte." },
+
+  "settingsMailboxIntegrationDesc": "Hinterlege ein IMAP-Konto, um Bestell- und Versand-Mails automatisch erkennen zu lassen. Polling läuft alle 5 min serverseitig — Passwörter werden mit pgp_sym_encrypt verschlüsselt gespeichert. Im Inbox-Tab kannst du erkannte Deals annehmen.",
+  "@settingsMailboxIntegrationDesc": { "description": "Beschreibungstext der Postfach-Integrations-Karte." },
+
+  "settingsMailboxQuotaLine": "{plan}-Plan: {quota} {mailboxWord} · {days} Tage Inbox-Verlauf",
+  "@settingsMailboxQuotaLine": {
+    "description": "Quota-Zeile in der Postfach-Integrations-Karte.",
+    "placeholders": {
+      "plan": { "type": "String" },
+      "quota": { "type": "String" },
+      "mailboxWord": { "type": "String" },
+      "days": { "type": "int" }
+    }
+  },
+
+  "settingsMailboxStatusPaused": "Pausiert",
+  "@settingsMailboxStatusPaused": { "description": "Status-Label wenn ein Postfach-Konto pausiert ist." },
+
+  "settingsMailboxStatusError": "Fehler",
+  "@settingsMailboxStatusError": { "description": "Status-Label wenn ein Postfach-Konto einen Fehler hat." },
+
+  "settingsMailboxStatusNeverPolled": "Noch nicht gepollt",
+  "@settingsMailboxStatusNeverPolled": { "description": "Status-Label wenn ein Postfach noch nie gepollt wurde." },
+
+  "settingsMailboxStatusLastPolled": "Zuletzt gepollt: {relative}",
+  "@settingsMailboxStatusLastPolled": {
+    "description": "Status-Label mit letztem Poll-Zeitpunkt.",
+    "placeholders": { "relative": { "type": "String" } }
+  },
+
+  "settingsRelativeJustNow": "gerade eben",
+  "@settingsRelativeJustNow": { "description": "Relative Zeitangabe: eben jetzt." },
+
+  "settingsRelativeMinutes": "vor {minutes} min",
+  "@settingsRelativeMinutes": {
+    "description": "Relative Zeitangabe in Minuten.",
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+
+  "settingsRelativeHours": "vor {hours} h",
+  "@settingsRelativeHours": {
+    "description": "Relative Zeitangabe in Stunden.",
+    "placeholders": { "hours": { "type": "int" } }
+  },
+
+  "settingsRelativeDays": "vor {days} d",
+  "@settingsRelativeDays": {
+    "description": "Relative Zeitangabe in Tagen.",
+    "placeholders": { "days": { "type": "int" } }
+  },
+
+  "settingsMailboxEmptyHint": "Noch kein Postfach hinterlegt.",
+  "@settingsMailboxEmptyHint": { "description": "Hinweis wenn noch kein Postfach-Konto angelegt ist." },
+
+  "settingsMailboxFreePlanTitle": "Postfach im Free-Plan nicht enthalten",
+  "@settingsMailboxFreePlanTitle": { "description": "Titel der Free-Plan-Gate-Karte im Postfach-Tab." },
+
+  "settingsMailboxFreePlanDesc": "Dein aktueller Plan: {plan}. Die automatische Erkennung von Bestell- und Versand-Mails ist ab dem Starter-Plan verfügbar — höhere Pläne erlauben mehr Postfächer und längeren Inbox-Verlauf.",
+  "@settingsMailboxFreePlanDesc": {
+    "description": "Beschreibungstext der Free-Plan-Gate-Karte im Postfach-Tab.",
+    "placeholders": { "plan": { "type": "String" } }
+  },
+
+  "settingsMailboxPlanStarter": "1 Postfach · 7 Tage",
+  "@settingsMailboxPlanStarter": { "description": "Plan-Vergleichszeile Starter im Postfach-Tab." },
+
+  "settingsMailboxPlanPro": "3 Postfächer · 14 Tage",
+  "@settingsMailboxPlanPro": { "description": "Plan-Vergleichszeile Pro im Postfach-Tab." },
+
+  "settingsMailboxPlanBusiness": "10 Postfächer · 30 Tage",
+  "@settingsMailboxPlanBusiness": { "description": "Plan-Vergleichszeile Business im Postfach-Tab." },
+
+  "settingsMailboxPlanUltimate": "15 Postfächer · 90 Tage",
+  "@settingsMailboxPlanUltimate": { "description": "Plan-Vergleichszeile Ultimate im Postfach-Tab." },
+
+  "settingsShopsAmazonAlreadyPresent": "Amazon-Shops sind bereits vorhanden ({skipped} übersprungen).",
+  "@settingsShopsAmazonAlreadyPresent": {
+    "description": "SnackBar wenn keine neuen Amazon-Shops hinzugefügt wurden.",
+    "placeholders": { "skipped": { "type": "int" } }
+  },
+
+  "settingsShopsAmazonAdded": "{added} Amazon-Shops hinzugefügt{skippedSuffix}.",
+  "@settingsShopsAmazonAdded": {
+    "description": "SnackBar nach erfolgreichem Hinzufügen von Amazon-Shops.",
+    "placeholders": {
+      "added": { "type": "int" },
+      "skippedSuffix": { "type": "String" }
+    }
+  },
+
+  "settingsShopsAmazonSkippedSuffix": ", {skipped} bereits vorhanden",
+  "@settingsShopsAmazonSkippedSuffix": {
+    "description": "Optionaler Suffix wenn einige Amazon-Shops bereits vorhanden waren.",
+    "placeholders": { "skipped": { "type": "int" } }
+  },
+
+  "settingsShopsAddError": "Fehler beim Hinzufügen",
+  "@settingsShopsAddError": { "description": "SnackBar-Text wenn das Hinzufügen von Shops fehlschlägt." },
+
+  "settingsShopsAmazonCountAccounts": "{count} {word}",
+  "@settingsShopsAmazonCountAccounts": {
+    "description": "Amazon Country-Account Zähler.",
+    "placeholders": {
+      "count": { "type": "int" },
+      "word": { "type": "String" }
+    }
+  },
+
+  "settingsShopsAmazonAccountSingular": "Country-Account",
+  "@settingsShopsAmazonAccountSingular": { "description": "Singular Country-Account für Amazon-Shops." },
+
+  "settingsShopsAmazonAccountPlural": "Country-Accounts",
+  "@settingsShopsAmazonAccountPlural": { "description": "Plural Country-Accounts für Amazon-Shops." },
+
+  "settingsShippingApiKeyLabel": "API-Key",
+  "@settingsShippingApiKeyLabel": { "description": "Label für das API-Key-Textfeld im Versand-Tab." },
+
+  "settingsShippingDeleteKeyConfirmBody": "{carrier}: API-Key wirklich entfernen?",
+  "@settingsShippingDeleteKeyConfirmBody": {
+    "description": "Bestätigungs-Dialog-Text zum Löschen eines Carrier-API-Keys.",
+    "placeholders": { "carrier": { "type": "String" } }
   }
 }

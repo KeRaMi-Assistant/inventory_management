@@ -2472,6 +2472,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ticketsArchiveLongPressHint => 'Lang drücken zum Wiedereröffnen';
 
   @override
+  String ticketsReopenSuccess(String ticketNumber) {
+    return 'Ticket $ticketNumber wieder geöffnet';
+  }
+
+  @override
+  String get ticketsReopenFailed => 'Wiedereröffnen fehlgeschlagen';
+
+  @override
+  String ticketsEditSaved(String ticketNumber) {
+    return 'Ticket $ticketNumber gespeichert';
+  }
+
+  @override
+  String get ticketsEditFailed => 'Speichern fehlgeschlagen';
+
+  @override
   String get inventoryTitle => 'Lager';
 
   @override
@@ -4817,4 +4833,191 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get inboxDiscardFilterClearedFeedback => 'Filter zurückgesetzt';
+
+  @override
+  String get settingsTabMailbox => 'Postfach';
+
+  @override
+  String get settingsBillingSectionTitle => 'Plan & Abrechnung';
+
+  @override
+  String get settingsBillingPriceFree => 'kostenlos';
+
+  @override
+  String settingsBillingPricePerMonth(String price) {
+    return '$price / Monat';
+  }
+
+  @override
+  String get settingsBillingMostPopular => 'Most Popular';
+
+  @override
+  String get settingsBillingActionUpgrade => 'Upgrade';
+
+  @override
+  String get settingsBillingActionManage => 'Verwalten';
+
+  @override
+  String get settingsBillingDetailsTitle => 'Rechnungsdaten';
+
+  @override
+  String get settingsBillingAddressMissing =>
+      'Pflichtangaben unvollständig — bitte ergänzen';
+
+  @override
+  String get settingsBillingAddressAdd => 'Adresse hinterlegen';
+
+  @override
+  String get settingsBillingAddressOptional =>
+      'Optional — wird erst beim Upgrade benötigt';
+
+  @override
+  String get settingsMailboxRemoveTitle => 'Postfach entfernen';
+
+  @override
+  String settingsMailboxRemoveBody(String label) {
+    return 'Soll das IMAP-Konto \"$label\" wirklich gelöscht werden? Auch alle aus diesem Postfach importierten Mails (Vorschläge + Unklassifizierte) werden gelöscht. Bereits in Deals übernommene Bestellungen bleiben unberührt.';
+  }
+
+  @override
+  String get settingsMailboxDeleteError => 'Löschen fehlgeschlagen';
+
+  @override
+  String get settingsMailboxAddLabel => 'IMAP-Konto';
+
+  @override
+  String settingsMailboxLimitLabel(int limit) {
+    return 'Limit erreicht ($limit)';
+  }
+
+  @override
+  String get settingsMailboxLimitDialogTitle => 'Postfach-Limit erreicht';
+
+  @override
+  String settingsMailboxLimitDialogBody(
+    String plan,
+    int limit,
+    String mailboxWord,
+  ) {
+    return 'Dein $plan-Plan erlaubt $limit $mailboxWord. Upgrade auf einen höheren Plan, um weitere zu verbinden.';
+  }
+
+  @override
+  String get settingsMailboxWordSingular => 'Postfach';
+
+  @override
+  String get settingsMailboxWordPlural => 'Postfächer';
+
+  @override
+  String get settingsMailboxQuotaUnlimited => 'unbegrenzt';
+
+  @override
+  String get settingsMailboxIntegrationTitle => 'Postfach-Integration';
+
+  @override
+  String get settingsMailboxIntegrationDesc =>
+      'Hinterlege ein IMAP-Konto, um Bestell- und Versand-Mails automatisch erkennen zu lassen. Polling läuft alle 5 min serverseitig — Passwörter werden mit pgp_sym_encrypt verschlüsselt gespeichert. Im Inbox-Tab kannst du erkannte Deals annehmen.';
+
+  @override
+  String settingsMailboxQuotaLine(
+    String plan,
+    String quota,
+    String mailboxWord,
+    int days,
+  ) {
+    return '$plan-Plan: $quota $mailboxWord · $days Tage Inbox-Verlauf';
+  }
+
+  @override
+  String get settingsMailboxStatusPaused => 'Pausiert';
+
+  @override
+  String get settingsMailboxStatusError => 'Fehler';
+
+  @override
+  String get settingsMailboxStatusNeverPolled => 'Noch nicht gepollt';
+
+  @override
+  String settingsMailboxStatusLastPolled(String relative) {
+    return 'Zuletzt gepollt: $relative';
+  }
+
+  @override
+  String get settingsRelativeJustNow => 'gerade eben';
+
+  @override
+  String settingsRelativeMinutes(int minutes) {
+    return 'vor $minutes min';
+  }
+
+  @override
+  String settingsRelativeHours(int hours) {
+    return 'vor $hours h';
+  }
+
+  @override
+  String settingsRelativeDays(int days) {
+    return 'vor $days d';
+  }
+
+  @override
+  String get settingsMailboxEmptyHint => 'Noch kein Postfach hinterlegt.';
+
+  @override
+  String get settingsMailboxFreePlanTitle =>
+      'Postfach im Free-Plan nicht enthalten';
+
+  @override
+  String settingsMailboxFreePlanDesc(String plan) {
+    return 'Dein aktueller Plan: $plan. Die automatische Erkennung von Bestell- und Versand-Mails ist ab dem Starter-Plan verfügbar — höhere Pläne erlauben mehr Postfächer und längeren Inbox-Verlauf.';
+  }
+
+  @override
+  String get settingsMailboxPlanStarter => '1 Postfach · 7 Tage';
+
+  @override
+  String get settingsMailboxPlanPro => '3 Postfächer · 14 Tage';
+
+  @override
+  String get settingsMailboxPlanBusiness => '10 Postfächer · 30 Tage';
+
+  @override
+  String get settingsMailboxPlanUltimate => '15 Postfächer · 90 Tage';
+
+  @override
+  String settingsShopsAmazonAlreadyPresent(int skipped) {
+    return 'Amazon-Shops sind bereits vorhanden ($skipped übersprungen).';
+  }
+
+  @override
+  String settingsShopsAmazonAdded(int added, String skippedSuffix) {
+    return '$added Amazon-Shops hinzugefügt$skippedSuffix.';
+  }
+
+  @override
+  String settingsShopsAmazonSkippedSuffix(int skipped) {
+    return ', $skipped bereits vorhanden';
+  }
+
+  @override
+  String get settingsShopsAddError => 'Fehler beim Hinzufügen';
+
+  @override
+  String settingsShopsAmazonCountAccounts(int count, String word) {
+    return '$count $word';
+  }
+
+  @override
+  String get settingsShopsAmazonAccountSingular => 'Country-Account';
+
+  @override
+  String get settingsShopsAmazonAccountPlural => 'Country-Accounts';
+
+  @override
+  String get settingsShippingApiKeyLabel => 'API-Key';
+
+  @override
+  String settingsShippingDeleteKeyConfirmBody(String carrier) {
+    return '$carrier: API-Key wirklich entfernen?';
+  }
 }

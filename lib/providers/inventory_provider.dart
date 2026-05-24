@@ -80,9 +80,17 @@ class InventoryProvider extends ChangeNotifier {
   List<ProductStock> _productStock = [];
 
   bool _loading = false;
+  bool _initialLoadAttempted = false;
   Object? _lastError;
 
   bool get isLoading => _loading;
+
+  /// True as soon as the first [loadData] call has returned — regardless of
+  /// whether it succeeded or failed. Used by skeleton-loading logic to
+  /// distinguish the cold-start race (provider not yet fired) from the
+  /// empty-state after a completed load.
+  bool get initialLoadAttempted => _initialLoadAttempted;
+
   Object? get lastError => _lastError;
 
   /// Sorted views — the underlying lists are pre-sorted on every load so the
@@ -405,6 +413,7 @@ class InventoryProvider extends ChangeNotifier {
       if (kDebugMode) debugPrint('InventoryProvider.loadData failed: $e');
     } finally {
       _loading = false;
+      _initialLoadAttempted = true;
       notifyListeners();
     }
   }
@@ -426,6 +435,7 @@ class InventoryProvider extends ChangeNotifier {
     _stocktakes = [];
     _productStock = [];
     _lastError = null;
+    _initialLoadAttempted = false;
     _activeWorkspaceId = null;
     _repository.setActiveWorkspace(null);
     notifyListeners();

@@ -70,9 +70,17 @@ class InboxProvider extends ChangeNotifier {
   final Map<String, Timer> _pendingRejectTimers = {};
 
   bool _loading = false;
+  bool _initialLoadAttempted = false;
   Object? _lastError;
 
   bool get isLoading => _loading;
+
+  /// True as soon as the first [refresh] call has returned — regardless of
+  /// whether it succeeded or failed. Used by skeleton-loading logic to
+  /// distinguish the cold-start race (provider not yet fired) from the
+  /// empty-state after a completed load.
+  bool get initialLoadAttempted => _initialLoadAttempted;
+
   Object? get lastError => _lastError;
 
   /// Wann die letzten DB-Daten reingekommen sind. Der Countdown der UI
@@ -243,6 +251,7 @@ class InboxProvider extends ChangeNotifier {
       if (kDebugMode) debugPrint('InboxProvider.refresh failed: $e');
     } finally {
       _loading = false;
+      _initialLoadAttempted = true;
       notifyListeners();
     }
   }
@@ -954,6 +963,7 @@ class InboxProvider extends ChangeNotifier {
     _shopFilter = null;
     _statusFilter = null;
     _lastError = null;
+    _initialLoadAttempted = false;
     notifyListeners();
   }
 }

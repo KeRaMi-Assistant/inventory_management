@@ -722,7 +722,7 @@ möglich wo `depends` leer.
   falls A7 ergibt „nicht möglich" → kein Undo, nur Confirm).
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2, A7]`
 
-- [ ] **A6a** `tickets_screen.dart` SnackBars + Confirm-Dialogs auf
+- [x] **A6a** `tickets_screen.dart` SnackBars + Confirm-Dialogs auf
   zentrale Helpers.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
@@ -797,7 +797,7 @@ möglich wo `depends` leer.
 
 ### Epic B — Loading-Polish (P0)
 
-- [ ] **B0** **Provider-API-Harmonisierung (blockierend für B2/B3/B4).**
+- [x] **B0** **Provider-API-Harmonisierung (blockierend für B2/B3/B4).**
   Vereinheitliche `bool get isLoading` in allen Providern, die
   Skeleton bekommen (`InventoryProvider`, `DealsProvider`,
   `TicketsProvider`, `InboxProvider`, `SuppliersProvider`). Plus
@@ -845,7 +845,7 @@ möglich wo `depends` leer.
   Übersetzungen. `flutter gen-l10n`-Pass.
   `agent: flutter-coder` · `model: sonnet` · `depends: []`
 
-- [ ] **C2** ARB-Keys + EN-Übersetzungen für alle hardcoded
+- [x] **C2** ARB-Keys + EN-Übersetzungen für alle hardcoded
   Settings-Strings + Confirm-Dialog-Body. `confirmTypeNamePrompt`
   EN-Variante nutzt ASCII-`"…"`-Quotes (siehe §5.3).
   `agent: flutter-coder` · `model: sonnet` · `depends: []`
