@@ -481,7 +481,7 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
               final s = (v ?? '').trim().replaceAll(',', '.');
               if (s.isEmpty) return null;
               final n = double.tryParse(s);
-              if (n == null) return 'Ungültige Zahl';
+              if (n == null) return l10n.productInvalidNumber;
               if (n < 0 || n > 100) return '0–100 %';
               return null;
             },

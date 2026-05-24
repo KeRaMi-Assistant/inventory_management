@@ -121,7 +121,9 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(_isEdit ? 'Postfach bearbeiten' : 'IMAP-Konto hinzufügen'),
+      title: Text(_isEdit
+          ? AppLocalizations.of(context).mailboxDialogEditTitle
+          : AppLocalizations.of(context).mailboxDialogAddTitle),
       content: SizedBox(
         width: 460,
         child: SingleChildScrollView(
@@ -177,7 +179,8 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: _isEdit
-                      ? 'App-Passwort (leer lassen, wenn unverändert)'
+                      ? AppLocalizations.of(context)
+                          .mailboxDialogPasswordEditLabel
                       : 'App-Passwort',
                   helperText: _isEdit
                       ? null

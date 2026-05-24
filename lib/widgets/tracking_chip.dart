@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_theme.dart';
+import '../l10n/app_localizations.dart';
 import '../services/carrier_service.dart';
 import '../utils/url_helper.dart';
 
@@ -91,7 +92,7 @@ class _ChipBody extends StatelessWidget {
           enabled: false,
           height: 32,
           child: Text(
-            'Versanddienst wählen',
+            AppLocalizations.of(context).trackingCarrierPickTitle,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -165,7 +166,7 @@ class _ChipBody extends StatelessWidget {
           enabled: false,
           height: 32,
           child: Text(
-            'Amazon · Land wählen',
+            AppLocalizations.of(context).trackingAmazonCountryTitle,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -224,9 +225,10 @@ class _ChipBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final tooltip = detected == Carrier.unknown
-        ? 'Tracking — Versanddienst nicht erkannt (lange drücken zum Auswählen)'
-        : '${detected.label} · lange drücken zum Wechseln';
+        ? l10n.trackingTooltipUnknown
+        : l10n.trackingTooltipKnown(detected.label);
 
     final number = Text(
       _displayLabel,

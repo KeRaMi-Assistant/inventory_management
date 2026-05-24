@@ -183,6 +183,7 @@ class _PricingScreenState extends State<PricingScreen>
     BillingProvider billing,
     ScaffoldMessengerState messenger,
   ) async {
+    final l10nOuter = AppLocalizations.of(context);
     final isDowngradeToFree = plan.plan == BillingPlan.free;
     final ok = await showDialog<bool>(
       context: context,
@@ -190,13 +191,12 @@ class _PricingScreenState extends State<PricingScreen>
         final l10n = AppLocalizations.of(ctx);
         return AlertDialog(
           title: Text(isDowngradeToFree
-              ? 'Auf Free wechseln?'
-              : 'Auf ${plan.plan.label} upgraden?'),
+              ? l10n.pricingDowngradeToFreeTitle
+              : l10n.pricingUpgradeToTitle(plan.plan.label)),
           content: Text(
             isDowngradeToFree
-                ? 'Du verlierst Zugang zu Pro-Features. Bestehende Daten bleiben erhalten.'
-                : 'Hinweis: Dies ist ein Demo-Switch ohne Zahlungsabwicklung. '
-                    'Sobald Stripe/Paddle integriert ist, läuft hier der echte Checkout.',
+                ? l10n.pricingDowngradeLoseAccess
+                : l10n.pricingDemoCheckoutNotice,
           ),
           actions: [
             TextButton(
@@ -205,7 +205,9 @@ class _PricingScreenState extends State<PricingScreen>
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text(isDowngradeToFree ? 'Wechseln' : 'Plan aktivieren'),
+              child: Text(isDowngradeToFree
+                  ? l10n.pricingDoSwitch
+                  : l10n.pricingActivatePlan),
             ),
           ],
         );
@@ -220,12 +222,14 @@ class _PricingScreenState extends State<PricingScreen>
       );
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Plan ${plan.plan.label} aktiviert.')),
+        SnackBar(
+          content: Text(l10nOuter.pricingPlanActivated(plan.plan.label)),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Aktivierung fehlgeschlagen: $e')),
+        SnackBar(content: Text(l10nOuter.pricingActivationFailed)),
       );
     } finally {
       if (mounted) setState(() => _activating = false);
@@ -347,14 +351,14 @@ class _BillingCycleToggle extends StatelessWidget {
           Expanded(
             child: _ToggleChip(
               selected: cycle == BillingCycle.monthly,
-              label: 'Monatlich',
+              label: AppLocalizations.of(context).pricingCycleMonthly,
               onTap: () => onChanged(BillingCycle.monthly),
             ),
           ),
           Expanded(
             child: _ToggleChip(
               selected: cycle == BillingCycle.yearly,
-              label: 'Jährlich · –17%',
+              label: AppLocalizations.of(context).pricingCycleYearly,
               onTap: () => onChanged(BillingCycle.yearly),
               accent: theme.colorScheme.primary,
             ),
@@ -594,7 +598,7 @@ class _PlanCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: Text(_buttonLabel(plan, isCurrent)),
+                child: Text(_buttonLabel(l10n, plan, isCurrent)),
               ),
             ),
             const SizedBox(height: 16),
@@ -624,10 +628,11 @@ class _PlanCard extends StatelessWidget {
     );
   }
 
-  String _buttonLabel(PricingPlan plan, bool isCurrent) {
-    if (isCurrent) return 'Aktiver Plan';
-    if (plan.isFree) return 'Auf Free wechseln';
-    return 'Plan auswählen';
+  String _buttonLabel(
+      AppLocalizations l10n, PricingPlan plan, bool isCurrent) {
+    if (isCurrent) return l10n.pricingActivePlan;
+    if (plan.isFree) return l10n.pricingSwitchToFree;
+    return l10n.pricingSelectPlan;
   }
 
   static String _fmtEur(double v) {

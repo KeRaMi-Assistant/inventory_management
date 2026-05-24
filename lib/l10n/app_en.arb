@@ -1236,6 +1236,8 @@
   "invitesDeclinedSnack": "Invite declined.",
   "invitesAcceptFailed": "Join failed: {error}",
   "@invitesAcceptFailed": { "placeholders": { "error": {} } },
+  "invitesDeclineFailed": "Decline failed: {error}",
+  "@invitesDeclineFailed": { "placeholders": { "error": {} } },
   "invitesExpiresOn": "Expires {date}",
   "@invitesExpiresOn": { "placeholders": { "date": {} } },
   "invitesRoleLabel": "Role: {role}",
@@ -2384,5 +2386,224 @@
   "@warehouseSaved": { "description": "Success SnackBar after saving a warehouse." },
 
   "warehouseSaveFailed": "Save failed.",
-  "@warehouseSaveFailed": { "description": "Error SnackBar when saving a warehouse fails." }
+  "@warehouseSaveFailed": { "description": "Error SnackBar when saving a warehouse fails." },
+
+  "inboxDetailNoSubject": "— no subject —",
+  "@inboxDetailNoSubject": { "description": "Placeholder when an inbox message has no subject." },
+
+  "inboxDetailFrom": "From: {address}",
+  "@inboxDetailFrom": {
+    "description": "Sender line in the inbox message detail sheet.",
+    "placeholders": { "address": {} }
+  },
+
+  "inboxDetailReceived": "Received: {date}",
+  "@inboxDetailReceived": {
+    "description": "Received date in the inbox message detail sheet.",
+    "placeholders": { "date": {} }
+  },
+
+  "inboxDetailProcessed": "Processed: {date}",
+  "@inboxDetailProcessed": {
+    "description": "Processed date in the inbox message detail sheet.",
+    "placeholders": { "date": {} }
+  },
+
+  "inboxStatusMatched": "Updated",
+  "@inboxStatusMatched": { "description": "Status badge in the inbox message detail: deal was updated." },
+
+  "inboxStatusSuggested": "Suggestion",
+  "@inboxStatusSuggested": { "description": "Status badge in the inbox message detail: suggestion for a new deal." },
+
+  "inboxStatusUnclassified": "Unclassified",
+  "@inboxStatusUnclassified": { "description": "Status badge in the inbox message detail: message not matched." },
+
+  "inboxStatusFailed": "Error",
+  "@inboxStatusFailed": { "description": "Status badge in the inbox message detail: processing failed." },
+
+  "inboxStatusDismissed": "Dismissed",
+  "@inboxStatusDismissed": { "description": "Status badge in the inbox message detail: message dismissed." },
+
+  "inboxStatusPending": "Processing",
+  "@inboxStatusPending": { "description": "Status badge in the inbox message detail: message is being processed." },
+
+  "trackingUpdateFailed": "Tracking update failed.",
+  "@trackingUpdateFailed": { "description": "Error SnackBar when the manual tracking update fails." },
+
+  "trackingAcceptFailed": "Tracking acceptance failed.",
+  "@trackingAcceptFailed": { "description": "Error SnackBar when accepting a tracking number fails." },
+
+  "trackingDiscardFailed": "Tracking discard failed.",
+  "@trackingDiscardFailed": { "description": "Error SnackBar when discarding a tracking number fails." },
+
+  "billingProfileRequiredField": "Required for paid plans",
+  "@billingProfileRequiredField": { "description": "Validator message for required fields in the billing form when a paid plan is active." },
+
+  "billingProfilePaidHint": "For paid plans, we need a complete billing address (required fields marked with *).",
+  "@billingProfilePaidHint": { "description": "Info banner in the billing form when a paid plan is active." },
+
+  "billingProfileFieldFullName": "Full name",
+  "@billingProfileFieldFullName": { "description": "Label for the 'Full name' field in the billing form." },
+
+  "billingProfileFieldStreet": "Street & house number",
+  "@billingProfileFieldStreet": { "description": "Label for the street & house number field in the billing form." },
+
+  "billingProfileDataNotice": "This data is used exclusively for invoices and legally required information.",
+  "@billingProfileDataNotice": { "description": "Privacy notice at the bottom of the billing form." },
+
+  "billingProfileSaved": "Billing details saved.",
+  "@billingProfileSaved": { "description": "SnackBar text after billing details are saved successfully." },
+
+  "billingProfileSaveFailed": "Save failed.",
+  "@billingProfileSaveFailed": { "description": "SnackBar text when saving billing details fails." },
+
+  "billingProfileSaving": "Saving…",
+  "@billingProfileSaving": { "description": "Button text while billing details are being saved." },
+
+  "planMenuSelect": "Select plan",
+  "@planMenuSelect": { "description": "Menu entry for free users to select a plan." },
+
+  "planMenuManage": "Manage plan",
+  "@planMenuManage": { "description": "Menu entry for paying users to manage their plan." },
+
+  "planMenuCurrent": "Current: {label}",
+  "@planMenuCurrent": {
+    "description": "Subtitle in the plan menu entry showing the current plan name.",
+    "placeholders": { "label": { "type": "String" } }
+  },
+
+  "planMenuUpgradeBadge": "Upgrade",
+  "@planMenuUpgradeBadge": { "description": "Badge text in the plan menu for free users." },
+
+  "pricingSelectPlan": "Select plan",
+  "@pricingSelectPlan": { "description": "Button label on the pricing page to select a plan." },
+
+  "pricingActivePlan": "Active plan",
+  "@pricingActivePlan": { "description": "Button label on the pricing page when the plan is already active." },
+
+  "pricingSwitchToFree": "Switch to free",
+  "@pricingSwitchToFree": { "description": "Button label on the pricing page to switch to the free plan." },
+
+  "pricingUpgradeToTitle": "Upgrade to {plan}?",
+  "@pricingUpgradeToTitle": {
+    "description": "Dialog title when upgrading to a paid plan.",
+    "placeholders": { "plan": { "type": "String" } }
+  },
+
+  "pricingDowngradeToFreeTitle": "Switch to free?",
+  "@pricingDowngradeToFreeTitle": { "description": "Dialog title when downgrading to the free plan." },
+
+  "pricingDowngradeLoseAccess": "You'll lose access to Pro features. Existing data will be retained.",
+  "@pricingDowngradeLoseAccess": { "description": "Dialog body when downgrading to the free plan." },
+
+  "pricingDemoCheckoutNotice": "Note: This is a demo switch without payment processing. Once Stripe/Paddle is integrated, the real checkout will run here.",
+  "@pricingDemoCheckoutNotice": { "description": "Dialog body when upgrading to a paid plan (demo mode)." },
+
+  "pricingActivatePlan": "Activate plan",
+  "@pricingActivatePlan": { "description": "Confirm button in the upgrade dialog." },
+
+  "pricingDoSwitch": "Switch",
+  "@pricingDoSwitch": { "description": "Confirm button in the downgrade-to-free dialog." },
+
+  "pricingCycleMonthly": "Monthly",
+  "@pricingCycleMonthly": { "description": "Toggle chip label for monthly billing on the pricing page." },
+
+  "pricingCycleYearly": "Yearly · –17%",
+  "@pricingCycleYearly": { "description": "Toggle chip label for yearly billing on the pricing page (with discount note)." },
+
+  "trackingCarrierPickTitle": "Select carrier",
+  "@trackingCarrierPickTitle": { "description": "Header in the carrier override popup menu of the tracking chip." },
+
+  "trackingAmazonCountryTitle": "Amazon · Select country",
+  "@trackingAmazonCountryTitle": { "description": "Header in the Amazon country picker popup of the tracking chip." },
+
+  "trackingTooltipUnknown": "Tracking — carrier not detected (long press to select)",
+  "@trackingTooltipUnknown": { "description": "Tooltip of the tracking chip when the carrier is unknown." },
+
+  "trackingTooltipKnown": "{carrier} · long press to change",
+  "@trackingTooltipKnown": {
+    "description": "Tooltip of the tracking chip when a carrier has been detected.",
+    "placeholders": { "carrier": { "type": "String" } }
+  },
+
+  "globalSearchHint": "Search across deals, inventory, tickets, buyers, suppliers…",
+  "@globalSearchHint": { "description": "Placeholder text in the search field of the global search dialog." },
+
+  "globalSearchBuyerFilterSubtitle": "Buyer · filter deals",
+  "@globalSearchBuyerFilterSubtitle": { "description": "Subtitle of a buyer search result in the global search dialog." },
+
+  "dealPickerSearchHint": "Search by product, ticket, shop or buyer …",
+  "@dealPickerSearchHint": { "description": "Placeholder text in the search field of the deal picker dialog." },
+
+  "dealPickerEmpty": "No matching deal found.",
+  "@dealPickerEmpty": { "description": "Empty state text in the deal picker dialog when the search yields no results." },
+
+  "mailboxDialogEditTitle": "Edit mailbox",
+  "@mailboxDialogEditTitle": { "description": "Dialog title when editing an existing IMAP account." },
+
+  "mailboxDialogAddTitle": "Add IMAP account",
+  "@mailboxDialogAddTitle": { "description": "Dialog title when adding a new IMAP account." },
+
+  "mailboxDialogPasswordEditLabel": "App password (leave empty to keep unchanged)",
+  "@mailboxDialogPasswordEditLabel": { "description": "Password field label in the mailbox edit dialog (when editing)." },
+
+  "productInvalidNumber": "Invalid number",
+  "@productInvalidNumber": { "description": "Validator error message when a number in the product form cannot be parsed." },
+
+  "inventoryPiecesCount": "{quantity} pcs",
+  "@inventoryPiecesCount": {
+    "description": "Piece count display in the inventory list (e.g. '5 pcs').",
+    "placeholders": { "quantity": { "type": "int" } }
+  },
+
+  "heatmapTapHint": "Tap a day for details",
+  "@heatmapTapHint": { "description": "Hint text in the profit heatmap when no day is selected yet." },
+
+  "billingProfileSectionContact": "Contact person",
+  "@billingProfileSectionContact": { "description": "Section header 'Contact person' in the billing form." },
+
+  "billingProfileSectionAddress": "Billing address",
+  "@billingProfileSectionAddress": { "description": "Section header 'Billing address' in the billing form." },
+
+  "billingProfileFieldCompany": "Company (optional)",
+  "@billingProfileFieldCompany": { "description": "Label for the company field in the billing form." },
+
+  "billingProfileFieldVatId": "VAT ID (optional)",
+  "@billingProfileFieldVatId": { "description": "Label for the VAT ID field in the billing form." },
+
+  "billingProfileFieldPhone": "Phone",
+  "@billingProfileFieldPhone": { "description": "Label for the phone field in the billing form." },
+
+  "billingProfileFieldAddr2": "Address supplement (optional)",
+  "@billingProfileFieldAddr2": { "description": "Label for the address supplement field in the billing form." },
+
+  "billingProfileFieldPostal": "Postal code",
+  "@billingProfileFieldPostal": { "description": "Label for the postal code field in the billing form." },
+
+  "billingProfileFieldCity": "City",
+  "@billingProfileFieldCity": { "description": "Label for the city field in the billing form." },
+
+  "billingProfileFieldRegion": "State / Region (optional)",
+  "@billingProfileFieldRegion": { "description": "Label for the state/region field in the billing form." },
+
+  "billingProfileFieldCountry": "Country",
+  "@billingProfileFieldCountry": { "description": "Label for the country field in the billing form (ISO-2 code)." },
+
+  "billingProfileCountryValidation": "ISO 2-letter code",
+  "@billingProfileCountryValidation": { "description": "Validator message when the country field does not contain a valid ISO-2 code." },
+
+  "pricingPlanActivated": "Plan {plan} activated.",
+  "@pricingPlanActivated": {
+    "description": "SnackBar text after successful plan activation.",
+    "placeholders": { "plan": { "type": "String" } }
+  },
+
+  "pricingActivationFailed": "Activation failed.",
+  "@pricingActivationFailed": { "description": "SnackBar text when plan activation fails." },
+
+  "heatmapLess": "Less",
+  "@heatmapLess": { "description": "Legend label 'Less' in the profit heatmap (left side of the color scale)." },
+
+  "heatmapMore": "More",
+  "@heatmapMore": { "description": "Legend label 'More' in the profit heatmap (right side of the color scale)." }
 }

@@ -5798,6 +5798,12 @@ abstract class AppLocalizations {
   /// **'Beitritt fehlgeschlagen: {error}'**
   String invitesAcceptFailed(Object error);
 
+  /// No description provided for @invitesDeclineFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Ablehnen fehlgeschlagen: {error}'**
+  String invitesDeclineFailed(Object error);
+
   /// No description provided for @invitesExpiresOn.
   ///
   /// In de, this message translates to:
@@ -9112,6 +9118,396 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Speichern fehlgeschlagen.'**
   String get warehouseSaveFailed;
+
+  /// Platzhalter wenn eine Inbox-Mail keinen Betreff hat.
+  ///
+  /// In de, this message translates to:
+  /// **'— ohne Betreff —'**
+  String get inboxDetailNoSubject;
+
+  /// Absender-Zeile im Inbox-Mail-Detail.
+  ///
+  /// In de, this message translates to:
+  /// **'Von: {address}'**
+  String inboxDetailFrom(Object address);
+
+  /// Empfangsdatum im Inbox-Mail-Detail.
+  ///
+  /// In de, this message translates to:
+  /// **'Empfangen: {date}'**
+  String inboxDetailReceived(Object date);
+
+  /// Verarbeitungsdatum im Inbox-Mail-Detail.
+  ///
+  /// In de, this message translates to:
+  /// **'Verarbeitet: {date}'**
+  String inboxDetailProcessed(Object date);
+
+  /// Status-Badge im Inbox-Mail-Detail: Deal wurde aktualisiert.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktualisiert'**
+  String get inboxStatusMatched;
+
+  /// Status-Badge im Inbox-Mail-Detail: Vorschlag für neuen Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschlag'**
+  String get inboxStatusSuggested;
+
+  /// Status-Badge im Inbox-Mail-Detail: Mail nicht zugeordnet.
+  ///
+  /// In de, this message translates to:
+  /// **'Unklassifiziert'**
+  String get inboxStatusUnclassified;
+
+  /// Status-Badge im Inbox-Mail-Detail: Verarbeitung fehlgeschlagen.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler'**
+  String get inboxStatusFailed;
+
+  /// Status-Badge im Inbox-Mail-Detail: Mail verworfen.
+  ///
+  /// In de, this message translates to:
+  /// **'Verworfen'**
+  String get inboxStatusDismissed;
+
+  /// Status-Badge im Inbox-Mail-Detail: Mail wird verarbeitet.
+  ///
+  /// In de, this message translates to:
+  /// **'In Arbeit'**
+  String get inboxStatusPending;
+
+  /// Fehler-SnackBar wenn das manuelle Tracking-Update scheitert.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Update fehlgeschlagen.'**
+  String get trackingUpdateFailed;
+
+  /// Fehler-SnackBar wenn das Akzeptieren eines Trackings scheitert.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Akzeptanz fehlgeschlagen.'**
+  String get trackingAcceptFailed;
+
+  /// Fehler-SnackBar wenn das Verwerfen eines Trackings scheitert.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking verwerfen fehlgeschlagen.'**
+  String get trackingDiscardFailed;
+
+  /// Validator-Meldung für Pflichtfelder im Rechnungsformular bei kostenpflichtigen Plänen.
+  ///
+  /// In de, this message translates to:
+  /// **'Pflichtfeld für kostenpflichtige Pläne'**
+  String get billingProfileRequiredField;
+
+  /// Hinweis-Banner im Rechnungsformular wenn ein kostenpflichtiger Plan aktiv ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Für kostenpflichtige Pläne benötigen wir eine vollständige Rechnungsadresse (Pflichtfelder mit *).'**
+  String get billingProfilePaidHint;
+
+  /// Label für das Feld 'Vollständiger Name' im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Vollständiger Name'**
+  String get billingProfileFieldFullName;
+
+  /// Label für das Straße-&-Hausnummer-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Straße & Hausnummer'**
+  String get billingProfileFieldStreet;
+
+  /// Datenschutz-Hinweis am Ende des Rechnungsformulars.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Daten werden ausschließlich für Rechnungen und gesetzlich vorgeschriebene Pflichtangaben verwendet.'**
+  String get billingProfileDataNotice;
+
+  /// SnackBar-Text nach erfolgreichem Speichern der Rechnungsdaten.
+  ///
+  /// In de, this message translates to:
+  /// **'Rechnungsdaten gespeichert.'**
+  String get billingProfileSaved;
+
+  /// SnackBar-Text wenn das Speichern der Rechnungsdaten fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern fehlgeschlagen.'**
+  String get billingProfileSaveFailed;
+
+  /// Button-Text während die Rechnungsdaten gespeichert werden.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern…'**
+  String get billingProfileSaving;
+
+  /// Menü-Eintrag für Free-User zum Plan auswählen.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan auswählen'**
+  String get planMenuSelect;
+
+  /// Menü-Eintrag für zahlende User zum Plan verwalten.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan verwalten'**
+  String get planMenuManage;
+
+  /// Untertitel im Plan-Menü-Eintrag mit dem aktuellen Plan-Namen.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktuell: {label}'**
+  String planMenuCurrent(String label);
+
+  /// Badge-Text im Plan-Menü für Free-User.
+  ///
+  /// In de, this message translates to:
+  /// **'Upgrade'**
+  String get planMenuUpgradeBadge;
+
+  /// Button-Label auf der Pricing-Seite zum Auswählen eines Plans.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan auswählen'**
+  String get pricingSelectPlan;
+
+  /// Button-Label auf der Pricing-Seite wenn der Plan bereits aktiv ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiver Plan'**
+  String get pricingActivePlan;
+
+  /// Button-Label auf der Pricing-Seite zum Wechsel auf den Free-Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'Auf Free wechseln'**
+  String get pricingSwitchToFree;
+
+  /// Dialog-Titel beim Upgrade auf einen kostenpflichtigen Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'Auf {plan} upgraden?'**
+  String pricingUpgradeToTitle(String plan);
+
+  /// Dialog-Titel beim Downgrade auf den Free-Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'Auf Free wechseln?'**
+  String get pricingDowngradeToFreeTitle;
+
+  /// Dialog-Body beim Downgrade auf den Free-Plan.
+  ///
+  /// In de, this message translates to:
+  /// **'Du verlierst Zugang zu Pro-Features. Bestehende Daten bleiben erhalten.'**
+  String get pricingDowngradeLoseAccess;
+
+  /// Dialog-Body beim Upgrade auf einen kostenpflichtigen Plan (Demo-Modus).
+  ///
+  /// In de, this message translates to:
+  /// **'Hinweis: Dies ist ein Demo-Switch ohne Zahlungsabwicklung. Sobald Stripe/Paddle integriert ist, läuft hier der echte Checkout.'**
+  String get pricingDemoCheckoutNotice;
+
+  /// Bestätigungs-Button im Upgrade-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan aktivieren'**
+  String get pricingActivatePlan;
+
+  /// Bestätigungs-Button im Downgrade-zu-Free-Dialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Wechseln'**
+  String get pricingDoSwitch;
+
+  /// Toggle-Chip-Label für monatliche Abrechnung auf der Pricing-Seite.
+  ///
+  /// In de, this message translates to:
+  /// **'Monatlich'**
+  String get pricingCycleMonthly;
+
+  /// Toggle-Chip-Label für jährliche Abrechnung auf der Pricing-Seite (mit Rabatt-Hinweis).
+  ///
+  /// In de, this message translates to:
+  /// **'Jährlich · –17%'**
+  String get pricingCycleYearly;
+
+  /// Header im Carrier-Override-Popup-Menü des Tracking-Chips.
+  ///
+  /// In de, this message translates to:
+  /// **'Versanddienst wählen'**
+  String get trackingCarrierPickTitle;
+
+  /// Header im Amazon-Country-Picker-Popup des Tracking-Chips.
+  ///
+  /// In de, this message translates to:
+  /// **'Amazon · Land wählen'**
+  String get trackingAmazonCountryTitle;
+
+  /// Tooltip des Tracking-Chips wenn der Carrier unbekannt ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking — Versanddienst nicht erkannt (lange drücken zum Auswählen)'**
+  String get trackingTooltipUnknown;
+
+  /// Tooltip des Tracking-Chips wenn ein Carrier erkannt wurde.
+  ///
+  /// In de, this message translates to:
+  /// **'{carrier} · lange drücken zum Wechseln'**
+  String trackingTooltipKnown(String carrier);
+
+  /// Placeholder-Text im Suchfeld des globalen Suchdialogs.
+  ///
+  /// In de, this message translates to:
+  /// **'Suchen über Deals, Lager, Tickets, Käufer, Lieferanten…'**
+  String get globalSearchHint;
+
+  /// Untertitel eines Käufer-Suchergebnisses im globalen Suchdialog.
+  ///
+  /// In de, this message translates to:
+  /// **'Käufer · Deals filtern'**
+  String get globalSearchBuyerFilterSubtitle;
+
+  /// Placeholder-Text im Suchfeld des Deal-Picker-Dialogs.
+  ///
+  /// In de, this message translates to:
+  /// **'Suche nach Produkt, Ticket, Shop oder Käufer …'**
+  String get dealPickerSearchHint;
+
+  /// Leerer-Zustand-Text im Deal-Picker-Dialog wenn die Suche keine Treffer ergibt.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein passender Deal gefunden.'**
+  String get dealPickerEmpty;
+
+  /// Dialog-Titel beim Bearbeiten eines bestehenden IMAP-Kontos.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach bearbeiten'**
+  String get mailboxDialogEditTitle;
+
+  /// Dialog-Titel beim Hinzufügen eines neuen IMAP-Kontos.
+  ///
+  /// In de, this message translates to:
+  /// **'IMAP-Konto hinzufügen'**
+  String get mailboxDialogAddTitle;
+
+  /// Passwort-Feld-Label im Mailbox-Bearbeiten-Dialog (beim Bearbeiten).
+  ///
+  /// In de, this message translates to:
+  /// **'App-Passwort (leer lassen, wenn unverändert)'**
+  String get mailboxDialogPasswordEditLabel;
+
+  /// Validator-Fehlermeldung wenn eine Zahl im Produkt-Formular nicht parsebar ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungültige Zahl'**
+  String get productInvalidNumber;
+
+  /// Stückzahl-Anzeige in der Inventarliste (z. B. '5 Stück').
+  ///
+  /// In de, this message translates to:
+  /// **'{quantity} Stück'**
+  String inventoryPiecesCount(int quantity);
+
+  /// Hinweis-Text in der Profit-Heatmap wenn noch kein Tag ausgewählt ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Tippe auf einen Tag für Details'**
+  String get heatmapTapHint;
+
+  /// Abschnittsheader 'Kontaktperson' im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Kontaktperson'**
+  String get billingProfileSectionContact;
+
+  /// Abschnittsheader 'Rechnungsadresse' im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Rechnungsadresse'**
+  String get billingProfileSectionAddress;
+
+  /// Label für das Firma-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Firma (optional)'**
+  String get billingProfileFieldCompany;
+
+  /// Label für das Umsatzsteuer-ID-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'USt-IdNr. (optional)'**
+  String get billingProfileFieldVatId;
+
+  /// Label für das Telefon-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Telefon'**
+  String get billingProfileFieldPhone;
+
+  /// Label für das Adresszusatz-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Adresszusatz (optional)'**
+  String get billingProfileFieldAddr2;
+
+  /// Label für das PLZ-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'PLZ'**
+  String get billingProfileFieldPostal;
+
+  /// Label für das Ort-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Ort'**
+  String get billingProfileFieldCity;
+
+  /// Label für das Bundesland-Feld im Rechnungsformular.
+  ///
+  /// In de, this message translates to:
+  /// **'Bundesland (optional)'**
+  String get billingProfileFieldRegion;
+
+  /// Label für das Land-Feld im Rechnungsformular (ISO-2-Code).
+  ///
+  /// In de, this message translates to:
+  /// **'Land'**
+  String get billingProfileFieldCountry;
+
+  /// Validator-Meldung wenn das Länderfeld keinen gültigen ISO-2-Code enthält.
+  ///
+  /// In de, this message translates to:
+  /// **'ISO 2-Buchstaben'**
+  String get billingProfileCountryValidation;
+
+  /// SnackBar-Text nach erfolgreicher Plan-Aktivierung.
+  ///
+  /// In de, this message translates to:
+  /// **'Plan {plan} aktiviert.'**
+  String pricingPlanActivated(String plan);
+
+  /// SnackBar-Text wenn die Plan-Aktivierung fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierung fehlgeschlagen.'**
+  String get pricingActivationFailed;
+
+  /// Legende-Label 'Weniger' in der Profit-Heatmap (linke Seite der Farb-Skala).
+  ///
+  /// In de, this message translates to:
+  /// **'Weniger'**
+  String get heatmapLess;
+
+  /// Legende-Label 'Mehr' in der Profit-Heatmap (rechte Seite der Farb-Skala).
+  ///
+  /// In de, this message translates to:
+  /// **'Mehr'**
+  String get heatmapMore;
 }
 
 class _AppLocalizationsDelegate

@@ -766,13 +766,13 @@ möglich wo `depends` leer.
 - [x] **A6m** `invite_member_dialog.dart` SnackBars.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6n** `invites_bell.dart` SnackBars.
+- [x] **A6n** `invites_bell.dart` SnackBars.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6o** `create_workspace_dialog.dart` SnackBars.
+- [x] **A6o** `create_workspace_dialog.dart` SnackBars.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6p** `inbox_message_details_screen.dart` SnackBars +
+- [x] **A6p** `inbox_message_details_screen.dart` SnackBars +
   Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
@@ -887,9 +887,15 @@ möglich wo `depends` leer.
   Onboarding-Akzente, Logout-/Danger-Zone.
   `agent: flutter-coder` · `model: sonnet` · `depends: []`
 
-- [ ] **C6** `python3 .claude/scripts/check-l10n.py` ausführen,
+- [x] **C6** `python3 .claude/scripts/check-l10n.py` ausführen,
   Restdrift in `lib/` (außerhalb inbox/settings) als Liste
   reporten. Nur reporten, nicht beheben — Nachfolge-Task.
+  — **Erweitert:** Migration aller User-sichtbaren Strings in
+  `billing_profile_screen`, `main_screen`, `pricing_screen`,
+  `inventory_screen`, `tracking_chip`, `global_search_dialog`,
+  `deal_picker_dialog`, `add_edit_mailbox_dialog`,
+  `add_edit_product_dialog`, `statistics/charts/heatmap`.
+  46 neue ARB-Keys (DE+EN symmetrisch). `check-l10n.py` grün.
   `agent: flutter-coder` · `model: sonnet` · `depends: [C3, C4]`
 
 ### Epic D — A11y + Keyboard-Nav (P1)

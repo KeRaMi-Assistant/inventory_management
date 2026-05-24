@@ -84,10 +84,10 @@ class _DealPickerDialogState extends State<DealPickerDialog> {
                 TextField(
                   controller: _ctrl,
                   autofocus: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Suche nach Produkt, Ticket, Shop oder Käufer …',
-                    prefixIcon: Icon(Icons.search, size: 18),
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.of(context).dealPickerSearchHint,
+                    prefixIcon: const Icon(Icons.search, size: 18),
+                    border: const OutlineInputBorder(),
                     isDense: true,
                   ),
                   onChanged: (v) => setState(() => _query = v),
@@ -95,10 +95,10 @@ class _DealPickerDialogState extends State<DealPickerDialog> {
                 const SizedBox(height: 12),
                 Expanded(
                   child: results.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
-                            'Kein passender Deal gefunden.',
-                            style: TextStyle(color: Color(0xFF94A3B8)),
+                            AppLocalizations.of(context).dealPickerEmpty,
+                            style: const TextStyle(color: Color(0xFF94A3B8)),
                           ),
                         )
                       : ListView.separated(

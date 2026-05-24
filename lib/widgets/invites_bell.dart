@@ -9,6 +9,7 @@ import '../providers/active_workspace_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/invites_provider.dart';
 import '../utils/role_labels.dart';
+import 'app_feedback.dart';
 
 /// Glocken-Icon im App-Header. Zeigt einen roten Badge mit der Anzahl
 /// offener Workspace-Einladungen für den aktuellen User. Tap öffnet einen
@@ -26,6 +27,8 @@ class InvitesBell extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final invites = context.watch<InvitesProvider>();
     final count = invites.count;
+    // Badge-Border verwendet bgSurfaceOf für Dark-Mode-Kompatibilität.
+    final badgeBorder = AppTheme.bgSurfaceOf(context);
     return IconButton(
       tooltip: l10n.invitesBellTooltip,
       onPressed: () => _openInvitesDialog(context),
@@ -44,13 +47,16 @@ class InvitesBell extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppTheme.danger,
                   borderRadius: BorderRadius.circular(7),
-                  border: Border.all(color: Colors.white, width: 1.5),
+                  border: Border.all(color: badgeBorder, width: 1.5),
                 ),
                 child: Text(
                   count > 9 ? '9+' : '$count',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    // White text on danger-red badge — semantically correct,
+                    // no AppTheme.onDanger token exists; matches ElevatedButton
+                    // foregroundColor: Colors.white in app_theme.dart.
+                    color: AppTheme.bgSurface,
                     fontSize: 9,
                     fontWeight: FontWeight.w800,
                     height: 1.1,
@@ -81,7 +87,8 @@ class _InvitesDialog extends StatelessWidget {
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final dateFmt = DateFormat.yMd(localeTag);
     return Dialog(
-      backgroundColor: Colors.white,
+      // bgSurfaceOf adapts to dark mode (bgSurface / bgSurfaceDark).
+      backgroundColor: AppTheme.bgSurfaceOf(context),
       shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
@@ -165,10 +172,23 @@ class _InviteRow extends StatefulWidget {
 class _InviteRowState extends State<_InviteRow> {
   bool _busy = false;
 
+  /// Extrahiert eine sichere, kurze Fehlermeldung aus einer Exception.
+  ///
+  /// Nimmt nur die erste Zeile des `toString()`-Outputs und kürzt auf
+  /// maximal 120 Zeichen, damit keine Stack-Traces an den User durchsickern.
+  static String _sanitizeException(Object e) {
+    final raw = e.toString();
+    final firstLine = raw.split('\n').first.trim();
+    return firstLine.length > 120 ? '${firstLine.substring(0, 120)}…' : firstLine;
+  }
+
   Future<void> _accept() async {
     setState(() => _busy = true);
-    final l10n = AppLocalizations.of(context);
+    // Dialog-Context-Pattern: Capture messenger + l10n before async gaps so
+    // that we can show feedback even after the dialog has been popped.
     final messenger = ScaffoldMessenger.of(context);
+    final rootContext = context;
+    final l10n = AppLocalizations.of(context);
     final navigator = Navigator.of(context);
     final invites = context.read<InvitesProvider>();
     final activeWs = context.read<ActiveWorkspaceProvider>();
@@ -180,12 +200,21 @@ class _InviteRowState extends State<_InviteRow> {
         final uid = auth.currentUser?.id;
         if (uid != null) await activeWs.loadForCurrentUser(uid);
       }
-      messenger.showSnackBar(SnackBar(content: Text(l10n.invitesAcceptedSnack)));
+      // Show snack before pop so rootContext is still valid for theme lookup.
+      if (!rootContext.mounted) return;
+      AppFeedback.successOn(
+        messenger,
+        l10n.invitesAcceptedSnack,
+        rootContext: rootContext,
+      );
       navigator.maybePop();
     } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.invitesAcceptFailed('$e'))));
+      if (!rootContext.mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.invitesAcceptFailed(_sanitizeException(e)),
+        rootContext: rootContext,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -193,18 +222,26 @@ class _InviteRowState extends State<_InviteRow> {
 
   Future<void> _decline() async {
     setState(() => _busy = true);
-    final l10n = AppLocalizations.of(context);
+    // Dialog-Context-Pattern: capture before async gap.
     final messenger = ScaffoldMessenger.of(context);
+    final rootContext = context;
+    final l10n = AppLocalizations.of(context);
     final invites = context.read<InvitesProvider>();
     try {
       await invites.decline(widget.invite.id);
-      if (!mounted) return;
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.invitesDeclinedSnack)));
+      if (!rootContext.mounted) return;
+      AppFeedback.successOn(
+        messenger,
+        l10n.invitesDeclinedSnack,
+        rootContext: rootContext,
+      );
     } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.invitesAcceptFailed('$e'))));
+      if (!rootContext.mounted) return;
+      AppFeedback.errorOn(
+        messenger,
+        l10n.invitesDeclineFailed(_sanitizeException(e)),
+        rootContext: rootContext,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -286,11 +323,15 @@ class _InviteRowState extends State<_InviteRow> {
               ElevatedButton.icon(
                 onPressed: _busy ? null : _accept,
                 icon: _busy
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 12,
                         height: 12,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          // onPrimary adapts to theme (white in light mode,
+                          // theme foreground in dark mode).
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
                       )
                     : const Icon(Icons.login, size: 14),
                 label: Text(l10n.invitesAccept),

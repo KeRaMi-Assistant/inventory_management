@@ -3171,6 +3171,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String invitesDeclineFailed(Object error) {
+    return 'Decline failed: $error';
+  }
+
+  @override
   String invitesExpiresOn(Object date) {
     return 'Expires $date';
   }
@@ -5100,4 +5105,223 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get warehouseSaveFailed => 'Save failed.';
+
+  @override
+  String get inboxDetailNoSubject => '— no subject —';
+
+  @override
+  String inboxDetailFrom(Object address) {
+    return 'From: $address';
+  }
+
+  @override
+  String inboxDetailReceived(Object date) {
+    return 'Received: $date';
+  }
+
+  @override
+  String inboxDetailProcessed(Object date) {
+    return 'Processed: $date';
+  }
+
+  @override
+  String get inboxStatusMatched => 'Updated';
+
+  @override
+  String get inboxStatusSuggested => 'Suggestion';
+
+  @override
+  String get inboxStatusUnclassified => 'Unclassified';
+
+  @override
+  String get inboxStatusFailed => 'Error';
+
+  @override
+  String get inboxStatusDismissed => 'Dismissed';
+
+  @override
+  String get inboxStatusPending => 'Processing';
+
+  @override
+  String get trackingUpdateFailed => 'Tracking update failed.';
+
+  @override
+  String get trackingAcceptFailed => 'Tracking acceptance failed.';
+
+  @override
+  String get trackingDiscardFailed => 'Tracking discard failed.';
+
+  @override
+  String get billingProfileRequiredField => 'Required for paid plans';
+
+  @override
+  String get billingProfilePaidHint =>
+      'For paid plans, we need a complete billing address (required fields marked with *).';
+
+  @override
+  String get billingProfileFieldFullName => 'Full name';
+
+  @override
+  String get billingProfileFieldStreet => 'Street & house number';
+
+  @override
+  String get billingProfileDataNotice =>
+      'This data is used exclusively for invoices and legally required information.';
+
+  @override
+  String get billingProfileSaved => 'Billing details saved.';
+
+  @override
+  String get billingProfileSaveFailed => 'Save failed.';
+
+  @override
+  String get billingProfileSaving => 'Saving…';
+
+  @override
+  String get planMenuSelect => 'Select plan';
+
+  @override
+  String get planMenuManage => 'Manage plan';
+
+  @override
+  String planMenuCurrent(String label) {
+    return 'Current: $label';
+  }
+
+  @override
+  String get planMenuUpgradeBadge => 'Upgrade';
+
+  @override
+  String get pricingSelectPlan => 'Select plan';
+
+  @override
+  String get pricingActivePlan => 'Active plan';
+
+  @override
+  String get pricingSwitchToFree => 'Switch to free';
+
+  @override
+  String pricingUpgradeToTitle(String plan) {
+    return 'Upgrade to $plan?';
+  }
+
+  @override
+  String get pricingDowngradeToFreeTitle => 'Switch to free?';
+
+  @override
+  String get pricingDowngradeLoseAccess =>
+      'You\'ll lose access to Pro features. Existing data will be retained.';
+
+  @override
+  String get pricingDemoCheckoutNotice =>
+      'Note: This is a demo switch without payment processing. Once Stripe/Paddle is integrated, the real checkout will run here.';
+
+  @override
+  String get pricingActivatePlan => 'Activate plan';
+
+  @override
+  String get pricingDoSwitch => 'Switch';
+
+  @override
+  String get pricingCycleMonthly => 'Monthly';
+
+  @override
+  String get pricingCycleYearly => 'Yearly · –17%';
+
+  @override
+  String get trackingCarrierPickTitle => 'Select carrier';
+
+  @override
+  String get trackingAmazonCountryTitle => 'Amazon · Select country';
+
+  @override
+  String get trackingTooltipUnknown =>
+      'Tracking — carrier not detected (long press to select)';
+
+  @override
+  String trackingTooltipKnown(String carrier) {
+    return '$carrier · long press to change';
+  }
+
+  @override
+  String get globalSearchHint =>
+      'Search across deals, inventory, tickets, buyers, suppliers…';
+
+  @override
+  String get globalSearchBuyerFilterSubtitle => 'Buyer · filter deals';
+
+  @override
+  String get dealPickerSearchHint =>
+      'Search by product, ticket, shop or buyer …';
+
+  @override
+  String get dealPickerEmpty => 'No matching deal found.';
+
+  @override
+  String get mailboxDialogEditTitle => 'Edit mailbox';
+
+  @override
+  String get mailboxDialogAddTitle => 'Add IMAP account';
+
+  @override
+  String get mailboxDialogPasswordEditLabel =>
+      'App password (leave empty to keep unchanged)';
+
+  @override
+  String get productInvalidNumber => 'Invalid number';
+
+  @override
+  String inventoryPiecesCount(int quantity) {
+    return '$quantity pcs';
+  }
+
+  @override
+  String get heatmapTapHint => 'Tap a day for details';
+
+  @override
+  String get billingProfileSectionContact => 'Contact person';
+
+  @override
+  String get billingProfileSectionAddress => 'Billing address';
+
+  @override
+  String get billingProfileFieldCompany => 'Company (optional)';
+
+  @override
+  String get billingProfileFieldVatId => 'VAT ID (optional)';
+
+  @override
+  String get billingProfileFieldPhone => 'Phone';
+
+  @override
+  String get billingProfileFieldAddr2 => 'Address supplement (optional)';
+
+  @override
+  String get billingProfileFieldPostal => 'Postal code';
+
+  @override
+  String get billingProfileFieldCity => 'City';
+
+  @override
+  String get billingProfileFieldRegion => 'State / Region (optional)';
+
+  @override
+  String get billingProfileFieldCountry => 'Country';
+
+  @override
+  String get billingProfileCountryValidation => 'ISO 2-letter code';
+
+  @override
+  String pricingPlanActivated(String plan) {
+    return 'Plan $plan activated.';
+  }
+
+  @override
+  String get pricingActivationFailed => 'Activation failed.';
+
+  @override
+  String get heatmapLess => 'Less';
+
+  @override
+  String get heatmapMore => 'More';
 }

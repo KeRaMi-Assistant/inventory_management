@@ -3175,6 +3175,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String invitesDeclineFailed(Object error) {
+    return 'Ablehnen fehlgeschlagen: $error';
+  }
+
+  @override
   String invitesExpiresOn(Object date) {
     return 'Läuft am $date ab';
   }
@@ -5132,4 +5137,224 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get warehouseSaveFailed => 'Speichern fehlgeschlagen.';
+
+  @override
+  String get inboxDetailNoSubject => '— ohne Betreff —';
+
+  @override
+  String inboxDetailFrom(Object address) {
+    return 'Von: $address';
+  }
+
+  @override
+  String inboxDetailReceived(Object date) {
+    return 'Empfangen: $date';
+  }
+
+  @override
+  String inboxDetailProcessed(Object date) {
+    return 'Verarbeitet: $date';
+  }
+
+  @override
+  String get inboxStatusMatched => 'Aktualisiert';
+
+  @override
+  String get inboxStatusSuggested => 'Vorschlag';
+
+  @override
+  String get inboxStatusUnclassified => 'Unklassifiziert';
+
+  @override
+  String get inboxStatusFailed => 'Fehler';
+
+  @override
+  String get inboxStatusDismissed => 'Verworfen';
+
+  @override
+  String get inboxStatusPending => 'In Arbeit';
+
+  @override
+  String get trackingUpdateFailed => 'Tracking-Update fehlgeschlagen.';
+
+  @override
+  String get trackingAcceptFailed => 'Tracking-Akzeptanz fehlgeschlagen.';
+
+  @override
+  String get trackingDiscardFailed => 'Tracking verwerfen fehlgeschlagen.';
+
+  @override
+  String get billingProfileRequiredField =>
+      'Pflichtfeld für kostenpflichtige Pläne';
+
+  @override
+  String get billingProfilePaidHint =>
+      'Für kostenpflichtige Pläne benötigen wir eine vollständige Rechnungsadresse (Pflichtfelder mit *).';
+
+  @override
+  String get billingProfileFieldFullName => 'Vollständiger Name';
+
+  @override
+  String get billingProfileFieldStreet => 'Straße & Hausnummer';
+
+  @override
+  String get billingProfileDataNotice =>
+      'Diese Daten werden ausschließlich für Rechnungen und gesetzlich vorgeschriebene Pflichtangaben verwendet.';
+
+  @override
+  String get billingProfileSaved => 'Rechnungsdaten gespeichert.';
+
+  @override
+  String get billingProfileSaveFailed => 'Speichern fehlgeschlagen.';
+
+  @override
+  String get billingProfileSaving => 'Speichern…';
+
+  @override
+  String get planMenuSelect => 'Plan auswählen';
+
+  @override
+  String get planMenuManage => 'Plan verwalten';
+
+  @override
+  String planMenuCurrent(String label) {
+    return 'Aktuell: $label';
+  }
+
+  @override
+  String get planMenuUpgradeBadge => 'Upgrade';
+
+  @override
+  String get pricingSelectPlan => 'Plan auswählen';
+
+  @override
+  String get pricingActivePlan => 'Aktiver Plan';
+
+  @override
+  String get pricingSwitchToFree => 'Auf Free wechseln';
+
+  @override
+  String pricingUpgradeToTitle(String plan) {
+    return 'Auf $plan upgraden?';
+  }
+
+  @override
+  String get pricingDowngradeToFreeTitle => 'Auf Free wechseln?';
+
+  @override
+  String get pricingDowngradeLoseAccess =>
+      'Du verlierst Zugang zu Pro-Features. Bestehende Daten bleiben erhalten.';
+
+  @override
+  String get pricingDemoCheckoutNotice =>
+      'Hinweis: Dies ist ein Demo-Switch ohne Zahlungsabwicklung. Sobald Stripe/Paddle integriert ist, läuft hier der echte Checkout.';
+
+  @override
+  String get pricingActivatePlan => 'Plan aktivieren';
+
+  @override
+  String get pricingDoSwitch => 'Wechseln';
+
+  @override
+  String get pricingCycleMonthly => 'Monatlich';
+
+  @override
+  String get pricingCycleYearly => 'Jährlich · –17%';
+
+  @override
+  String get trackingCarrierPickTitle => 'Versanddienst wählen';
+
+  @override
+  String get trackingAmazonCountryTitle => 'Amazon · Land wählen';
+
+  @override
+  String get trackingTooltipUnknown =>
+      'Tracking — Versanddienst nicht erkannt (lange drücken zum Auswählen)';
+
+  @override
+  String trackingTooltipKnown(String carrier) {
+    return '$carrier · lange drücken zum Wechseln';
+  }
+
+  @override
+  String get globalSearchHint =>
+      'Suchen über Deals, Lager, Tickets, Käufer, Lieferanten…';
+
+  @override
+  String get globalSearchBuyerFilterSubtitle => 'Käufer · Deals filtern';
+
+  @override
+  String get dealPickerSearchHint =>
+      'Suche nach Produkt, Ticket, Shop oder Käufer …';
+
+  @override
+  String get dealPickerEmpty => 'Kein passender Deal gefunden.';
+
+  @override
+  String get mailboxDialogEditTitle => 'Postfach bearbeiten';
+
+  @override
+  String get mailboxDialogAddTitle => 'IMAP-Konto hinzufügen';
+
+  @override
+  String get mailboxDialogPasswordEditLabel =>
+      'App-Passwort (leer lassen, wenn unverändert)';
+
+  @override
+  String get productInvalidNumber => 'Ungültige Zahl';
+
+  @override
+  String inventoryPiecesCount(int quantity) {
+    return '$quantity Stück';
+  }
+
+  @override
+  String get heatmapTapHint => 'Tippe auf einen Tag für Details';
+
+  @override
+  String get billingProfileSectionContact => 'Kontaktperson';
+
+  @override
+  String get billingProfileSectionAddress => 'Rechnungsadresse';
+
+  @override
+  String get billingProfileFieldCompany => 'Firma (optional)';
+
+  @override
+  String get billingProfileFieldVatId => 'USt-IdNr. (optional)';
+
+  @override
+  String get billingProfileFieldPhone => 'Telefon';
+
+  @override
+  String get billingProfileFieldAddr2 => 'Adresszusatz (optional)';
+
+  @override
+  String get billingProfileFieldPostal => 'PLZ';
+
+  @override
+  String get billingProfileFieldCity => 'Ort';
+
+  @override
+  String get billingProfileFieldRegion => 'Bundesland (optional)';
+
+  @override
+  String get billingProfileFieldCountry => 'Land';
+
+  @override
+  String get billingProfileCountryValidation => 'ISO 2-Buchstaben';
+
+  @override
+  String pricingPlanActivated(String plan) {
+    return 'Plan $plan aktiviert.';
+  }
+
+  @override
+  String get pricingActivationFailed => 'Aktivierung fehlgeschlagen.';
+
+  @override
+  String get heatmapLess => 'Weniger';
+
+  @override
+  String get heatmapMore => 'Mehr';
 }

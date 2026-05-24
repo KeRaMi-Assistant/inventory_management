@@ -670,13 +670,13 @@ class _AccountMenu extends StatelessWidget {
                   children: [
                     Text(
                       plan == BillingPlan.free
-                          ? 'Plan auswählen'
-                          : 'Plan verwalten',
+                          ? l10n.planMenuSelect
+                          : l10n.planMenuManage,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Aktuell: ${plan.label}',
+                      l10n.planMenuCurrent(plan.label),
                       style: TextStyle(
                           fontSize: 11, color: AppTheme.textMutedOf(context)),
                     ),
@@ -693,7 +693,9 @@ class _AccountMenu extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  plan == BillingPlan.free ? 'Upgrade' : plan.label,
+                  plan == BillingPlan.free
+                      ? l10n.planMenuUpgradeBadge
+                      : plan.label,
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,

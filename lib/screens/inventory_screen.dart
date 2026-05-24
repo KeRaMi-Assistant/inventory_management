@@ -1224,7 +1224,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                   children: [
                     Icon(Icons.circle, size: 10, color: color),
                     const SizedBox(width: 4),
-                    Text('${item.quantity} Stück', style: TextStyle(fontWeight: FontWeight.w800, color: color)),
+                    Text(AppLocalizations.of(context).inventoryPiecesCount(item.quantity), style: TextStyle(fontWeight: FontWeight.w800, color: color)),
                     const Spacer(),
                     Text(item.costPrice != null ? money.format(item.costPrice) : '-', style: const TextStyle(fontSize: 13)),
                   ],

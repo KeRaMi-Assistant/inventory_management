@@ -102,7 +102,9 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
 
   String? _requiredValidator(String? v) {
     if (!_isPaidContext) return null;
-    if ((v ?? '').trim().isEmpty) return 'Pflichtfeld für kostenpflichtige Pläne';
+    if ((v ?? '').trim().isEmpty) {
+      return AppLocalizations.of(context).billingProfileRequiredField;
+    }
     return null;
   }
 
@@ -135,13 +137,17 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
       await billing.save(updated);
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('Rechnungsdaten gespeichert.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).billingProfileSaved),
+        ),
       );
       navigator.pop(true);
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Speichern fehlgeschlagen: $e')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).billingProfileSaveFailed),
+        ),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -158,7 +164,7 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rechnungsdaten'),
+        title: Text(AppLocalizations.of(context).settingsBillingDetailsTitle),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -190,15 +196,15 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                             color: const Color(0xFFFFE082),
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.info_outline, size: 20),
-                            SizedBox(width: 10),
+                            const Icon(Icons.info_outline, size: 20),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'Für kostenpflichtige Pläne benötigen wir eine '
-                                'vollständige Rechnungsadresse (Pflichtfelder mit *).',
+                                AppLocalizations.of(context)
+                                    .billingProfilePaidHint,
                               ),
                             ),
                           ],
@@ -206,11 +212,14 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                       ),
                       const SizedBox(height: 20),
                     ],
-                    _SectionHeader('Kontaktperson'),
+                    _SectionHeader(
+                        AppLocalizations.of(context)
+                            .billingProfileSectionContact),
                     const SizedBox(height: 8),
                     _Field(
                       controller: _fullName,
-                      label: 'Vollständiger Name',
+                      label: AppLocalizations.of(context)
+                          .billingProfileFieldFullName,
                       required: paidContext,
                       validator: _requiredValidator,
                       textCapitalization: TextCapitalization.words,
@@ -218,19 +227,22 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                     const SizedBox(height: 12),
                     _Field(
                       controller: _company,
-                      label: 'Firma (optional)',
+                      label: AppLocalizations.of(context)
+                          .billingProfileFieldCompany,
                       textCapitalization: TextCapitalization.words,
                     ),
                     const SizedBox(height: 12),
                     _Field(
                       controller: _vatId,
-                      label: 'USt-IdNr. (optional)',
+                      label: AppLocalizations.of(context)
+                          .billingProfileFieldVatId,
                       hint: 'DE123456789',
                     ),
                     const SizedBox(height: 12),
                     _Field(
                       controller: _phone,
-                      label: 'Telefon',
+                      label: AppLocalizations.of(context)
+                          .billingProfileFieldPhone,
                       required: paidContext,
                       validator: _requiredValidator,
                       keyboardType: TextInputType.phone,
@@ -241,18 +253,22 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    _SectionHeader('Rechnungsadresse'),
+                    _SectionHeader(
+                        AppLocalizations.of(context)
+                            .billingProfileSectionAddress),
                     const SizedBox(height: 8),
                     _Field(
                       controller: _addr1,
-                      label: 'Straße & Hausnummer',
+                      label: AppLocalizations.of(context)
+                          .billingProfileFieldStreet,
                       required: paidContext,
                       validator: _requiredValidator,
                     ),
                     const SizedBox(height: 12),
                     _Field(
                       controller: _addr2,
-                      label: 'Adresszusatz (optional)',
+                      label: AppLocalizations.of(context)
+                          .billingProfileFieldAddr2,
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -262,7 +278,8 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                           width: 120,
                           child: _Field(
                             controller: _postal,
-                            label: 'PLZ',
+                            label: AppLocalizations.of(context)
+                                .billingProfileFieldPostal,
                             required: paidContext,
                             validator: _requiredValidator,
                             keyboardType: TextInputType.number,
@@ -277,7 +294,8 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                         Expanded(
                           child: _Field(
                             controller: _city,
-                            label: 'Ort',
+                            label: AppLocalizations.of(context)
+                                .billingProfileFieldCity,
                             required: paidContext,
                             validator: _requiredValidator,
                             textCapitalization: TextCapitalization.words,
@@ -292,7 +310,8 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                         Expanded(
                           child: _Field(
                             controller: _region,
-                            label: 'Bundesland (optional)',
+                            label: AppLocalizations.of(context)
+                                .billingProfileFieldRegion,
                             textCapitalization: TextCapitalization.words,
                           ),
                         ),
@@ -301,12 +320,14 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                           width: 120,
                           child: _Field(
                             controller: _country,
-                            label: 'Land',
+                            label: AppLocalizations.of(context)
+                                .billingProfileFieldCountry,
                             required: true,
                             validator: (v) {
                               final t = (v ?? '').trim();
                               if (t.length != 2) {
-                                return 'ISO 2-Buchstaben';
+                                return AppLocalizations.of(context)
+                                    .billingProfileCountryValidation;
                               }
                               return null;
                             },
@@ -332,13 +353,17 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: Text(_saving ? 'Speichern...' : 'Speichern'),
+                        child: Text(
+                          _saving
+                              ? AppLocalizations.of(context)
+                                  .billingProfileSaving
+                              : AppLocalizations.of(context).actionSave,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Diese Daten werden ausschließlich für Rechnungen und '
-                      'gesetzlich vorgeschriebene Pflichtangaben verwendet.',
+                      AppLocalizations.of(context).billingProfileDataNotice,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.textMutedOf(context),
                           ),
