@@ -1756,5 +1756,16 @@
   "stocktakeDiffReportNoDiff": "Keine Differenzen — Bestand ist korrekt.",
   "stocktakeNoItems": "Keine Positionen",
   "detailPaneNoSelection": "Kein Eintrag ausgewählt",
-  "detailPaneNoSelectionHint": "Wähle links einen Artikel aus, um Details zu sehen."
+  "detailPaneNoSelectionHint": "Wähle links einen Artikel aus, um Details zu sehen.",
+
+  "confirmTypeNamePrompt": "Gib „{name}“ ein, um zu bestätigen.",
+  "@confirmTypeNamePrompt": {
+    "description": "Aufforderung zur Texteingabe im requireTypeName-Modus des ConfirmDialog. Verwendet deutsche typografische Anführungszeichen (U+201E/U+201C).",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "appFeedbackUndoAction": "Rückgängig",
+  "appFeedbackErrorDefault": "Etwas ist schiefgegangen. Bitte erneut versuchen."
 }

@@ -1756,5 +1756,16 @@
   "stocktakeDiffReportNoDiff": "No differences — stock is correct.",
   "stocktakeNoItems": "No items",
   "detailPaneNoSelection": "No item selected",
-  "detailPaneNoSelectionHint": "Pick an item from the list to see its details."
+  "detailPaneNoSelectionHint": "Pick an item from the list to see its details.",
+
+  "confirmTypeNamePrompt": "Type \"{name}\" to confirm.",
+  "@confirmTypeNamePrompt": {
+    "description": "Prompt text in requireTypeName mode of the ConfirmDialog. EN uses ASCII straight quotes.",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "appFeedbackUndoAction": "Undo",
+  "appFeedbackErrorDefault": "Something went wrong. Please try again."
 }

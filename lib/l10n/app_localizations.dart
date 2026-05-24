@@ -8221,6 +8221,24 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Wähle links einen Artikel aus, um Details zu sehen.'**
   String get detailPaneNoSelectionHint;
+
+  /// Aufforderung zur Texteingabe im requireTypeName-Modus des ConfirmDialog. Verwendet deutsche typografische Anführungszeichen (U+201E/U+201C).
+  ///
+  /// In de, this message translates to:
+  /// **'Gib „{name}“ ein, um zu bestätigen.'**
+  String confirmTypeNamePrompt(String name);
+
+  /// No description provided for @appFeedbackUndoAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Rückgängig'**
+  String get appFeedbackUndoAction;
+
+  /// No description provided for @appFeedbackErrorDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Etwas ist schiefgegangen. Bitte erneut versuchen.'**
+  String get appFeedbackErrorDefault;
 }
 
 class _AppLocalizationsDelegate

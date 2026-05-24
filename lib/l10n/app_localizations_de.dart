@@ -4538,4 +4538,16 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get detailPaneNoSelectionHint =>
       'Wähle links einen Artikel aus, um Details zu sehen.';
+
+  @override
+  String confirmTypeNamePrompt(String name) {
+    return 'Gib „$name“ ein, um zu bestätigen.';
+  }
+
+  @override
+  String get appFeedbackUndoAction => 'Rückgängig';
+
+  @override
+  String get appFeedbackErrorDefault =>
+      'Etwas ist schiefgegangen. Bitte erneut versuchen.';
 }

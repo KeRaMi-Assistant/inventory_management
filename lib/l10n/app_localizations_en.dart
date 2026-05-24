@@ -4510,4 +4510,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get detailPaneNoSelectionHint =>
       'Pick an item from the list to see its details.';
+
+  @override
+  String confirmTypeNamePrompt(String name) {
+    return 'Type \"$name\" to confirm.';
+  }
+
+  @override
+  String get appFeedbackUndoAction => 'Undo';
+
+  @override
+  String get appFeedbackErrorDefault =>
+      'Something went wrong. Please try again.';
 }
