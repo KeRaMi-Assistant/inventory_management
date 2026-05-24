@@ -37,6 +37,18 @@ class InventoryProvider extends ChangeNotifier {
   final _uuid = const Uuid();
 
   List<Deal> _deals = [];
+
+  /// IDs von Deals, für die ein verzögertes Löschen (Delayed-Commit) aussteht.
+  /// Diese Deals sind lokal noch im Cache vorhanden, werden aber aus dem
+  /// [deals]-Getter gefiltert (optimistic hide). Der DB-Call erfolgt erst
+  /// nach Ablauf des Timers in [_pendingDeleteTimers].
+  final Set<int> _pendingDeleteIds = {};
+
+  /// Aktive Timer für verzögerte Deal-Löschungen.
+  /// Key: Deal-ID. Value: aktiver Timer, der nach Ablauf [_commitPendingDelete]
+  /// aufruft.
+  final Map<int, Timer> _pendingDeleteTimers = {};
+
   List<Buyer> _buyers = [];
   List<Shop> _shops = [];
   List<Supplier> _suppliers = [];
@@ -75,7 +87,14 @@ class InventoryProvider extends ChangeNotifier {
 
   /// Sorted views — the underlying lists are pre-sorted on every load so the
   /// getters are O(n) wraps, not O(n log n) re-sorts.
-  List<Deal> get deals => List.unmodifiable(_deals);
+  ///
+  /// Deals mit ausstehendem Delayed-Commit-Delete ([_pendingDeleteIds]) werden
+  /// optimistisch herausgefiltert — sie sind im Cache, aber nicht sichtbar.
+  List<Deal> get deals => _pendingDeleteIds.isEmpty
+      ? List.unmodifiable(_deals)
+      : List.unmodifiable(
+          _deals.where((d) => !_pendingDeleteIds.contains(d.id)),
+        );
   List<Buyer> get buyers => List.unmodifiable(_buyers);
   List<Shop> get shops => List.unmodifiable(_shops);
   List<Supplier> get suppliers => List.unmodifiable(_suppliers);
@@ -605,6 +624,70 @@ class InventoryProvider extends ChangeNotifier {
     _deals.removeWhere((d) => d.id == id);
     if (deal != null) _log('Deal gelöscht: ${deal.product}', 'deal');
     notifyListeners();
+  }
+
+  // ── Optimistic-Delete mit Delayed-Commit (Undo-Pattern) ──────────────────
+
+  /// Startet einen verzögerten Lösch-Vorgang für einen Deal.
+  ///
+  /// Der Deal wird sofort aus dem [deals]-Getter gefiltert (optimistisch
+  /// unsichtbar), aber der DB-Call erfolgt erst nach [delay] (Default: 4 s).
+  /// Während dieser Zeit kann der User via [cancelPendingDelete] rückgängig
+  /// machen — ohne DB-Touch.
+  ///
+  /// Wenn für dieselbe [id] bereits ein Timer läuft, wird er zuerst
+  /// gecancelt und ein neuer gestartet (idempotentes Doppel-Delete).
+  void deleteDealWithUndo(
+    int id, {
+    Duration delay = const Duration(seconds: 4),
+  }) {
+    // Idempotent: bereits laufenden Timer canceln, Marker bleibt aber gesetzt.
+    _pendingDeleteTimers[id]?.cancel();
+
+    _pendingDeleteIds.add(id);
+    notifyListeners();
+
+    _pendingDeleteTimers[id] = Timer(delay, () => _commitPendingDelete(id));
+  }
+
+  /// Bricht den verzögerten Lösch-Vorgang ab — der Deal kommt zurück in die
+  /// Liste. Kein DB-Touch.
+  void cancelPendingDelete(int id) {
+    _pendingDeleteTimers.remove(id)?.cancel();
+    _pendingDeleteIds.remove(id);
+    notifyListeners();
+  }
+
+  /// Führt den tatsächlichen DB-Delete aus und entfernt das Item endgültig
+  /// aus dem lokalen Cache. Wird nach Timer-Ablauf gerufen.
+  void _commitPendingDelete(int id) {
+    _pendingDeleteTimers.remove(id);
+    _pendingDeleteIds.remove(id);
+
+    final deal = _deals.where((d) => d.id == id).firstOrNull;
+    // Async fire-and-forget — Fehler werden geloggt, aber kein UI-State
+    // wechselt (Item ist bereits aus der Ansicht verschwunden).
+    _repository.deleteDeal(id).then((_) {
+      _deals.removeWhere((d) => d.id == id);
+      if (deal != null) _log('Deal gelöscht (commit): ${deal.product}', 'deal');
+      notifyListeners();
+    }).catchError((Object e) {
+      // Bei Fehler: Item wieder sichtbar machen und Cache bereinigen.
+      _log('Deal-Delete fehlgeschlagen: $e', 'deal');
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    // Laufende Timers beim Dispose canceln — sie würden sonst nach Dispose
+    // auf einem ungültigen Provider feuern.
+    for (final timer in _pendingDeleteTimers.values) {
+      timer.cancel();
+    }
+    _pendingDeleteTimers.clear();
+    _pendingDeleteIds.clear();
+    super.dispose();
   }
 
   Future<void> updateDealsStatus(Iterable<int> ids, String status) async {

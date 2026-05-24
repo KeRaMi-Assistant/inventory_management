@@ -534,6 +534,9 @@
   "dealDeleteTitle": "Delete entry",
   "dealDeleteConfirm": "Delete \"{product}\" (ID: {id})?",
   "@dealDeleteConfirm": { "placeholders": { "product": {}, "id": { "type": "int" } } },
+  "dealDeleteConfirmTitle": "Delete deal?",
+  "dealDeleteConfirmMessage": "This will remove the deal. You have 4 seconds to undo.",
+  "dealDeletedFeedback": "Deal deleted",
 
   "bulkStatus": "Status",
   "bulkBuyer": "Buyer",
@@ -1767,5 +1770,312 @@
   },
 
   "appFeedbackUndoAction": "Undo",
-  "appFeedbackErrorDefault": "Something went wrong. Please try again."
+  "appFeedbackErrorDefault": "Something went wrong. Please try again.",
+
+  "inboxTabSuggestions": "Suggestions ({count})",
+  "@inboxTabSuggestions": {
+    "description": "Tab label for suggestions with count.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxTabUpdated": "Updated ({count})",
+  "@inboxTabUpdated": {
+    "description": "Tab label for updated deals with count.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxTabUnclassified": "Unclassified ({count})",
+  "@inboxTabUnclassified": {
+    "description": "Tab label for unclassified mails with count.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxMailboxConnectedCount": "{count, plural, =1{1 mailbox connected} other{{count} mailboxes connected}}",
+  "@inboxMailboxConnectedCount": {
+    "description": "Header text when mailboxes are connected.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxMailboxNone": "No mailbox connected yet",
+  "@inboxMailboxNone": {
+    "description": "Header text when no mailbox is connected."
+  },
+  "inboxPollingHint": "Polling every 5 min — only order confirmations, shipping and cancellation mails from configured shops appear here.",
+  "@inboxPollingHint": {
+    "description": "Explanatory text under the mailbox header when a mailbox is connected."
+  },
+  "inboxMailboxNoneHint": "Add an IMAP account under Settings → Mailbox.",
+  "@inboxMailboxNoneHint": {
+    "description": "Hint text when no mailbox is connected yet."
+  },
+  "inboxDismissalFilterTooltipEmpty": "Dismissed filter (0)",
+  "@inboxDismissalFilterTooltipEmpty": {
+    "description": "Tooltip for the dismissed-filter button when no dismissed entries exist."
+  },
+  "inboxDismissalFilterTooltipCount": "Reset dismissed filter ({count, plural, =1{1 entry} other{{count} entries}})",
+  "@inboxDismissalFilterTooltipCount": {
+    "description": "Tooltip for the dismissed-filter button with count of dismissed entries.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxImportingTooltip": "Importing mails… ({count} so far)",
+  "@inboxImportingTooltip": {
+    "description": "Tooltip for the import button while importing.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxPollNowTooltip": "Poll now (instead of waiting 5 min)",
+  "@inboxPollNowTooltip": {
+    "description": "Tooltip for the poll button when mailbox is connected and ready."
+  },
+  "inboxConnectFirstTooltip": "Connect a mailbox in Settings first",
+  "@inboxConnectFirstTooltip": {
+    "description": "Tooltip for the poll button when no mailbox is connected."
+  },
+  "inboxReparseTrackingTitle": "Re-read tracking data",
+  "@inboxReparseTrackingTitle": {
+    "description": "Title of the re-parse tracking menu item in the header popup menu."
+  },
+  "inboxReparseTrackingSubtitle": "Re-applies the current adapter registry to all suggestions. Fixes incorrectly extracted tracking numbers (e.g. when an adapter bug saved an internal shipment ID instead of the real carrier number).",
+  "@inboxReparseTrackingSubtitle": {
+    "description": "Subtitle of the re-parse tracking menu item."
+  },
+  "inboxFilterAllShops": "All shops",
+  "@inboxFilterAllShops": {
+    "description": "Label in the shop filter sheet when no shop filter is active."
+  },
+  "inboxFilterAllStatus": "All statuses",
+  "@inboxFilterAllStatus": {
+    "description": "Label in the status filter sheet when no status filter is active."
+  },
+  "inboxFilterResetBodyCount": "{count} dismissed entries will be shown again. Order confirmations that arrived in the meantime will also reappear in the inbox tab.",
+  "@inboxFilterResetBodyCount": {
+    "description": "Body text of the dialog to reset the dismissed filter.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxDiscardFilterCleared": "Dismissed filter cleared.",
+  "@inboxDiscardFilterCleared": {
+    "description": "SnackBar text after successfully clearing the dismissed filter."
+  },
+  "inboxClearDismissalsFailed": "Reset failed: {error}",
+  "@inboxClearDismissalsFailed": {
+    "description": "SnackBar text when clearing the dismissed filter fails.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxPolling": "Polling mailbox…",
+  "@inboxPolling": {
+    "description": "SnackBar text while the mailbox is being polled."
+  },
+  "inboxPollingFailed": "Polling failed: {error}",
+  "@inboxPollingFailed": {
+    "description": "SnackBar text when polling fails.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxPollFetched": "{count, plural, =1{1 mail fetched} other{{count} mails fetched}}",
+  "@inboxPollFetched": {
+    "description": "Poll result: number of fetched mails.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxPollStored": "{count} stored",
+  "@inboxPollStored": {
+    "description": "Poll result: number of stored mails.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inboxPollSuggestedMerged": "{suggested} suggestions / {matched} merged",
+  "@inboxPollSuggestedMerged": {
+    "description": "Poll result: number of suggestions and merged mails.",
+    "placeholders": {
+      "suggested": { "type": "int" },
+      "matched": { "type": "int" }
+    }
+  },
+  "inboxPollUpToDate": "No new matching mails. Mailbox is up to date.",
+  "@inboxPollUpToDate": {
+    "description": "SnackBar text when polling finds no new mails."
+  },
+  "inboxRetracking": "Re-reading tracking data…",
+  "@inboxRetracking": {
+    "description": "SnackBar text when re-parse tracking starts."
+  },
+  "inboxReparseFailed": "Re-parse failed: {error}",
+  "@inboxReparseFailed": {
+    "description": "SnackBar text when re-parse fails.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxReparseRescued": "{rescued, plural, =1{1 suggestion} other{{rescued} suggestions}} corrected ({scanned} checked).",
+  "@inboxReparseRescued": {
+    "description": "SnackBar text after re-parse when corrections were made.",
+    "placeholders": {
+      "rescued": { "type": "int" },
+      "scanned": { "type": "int" }
+    }
+  },
+  "inboxReparseNoCorrections": "No corrections needed ({scanned} checked).",
+  "@inboxReparseNoCorrections": {
+    "description": "SnackBar text after re-parse when no corrections were needed.",
+    "placeholders": {
+      "scanned": { "type": "int" }
+    }
+  },
+  "inboxDiscardMailTitle": "Discard mail?",
+  "@inboxDiscardMailTitle": {
+    "description": "Title of the dialog to discard a mail."
+  },
+  "inboxDiscardMailBody": "The mail \"{subject}\" will be removed from the inbox and no longer shown.",
+  "@inboxDiscardMailBody": {
+    "description": "Body text of the dialog to discard a mail.",
+    "placeholders": {
+      "subject": { "type": "String" }
+    }
+  },
+  "inboxMailDiscarded": "Mail discarded.",
+  "@inboxMailDiscarded": {
+    "description": "SnackBar text after successfully discarding a mail."
+  },
+  "inboxDiscardFailed": "Discard failed: {error}",
+  "@inboxDiscardFailed": {
+    "description": "SnackBar text when discarding a mail fails.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxSuggestionCompleteFailed": "Could not complete suggestion: {error}",
+  "@inboxSuggestionCompleteFailed": {
+    "description": "SnackBar text when completing a suggestion fails.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxSuggestionRejectFailed": "Rejection failed: {error}",
+  "@inboxSuggestionRejectFailed": {
+    "description": "SnackBar text when rejecting a suggestion fails.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxTrackingAdopted": "Tracking applied to deal #{dealId}.",
+  "@inboxTrackingAdopted": {
+    "description": "SnackBar text after successfully applying tracking to a deal.",
+    "placeholders": {
+      "dealId": { "type": "int" }
+    }
+  },
+  "inboxTrackingAdoptionFailed": "Tracking adoption failed: {error}",
+  "@inboxTrackingAdoptionFailed": {
+    "description": "SnackBar text when tracking adoption fails.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxApplyTrackingToDeal": "Apply tracking to deal",
+  "@inboxApplyTrackingToDeal": {
+    "description": "Label for the menu item and dialog title for applying tracking to a deal."
+  },
+  "inboxApplyTrackingHint": "Tracking {tracking} → deal tracking, status will be set to \"In transit\".",
+  "@inboxApplyTrackingHint": {
+    "description": "Hint text in the DealPickerDialog when applying tracking.",
+    "placeholders": {
+      "tracking": { "type": "String" }
+    }
+  },
+  "inboxApplyTrackingHintShort": "Tracking {tracking} → deal tracking.",
+  "@inboxApplyTrackingHintShort": {
+    "description": "Short hint text in the DealPickerDialog when applying tracking from an unclassified mail.",
+    "placeholders": {
+      "tracking": { "type": "String" }
+    }
+  },
+  "inboxLinkToDealTitle": "Assign suggestion to deal",
+  "@inboxLinkToDealTitle": {
+    "description": "Dialog title when assigning a suggestion to a deal."
+  },
+  "inboxLinkToDealHint": "Order ID, tracking and ETA will be adopted into the selected deal, the suggestion will be ticked off.",
+  "@inboxLinkToDealHint": {
+    "description": "Hint text in the DealPickerDialog when assigning a suggestion."
+  },
+  "inboxSuggestionLinked": "Suggestion linked to deal #{dealId}.",
+  "@inboxSuggestionLinked": {
+    "description": "SnackBar text after successfully linking a suggestion to a deal.",
+    "placeholders": {
+      "dealId": { "type": "int" }
+    }
+  },
+  "inboxLinkFailed": "Assignment failed: {error}",
+  "@inboxLinkFailed": {
+    "description": "SnackBar text when assigning a suggestion to a deal fails.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "inboxDetailsAndTracking": "Show details & tracking",
+  "@inboxDetailsAndTracking": {
+    "description": "Tooltip and menu label for showing details and tracking information."
+  },
+  "inboxLinkToExistingDeal": "Assign to existing deal",
+  "@inboxLinkToExistingDeal": {
+    "description": "Menu label for assigning a suggestion to an existing deal."
+  },
+  "inboxDealCreatedFromMail": "Deal #{dealId} created from mail.",
+  "@inboxDealCreatedFromMail": {
+    "description": "SnackBar text after successfully creating a deal from an unclassified mail.",
+    "placeholders": {
+      "dealId": { "type": "int" }
+    }
+  },
+  "inboxCreateDeal": "Create deal",
+  "@inboxCreateDeal": {
+    "description": "Menu label and button label for creating a deal from a mail."
+  },
+  "inboxApplyTrackingToDealShort": "Tracking → Deal",
+  "@inboxApplyTrackingToDealShort": {
+    "description": "Short button label for applying tracking to a deal."
+  },
+  "inboxShowDetails": "Show details",
+  "@inboxShowDetails": {
+    "description": "Menu label for showing mail details."
+  },
+  "inboxCountdownToday": "Gone today",
+  "@inboxCountdownToday": {
+    "description": "CountdownPill label when the suggestion disappears from the inbox today."
+  },
+  "inboxCountdownOneDay": "1 day left",
+  "@inboxCountdownOneDay": {
+    "description": "CountdownPill label when 1 day of inbox visibility remains."
+  },
+  "inboxCountdownDays": "{days} days left",
+  "@inboxCountdownDays": {
+    "description": "CountdownPill label when multiple days of inbox visibility remain.",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "inboxCountdownTooltip": "Inbox visibility {totalDays} days. Updates on next refresh.",
+  "@inboxCountdownTooltip": {
+    "description": "Tooltip of the CountdownPill with total visibility window.",
+    "placeholders": {
+      "totalDays": { "type": "int" }
+    }
+  },
+  "inboxTrackingCopied": "Tracking number copied.",
+  "@inboxTrackingCopied": {
+    "description": "SnackBar text after successfully copying the tracking number."
+  }
 }

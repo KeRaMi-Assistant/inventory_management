@@ -9,6 +9,7 @@ import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../utils/responsive.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/statistics/kpi_card.dart';
 import 'purchase_orders_screen.dart';
@@ -232,15 +233,13 @@ class _EmptyStateCardState extends State<_EmptyStateCard> {
 
   Future<void> _loadDemo() async {
     final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     final ob = context.read<OnboardingProvider>();
     final activeWs = context.read<ActiveWorkspaceProvider>();
     final inv = context.read<InventoryProvider>();
     final wsId = activeWs.active?.id;
     if (wsId == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.onboardingErrorNoWorkspace)),
-      );
+      // Workspace nicht vorhanden — synchron, context ist garantiert gültig.
+      AppFeedback.error(context, l10n.onboardingErrorNoWorkspace);
       return;
     }
     setState(() => _loading = true);
@@ -248,16 +247,17 @@ class _EmptyStateCardState extends State<_EmptyStateCard> {
     if (!mounted) return;
     setState(() => _loading = false);
     if (result == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.dashboardDemoLoadError(ob.lastError ?? ''))),
-      );
+      // Demo-Load fehlgeschlagen. Rohe Exception-Strings werden nicht
+      // durchgereicht (ob.lastError wäre ein interner Provider-Fehler).
+      // Stattdessen generischer Fehler-Key — für Details muss der User
+      // die Fehler-Logs prüfen (Pre-Launch, kein Support-Chat nötig).
+      AppFeedback.error(context, l10n.appFeedbackErrorDefault);
       return;
     }
     await inv.loadData();
     if (!mounted) return;
-    messenger.showSnackBar(
-      SnackBar(content: Text(l10n.dashboardDemoLoadSuccess(result.total))),
-    );
+    // Demo-Reload ist idempotent → kein Undo erforderlich.
+    AppFeedback.info(context, l10n.dashboardDemoLoadSuccess(result.total));
   }
 
   @override

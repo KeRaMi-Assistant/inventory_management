@@ -1201,6 +1201,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get dealDeleteConfirmTitle => 'Delete deal?';
+
+  @override
+  String get dealDeleteConfirmMessage =>
+      'This will remove the deal. You have 4 seconds to undo.';
+
+  @override
+  String get dealDeletedFeedback => 'Deal deleted';
+
+  @override
   String get bulkStatus => 'Status';
 
   @override
@@ -4522,4 +4532,254 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get appFeedbackErrorDefault =>
       'Something went wrong. Please try again.';
+
+  @override
+  String inboxTabSuggestions(int count) {
+    return 'Suggestions ($count)';
+  }
+
+  @override
+  String inboxTabUpdated(int count) {
+    return 'Updated ($count)';
+  }
+
+  @override
+  String inboxTabUnclassified(int count) {
+    return 'Unclassified ($count)';
+  }
+
+  @override
+  String inboxMailboxConnectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count mailboxes connected',
+      one: '1 mailbox connected',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get inboxMailboxNone => 'No mailbox connected yet';
+
+  @override
+  String get inboxPollingHint =>
+      'Polling every 5 min — only order confirmations, shipping and cancellation mails from configured shops appear here.';
+
+  @override
+  String get inboxMailboxNoneHint =>
+      'Add an IMAP account under Settings → Mailbox.';
+
+  @override
+  String get inboxDismissalFilterTooltipEmpty => 'Dismissed filter (0)';
+
+  @override
+  String inboxDismissalFilterTooltipCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count entries',
+      one: '1 entry',
+    );
+    return 'Reset dismissed filter ($_temp0)';
+  }
+
+  @override
+  String inboxImportingTooltip(int count) {
+    return 'Importing mails… ($count so far)';
+  }
+
+  @override
+  String get inboxPollNowTooltip => 'Poll now (instead of waiting 5 min)';
+
+  @override
+  String get inboxConnectFirstTooltip => 'Connect a mailbox in Settings first';
+
+  @override
+  String get inboxReparseTrackingTitle => 'Re-read tracking data';
+
+  @override
+  String get inboxReparseTrackingSubtitle =>
+      'Re-applies the current adapter registry to all suggestions. Fixes incorrectly extracted tracking numbers (e.g. when an adapter bug saved an internal shipment ID instead of the real carrier number).';
+
+  @override
+  String get inboxFilterAllShops => 'All shops';
+
+  @override
+  String get inboxFilterAllStatus => 'All statuses';
+
+  @override
+  String inboxFilterResetBodyCount(int count) {
+    return '$count dismissed entries will be shown again. Order confirmations that arrived in the meantime will also reappear in the inbox tab.';
+  }
+
+  @override
+  String get inboxDiscardFilterCleared => 'Dismissed filter cleared.';
+
+  @override
+  String inboxClearDismissalsFailed(String error) {
+    return 'Reset failed: $error';
+  }
+
+  @override
+  String get inboxPolling => 'Polling mailbox…';
+
+  @override
+  String inboxPollingFailed(String error) {
+    return 'Polling failed: $error';
+  }
+
+  @override
+  String inboxPollFetched(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count mails fetched',
+      one: '1 mail fetched',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String inboxPollStored(int count) {
+    return '$count stored';
+  }
+
+  @override
+  String inboxPollSuggestedMerged(int suggested, int matched) {
+    return '$suggested suggestions / $matched merged';
+  }
+
+  @override
+  String get inboxPollUpToDate =>
+      'No new matching mails. Mailbox is up to date.';
+
+  @override
+  String get inboxRetracking => 'Re-reading tracking data…';
+
+  @override
+  String inboxReparseFailed(String error) {
+    return 'Re-parse failed: $error';
+  }
+
+  @override
+  String inboxReparseRescued(int rescued, int scanned) {
+    String _temp0 = intl.Intl.pluralLogic(
+      rescued,
+      locale: localeName,
+      other: '$rescued suggestions',
+      one: '1 suggestion',
+    );
+    return '$_temp0 corrected ($scanned checked).';
+  }
+
+  @override
+  String inboxReparseNoCorrections(int scanned) {
+    return 'No corrections needed ($scanned checked).';
+  }
+
+  @override
+  String get inboxDiscardMailTitle => 'Discard mail?';
+
+  @override
+  String inboxDiscardMailBody(String subject) {
+    return 'The mail \"$subject\" will be removed from the inbox and no longer shown.';
+  }
+
+  @override
+  String get inboxMailDiscarded => 'Mail discarded.';
+
+  @override
+  String inboxDiscardFailed(String error) {
+    return 'Discard failed: $error';
+  }
+
+  @override
+  String inboxSuggestionCompleteFailed(String error) {
+    return 'Could not complete suggestion: $error';
+  }
+
+  @override
+  String inboxSuggestionRejectFailed(String error) {
+    return 'Rejection failed: $error';
+  }
+
+  @override
+  String inboxTrackingAdopted(int dealId) {
+    return 'Tracking applied to deal #$dealId.';
+  }
+
+  @override
+  String inboxTrackingAdoptionFailed(String error) {
+    return 'Tracking adoption failed: $error';
+  }
+
+  @override
+  String get inboxApplyTrackingToDeal => 'Apply tracking to deal';
+
+  @override
+  String inboxApplyTrackingHint(String tracking) {
+    return 'Tracking $tracking → deal tracking, status will be set to \"In transit\".';
+  }
+
+  @override
+  String inboxApplyTrackingHintShort(String tracking) {
+    return 'Tracking $tracking → deal tracking.';
+  }
+
+  @override
+  String get inboxLinkToDealTitle => 'Assign suggestion to deal';
+
+  @override
+  String get inboxLinkToDealHint =>
+      'Order ID, tracking and ETA will be adopted into the selected deal, the suggestion will be ticked off.';
+
+  @override
+  String inboxSuggestionLinked(int dealId) {
+    return 'Suggestion linked to deal #$dealId.';
+  }
+
+  @override
+  String inboxLinkFailed(String error) {
+    return 'Assignment failed: $error';
+  }
+
+  @override
+  String get inboxDetailsAndTracking => 'Show details & tracking';
+
+  @override
+  String get inboxLinkToExistingDeal => 'Assign to existing deal';
+
+  @override
+  String inboxDealCreatedFromMail(int dealId) {
+    return 'Deal #$dealId created from mail.';
+  }
+
+  @override
+  String get inboxCreateDeal => 'Create deal';
+
+  @override
+  String get inboxApplyTrackingToDealShort => 'Tracking → Deal';
+
+  @override
+  String get inboxShowDetails => 'Show details';
+
+  @override
+  String get inboxCountdownToday => 'Gone today';
+
+  @override
+  String get inboxCountdownOneDay => '1 day left';
+
+  @override
+  String inboxCountdownDays(int days) {
+    return '$days days left';
+  }
+
+  @override
+  String inboxCountdownTooltip(int totalDays) {
+    return 'Inbox visibility $totalDays days. Updates on next refresh.';
+  }
+
+  @override
+  String get inboxTrackingCopied => 'Tracking number copied.';
 }

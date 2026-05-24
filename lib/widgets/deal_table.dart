@@ -13,6 +13,8 @@ import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import 'add_edit_deal_dialog.dart';
+import 'app_feedback.dart';
+import 'confirm_dialog.dart';
 import 'deal_card.dart';
 import 'tracking_banner_improved_detection.dart';
 import 'tracking_chip.dart';
@@ -1020,31 +1022,73 @@ class _DealRowState extends State<_DealRow> {
     }
   }
 
-  void _confirmDelete(
-      BuildContext context, InventoryProvider provider, Deal deal) {
+  Future<void> _confirmDelete(
+      BuildContext context, InventoryProvider provider, Deal deal) async {
     final l10n = AppLocalizations.of(context);
-    showDialog(
+    // Capture messenger + theme-dependent values BEFORE the async gap so
+    // they remain valid even if the widget rebuilds during the dialog.
+    final messenger = ScaffoldMessenger.of(context);
+    final successBg = AppTheme.successBgOf(context);
+    final successText = AppTheme.successTextOf(context);
+    final bottomMargin = MediaQuery.sizeOf(context).width < Breakpoints.phone
+        ? (kBottomNavHeight + MediaQuery.paddingOf(context).bottom + 8.0)
+        : 16.0;
+    final feedbackMessage = l10n.dealDeletedFeedback;
+    final undoLabel = l10n.appFeedbackUndoAction;
+
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(l10n.dealDeleteTitle),
-        content: Text(l10n.dealDeleteConfirm(deal.product, deal.id)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.actionCancel)),
-          ElevatedButton(
-            onPressed: () {
-              provider.deleteDeal(deal.id);
-              Navigator.pop(context);
-            },
-            style:
-                ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
-            child: Text(l10n.actionDelete,
-                style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      title: l10n.dealDeleteConfirmTitle,
+      message: l10n.dealDeleteConfirmMessage,
+      confirmLabel: l10n.actionDelete,
+      isDestructive: true,
     );
+    if (!confirmed) return;
+
+    // Optimistic-Local-Restore mit Delayed-Commit:
+    // Provider markiert den Deal als pending-delete und filtert ihn aus der
+    // UI. Der tatsächliche DB-Call erfolgt nach 4 s, falls kein Undo erfolgt.
+    provider.deleteDealWithUndo(deal.id);
+
+    // SnackBar mit Undo-Action — capturedWerte verwenden, kein Context-Zugriff
+    // nach dem async gap (lint: use_build_context_synchronously).
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          key: const Key('appFeedbackSuccess'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: successBg,
+          margin: EdgeInsets.only(left: 16, right: 16, bottom: bottomMargin),
+          duration: const Duration(seconds: 4),
+          elevation: 2,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          content: Row(
+            children: [
+              Icon(Icons.check_circle_outline_rounded,
+                  color: successText, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  feedbackMessage,
+                  style: TextStyle(
+                    color: successText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          action: SnackBarAction(
+            key: const Key('appFeedbackUndoAction'),
+            label: undoLabel,
+            textColor: successText,
+            onPressed: () => provider.cancelPendingDelete(deal.id),
+          ),
+        ),
+      );
   }
 }
 

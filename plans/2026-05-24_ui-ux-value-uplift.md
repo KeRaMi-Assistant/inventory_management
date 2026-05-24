@@ -715,7 +715,7 @@ möglich wo `depends` leer.
   Plan-Upgrade-Hinweise als `AppFeedback.info`.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2, C2]`
 
-- [ ] **A5** Migriere `deals_screen.dart` + `deal_table.dart`
+- [x] **A5** Migriere `deals_screen.dart` + `deal_table.dart`
   SnackBars auf `AppFeedback`. Confirm-Dialog für „Deal
   löschen" auf `showConfirmDialog(isDestructive: true)`.
   Undo-Support für Delete (Optimistic-Restore aus A7-Audit;
@@ -753,7 +753,7 @@ möglich wo `depends` leer.
   Confirm-Dialogs.
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
-- [ ] **A6j** `dashboard_screen.dart` SnackBars (CTA-Errors,
+- [x] **A6j** `dashboard_screen.dart` SnackBars (CTA-Errors,
   Refresh-Failures).
   `agent: flutter-coder` · `model: sonnet` · `depends: [A1, A2]`
 
@@ -840,7 +840,7 @@ möglich wo `depends` leer.
 
 ### Epic C — l10n + Color-Hygiene (P0)
 
-- [ ] **C1** ARB-Keys in `app_de.arb` + `app_en.arb` für alle 16+
+- [x] **C1** ARB-Keys in `app_de.arb` + `app_en.arb` für alle 16+
   `inbox_screen.dart`-Strings hinzufügen, idiomatische EN-
   Übersetzungen. `flutter gen-l10n`-Pass.
   `agent: flutter-coder` · `model: sonnet` · `depends: []`
@@ -850,7 +850,7 @@ möglich wo `depends` leer.
   EN-Variante nutzt ASCII-`"…"`-Quotes (siehe §5.3).
   `agent: flutter-coder` · `model: sonnet` · `depends: []`
 
-- [ ] **C3** `inbox_screen.dart` — alle 16+ hardcoded Strings auf
+- [x] **C3** `inbox_screen.dart` — alle 16+ hardcoded Strings auf
   `l10n.*` umbiegen.
   `agent: flutter-coder` · `model: sonnet` · `depends: [C1]`
 

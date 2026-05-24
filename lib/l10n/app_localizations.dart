@@ -2246,6 +2246,24 @@ abstract class AppLocalizations {
   /// **'„{product}\" (ID: {id}) wirklich löschen?'**
   String dealDeleteConfirm(Object product, int id);
 
+  /// No description provided for @dealDeleteConfirmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal löschen?'**
+  String get dealDeleteConfirmTitle;
+
+  /// No description provided for @dealDeleteConfirmMessage.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Aktion entfernt den Deal. Du hast 4 Sekunden, um es rückgängig zu machen.'**
+  String get dealDeleteConfirmMessage;
+
+  /// No description provided for @dealDeletedFeedback.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal gelöscht'**
+  String get dealDeletedFeedback;
+
   /// No description provided for @bulkStatus.
   ///
   /// In de, this message translates to:
@@ -8239,6 +8257,336 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Etwas ist schiefgegangen. Bitte erneut versuchen.'**
   String get appFeedbackErrorDefault;
+
+  /// Tab-Label für Vorschläge mit Anzahl.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschläge ({count})'**
+  String inboxTabSuggestions(int count);
+
+  /// Tab-Label für aktualisierte Deals mit Anzahl.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktualisiert ({count})'**
+  String inboxTabUpdated(int count);
+
+  /// Tab-Label für unklassifizierte Mails mit Anzahl.
+  ///
+  /// In de, this message translates to:
+  /// **'Unklassifiziert ({count})'**
+  String inboxTabUnclassified(int count);
+
+  /// Header-Text wenn Postfächer verbunden sind.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Postfach verbunden} other{{count} Postfächer verbunden}}'**
+  String inboxMailboxConnectedCount(int count);
+
+  /// Header-Text wenn kein Postfach verbunden ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch kein Postfach verbunden'**
+  String get inboxMailboxNone;
+
+  /// Erklärtext unter dem Postfach-Header wenn Postfach verbunden.
+  ///
+  /// In de, this message translates to:
+  /// **'Polling alle 5 min — nur Bestellbestätigungen, Versand- und Stornierungs-Mails der konfigurierten Shops landen hier.'**
+  String get inboxPollingHint;
+
+  /// Hinweistext wenn noch kein Postfach verbunden ist.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege unter Einstellungen → Postfach ein IMAP-Konto an.'**
+  String get inboxMailboxNoneHint;
+
+  /// Tooltip des Verworfen-Filter-Buttons wenn keine verworfenen Einträge vorhanden.
+  ///
+  /// In de, this message translates to:
+  /// **'Verworfen-Filter (0)'**
+  String get inboxDismissalFilterTooltipEmpty;
+
+  /// Tooltip des Verworfen-Filter-Buttons mit Anzahl verworfener Einträge.
+  ///
+  /// In de, this message translates to:
+  /// **'Verworfen-Filter zurücksetzen ({count, plural, =1{1 Eintrag} other{{count} Einträge}})'**
+  String inboxDismissalFilterTooltipCount(int count);
+
+  /// Tooltip des Import-Buttons während des Imports.
+  ///
+  /// In de, this message translates to:
+  /// **'Importiere Mails… ({count} bisher)'**
+  String inboxImportingTooltip(int count);
+
+  /// Tooltip des Poll-Buttons wenn Postfach verbunden und bereit.
+  ///
+  /// In de, this message translates to:
+  /// **'Jetzt pollen (statt 5 min warten)'**
+  String get inboxPollNowTooltip;
+
+  /// Tooltip des Poll-Buttons wenn noch kein Postfach verbunden.
+  ///
+  /// In de, this message translates to:
+  /// **'Erst Postfach in den Einstellungen verbinden'**
+  String get inboxConnectFirstTooltip;
+
+  /// Titel des Re-Parse-Tracking-Menüeintrags im Header-PopupMenu.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Daten neu auslesen'**
+  String get inboxReparseTrackingTitle;
+
+  /// Untertitel des Re-Parse-Tracking-Menüeintrags.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendet die aktuelle Adapter-Registry erneut auf alle Vorschläge an. Korrigiert falsch extrahierte Tracking-Nummern (z.B. wenn ein Adapter-Bug eine interne Shipment-ID statt der echten Carrier-Nr gespeichert hat).'**
+  String get inboxReparseTrackingSubtitle;
+
+  /// Label im Shop-Filter-Sheet wenn kein Shop-Filter aktiv.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Shops'**
+  String get inboxFilterAllShops;
+
+  /// Label im Status-Filter-Sheet wenn kein Status-Filter aktiv.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Status'**
+  String get inboxFilterAllStatus;
+
+  /// Body-Text des Dialogs zum Zurücksetzen des Verworfen-Filters.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} verworfene Einträge werden wieder angezeigt. Bestellbestätigungen, die zwischenzeitlich erneut gekommen sind, erscheinen ebenfalls wieder im Inbox-Tab.'**
+  String inboxFilterResetBodyCount(int count);
+
+  /// SnackBar-Text nach erfolgreichem Leeren des Verworfen-Filters.
+  ///
+  /// In de, this message translates to:
+  /// **'Verworfen-Filter geleert.'**
+  String get inboxDiscardFilterCleared;
+
+  /// SnackBar-Text wenn das Leeren des Verworfen-Filters fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurücksetzen fehlgeschlagen: {error}'**
+  String inboxClearDismissalsFailed(String error);
+
+  /// SnackBar-Text wenn das Postfach gerade gepollt wird.
+  ///
+  /// In de, this message translates to:
+  /// **'Pollt das Postfach…'**
+  String get inboxPolling;
+
+  /// SnackBar-Text wenn das Polling fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Polling fehlgeschlagen: {error}'**
+  String inboxPollingFailed(String error);
+
+  /// Poll-Ergebnis: Anzahl geholter Mails.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, =1{1 Mail geholt} other{{count} Mails geholt}}'**
+  String inboxPollFetched(int count);
+
+  /// Poll-Ergebnis: Anzahl gespeicherter Mails.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} aufgenommen'**
+  String inboxPollStored(int count);
+
+  /// Poll-Ergebnis: Anzahl Vorschläge und gemergter Mails.
+  ///
+  /// In de, this message translates to:
+  /// **'{suggested} Vorschl. / {matched} gemerged'**
+  String inboxPollSuggestedMerged(int suggested, int matched);
+
+  /// SnackBar-Text wenn das Polling keine neuen Mails findet.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine neuen passenden Mails. Postfach ist aktuell.'**
+  String get inboxPollUpToDate;
+
+  /// SnackBar-Text beim Start des Re-Parse-Trackings.
+  ///
+  /// In de, this message translates to:
+  /// **'Liest Tracking-Daten neu aus…'**
+  String get inboxRetracking;
+
+  /// SnackBar-Text wenn der Re-Parse fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Re-Parse fehlgeschlagen: {error}'**
+  String inboxReparseFailed(String error);
+
+  /// SnackBar-Text nach Re-Parse wenn Korrekturen vorgenommen wurden.
+  ///
+  /// In de, this message translates to:
+  /// **'{rescued, plural, =1{1 Vorschlag} other{{rescued} Vorschläge}} korrigiert ({scanned} geprüft).'**
+  String inboxReparseRescued(int rescued, int scanned);
+
+  /// SnackBar-Text nach Re-Parse wenn keine Korrekturen nötig waren.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Korrekturen nötig ({scanned} geprüft).'**
+  String inboxReparseNoCorrections(int scanned);
+
+  /// Titel des Dialogs zum Verwerfen einer Mail.
+  ///
+  /// In de, this message translates to:
+  /// **'Mail verwerfen?'**
+  String get inboxDiscardMailTitle;
+
+  /// Body-Text des Dialogs zum Verwerfen einer Mail.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Mail „{subject}\" wird aus der Inbox entfernt und nicht mehr angezeigt.'**
+  String inboxDiscardMailBody(String subject);
+
+  /// SnackBar-Text nach erfolgreichem Verwerfen einer Mail.
+  ///
+  /// In de, this message translates to:
+  /// **'Mail verworfen.'**
+  String get inboxMailDiscarded;
+
+  /// SnackBar-Text wenn das Verwerfen einer Mail fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Verwerfen fehlgeschlagen: {error}'**
+  String inboxDiscardFailed(String error);
+
+  /// SnackBar-Text wenn das Abschließen eines Vorschlags fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Konnte Vorschlag nicht abschließen: {error}'**
+  String inboxSuggestionCompleteFailed(String error);
+
+  /// SnackBar-Text wenn das Ablehnen eines Vorschlags fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Ablehnen fehlgeschlagen: {error}'**
+  String inboxSuggestionRejectFailed(String error);
+
+  /// SnackBar-Text nach erfolgreicher Tracking-Übernahme auf einen Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking auf Deal #{dealId} übernommen.'**
+  String inboxTrackingAdopted(int dealId);
+
+  /// SnackBar-Text wenn die Tracking-Übernahme fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Übernahme fehlgeschlagen: {error}'**
+  String inboxTrackingAdoptionFailed(String error);
+
+  /// Label für den Menüeintrag und Dialog-Titel zum Anwenden eines Trackings auf einen Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking auf Deal anwenden'**
+  String get inboxApplyTrackingToDeal;
+
+  /// Hint-Text im DealPickerDialog beim Anwenden eines Trackings.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking {tracking} → Deal-Tracking, Status wird auf „Unterwegs\" gesetzt.'**
+  String inboxApplyTrackingHint(String tracking);
+
+  /// Kurzer Hint-Text im DealPickerDialog beim Anwenden eines Trackings aus unklassifizierter Mail.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking {tracking} → Deal-Tracking.'**
+  String inboxApplyTrackingHintShort(String tracking);
+
+  /// Dialog-Titel beim Zuweisen eines Vorschlags zu einem Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschlag zu Deal zuweisen'**
+  String get inboxLinkToDealTitle;
+
+  /// Hint-Text im DealPickerDialog beim Zuweisen eines Vorschlags.
+  ///
+  /// In de, this message translates to:
+  /// **'Order-ID, Tracking und ETA werden in den ausgewählten Deal übernommen, der Vorschlag wird abgehakt.'**
+  String get inboxLinkToDealHint;
+
+  /// SnackBar-Text nach erfolgreicher Verknüpfung eines Vorschlags mit einem Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschlag mit Deal #{dealId} verknüpft.'**
+  String inboxSuggestionLinked(int dealId);
+
+  /// SnackBar-Text wenn die Zuweisung eines Vorschlags zu einem Deal fehlschlägt.
+  ///
+  /// In de, this message translates to:
+  /// **'Zuweisung fehlgeschlagen: {error}'**
+  String inboxLinkFailed(String error);
+
+  /// Tooltip und Menü-Label zum Anzeigen von Details und Tracking-Informationen.
+  ///
+  /// In de, this message translates to:
+  /// **'Details & Tracking anzeigen'**
+  String get inboxDetailsAndTracking;
+
+  /// Menü-Label zum Zuweisen eines Vorschlags zu einem bestehenden Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu bestehendem Deal zuweisen'**
+  String get inboxLinkToExistingDeal;
+
+  /// SnackBar-Text nach erfolgreichem Anlegen eines Deals aus einer unklassifizierten Mail.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal #{dealId} aus Mail angelegt.'**
+  String inboxDealCreatedFromMail(int dealId);
+
+  /// Menü-Label und Button-Label zum Anlegen eines Deals aus einer Mail.
+  ///
+  /// In de, this message translates to:
+  /// **'Deal anlegen'**
+  String get inboxCreateDeal;
+
+  /// Kurzes Button-Label zum Anwenden eines Trackings auf einen Deal.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking → Deal'**
+  String get inboxApplyTrackingToDealShort;
+
+  /// Menü-Label zum Anzeigen der Mail-Details.
+  ///
+  /// In de, this message translates to:
+  /// **'Details anzeigen'**
+  String get inboxShowDetails;
+
+  /// CountdownPill-Label wenn die Suggestion heute aus der Inbox verschwindet.
+  ///
+  /// In de, this message translates to:
+  /// **'Heute weg'**
+  String get inboxCountdownToday;
+
+  /// CountdownPill-Label wenn noch 1 Tag Inbox-Sichtbarkeit verbleibt.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch 1 Tag'**
+  String get inboxCountdownOneDay;
+
+  /// CountdownPill-Label wenn noch mehrere Tage Inbox-Sichtbarkeit verbleiben.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch {days} Tage'**
+  String inboxCountdownDays(int days);
+
+  /// Tooltip der CountdownPill mit Gesamtsichtbarkeitsfenster.
+  ///
+  /// In de, this message translates to:
+  /// **'Inbox-Sichtbarkeit {totalDays} Tage. Aktualisiert sich beim nächsten Refresh.'**
+  String inboxCountdownTooltip(int totalDays);
+
+  /// SnackBar-Text nach erfolgreichem Kopieren der Tracking-Nummer.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracking-Nummer kopiert.'**
+  String get inboxTrackingCopied;
 }
 
 class _AppLocalizationsDelegate
