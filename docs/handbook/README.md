@@ -24,6 +24,7 @@ zu Architektur, Datenbank oder Edge-Functions springen.
 
 | # | Kapitel | Worum es geht |
 |---|---|---|
+| 00 | [Capability-Overview](00-overview.md) | Flacher, scannbarer Katalog: „Was kann diese App?" — Antwort in einem Blick, Verweise zu Detail-Kapiteln |
 | 01 | [Getting Started](01-getting-started.md) | Repo klonen, Supabase aufsetzen, Flutter starten, Login + erstes Onboarding |
 | 02 | [Konzepte](02-concepts.md) | Workspace, Deal, Inventory, Buyer, Shop, Supplier, Ticket, Inbox |
 | 03 | [Screens-Walkthrough](03-screens-walkthrough.md) | Pro Top-Level-Screen ein Abschnitt — was er tut, wie er aufgebaut ist |
