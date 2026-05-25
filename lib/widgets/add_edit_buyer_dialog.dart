@@ -391,7 +391,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
                           ),
                           const SizedBox(width: 4),
                           IconButton(
-                            icon: const Icon(Icons.remove_circle_outline,
+                            icon: const Icon(Icons.remove_circle_outlined,
                                 color: Colors.red, size: 20),
                             onPressed: () => _removeServerId(i),
                             visualDensity: VisualDensity.compact,

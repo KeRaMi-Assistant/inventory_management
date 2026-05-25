@@ -97,7 +97,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         decoration: InputDecoration(
                           labelText: l10n.fieldNewPassword,
                           prefixIcon:
-                              const Icon(Icons.lock_outline, size: 18),
+                              const Icon(Icons.lock_outlined, size: 18),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscure
@@ -121,7 +121,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         decoration: InputDecoration(
                           labelText: l10n.fieldConfirmPassword,
                           prefixIcon:
-                              const Icon(Icons.lock_outline, size: 18),
+                              const Icon(Icons.lock_outlined, size: 18),
                         ),
                         validator: (v) {
                           if (v != _passwordCtrl.text) {

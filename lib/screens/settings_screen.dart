@@ -2357,7 +2357,7 @@ class _MailboxTabState extends State<_MailboxTab> {
                             builder: (_) => const AddEditMailboxDialog(),
                           ),
                   backgroundColor: atLimit ? Colors.grey : null,
-                  icon: Icon(atLimit ? Icons.lock_outline : Icons.add),
+                  icon: Icon(atLimit ? Icons.lock_outlined : Icons.add),
                   label: Text(atLimit
                       ? l10n.settingsMailboxLimitLabel(mailboxLimit)
                       : l10n.settingsMailboxAddLabel),
@@ -2489,7 +2489,7 @@ class _MailboxIntroCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.info_outline, color: AppTheme.accentTextOf(context)),
+            Icon(Icons.info_outlined, color: AppTheme.accentTextOf(context)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -2724,7 +2724,7 @@ class _MailboxFreePlanGate extends StatelessWidget {
                             color: AppTheme.warningBgOf(ctx),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(Icons.lock_outline,
+                          child: Icon(Icons.lock_outlined,
                               color: AppTheme.warningTextOf(ctx)),
                         ),
                       ),

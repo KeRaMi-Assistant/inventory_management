@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/billing_profile.dart';
 import '../services/billing_service.dart';
+import '../utils/error_messages.dart';
 
 /// Hält das aktuelle [BillingProfile] und vermittelt Lade-/Speicher-
 /// Operationen. Wird von der Pricing- und Billing-Form-Screen verwendet
@@ -33,7 +34,7 @@ class BillingProvider extends ChangeNotifier {
       _profile = await _service.loadCurrent();
       _error = null;
     } catch (e) {
-      _error = e.toString();
+      _error = sanitizeError(e);
     } finally {
       _loading = false;
       notifyListeners();

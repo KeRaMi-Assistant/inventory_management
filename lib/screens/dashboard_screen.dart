@@ -375,22 +375,22 @@ class _ActivityItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.space8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 5),
+            padding: const EdgeInsets.only(top: 5), // off-grid: baseline-align bullet with first text line
             child: Container(
-              width: 6,
-              height: 6,
+              width: 6,  // off-grid: bullet dot size (visual, not layout spacing)
+              height: 6, // off-grid: bullet dot size (visual, not layout spacing)
               decoration: BoxDecoration(
                 color: AppTheme.accent,
                 shape: BoxShape.circle,
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppTheme.space10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,7 +442,7 @@ class _BuyerOverview extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: AppTheme.space8),
                       child: Row(
                         children: [
-                          const SizedBox(width: 20),
+                          const SizedBox(width: AppTheme.space20),
                           Expanded(
                             child: Text(l10n.dashboardColBuyer,
                                 style: TextStyle(
@@ -488,20 +488,20 @@ class _BuyerOverview extends StatelessWidget {
                     Divider(height: 1, color: AppTheme.borderStrongOf(context)),
                     ...rows.map(
                       (row) => Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        padding: const EdgeInsets.symmetric(vertical: AppTheme.space10),
                         decoration: BoxDecoration(
                           border: Border(bottom: BorderSide(color: AppTheme.borderOf(context))),
                         ),
                         child: Row(
                           children: [
                             Container(
-                              width: 10,
-                              height: 10,
+                              width: 10,  // off-grid: buyer dot indicator size (visual, not layout spacing)
+                              height: 10, // off-grid: buyer dot indicator size (visual, not layout spacing)
                               decoration: BoxDecoration(
                                   color: row.buyer.buyerCellColor,
                                   shape: BoxShape.circle),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: AppTheme.space10),
                             Expanded(
                               child: Text(row.buyer.name,
                                   style: TextStyle(
@@ -567,7 +567,7 @@ class _Panel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            padding: const EdgeInsets.fromLTRB(AppTheme.space16, AppTheme.space14, AppTheme.space16, AppTheme.space14),
             child: Row(
               children: [
                 Icon(icon, size: 16, color: AppTheme.textMutedOf(context)),

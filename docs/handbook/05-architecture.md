@@ -209,6 +209,33 @@ deutlich über 880 LoC). Hält jetzt den gesamten Warenwirtschafts-State:
 Caches `loadAll()`-Snapshot pro Workspace. Optimistic-Update-Methoden
 für jede CRUD-Aktion. CSV-Import/Export-Glue (`importCsvAll`).
 
+**Delayed-Commit-Pattern / Undo-Delete (PR #109):**
+
+`deleteDealWithUndo(int id, {Duration delay})` ersetzt direktes
+`deleteDeal`. Ablauf:
+
+1. Deal-ID wird in `_pendingDeleteIds` eingetragen — der `deals`-Getter
+   filtert diese IDs sofort heraus (optimistisches Ausblenden).
+2. Ein `Timer` auf `_pendingDeleteTimers` startet den Countdown (Default
+   4 Sekunden).
+3. Während des Countdowns kann der Caller `cancelPendingDelete(id)` rufen
+   — Timer wird gecancelt, ID aus der Set entfernt, Deal erscheint sofort
+   wieder in der Liste (Undo, kein DB-Touch).
+4. Nach Timer-Ablauf führt `_commitPendingDelete(id)` den tatsächlichen
+   `repository.deleteDeal(id)` aus.
+
+Bei `dispose()` werden alle laufenden Timers gecancelt, damit keine
+fire-and-forget Calls auf einem entsorgten Provider landen.
+
+**`initialLoadAttempted`-Flag (Cold-Start-Skeleton-Race-Fix, PR #109):**
+
+Wird nach dem ersten Rückkehren von `loadData()` auf `true` gesetzt
+(auch bei Fehler). Der Getter ermöglicht `shouldShowSkeleton()` im
+`list_skeleton.dart`, zwischen Cold-Start-Race (Provider noch nicht
+gefeuert → Skeleton zeigen) und echtem Leer-Zustand nach abgeschlossener
+Ladung (→ EmptyState zeigen) zu unterscheiden. Wird bei `clear()` auf
+`false` zurückgesetzt.
+
 ### `InboxProvider`
 
 Datei: [`inbox_provider.dart`](../../lib/providers/inbox_provider.dart)
@@ -220,6 +247,35 @@ Hält Inbox-State (≈730 LoC):
   basierend auf `BillingProvider.currentPlan`.
 - Methoden: `pollNow()`, `reparseUnclassified()`, `dismiss()`,
   `acceptSuggestion()`, `markAllRead()`.
+
+**Delayed-Reject / Optimistic-Undo (PR #109):**
+
+`rejectSuggestionWithUndo(String suggestionId, {Duration delay})` implementiert
+dasselbe Delayed-Commit-Pattern wie `InventoryProvider.deleteDealWithUndo`:
+
+1. ID wird in `_pendingRejectIds` eingetragen — der `pendingSuggestions`-Getter
+   filtert sie sofort aus der UI (optimistisches Ausblenden).
+2. Timer startet den Countdown (Default 4 Sekunden) auf `_pendingRejectTimers`.
+3. `cancelPendingReject(id)` bricht den Timer ab und macht die Suggestion
+   sofort wieder sichtbar (Undo, kein DB-Touch).
+4. Nach Timer-Ablauf ruft der Timer `markSuggestionRejected(id)` auf.
+   Bei Fehler wird der Marker trotzdem entfernt, damit die Suggestion
+   wieder erscheint (User kann es erneut versuchen).
+
+**`initialLoadAttempted`-Flag (Cold-Start-Skeleton-Race-Fix, PR #109):**
+
+Identisch zum `InventoryProvider`-Flag: gesetzt nach dem ersten Rückkehren
+von `refresh()` (auch bei Fehler), wird bei `clear()` zurückgesetzt.
+Ermöglicht `shouldShowSkeleton()` die Race-Condition zwischen Cold-Start
+und leerem Ergebnis zu unterscheiden.
+
+**Optimistic-Restore für Dismissals:**
+
+`clearDismissalsOptimistic()` leert `_dismissalKeys` sofort lokal und
+gibt einen Snapshot zurück. `restoreDismissals(keys, count)` stellt den
+Snapshot wieder her (Undo). Der DB-DELETE-Call (`clearDismissals`) wird
+erst nach Ablauf der SnackBar-Duration ausgeführt — kein DB-Touch bei
+Undo.
 
 ### `BillingProvider`
 
@@ -374,6 +430,31 @@ nutzen jetzt durchgängig `AppTheme.bgSurfaceOf(context)`,
 `AppTheme.textMutedOf(context)` etc. statt hardcoded `Colors.black54` /
 `Colors.white`. Brand-pinned `Colors.white` (Foreground auf Accent-
 Buttons) und ultra-low-alpha Shadows bleiben.
+
+### Visual-Tokens: AppSpacing / AppRadius / AppElevation (PR #109)
+
+Drei ergänzende Klassen in `app_theme.dart` bieten semantische Aliasnamen
+für konsistentes Spacing, Border-Radii und Elevations:
+
+```dart
+AppSpacing.xs  = 4   AppSpacing.sm = 8   AppSpacing.md = 12
+AppSpacing.lg  = 16  AppSpacing.xl = 24  AppSpacing.xxl = 32
+AppSpacing.xxxl = 48
+
+AppRadius.sm = 6   (Chips)
+AppRadius.md = 8   (Cards — Default)
+AppRadius.lg = 12  (Dialoge, FAB)
+AppRadius.xl = 16
+AppRadius.pill = 999  (Badges / Tags)
+
+AppElevation.card = 1   AppElevation.dialog = 8   AppElevation.fab = 6
+```
+
+Grundlage sind `AppTheme.space*`- und `AppTheme.radius*`-Konstanten
+(alle `static const double`), die ebenfalls in PR #109 zu `AppTheme`
+hinzugefügt wurden. Neue Screens sollen `AppSpacing`/`AppRadius`/
+`AppElevation` bevorzugen — Magic-Number-Abstände in `lib/` sind
+Anti-Pattern (gleiche Logik wie bei `Breakpoints.*`).
 
 ## Localization
 
@@ -560,6 +641,157 @@ EmptyState(
 Alle sichtbaren Strings kommen vom Caller via l10n — das Widget hardcodet
 keine deutschen Texte.
 
+## Modal-Layer-Widgets (PR #109)
+
+Vier neue querschnittliche Widgets standardisieren Feedback, Bestätigung,
+Formularsicherung und Lade-Zustände app-weit. Sie ersetzen lokale
+Inline-Lösungen (je nach Screen ad-hoc gebaut) durch eine einheitliche API.
+
+### `AppFeedback`
+
+Datei: [`lib/widgets/app_feedback.dart`](../../lib/widgets/app_feedback.dart)
+
+Abstrakter Helper mit statischen Methoden für konsistente SnackBars.
+Keine eigene Widget-Klasse — ausschließlich statische Methoden.
+
+| Methode | Variante | Farbe |
+|---|---|---|
+| `AppFeedback.success(context, msg, {onUndo})` | Context | `AppTheme.successBgOf` |
+| `AppFeedback.error(context, msg)` | Context | `AppTheme.dangerBgOf` |
+| `AppFeedback.info(context, msg)` | Context | `AppTheme.infoBgOf` |
+| `AppFeedback.successOn(messenger, msg, {rootContext, onUndo})` | Messenger | wie oben |
+| `AppFeedback.errorOn(messenger, msg, {rootContext})` | Messenger | wie oben |
+| `AppFeedback.infoOn(messenger, msg, {rootContext})` | Messenger | wie oben |
+
+**Phone-Bottom-Margin:** SnackBar liegt über der Bottom-Navigation
+(`kBottomNavHeight = 80 dp` + SafeArea-Bottom-Inset + 8 dp). Auf
+Desktop/Tablet 16 dp. Basis: `MediaQuery.sizeOf(context).width < Breakpoints.phone`.
+
+**Dialog-Context-Pattern:** Wenn `AppFeedback` aus einem Dialog heraus
+aufgerufen wird, muss der `ScaffoldMessengerState` VOR dem Dialog-Öffnen
+gecaptured werden (`final messenger = ScaffoldMessenger.of(context)`),
+weil nach dem Dialog-Close der Dialog-Kontext abgeräumt ist. Dann
+`AppFeedback.successOn(messenger, msg, rootContext: context)` nutzen.
+
+**Undo-Slot:** `success()` und `successOn()` akzeptieren einen
+`onUndo`-Callback. Ist er gesetzt, erscheint eine „Rückgängig"-Action
+mit `Key('appFeedbackUndoAction')` in der SnackBar.
+
+### `ConfirmDialog` / `showConfirmDialog`
+
+Datei: [`lib/widgets/confirm_dialog.dart`](../../lib/widgets/confirm_dialog.dart)
+
+Responsive Bestätigungs-Dialog-Funktion:
+
+- **Phone** (Viewport-Breite `< Breakpoints.phone`): `showModalBottomSheet`
+  mit `isScrollControlled: true` + `MediaQuery.viewInsetsOf` für
+  Keyboard-Inset. Breite Buttons (Touch-Target ≥ 48 dp).
+- **Desktop**: zentrierter `AlertDialog`.
+
+Parameter:
+
+```dart
+Future<bool> showConfirmDialog({
+  required BuildContext context,
+  required String title,
+  required String message,
+  required String confirmLabel,
+  String? cancelLabel,
+  bool isDestructive = false,   // danger-Styling + HapticFeedback
+  String? requireTypeName,      // User muss diesen String exakt eintippen
+})
+```
+
+`requireTypeName`: Confirm-Button bleibt disabled bis der User den
+exakten String eingegeben hat. Bidi-Override-Chars (U+202A–U+202E,
+U+2066–U+2069 etc.) werden vor dem Vergleich via `_sanitizeBidi()`
+gefiltert (Defense-in-Depth gegen visuelle Spoofing-Angriffe).
+
+`PopScope` liegt innerhalb des Dialog-Trees (Pflicht — sonst greift
+`canPop: false` nicht in `showDialog`-Routes).
+
+### `UnsavedChangesGuard`
+
+Datei: [`lib/widgets/unsaved_changes_guard.dart`](../../lib/widgets/unsaved_changes_guard.dart)
+
+`PopScope`-Wrapper für Dialog-/Form-Trees. Bei `isDirty: true` wird
+Back-Button / Navigator.pop abgefangen und ein Discard-Confirm via
+`showConfirmDialog` (destruktiv) angezeigt.
+
+```dart
+UnsavedChangesGuard(
+  isDirty: _formKey.currentState?.isDirty ?? false,
+  child: YourFormContent(),
+)
+```
+
+**Wichtig:** Der Guard muss INNERHALB des Dialog-Trees liegen, nicht
+um den `showDialog`-Call. Nur so greift `PopScope` auf die
+Dialog-Route.
+
+### `ListSkeleton` + `shouldShowSkeleton`
+
+Datei: [`lib/widgets/skeletons/list_skeleton.dart`](../../lib/widgets/skeletons/list_skeleton.dart)
+
+Zentrales Skeleton-Loading-Widget für Listen-Screens. Basiert auf dem
+`skeletonizer`-Paket.
+
+```dart
+ListSkeleton({
+  int itemCount = 6,        // IMMER fest — nie aus echten Daten ableiten
+  double itemHeight = 88,
+  Widget Function(BuildContext, int)? itemBuilder,
+  EdgeInsetsGeometry padding = const EdgeInsets.all(16),
+})
+```
+
+`Key('skeletonLoader')` auf dem Root — der Browser-Tester erkennt
+damit den Lade-Zustand zuverlässig.
+
+`shouldShowSkeleton({bool isLoading, bool hasData, bool initialLoadAttempted})`:
+Pure Helper-Funktion, steuert Race-Condition-safe, wann der Skeleton
+zu zeigen ist:
+
+- `!initialLoadAttempted && !hasData` → Skeleton (Cold-Start-Race).
+- `isLoading && !hasData` → Skeleton.
+- Sonst → kein Skeleton (d.h. bei Refresh mit vorhandenen Daten bleibt
+  der Content sichtbar — kein Layout-Jank).
+
+Typische Verwendung mit `AnimatedSwitcher`:
+
+```dart
+AnimatedSwitcher(
+  duration: const Duration(milliseconds: 200),
+  child: shouldShowSkeleton(
+    isLoading: provider.isLoading,
+    hasData: provider.items.isNotEmpty,
+    initialLoadAttempted: provider.initialLoadAttempted,
+  )
+      ? const ListSkeleton(key: ValueKey('skeleton'))
+      : MyList(key: ValueKey('content')),
+)
+```
+
+### `AppNavRail`
+
+Datei: [`lib/widgets/app_nav_rail.dart`](../../lib/widgets/app_nav_rail.dart)
+
+Ersetzt das frühere Custom-`_Sidebar`-Widget in `main_screen.dart`.
+Wrapping-Widget um Flutter-`NavigationRail` mit Branding-Header
+(Logo + optionale Wordmark), Plan-Gating über eine `visibility`-Map
+und Index-Mapping `MainTab ↔ RailIndex`.
+
+**API-Besonderheiten:**
+- Callback liefert `MainTab` (Enum), nicht den int-Index der Rail.
+  Intern geschieht das Mapping `visible.indexOf(selectedTab)` →
+  `visibleTabAtRailIndex` → `MainTab`.
+- `extended: true` + `labelType: null` (Labels neben Icons); bei
+  `extended: false` → `labelType: NavigationRailLabelType.none` (Assertion-Fix).
+- `scrollable: true` (Flutter SDK ≥ 3.27) für 11 Tabs auf kleinen
+  Viewport-Höhen.
+- A11y-Keys: `Key('mainNavRail')` auf Root,
+  `Key('navRailDestination-<tab.name>')` pro Destination.
+
 ## Master-Detail-Pattern
 
 Eingeführt in Epic 3 (Tasks T3.3, T3.4) als Standard für Listen-Screens auf
@@ -743,6 +975,12 @@ User-Ideen durchlaufen seit Mai 2026 einen Council-Gate bevor sie ins Backlog wa
 - [`lib/utils/responsive.dart`](../../lib/utils/responsive.dart) — Responsive-Utility (Zwei-Achsen-API)
 - [`lib/widgets/app_screen_scaffold.dart`](../../lib/widgets/app_screen_scaffold.dart) — Gemeinsames Screen-Scaffold
 - [`lib/widgets/empty_state.dart`](../../lib/widgets/empty_state.dart) — Gemeinsames Empty-State-Widget
+- [`lib/widgets/app_feedback.dart`](../../lib/widgets/app_feedback.dart) — Zentraler SnackBar-Helper
+- [`lib/widgets/confirm_dialog.dart`](../../lib/widgets/confirm_dialog.dart) — Responsiver Bestätigungs-Dialog
+- [`lib/widgets/unsaved_changes_guard.dart`](../../lib/widgets/unsaved_changes_guard.dart) — Formularsicherungs-Wrapper
+- [`lib/widgets/skeletons/list_skeleton.dart`](../../lib/widgets/skeletons/list_skeleton.dart) — Skeleton-Loading für Listen
+- [`lib/widgets/app_nav_rail.dart`](../../lib/widgets/app_nav_rail.dart) — Desktop-NavigationRail
+- [`lib/utils/error_messages.dart`](../../lib/utils/error_messages.dart) — `sanitizeError()`-Hilfsfunktion
 - [`lib/services/supabase_repository.dart`](../../lib/services/supabase_repository.dart) — Single-Point-of-Contact zum Backend
 - [`pubspec.yaml`](../../pubspec.yaml) — Dependencies
 - [`analysis_options.yaml`](../../analysis_options.yaml) — Lint-Regeln

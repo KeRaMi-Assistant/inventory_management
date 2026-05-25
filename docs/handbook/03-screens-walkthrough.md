@@ -108,6 +108,13 @@ Drei Schritte (siehe
 3. **Done** — Markiert `onboarded_at` und schaltet zum
    [`MainScreen`](#main).
 
+> **Fortschrittsanzeige (PR #109):** Die Schritt-Navigation (früher
+> eine Dot-Row) ist durch einen `_StepProgressBar` ersetzt:
+> animierter `LinearProgressIndicator` (via `TweenAnimationBuilder`,
+> smooth statt sprunghaft) + Step-Label-Text. Erste Anzeige:
+> `1/N`, letzte: `N/N`. Verbessert die Wahrnehmung des Fortschritts
+> auf Phone-Viewport erheblich.
+
 > Auf Phone-Viewport sehr wichtig: Die Buttons sind 48dp hoch, das Layout
 > nutzt `SafeArea` für Notch + Bottom-Indikator. Wenn das jemals bricht,
 > ist der erste Eindruck der App kaputt.
@@ -127,6 +134,23 @@ Wrapper-Scaffold mit Sidebar (Desktop) oder Drawer (Phone). Sehr wichtig:
   [`GlobalSearchDialog`](../../lib/widgets/global_search_dialog.dart) öffnet.
 - Floating-Action-Button "Neuer Deal" ist nur auf Index 1 (Deals) und 2
   (Tickets) sichtbar.
+
+**Mehr-Sheet / MoreNavSheet (PR #109):**
+
+Das Phone-Bottom-Sheet hinter dem „Mehr"-Slot (`Key('main-tab-more')`)
+wurde erheblich überarbeitet:
+
+- **Quick-Search-TextField** oben im Sheet filtert die angezeigten Tabs
+  nach Bezeichnung (Substring, case-insensitive).
+- **Section-Header** gruppieren die Tabs thematisch:
+  - *Verwaltung* — Lieferanten, Postfach u.a.
+  - *Tools* — Statistiken, Aktivitätseintrag.
+  - *Account* — Einstellungen, Hilfe.
+- Section-Header werden nur gerendert, wenn mindestens ein Tab der
+  Gruppe den Suchfilter übersteht.
+- **„Suchen"-Eintrag** am Kopf des Sheets — Tap schließt das Sheet und
+  öffnet sofort den Global-Search-Dialog (Kontextwechsel ohne Workaround
+  für Pop-Reihenfolge).
 
 ## Dashboard
 
@@ -257,6 +281,21 @@ CSV-Export/Import passiert über
 > Switches und überlebt einen Resize Phone↔Desktop. A11y-Keys für die
 > Detail-Spalte: `Key('detailPane')` (wenn Item gewählt) und
 > `Key('detailPaneEmpty')` (Placeholder, wenn kein Item gewählt).
+
+> **Hero-Animation Phone-gated (PR #109):** Das Produkt-Bild/-Icon in der
+> Item-Card ist mit einem `Hero`-Tag (`'product-hero-<id>'`) versehen.
+> Die Animation greift ausschließlich auf Phone-Viewport (`isPhoneViewport(context) == true`)
+> und wenn kein Master-Detail-Modus aktiv ist (`!isMasterDetail`). Auf
+> Desktop / im Master-Detail-Layout wird kein Hero gerendert, um den
+> Vollbild-Push-Übergang zu verhindern. Smoke-Test-Schlüssel:
+> `smoke-hero-no-desktop-regression`.
+
+> **Skeleton-Loader (PR #109):** Beim ersten Laden zeigt der Screen einen
+> `ListSkeleton` (via `shouldShowSkeleton`-Helper aus
+> [`lib/widgets/skeletons/list_skeleton.dart`](../../lib/widgets/skeletons/list_skeleton.dart)).
+> Race-Condition-safe: Skeleton erscheint nur, wenn `initialLoadAttempted == false`
+> (Cold-Start) oder `isLoading && !hasData`. Bei Refresh mit bereits
+> vorhandenen Daten bleibt die Liste sichtbar — kein Layout-Jank.
 
 ## Warenwirtschaft-Hub
 

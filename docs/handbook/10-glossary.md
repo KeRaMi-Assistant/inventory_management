@@ -10,6 +10,54 @@ Begriff im Kontext erklärt ist.
 
 ## A
 
+### AppElevation
+
+Klasse in [`lib/app_theme.dart`](../../lib/app_theme.dart) mit `const`-Elevation-Konstanten:
+`card = 1`, `dialog = 8`, `fab = 6`. Ergänzt `AppSpacing` und `AppRadius`
+als semantische Alternative zu Magic-Number-Schatten. Neue Widgets sollen
+diese Werte bevorzugen. Siehe
+[05 — Architektur](05-architecture.md#visual-tokens-appspacing--appradius--appelevation-pr-109).
+
+### AppFeedback
+
+Abstrakter Helper (`abstract class AppFeedback`) in
+[`lib/widgets/app_feedback.dart`](../../lib/widgets/app_feedback.dart)
+für konsistente SnackBars (success / error / info) mit optionalem
+Undo-Action-Slot. Kennt zwei Aufruf-Varianten: Context-Variante
+(`AppFeedback.success(context, …)`) und ScaffoldMessengerState-Variante
+(`AppFeedback.successOn(messenger, …, rootContext: context)`) für das
+Dialog-Context-Pattern. Bottom-Margin auf Phone: über Bottom-Nav
+(80 dp + SafeArea + 8 dp). Siehe
+[05 — Architektur](05-architecture.md#appfeedback).
+
+### AppNavRail
+
+Widget in [`lib/widgets/app_nav_rail.dart`](../../lib/widgets/app_nav_rail.dart),
+das die Desktop-Sidebar in `MainScreen` implementiert. Basiert auf
+Flutter's `NavigationRail` (Material 3) mit Branding-Header, Plan-Gating
+über `visibility`-Map und `MainTab`-basiertem Callback (kein int-Index).
+Ersetzt das frühere Custom-`_Sidebar`-Widget (PR #109). A11y-Keys:
+`Key('mainNavRail')`, `Key('navRailDestination-<tab.name>')`. Siehe
+[05 — Architektur](05-architecture.md#appnavrail).
+
+### AppRadius
+
+Klasse in [`lib/app_theme.dart`](../../lib/app_theme.dart) mit `const`-Border-Radius-Konstanten:
+`sm = 6` (Chips), `md = 8` (Cards), `lg = 12` (Dialoge/FAB), `xl = 16`,
+`pill = 999` (Badges). Semantische Aliasnamen für `AppTheme.radius*`. Neue
+Widgets sollen diese Werte bevorzugen statt Magic-Number-Werten. Verwandte
+Tokens: [AppSpacing](#appspacing), [AppElevation](#appelevation). Siehe
+[05 — Architektur](05-architecture.md#visual-tokens-appspacing--appradius--appelevation-pr-109).
+
+### AppSpacing
+
+Klasse in [`lib/app_theme.dart`](../../lib/app_theme.dart) mit `const`-Spacing-Konstanten
+auf 4-px-Basis (Material-3-aligned): `xs=4`, `sm=8`, `md=12`, `lg=16`,
+`xl=24`, `xxl=32`, `xxxl=48`. Semantische Aliasnamen für `AppTheme.space*`.
+Neue Widgets sollen `AppSpacing.*` bevorzugen statt hardcodierten Abstands-
+zahlen. Verwandte Tokens: [AppRadius](#appradius), [AppElevation](#appelevation).
+Siehe [05 — Architektur](05-architecture.md#visual-tokens-appspacing--appradius--appelevation-pr-109).
+
 ### Akzent-Palette
 
 Eine von fünf vordefinierten Farbpaletten (`blue`, `indigo`, `violet`,
@@ -131,6 +179,31 @@ Flutter-Klasse aus `provider`, die `notifyListeners()`-basierten Rebuild
 ermöglicht. Alle stateful Provider in `lib/providers/` sind
 ChangeNotifier-Subklassen. Siehe [05 — Architektur](05-architecture.md#provider-verantwortlichkeiten).
 
+### Cold-Start-Skeleton-Race
+
+Zustand, in dem ein Provider noch keinen einzigen `loadData()`/`refresh()`-
+Aufruf abgeschlossen hat (`initialLoadAttempted == false`), die UI aber
+bereits einen Build-Zyklus durchläuft. Ohne Gegenmaßnahme würde ein leeres
+EmptyState-Widget gezeigt, obwohl die Daten noch unterwegs sind. Gelöst
+durch den `shouldShowSkeleton`-Predicate in
+[`lib/widgets/skeletons/list_skeleton.dart`](../../lib/widgets/skeletons/list_skeleton.dart):
+Skeleton erscheint bei `!initialLoadAttempted && !hasData`. Betrifft
+`InventoryProvider` und `InboxProvider` (PR #109). Verwandte Begriffe:
+[ListSkeleton](#listskeleton), [shouldShowSkeleton-Predicate](#shouldshowskeleton-predicate).
+Siehe [05 — Architektur](05-architecture.md#listSkeleton--shouldshowskeleton).
+
+### ConfirmDialog
+
+Responsive Bestätigungs-Dialog-Funktion `showConfirmDialog` in
+[`lib/widgets/confirm_dialog.dart`](../../lib/widgets/confirm_dialog.dart).
+Phone (Viewport < `Breakpoints.phone`): `showModalBottomSheet` (Keyboard-safe).
+Desktop: `AlertDialog`. Unterstützt `isDestructive` (danger-Styling +
+Haptics) und `requireTypeName` (Confirm gesperrt bis exakter String getippt;
+Unicode-Bidi-Sanitize). Ablöst Inline-`AlertDialog`-Wildwuchs aus 28 Files.
+Verwandte Begriffe: [UnsavedChangesGuard](#unsavedchangesguard),
+[AppFeedback](#appfeedback). Siehe
+[05 — Architektur](05-architecture.md#confirmdialog--showconfirmdialog).
+
 ### Cron-Secret
 
 `CRON_SECRET`-Env-Variable, gemeinsamer Bearer-Token zwischen pg_cron und
@@ -143,6 +216,19 @@ den Edge-Functions. Wird mit `supabase secrets set` gesetzt.
 Kern-Entity der App. Bestellung beim Shop, die an einen Buyer
 weiterverkauft (oder direkt geliefert) wird. Tabelle `deals`. Siehe
 [02 — Konzepte](02-concepts.md#deal).
+
+### Delayed-Commit-Pattern
+
+Optimistic-UX-Muster für destruktive Aktionen (Löschen, Verwerfen): Die
+UI blendet das Element sofort aus (optimistisch), der tatsächliche DB-Call
+wird erst nach einem Timer-Ablauf (Default 4 Sekunden) ausgeführt. Der User
+kann innerhalb dieser Frist „Rückgängig" tippen — dann wird der Timer
+gecancelt, kein DB-Call. Implementiert in `InventoryProvider.deleteDealWithUndo`
+(`_pendingDeleteIds` + `_pendingDeleteTimers`) und
+`InboxProvider.rejectSuggestionWithUndo` (`_pendingRejectIds` +
+`_pendingRejectTimers`). `AppFeedback.success(context, msg, onUndo: …)`
+liefert den SnackBar-Undo-Slot. Siehe
+[05 — Architektur](05-architecture.md#delayed-commit-pattern--undo-delete-pr-109).
 
 ### Demo-Daten
 
@@ -280,6 +366,18 @@ Items mit einem Lager. Der aggregierte Bestand pro Lager ist über die
 [`WarehousesScreen`](03-screens-walkthrough.md#lager). Siehe
 [06 — Datenbank](06-database.md#warehouses).
 
+### ListSkeleton
+
+Widget in [`lib/widgets/skeletons/list_skeleton.dart`](../../lib/widgets/skeletons/list_skeleton.dart).
+Zentrales Skeleton-Loading-Widget (basiert auf `skeletonizer`-Paket).
+Rendert `itemCount` (Default 6, immer fest — nie aus echten Datenlängen
+ableiten) Platzhalter-Cards in `Skeletonizer.zone`. A11y-Key:
+`Key('skeletonLoader')`. Typisch kombiniert mit `AnimatedSwitcher` (200 ms)
+und `shouldShowSkeleton`-Predicate. Verwandte Begriffe:
+[Cold-Start-Skeleton-Race](#cold-start-skeleton-race),
+[shouldShowSkeleton-Predicate](#shouldshowskeleton-predicate). Siehe
+[05 — Architektur](05-architecture.md#listskeleton--shouldshowskeleton).
+
 ### Live-Status (Deal)
 
 Drei Spalten auf `deals` (`live_status`, `live_status_last_event`,
@@ -410,11 +508,44 @@ Supabase oder Edge-Functions spricht. Beispiel: `SupabaseRepository`. Pro
 Domain genau eine Service-Klasse. Siehe
 [05 — Architektur](05-architecture.md#service-schicht).
 
+### sanitizeError()
+
+Hilfsfunktion in [`lib/utils/error_messages.dart`](../../lib/utils/error_messages.dart).
+Wandelt rohe Exception-Objekte in User-freundliche, lokalisierte Strings um.
+Prüft der Reihe nach: `PostgrestException` (nur `message`-Field, nie
+Stack-Trace), `SocketException` (Offline), `TimeoutException`,
+`AuthException` (Anmeldung abgelaufen), `FormatException`, Fallback.
+Nimmt optionales `AppLocalizations? l10n` — ohne `l10n` greift ein
+Deutsch-Fallback-String (für Provider-Layer ohne `BuildContext`). Verwendung:
+
+```dart
+} catch (e) {
+  AppFeedback.error(context, sanitizeError(e, l10n: l10n));
+}
+```
+
+Verhindert, dass Postgres-Stack-Traces oder interne Supabase-Codes an den
+User durchdringen. Siehe
+[05 — Architektur](05-architecture.md#modal-layer-widgets-pr-109).
+
 ### Service-Role
 
 Supabase-Role mit voller Schreibrechten, ignoriert RLS. Wird **nur** in
 Edge-Functions benutzt; nie in der Flutter-App. Schlüssel:
 `SUPABASE_SERVICE_ROLE_KEY` (Secret).
+
+### shouldShowSkeleton-Predicate
+
+Pure Funktion in [`lib/widgets/skeletons/list_skeleton.dart`](../../lib/widgets/skeletons/list_skeleton.dart):
+`shouldShowSkeleton({bool isLoading, bool hasData, bool initialLoadAttempted})`.
+Gibt `true` zurück, wenn ein Skeleton-Loader angezeigt werden soll —
+und zwar Race-Condition-safe: Bei `!initialLoadAttempted && !hasData`
+(Cold-Start) sowie bei `isLoading && !hasData`. Bei Refresh mit
+vorhandenen Daten (`hasData == true`) gibt die Funktion stets `false`
+zurück (kein Layout-Jank beim Neu-Laden). Verwandte Begriffe:
+[Cold-Start-Skeleton-Race](#cold-start-skeleton-race),
+[ListSkeleton](#listskeleton). Siehe
+[05 — Architektur](05-architecture.md#listskeleton--shouldshowskeleton).
 
 ### Soft-Delete
 
@@ -451,6 +582,18 @@ Siehe [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#strict-tracking-extracti
 
 Großhändler / Lieferant. Tabelle `suppliers`. Siehe
 [02 — Konzepte](02-concepts.md#supplier).
+
+### UnsavedChangesGuard
+
+`PopScope`-Wrapper-Widget in
+[`lib/widgets/unsaved_changes_guard.dart`](../../lib/widgets/unsaved_changes_guard.dart).
+Bei `isDirty: true` wird Back-Button / `Navigator.pop` abgefangen und
+ein Discard-Confirm (destruktiv, via `showConfirmDialog`) gezeigt. Muss
+**innerhalb** des Dialog-Trees liegen (nicht um den `showDialog`-Call),
+damit `PopScope` auf die Dialog-Route wirkt. Optionaler
+`onDiscardConfirmed`-Callback für Form-State-Reset nach Discard. Verwandte
+Begriffe: [ConfirmDialog](#confirmdialog). Siehe
+[05 — Architektur](05-architecture.md#unsavedchangesguard).
 
 ## T
 

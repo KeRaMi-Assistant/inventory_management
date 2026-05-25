@@ -6,6 +6,7 @@ import '../models/inbox_message.dart';
 import '../models/mailbox_account.dart';
 import '../models/tracking_confidence.dart';
 import '../services/supabase_repository.dart';
+import '../utils/error_messages.dart';
 
 /// Hält den lokalen Cache rund um die Postfach-Integration: konfigurierte
 /// IMAP-Accounts, vorgeschlagene Deals, kürzliche geparste Mails. Lade-
@@ -492,7 +493,10 @@ class InboxProvider extends ChangeNotifier {
     try {
       return await _runPump(silent: false);
     } catch (e) {
-      _lastError = e.toString();
+      // UI zeigt nur null-Check auf lastError (AppFeedback.errorDefault),
+      // kein roher String wird angezeigt. sanitizeError verhindert dennoch
+      // interne Stacktraces im Heap.
+      _lastError = sanitizeError(e);
       notifyListeners();
       return null;
     }
@@ -517,7 +521,10 @@ class InboxProvider extends ChangeNotifier {
       await refresh();
       return result;
     } catch (e) {
-      _lastError = e.toString();
+      // UI zeigt nur null-Check auf lastError (AppFeedback.errorDefault),
+      // kein roher String wird angezeigt. sanitizeError verhindert dennoch
+      // interne Stacktraces im Heap.
+      _lastError = sanitizeError(e);
       notifyListeners();
       return null;
     }

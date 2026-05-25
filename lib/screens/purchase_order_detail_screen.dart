@@ -857,7 +857,7 @@ class _ViewerBanner extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            Icons.lock_outline,
+            Icons.lock_outlined,
             size: 16,
             color: AppTheme.warningTextOf(context),
           ),

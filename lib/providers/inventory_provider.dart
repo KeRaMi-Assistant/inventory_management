@@ -25,6 +25,7 @@ import '../models/warehouse.dart';
 import '../services/carrier_service.dart';
 import '../services/csv_service.dart';
 import '../services/supabase_repository.dart';
+import '../utils/error_messages.dart';
 
 /// Holds the full working set of cloud data for the signed-in user and routes
 /// every mutation through [SupabaseRepository]. Local lists are caches kept in
@@ -682,8 +683,10 @@ class InventoryProvider extends ChangeNotifier {
       if (deal != null) _log('Deal gelöscht (commit): ${deal.product}', 'deal');
       notifyListeners();
     }).catchError((Object e) {
-      // Bei Fehler: Item wieder sichtbar machen und Cache bereinigen.
-      _log('Deal-Delete fehlgeschlagen: $e', 'deal');
+      // _log() persistiert in `activity_log` und rendert via
+      // _ActivityItem im Dashboard — sanitizeError verhindert
+      // PostgresException-Stacktrace-Leaks in UI + DB.
+      _log('Deal-Delete fehlgeschlagen: ${sanitizeError(e)}', 'deal');
       notifyListeners();
     });
   }

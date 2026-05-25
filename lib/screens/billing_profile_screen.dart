@@ -199,7 +199,7 @@ class _BillingProfileScreenState extends State<BillingProfileScreen> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.info_outline, size: 20),
+                            const Icon(Icons.info_outlined, size: 20),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(

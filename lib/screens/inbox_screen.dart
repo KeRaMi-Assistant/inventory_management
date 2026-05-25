@@ -113,7 +113,7 @@ class _InboxScreenState extends State<InboxScreen> {
                           isLabelVisible:
                               provider.unreadUnclassifiedCount > 0,
                           child: const Icon(
-                              Icons.help_outline,
+                              Icons.help_outlined,
                               size: 18),
                         ),
                         text: AppLocalizations.of(context)
@@ -451,7 +451,7 @@ class _InboxFilterBar extends StatelessWidget {
       case SuggestionShipStatus.shipped:
         return Icons.local_shipping_outlined;
       case SuggestionShipStatus.delivered:
-        return Icons.check_circle_outline;
+        return Icons.check_circle_outlined;
       case SuggestionShipStatus.cancelled:
         return Icons.cancel_outlined;
       case SuggestionShipStatus.refunded:
@@ -774,7 +774,7 @@ class _SuggestionsTab extends StatelessWidget {
                     slivers: [
                       SliverFillRemaining(
                         child: EmptyState(
-                          icon: Icons.check_circle_outline,
+                          icon: Icons.check_circle_outlined,
                           title:
                               AppLocalizations.of(context).inboxSuggestionsEmpty,
                           subtitle: AppLocalizations.of(context)
@@ -1117,7 +1117,7 @@ class _SuggestionCard extends StatelessWidget {
                     PopupMenuItem(
                       value: 'details',
                       child: ListTile(
-                        leading: const Icon(Icons.info_outline),
+                        leading: const Icon(Icons.info_outlined),
                         title: Text(l10n.inboxDetailsAndTracking),
                         dense: true,
                       ),
@@ -1524,7 +1524,7 @@ class _UnclassifiedTab extends StatelessWidget {
                     slivers: [
                       SliverFillRemaining(
                         child: EmptyState(
-                          icon: Icons.help_outline,
+                          icon: Icons.help_outlined,
                           title: AppLocalizations.of(context)
                               .inboxUnclassifiedEmpty,
                           subtitle: AppLocalizations.of(context)
@@ -1709,7 +1709,7 @@ class _UnclassifiedRow extends StatelessWidget {
         onTap: () => _showDetails(context),
         leading: CircleAvatar(
           backgroundColor: AppTheme.warningBgOf(context),
-          child: Icon(Icons.help_outline,
+          child: Icon(Icons.help_outlined,
               color: AppTheme.warningTextOf(context), size: 20),
         ),
         title: Text(
@@ -1767,7 +1767,7 @@ class _UnclassifiedRow extends StatelessWidget {
             PopupMenuItem(
               value: 'details',
               child: ListTile(
-                leading: const Icon(Icons.info_outline),
+                leading: const Icon(Icons.info_outlined),
                 title: Text(l10n.inboxShowDetails),
                 dense: true,
               ),

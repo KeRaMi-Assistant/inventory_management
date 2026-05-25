@@ -164,7 +164,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           // ── Stammdaten der Bestands-Row ─────────────────────────────────
           _SectionCard(
             title: l10n.productDetailSectionStammdaten,
-            icon: Icons.info_outline,
+            icon: Icons.info_outlined,
             child: _StammdatenSection(
               item: liveItem,
               supplier: supplier,
@@ -444,8 +444,8 @@ class _AggregatedStockSection extends StatelessWidget {
                     : l10n.productDetailLabelOk,
                 valueColor: stockColor,
                 icon: isCritical
-                    ? Icons.error_outline
-                    : Icons.check_circle_outline,
+                    ? Icons.error_outlined
+                    : Icons.check_circle_outlined,
                 iconColor: stockColor,
               ),
             ),
@@ -611,7 +611,7 @@ class _StockSection extends StatelessWidget {
                 ? l10n.productDetailLabelCritical
                 : l10n.productDetailLabelOk,
             valueColor: stockColor,
-            icon: isCritical ? Icons.error_outline : Icons.check_circle_outline,
+            icon: isCritical ? Icons.error_outlined : Icons.check_circle_outlined,
             iconColor: stockColor,
           ),
         ),
@@ -765,7 +765,7 @@ class _MovementHistorySection extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  Icons.info_outline,
+                  Icons.info_outlined,
                   size: 14,
                   color: AppTheme.infoTextOf(context),
                 ),
@@ -998,7 +998,7 @@ class _ViewerHintBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.lock_outline,
+          Icon(Icons.lock_outlined,
               size: 16, color: AppTheme.warningTextOf(context)),
           const SizedBox(width: 8),
           Expanded(

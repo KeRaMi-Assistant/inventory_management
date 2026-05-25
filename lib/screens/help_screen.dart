@@ -370,7 +370,7 @@ class _HelpScreenState extends State<HelpScreen> {
       _HelpSection(
         id: 'faq',
         title: l10n.helpFaqSection,
-        icon: Icons.help_outline,
+        icon: Icons.help_outlined,
         items: [
           _HelpItem.text(l10n.helpFaqQ1, l10n.helpFaqA1),
           _HelpItem.text(l10n.helpFaqQ2, l10n.helpFaqA2),
@@ -1252,7 +1252,7 @@ class _DiscordSectionContent extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  Icons.info_outline,
+                  Icons.info_outlined,
                   color: AppTheme.accentTextOf(context),
                 ),
                 const SizedBox(width: 10),

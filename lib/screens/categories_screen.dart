@@ -369,7 +369,7 @@ class _ErrorState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.error_outline,
+              Icons.error_outlined,
               size: 48,
               color: AppTheme.danger,
             ),
