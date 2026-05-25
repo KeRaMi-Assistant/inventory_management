@@ -533,7 +533,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       },
       child: Container(
         color: isSelected ? AppTheme.accentLightOf(context) : null,
-        padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+        padding: const EdgeInsets.fromLTRB(AppTheme.space16, AppTheme.space10, AppTheme.space8, AppTheme.space10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -572,7 +572,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                 color: AppTheme.textMutedOf(context),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 6), // off-grid: tight visual separator between list-item rows
             Row(
               children: [
                 Icon(Icons.circle, size: 9, color: color),
@@ -597,7 +597,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                 _statusChip(context, item.status),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 6), // off-grid: tight visual separator between list-item rows
             // Action-Buttons — 48dp touch targets via SizedBox
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -605,14 +605,14 @@ class _InventoryScreenState extends State<InventoryScreen>
                 children: [
                   _actionBtn(
                     context: context,
-                    icon: Icons.add_circle_outline,
+                    icon: Icons.add_circle_outlined,
                     color: const Color(0xFF059669),
                     label: l10n.inventoryStockIn,
                     onTap: () => _adjust(context, provider, item, true),
                   ),
                   _actionBtn(
                     context: context,
-                    icon: Icons.remove_circle_outline,
+                    icon: Icons.remove_circle_outlined,
                     color: const Color(0xFFD97706),
                     label: l10n.inventoryStockOut,
                     onTap: () => _adjust(context, provider, item, false),
@@ -684,7 +684,7 @@ class _InventoryScreenState extends State<InventoryScreen>
         style: TextStyle(color: color, fontSize: 12),
       ),
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 6), // off-grid: compact inline action button; 8 is too wide here
         minimumSize: const Size(0, 48),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
@@ -803,7 +803,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     required bool isOrphaned,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space16, vertical: AppTheme.space10),
       decoration: BoxDecoration(
         color: isOrphaned
             ? AppTheme.bgSubtleOf(context)
@@ -813,7 +813,7 @@ class _InventoryScreenState extends State<InventoryScreen>
         children: [
           Icon(
             isOrphaned
-                ? Icons.help_outline
+                ? Icons.help_outlined
                 : Icons.inventory_2_outlined,
             size: 16,
             color: isOrphaned
@@ -892,7 +892,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                   hintText: l10n.inventorySearchHint,
                   isDense: true,
                   contentPadding:
-                      const EdgeInsets.symmetric(vertical: 10),
+                      const EdgeInsets.symmetric(vertical: AppTheme.space10),
                 ),
                 onChanged: (v) => setState(() => _search = v),
               ),
@@ -990,11 +990,11 @@ class _InventoryScreenState extends State<InventoryScreen>
     return Builder(builder: (ctx) {
       return Card(
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(AppTheme.space14),
           child: Row(
             children: [
               Icon(icon, color: color),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppTheme.space10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1110,7 +1110,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   ) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(AppTheme.space14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -1132,7 +1132,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 6), // off-grid: tight visual separator between list-item rows
             if (top.isEmpty)
               Text(
                 l10n.inventorySoldNoBuyer,
@@ -1282,13 +1282,13 @@ class _InventoryScreenState extends State<InventoryScreen>
                       return Row(children: [
                         TextButton.icon(
                           onPressed: () => _adjust(context, provider, item, true),
-                          icon: const Icon(Icons.add_circle_outline, size: 16, color: Color(0xFF059669)),
+                          icon: const Icon(Icons.add_circle_outlined, size: 16, color: Color(0xFF059669)),
                           label: Text(l10n.inventoryStockIn, style: const TextStyle(color: Color(0xFF059669), fontSize: 12)),
                           style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
                         ),
                         TextButton.icon(
                           onPressed: () => _adjust(context, provider, item, false),
-                          icon: const Icon(Icons.remove_circle_outline, size: 16, color: Color(0xFFD97706)),
+                          icon: const Icon(Icons.remove_circle_outlined, size: 16, color: Color(0xFFD97706)),
                           label: Text(l10n.inventoryStockOut, style: const TextStyle(color: Color(0xFFD97706), fontSize: 12)),
                           style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
                         ),
@@ -1422,12 +1422,12 @@ class _InventoryScreenState extends State<InventoryScreen>
             IconButton(
               tooltip: l10n.inventoryStockInTooltip,
               onPressed: () => _adjust(context, provider, item, true),
-              icon: const Icon(Icons.add_circle_outline, size: 18, color: Color(0xFF059669)),
+              icon: const Icon(Icons.add_circle_outlined, size: 18, color: Color(0xFF059669)),
             ),
             IconButton(
               tooltip: l10n.inventoryStockOutTooltip,
               onPressed: () => _adjust(context, provider, item, false),
-              icon: const Icon(Icons.remove_circle_outline, size: 18, color: Color(0xFFD97706)),
+              icon: const Icon(Icons.remove_circle_outlined, size: 18, color: Color(0xFFD97706)),
             ),
             IconButton(
               tooltip: l10n.actionEdit,
@@ -1463,7 +1463,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                       content: Row(children: [
                         Icon(Icons.check_circle_outline_rounded,
                             color: textColor, size: 20),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: AppTheme.space10),
                         Text(successMsg,
                             style: TextStyle(
                                 color: textColor,
@@ -1506,7 +1506,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                 controller: ctrl,
                 decoration: InputDecoration(labelText: l10n.inventoryQuantity),
                 keyboardType: TextInputType.number),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppTheme.space10),
             TextField(
                 controller: reason,
                 decoration:
@@ -1714,7 +1714,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
           children: [
             // ── Header ────────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+              padding: const EdgeInsets.fromLTRB(AppTheme.space20, AppTheme.space16, AppTheme.space12, AppTheme.space16),
               decoration: BoxDecoration(
                 border: Border(
                     bottom: BorderSide(color: AppTheme.borderOf(context))),
@@ -1756,7 +1756,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
             // ── Form (scrollable) ─────────────────────────────────────
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                padding: const EdgeInsets.fromLTRB(AppTheme.space20, AppTheme.space16, AppTheme.space20, 0),
                 child: Form(
                   key: _form,
                   child: Column(
@@ -1831,7 +1831,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                         },
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: AppTheme.space10),
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         initialValue: _status,
@@ -1850,7 +1850,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                 ),
                 const SizedBox(height: 12),
                 _buildProductField(provider),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppTheme.space20),
                 _sectionLabel(l10n.inventoryColStock),
                 const SizedBox(height: 12),
                 Row(children: [
@@ -1903,7 +1903,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     ),
                   ),
                 ]),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppTheme.space20),
                 _sectionLabel(l10n.inventorySectionId),
                 const SizedBox(height: 12),
                 Row(children: [
@@ -2027,7 +2027,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     onChanged: (v) => setState(() => _warehouseId = v),
                   ),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: AppTheme.space20),
                 _sectionLabel(l10n.inventorySectionAttachments),
                 const SizedBox(height: 12),
                 AttachmentGallery(
@@ -2037,7 +2037,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                   onChanged: (next) =>
                       setState(() => _attachmentPaths = next),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppTheme.space20),
                 _sectionLabel(l10n.dealNote),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -2067,7 +2067,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
       ),
             // ── Actions ────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              padding: const EdgeInsets.fromLTRB(AppTheme.space20, AppTheme.space12, AppTheme.space20, AppTheme.space16),
               decoration: BoxDecoration(
                 border: Border(
                     top: BorderSide(color: AppTheme.borderOf(context))),
@@ -2079,7 +2079,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     onPressed: () => Navigator.pop(context),
                     child: Text(l10n.actionCancel),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppTheme.space10),
                   ElevatedButton(
                     onPressed: () async {
                       if (!_form.currentState!.validate()) return;
@@ -2237,13 +2237,13 @@ class _StockGroupTileState extends State<_StockGroupTile> {
         InkWell(
           onTap: () => setState(() => _expanded = !_expanded),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space14, vertical: AppTheme.space10),
             decoration: BoxDecoration(color: headerBg),
             child: Row(
               children: [
                 Icon(
                   isOrphaned
-                      ? Icons.help_outline
+                      ? Icons.help_outlined
                       : Icons.inventory_2_outlined,
                   size: 16,
                   color: iconColor,

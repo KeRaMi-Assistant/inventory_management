@@ -158,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: InputDecoration(
                           labelText: l10n.fieldPassword,
                           prefixIcon:
-                              const Icon(Icons.lock_outline, size: 18),
+                              const Icon(Icons.lock_outlined, size: 18),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscure

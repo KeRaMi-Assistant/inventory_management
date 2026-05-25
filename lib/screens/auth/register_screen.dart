@@ -117,7 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         decoration: InputDecoration(
                           labelText: l10n.fieldPassword,
                           prefixIcon:
-                              const Icon(Icons.lock_outline, size: 18),
+                              const Icon(Icons.lock_outlined, size: 18),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscure
@@ -141,7 +141,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         decoration: InputDecoration(
                           labelText: l10n.fieldConfirmPassword,
                           prefixIcon:
-                              const Icon(Icons.lock_outline, size: 18),
+                              const Icon(Icons.lock_outlined, size: 18),
                         ),
                         validator: (v) {
                           if (v != _passwordCtrl.text) {

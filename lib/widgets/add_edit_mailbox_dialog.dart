@@ -372,7 +372,7 @@ class _AddEditMailboxDialogState extends State<AddEditMailboxDialog> {
                                     ? null
                                     : l10n.mailboxDialogPasswordHelper,
                                 prefixIcon: const Icon(
-                                    Icons.lock_outline,
+                                    Icons.lock_outlined,
                                     size: 18),
                                 suffixIcon: IconButton(
                                   icon: Icon(

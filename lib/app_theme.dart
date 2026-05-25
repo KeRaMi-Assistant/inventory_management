@@ -240,8 +240,11 @@ class AppTheme {
   static const double space2 = 2;
   static const double space4 = 4;
   static const double space8 = 8;
+  static const double space10 = 10; // sub-token: tight gap zwischen sm+md
   static const double space12 = 12;
+  static const double space14 = 14; // sub-token: kompakter Zeilenabstand
   static const double space16 = 16;
+  static const double space20 = 20; // sub-token: zwischen md und xl
   static const double space24 = 24;
   static const double space32 = 32;
 
@@ -567,8 +570,13 @@ class AppSpacing {
 
   static const double xs = AppTheme.space4;
   static const double sm = AppTheme.space8;
+  // Sub-tokens for common off-grid values — use when 8 is too tight and 12
+  // is too loose, or when matching a specific design spec (e.g. icon padding).
+  static const double s10 = AppTheme.space10;
   static const double md = AppTheme.space12;
+  static const double s14 = AppTheme.space14;
   static const double lg = AppTheme.space16;
+  static const double s20 = AppTheme.space20;
   static const double xl = AppTheme.space24;
   static const double xxl = AppTheme.space32;
   // xxxl has no AppTheme.space48 equivalent yet; define directly.

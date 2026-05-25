@@ -66,7 +66,7 @@ class InventorySuppliersTab extends StatelessWidget {
                 _HealthCard(
                   label: l10n.statsExpired,
                   value: '${h.expired}',
-                  icon: Icons.error_outline,
+                  icon: Icons.error_outlined,
                   color: h.expired > 0
                       ? const Color(0xFFDC2626)
                       : const Color(0xFF6B7280),

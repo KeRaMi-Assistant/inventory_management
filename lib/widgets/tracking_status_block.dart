@@ -783,9 +783,9 @@ class _LiveStatusSlot extends StatelessWidget {
         LiveTrackingStatus.pending => Icons.schedule,
         LiveTrackingStatus.inTransit => Icons.local_shipping_outlined,
         LiveTrackingStatus.outForDelivery => Icons.delivery_dining_outlined,
-        LiveTrackingStatus.delivered => Icons.check_circle_outline,
+        LiveTrackingStatus.delivered => Icons.check_circle_outlined,
         LiveTrackingStatus.exception => Icons.warning_amber_rounded,
-        LiveTrackingStatus.expired => Icons.help_outline,
+        LiveTrackingStatus.expired => Icons.help_outlined,
       };
 
   /// Gibt die passende Farbe für den Status zurück (context-aware).

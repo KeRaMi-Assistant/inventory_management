@@ -492,7 +492,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                     child: Icon(
                       widget.deal != null
                           ? Icons.edit_outlined
-                          : Icons.add_circle_outline,
+                          : Icons.add_circle_outlined,
                       color: const Color(0xFF2563EB),
                       size: 20,
                     ),
@@ -1227,7 +1227,7 @@ class _DiscordServerButtons extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.info_outline, size: 12, color: Color(0xFF0369A1)),
+                const Icon(Icons.info_outlined, size: 12, color: Color(0xFF0369A1)),
                 const SizedBox(width: 5),
                 Flexible(
                   child: Text(

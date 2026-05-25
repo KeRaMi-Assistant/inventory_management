@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../services/demo_data_service.dart';
 import '../services/workspace_service.dart';
+import '../utils/error_messages.dart';
 import 'active_workspace_provider.dart';
 
 /// Trägt den lokalen State des Onboarding-Flows: gewählte Shops, Lieferanten,
@@ -110,7 +111,7 @@ class OnboardingProvider extends ChangeNotifier {
       activeWs.applyUpdate(updated);
       return true;
     } catch (e) {
-      _lastError = e.toString();
+      _lastError = sanitizeError(e);
       if (kDebugMode) debugPrint('OnboardingProvider.complete failed: $e');
       return false;
     } finally {
@@ -133,7 +134,7 @@ class OnboardingProvider extends ChangeNotifier {
       activeWs.applyUpdate(updated);
       return true;
     } catch (e) {
-      _lastError = e.toString();
+      _lastError = sanitizeError(e);
       if (kDebugMode) debugPrint('OnboardingProvider.skip failed: $e');
       return false;
     } finally {
@@ -151,7 +152,7 @@ class OnboardingProvider extends ChangeNotifier {
     try {
       return await _demoDataService.loadDemoData(workspaceId: workspaceId);
     } catch (e) {
-      _lastError = e.toString();
+      _lastError = sanitizeError(e);
       if (kDebugMode) debugPrint('OnboardingProvider.loadDemo failed: $e');
       return null;
     } finally {
@@ -167,7 +168,7 @@ class OnboardingProvider extends ChangeNotifier {
     try {
       return await _demoDataService.wipeDemoData(workspaceId: workspaceId);
     } catch (e) {
-      _lastError = e.toString();
+      _lastError = sanitizeError(e);
       if (kDebugMode) debugPrint('OnboardingProvider.wipeDemo failed: $e');
       return null;
     } finally {

@@ -115,7 +115,7 @@ class WorkspaceSwitcher extends StatelessWidget {
           child: ListTile(
             minVerticalPadding: 12,
             leading: Icon(
-              Icons.add_circle_outline,
+              Icons.add_circle_outlined,
               color: theme.colorScheme.primary,
             ),
             title: Text(

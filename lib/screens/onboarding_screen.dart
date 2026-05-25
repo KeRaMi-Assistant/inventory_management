@@ -832,7 +832,7 @@ class _StepOutro extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.check_circle_outline,
+                      const Icon(Icons.check_circle_outlined,
                           color: AppTheme.success),
                       const SizedBox(width: 12),
                       Expanded(

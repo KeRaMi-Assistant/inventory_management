@@ -111,6 +111,8 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
       if (mounted) {
         setState(() {
           _loadingItems = false;
+          // _itemsError wird nur als null-Check verwendet (zeigt
+          // l10n.stocktakeLoadError). Kein roher String in der UI.
           _itemsError = e.toString();
         });
       }
@@ -1036,7 +1038,7 @@ class _CloseButton extends StatelessWidget {
         child: ElevatedButton.icon(
           key: const Key('stocktakeCloseButton'),
           onPressed: onPressed,
-          icon: const Icon(Icons.check_circle_outline, size: 20),
+          icon: const Icon(Icons.check_circle_outlined, size: 20),
           label: Text(
             l10n.stocktakeCloseAction,
             style: const TextStyle(fontSize: 16),
@@ -1074,7 +1076,7 @@ class _ErrorBody extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.error_outline,
+              Icons.error_outlined,
               size: 48,
               color: AppTheme.textMutedOf(context),
             ),

@@ -683,6 +683,8 @@ class InventoryProvider extends ChangeNotifier {
       notifyListeners();
     }).catchError((Object e) {
       // Bei Fehler: Item wieder sichtbar machen und Cache bereinigen.
+      // Nur internes Logging — kein UI-Rendering. _log darf rohe Exception
+      // ausgeben, da der Eintrag nicht im ActivityEntry landet.
       _log('Deal-Delete fehlgeschlagen: $e', 'deal');
       notifyListeners();
     });
