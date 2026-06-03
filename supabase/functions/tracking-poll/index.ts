@@ -69,6 +69,15 @@ interface PollStats {
 
 const MAX_DEALS_PER_RUN = 200
 
+/// DHL Parcel-DE-Tracking-API erlaubt max. 3 req/s pro API-Key (developer.dhl.com,
+/// "DHL Parcel DE Tracking"; zusätzlich 1.000 Queries/Tag). Wir drosseln die
+/// sequentiellen Carrier-Calls innerhalb eines Workspaces auf ≥350 ms Abstand
+/// (≈2.85 req/s) → sicher unter dem Limit, kein 429-Spam. Per Workspace, weil das
+/// Limit pro API-Key gilt und verschiedene Workspaces eigene Keys haben.
+const MIN_MS_BETWEEN_TRACKING_CALLS = 350
+const _trkSleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms))
+
 /// Re-Track-Cooldown pro Deal: ein User darf einen einzelnen Deal höchstens
 /// alle 30 Sekunden manuell re-tracken. Wir nutzen `deals.live_status_updated_at`
 /// als implizites Cooldown-Feld — kein extra Schema nötig. Cron-Polls (alle
@@ -331,6 +340,8 @@ async function pollWorkspace(
     return key
   }
 
+  // Throttle-State: ≥350 ms zwischen echten Carrier-API-Calls (DHL 3 req/s).
+  let madeApiCall = false
   for (const deal of eligible) {
     if (!deal.tracking || deal.tracking.trim().length === 0) continue
     // Amazon = detection-only (keine öffentliche Status-API, Plan §3.4).
@@ -356,6 +367,10 @@ async function pollWorkspace(
     if (!carriers.has(adapter.id)) continue
     const apiKey = await getKey(adapter.id)
     if (!apiKey) continue
+
+    // Rate-Limit-Schutz: ≥350 ms seit dem letzten echten API-Call (DHL 3 req/s).
+    if (madeApiCall) await _trkSleep(MIN_MS_BETWEEN_TRACKING_CALLS)
+    madeApiCall = true
 
     stat.checked++
     let parsed: ParsedTracking | null = null

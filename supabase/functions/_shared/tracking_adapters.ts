@@ -87,8 +87,11 @@ const toIso = (raw: string | undefined): string | undefined => {
 // Hintergrund 2026-05-22: Die "Shipment Tracking – Unified" API
 // (`/track/shipments`) wurde für unsere App-Registrierung revoked. Stattdessen
 // hat die App die "Parcel DE Tracking (Post & Parcel Germany)" API
-// freigeschaltet (10 000 000 calls/day vs. 250/day bei Unified). Wir migrieren
-// deshalb auf `/parcel/de/tracking/v0/shipments`.
+// freigeschaltet. Limit (verifiziert 2026-06-03, developer.dhl.com): max.
+// 1.000 Queries/Tag · max. 10.000 Sendungen/Tag · max. 3 req/s · 429 bei
+// Überschreitung · zugestellte Sendungen dürfen NICHT erneut abgefragt werden
+// (≠ alte Unified-API mit 250/Tag + 1/5s). Wir migrieren deshalb auf
+// `/parcel/de/tracking/v0/shipments`.
 //
 // Die Parcel-DE-Tracking-API spricht XML als Standard, kann aber via
 // `Accept: application/json` JSON zurückgeben. Field-Namen bleiben hyphenated
@@ -119,7 +122,7 @@ export const dhlAdapter: TrackingAdapter = {
   /// Tracking - Unified" API ist für unsere App-Registrierung revoked
   /// (siehe DHL-Developer-Portal-Screenshot vom 2026-05-22 — App-Status
   /// "mixed", Unified ist "deaktiviert", Parcel-DE ist "aktiviert" mit
-  /// 10M/Tag). Ein Unified-Fallback bei 401/403 würde nur 5s-SPIKE-Arrest-
+  /// 1.000 Queries/Tag + 3 req/s). Ein Unified-Fallback bei 401/403 würde nur
   /// Wartezeit verschwenden ohne Aussicht auf Erfolg. Falls Parcel-DE
   /// 401 zurückgibt, ist entweder der API-Key falsch (Stakeholder muss
   /// im Portal nachschauen) oder die App-Subscription nicht durch — wir
