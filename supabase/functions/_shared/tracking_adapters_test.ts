@@ -353,20 +353,46 @@ Deno.test('UPS adapter returns null for empty packages', () => {
   )
 })
 
-// ── detectAdapter ───────────────────────────────────────────────────────
-Deno.test('detectAdapter chooses UPS for 1Z…', () => {
-  assertEquals(detectAdapter('1Z999AA10123456784')?.id, 'ups')
-  assertEquals(detectAdapter('1z999aa10123456784')?.id, 'ups')
+// ── detectAdapter (Plan 2026-06-03, T4 — DHL/Amazon/DPD-Scope) ────────────
+// Scope-Reduktion: UPS ist OUT-of-scope (kein Poll-Adapter mehr), Amazon
+// Logistics ist detection-only (keine öffentliche Status-API). `detectAdapter`
+// ist nur noch der Fallback, wenn `deals.carrier` fehlt — der persistierte
+// lowercase-Carrier ist primär.
+
+Deno.test('detectAdapter: UPS 1Z… ist out-of-scope → null', () => {
+  // Plan §1/§3.4: UPS hat keinen Poll-Adapter mehr. 1Z darf NICHT mehr auf
+  // UPS geroutet werden — Poller würde sonst gegen einen entfernten Adapter
+  // laufen.
+  assertEquals(detectAdapter('1Z999AA10123456784'), null)
+  assertEquals(detectAdapter('1z999aa10123456784'), null)
 })
 
-Deno.test('detectAdapter chooses DPD for 0500-prefixed 14 digits', () => {
+Deno.test('detectAdapter: Amazon TBA… ist detection-only → null', () => {
+  // Plan §3.4: Amazon Logistics hat keine öffentliche Status-API → kein
+  // Poll-Adapter. TBA wird erkannt + gespeichert, aber nie gepollt.
+  assertEquals(detectAdapter('TBA123456789012'), null)
+})
+
+Deno.test('detectAdapter chooses DPD for 05-prefixed 14 digits', () => {
   assertEquals(detectAdapter('05001234567890')?.id, 'dpd')
 })
 
-Deno.test('detectAdapter chooses DHL for JJD-prefix and DE-prefix', () => {
+Deno.test('detectAdapter chooses DHL for JJD / S10 / 20-digit / 14-digit', () => {
+  // JJD-Prefix → DHL.
   assertEquals(detectAdapter('JJD0123456789012345')?.id, 'dhl')
-  assertEquals(detectAdapter('DE12345678')?.id, 'dhl')
+  // S10 international (2 Service + 9 Ziffern + 2 ISO-Land) → DHL.
+  assertEquals(detectAdapter('RB123456785GB')?.id, 'dhl')
+  // 20-stellige DHL-Sendungsnummer → DHL.
   assertEquals(detectAdapter('00340434161094019748')?.id, 'dhl')
+  // 14-stellige Numerik OHNE 05-Prefix → default DHL (Research R3
+  // Kollisionsregel: bare \d{12,14} fällt auf DHL, nicht DPD).
+  assertEquals(detectAdapter('12345678901234')?.id, 'dhl')
+})
+
+Deno.test('detectAdapter: DE-Prefix ist KEINE DHL-Heuristik mehr → null', () => {
+  // Plan §2.8: das alte `DE\d{8,14}`-DHL-Routing ist gelöscht (VAT-Kollision).
+  // `DE12345678` darf nicht mehr blind auf DHL geroutet werden.
+  assertEquals(detectAdapter('DE12345678'), null)
 })
 
 Deno.test('detectAdapter falls back to null on unknown', () => {

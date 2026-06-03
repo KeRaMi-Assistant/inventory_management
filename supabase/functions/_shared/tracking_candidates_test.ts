@@ -30,20 +30,22 @@ import {
 
 // ── Pattern-Tabelle Smoke-Test ────────────────────────────────────────
 
-Deno.test('TRACKING_PATTERNS: nur DHL-Patterns nach Plan 2026-05-16 §D1', () => {
-  // Pattern-Heuristik wurde mit Plan 2026-05-16 (§D1) auf DHL reduziert.
-  // UPS-1Z, Amazon-TBA, S10-UPU, context-numeric, context-alphanumeric
-  // sind raus — Detection laeuft ausschliesslich via DHL-API-Validation.
+Deno.test('TRACKING_PATTERNS: nur noch dhl-jjd (Plan 2026-06-03 §2.8)', () => {
+  // Plan 2026-06-03, T3: Die produktive Detection läuft AUSSCHLIESSLICH über
+  // `tracking_detection.detect()`. `TRACKING_PATTERNS` ist auf das eine
+  // format-eindeutige `dhl-jjd`-Pattern reduziert (schmales Legacy-Gerüst,
+  // damit die exportierte Schnittstelle stabil bleibt). Die VAT-gefährlichen
+  // Patterns (`dhl-de-prefix` = `DE\d{8,14}`, `dhl-de-suffix`) und
+  // `context-numeric-10-22` sind ENTFERNT.
   const ids = TRACKING_PATTERNS.map((p) => p.id)
   assert(ids.includes('dhl-jjd'))
-  assert(ids.includes('dhl-de-suffix'))
-  assert(ids.includes('dhl-de-prefix'))
+  // Entfernt mit Plan §2.8 — dürfen NICHT zurückkehren:
+  assert(!ids.includes('dhl-de-suffix'), 'dhl-de-suffix entfernt (VAT-Kollision)')
+  assert(!ids.includes('dhl-de-prefix'), 'dhl-de-prefix entfernt (VAT-Kollision)')
+  assert(!ids.includes('context-numeric-10-22'), 'context-numeric-10-22 entfernt')
   assert(!ids.includes('ups-1z'))
   assert(!ids.includes('amazon-tba'))
   assert(!ids.includes('s10-upu'))
-  // Plan Phase A (Iteration 2): context-numeric-10-22 wieder eingefuehrt
-  // als anchor-gated medium-Confidence. DHL-API entscheidet final.
-  assert(ids.includes('context-numeric-10-22'))
   assert(!ids.includes('context-alphanumeric-tracking'))
 })
 

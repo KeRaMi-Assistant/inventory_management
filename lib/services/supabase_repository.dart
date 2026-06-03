@@ -2005,15 +2005,23 @@ class SupabaseRepository {
   }
 
   /// Setzt eine manuell eingegebene Tracking-Nummer auf einem Deal.
-  Future<void> updateDealTrackingManually(int dealId, String tracking) async {
-    await _client
-        .from('deals')
-        .update({
-          'tracking': tracking,
-          'tracking_confidence': 'manual',
-          'tracking_needs_review': false,
-        })
-        .eq('id', dealId);
+  /// [carrier] — optionaler Carrier (lowercase 'dhl'|'amazon'|'dpd'), wird
+  /// nur geschrieben wenn nicht null, damit manuelle Notiz-Einträge ohne
+  /// erkannten Carrier die Spalte nicht überschreiben.
+  Future<void> updateDealTrackingManually(
+    int dealId,
+    String tracking, {
+    String? carrier,
+  }) async {
+    final payload = <String, dynamic>{
+      'tracking': tracking,
+      'tracking_confidence': 'manual',
+      'tracking_needs_review': false,
+    };
+    if (carrier != null) {
+      payload['carrier'] = carrier.toLowerCase();
+    }
+    await _client.from('deals').update(payload).eq('id', dealId);
   }
 }
 

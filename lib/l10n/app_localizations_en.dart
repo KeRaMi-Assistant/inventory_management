@@ -496,7 +496,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shippingIntroBody =>
-      'Enter an API key for each carrier you use so the inventory app can poll delivery status every 4 hours and mark deals as “Arrived” automatically.';
+      'Tracking numbers are detected automatically from your emails (DHL, Amazon, DPD) — no API key required. Enter an API key per carrier so the app can fetch live delivery status (daily at 13:00 and once immediately when a deal receives a tracking number) and mark deals as “Arrived” automatically.';
 
   @override
   String get shippingNoAccess =>
@@ -1500,7 +1500,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpDealsStatusInTransit =>
-      'In transit — shipping confirmation detected or set manually. Tracking number is polled every few hours.';
+      'In transit — shipping confirmation detected or set manually. As soon as a tracking number is assigned, the app checks the status once right away and then daily at 1:00 PM.';
 
   @override
   String get helpDealsStatusArrived =>
@@ -1519,7 +1519,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpDealsTrackingDesc =>
-      'When a shipping mail with a DHL tracking number arrives, the app queries DHL\'s API directly — only confirmed tracking numbers flip the deal to \"In transit\" automatically. Once DHL reports delivery, the deal flips to \"Arrived\". Other carriers (DPD, UPS, Hermes, Amazon Logistics, GLS) are no longer auto-detected from mails — enter their tracking numbers manually on the deal. See the \"Shipping & carrier API keys\" section for details.';
+      'When a shipping mail arrives, the app detects the tracking number purely from its structure (format + checksum) — DHL, Amazon Logistics and DPD are supported. No carrier API key is required for this: the number is always saved and the deal flips to \"In transit\" automatically. The live status (out for delivery, delivered) is fetched once a matching carrier API key is set — immediately on assignment and then daily at 1:00 PM. Amazon Logistics shipments are detected but can\'t be tracked live (see FAQ). Other carriers (UPS, Hermes, GLS) you enter manually on the deal when needed. See the \"Shipping & carrier API keys\" section for details.';
 
   @override
   String get helpDealsDropShipTitle => 'Multi drop-ship';
@@ -1533,7 +1533,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpDealsRetrackDesc =>
-      'In the deal detail view, next to the tracking number, you\'ll find a refresh icon labelled \"Refresh status\". It asks the carrier for the current status right away instead of waiting for the next scheduled poll — handy, for example, just before a planned delivery.\nOne retrack per deal is allowed every 30 seconds. While the lock is active the button is greyed out and shows \"Please wait 30s\" — that protects the carrier API from unnecessary calls and you from rate limits.';
+      'In the deal detail view, next to the tracking number, you\'ll find a refresh icon labelled \"Refresh status\". It asks the carrier for the current status right away instead of waiting for the daily 1:00 PM poll — handy, for example, just before a planned delivery.\nOne retrack per deal is allowed every 30 seconds. While the lock is active the button is greyed out and shows \"Please wait 30s\" — that protects the carrier API from unnecessary calls and you from rate limits.\nFor Amazon Logistics shipments the button stays greyed out permanently: Amazon doesn\'t offer a public status API, so there\'s no live status to refresh.';
 
   @override
   String get helpShippingSection => 'Shipping & carrier API keys';
@@ -1543,7 +1543,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpShippingIntroDesc =>
-      'So the app can fetch the live status of your shipments straight from the carrier (rather than just reading mails), you store one API key per carrier under Settings → Shipping. One key per carrier per workspace is enough — every member benefits from it.';
+      'The app detects tracking numbers from your mails automatically — no API key needed for that. The key is only required for the live status: so the app can fetch the current shipping status (out for delivery, delivered) straight from the carrier, you store one API key per carrier under Settings → Shipping. One key per carrier per workspace is enough — every member benefits from it.';
 
   @override
   String get helpShippingDhlTitle => 'DHL — actively supported';
@@ -1554,19 +1554,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpShippingApiOnlyTitle =>
-      'Why DHL API instead of mail heuristics?';
+      'How does the app spot a real tracking number?';
 
   @override
   String get helpShippingApiOnlyDesc =>
-      'Until recently the app detected tracking numbers from mails via regex patterns. The result: often multiple candidates per mail, only one of which was real (order no., customer no., invoice no. — every 12-digit number looked like a tracking code). Now the app queries DHL\'s API directly for each candidate: if DHL returns a shipment, the candidate is accepted; otherwise it\'s discarded. You see at most one pill per mail, and it\'s always real.';
+      'A single mail often contains several numbers that look like a tracking code (order no., customer no., invoice no.). The app checks each candidate against its structure: carrier format, length and checksum have to match exactly, and a shipping-related keyword must appear nearby. Values that only happen to look like a tracking code are discarded — a German VAT ID (two letters + nine digits, e.g. DE123456789) is therefore never mistakenly saved as a tracking number. You see at most one tracking number per mail, and it\'s structurally verified. This works entirely without an API key.';
 
   @override
-  String get helpShippingComingSoonTitle =>
-      'DPD, UPS, Hermes, Amazon Logistics — later or never';
+  String get helpShippingComingSoonTitle => 'Which carriers are supported?';
 
   @override
   String get helpShippingComingSoonDesc =>
-      'Automatic tracking detection currently runs exclusively against the DHL API. Other carriers (DPD, UPS, Hermes, Amazon Logistics, GLS) are no longer guessed from shipping mails — that was the main source of false positives. DPD and UPS will get their own API integration in a later update. Hermes and Amazon Logistics don\'t offer a public tracking API — for those carriers, enter the tracking number on the deal manually.';
+      'Tracking numbers from DHL, Amazon Logistics and DPD are detected automatically from mails.\n• DHL and DPD: detection plus live status once the matching carrier API key is set.\n• Amazon Logistics: detected and saved, but no live status — Amazon doesn\'t offer a public status API.\nOther carriers (UPS, Hermes, GLS) are deliberately not guessed from mails — that used to be the main source of wrong tracking numbers. For those, enter the tracking number on the deal manually when needed.';
 
   @override
   String get helpShippingKeySafetyTitle => 'What happens to my API key?';
@@ -1827,7 +1826,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpFaqA7 =>
-      'Carrier polling runs every 4 hours. Check Settings → Shipping that the carrier API key is set. Without a key the app cannot query the status — the mail pipeline may fill the gap via shipping mails.';
+      'The app fetches the live status once as soon as a deal gets a tracking number, and then daily at 1:00 PM. If you don\'t want to wait that long, use the \"Refresh status\" icon in the deal detail view (allowed every 30s per deal). If the status stays empty, check under Settings → Shipping whether the carrier API key is set — the tracking number itself is detected and saved even without a key, but the key is required for the live status. Amazon Logistics shipments never have a live status (see the next question).';
 
   @override
   String get helpFaqQ8 => 'Can I use multiple workspaces?';
@@ -1913,7 +1912,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpFaqA19 =>
-      'Since May 2026 the app only stores a tracking number when it is structurally verified (carrier pattern + length/checksum check). When the mail only contains an internal shop ID (e.g. an Amazon Logistics shipment ID) or the number is ambiguously formatted, the app deliberately leaves the field empty instead of saving a wrong value. You can always enter the tracking number manually on the deal — manual entries are never overwritten automatically.';
+      'The app only stores a tracking number when it is structurally verified (carrier format + length/checksum check + a shipping-related keyword nearby). When a mail only contains a similar-looking number (e.g. a VAT ID, IBAN or plain order number) or the number is ambiguously formatted, the app deliberately leaves the field empty instead of saving a wrong value. You can always enter the tracking number manually on the deal — manual entries are never overwritten automatically.';
 
   @override
   String get helpTroubleSection => 'Troubleshooting';
@@ -2226,6 +2225,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get helpFaqA24 =>
       'Settings → Push → disable the \"Low stock\" category. Push notifications for low stock will stop; the yellow warning in the dashboard and inventory tab remains as a silent indicator.';
+
+  @override
+  String get helpFaqQ25 => 'Why does my Amazon shipment have no live status?';
+
+  @override
+  String get helpFaqA25 =>
+      'The app detects Amazon Logistics shipments and saves the tracking number, but Amazon doesn\'t offer a public interface to query the shipping status. That\'s why the deal only shows \"Shipment detected — live status unavailable\" and the \"Refresh status\" icon is greyed out. Amazon often hands the parcel over to DHL — if the same mail also contains a DHL number, the app uses that as the trackable shipment and you get a normal live status there.';
 
   @override
   String get helpPrivacySection => 'Privacy & contact';
@@ -3655,6 +3661,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trackingRetrackOffline => 'No connection';
+
+  @override
+  String get trackingAmazonNoLiveStatusBadge =>
+      'Shipment detected — live status not available';
+
+  @override
+  String get trackingRetrackUnavailableAmazon =>
+      'Live status not available for Amazon Logistics';
+
+  @override
+  String get trackingManualVatRejected =>
+      'This looks like a VAT registration number (2 letters + 9 digits) and will not be saved as a tracking number.';
 
   @override
   String get inboxSectionOrder => 'Order';

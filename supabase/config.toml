@@ -1,0 +1,30 @@
+# Supabase project config.
+# Plan 2026-06-03_tracking_algorithmic_rebuild.md §3.3 / §4 (Critique C2-#2).
+#
+# Bewusst MINIMAL gehalten: dieser config.toml existiert primär, um für die
+# tracking-poll-Edge-Function `verify_jwt = false` zu setzen. Alle übrigen
+# Plattform-Einstellungen (Auth-Provider, DB-Pooler, Storage, …) werden
+# weiterhin im Supabase-Dashboard gepflegt, NICHT hier — damit dieser File
+# keine Dashboard-Config überschreibt, die nicht im Repo gespiegelt ist.
+
+# project_id ist der LOKALE Stack-Identifier (Container-Namespace), NICHT die
+# Remote-Projekt-Ref. Muss dem CLI-Default (= Repo-Verzeichnisname) entsprechen,
+# damit `supabase start/db reset` den bestehenden lokalen Stack
+# (supabase_db_inventory_management) weiterverwendet statt einen neuen anzulegen.
+project_id = "inventory_management"
+
+# ── tracking-poll: JWT-Verifikation AUS ──────────────────────────────────
+# PFLICHT-Prereq für den Event-Trigger (Migration
+# 20260603081506_tracking_poll_event_trigger.sql): der Postgres-Trigger
+# ruft die Function via net.http_post mit `Authorization: Bearer
+# <CRON_SECRET>` (KEIN Supabase-JWT). Bei verify_jwt=true (Default ohne
+# config) würde das Plattform-Gateway den Call mit 401 ablehnen, bevor der
+# Function-Code (isCron-Pfad) überhaupt läuft. Die App-interne Auth-Matrix
+# (isCron / isService / JWT-User → 401/403) bleibt im Function-Code intakt
+# — dies deaktiviert NUR den Gateway-JWT-Check, keinen App-Auth-Check.
+#
+# [Council-Fix] STRIKT nur tracking-poll. inbox-poll & andere Functions
+# NICHT hier eintragen — sie haben eine andere Auth-Matrix und behalten
+# verify_jwt=true (Default).
+[functions.tracking-poll]
+verify_jwt = false

@@ -337,16 +337,16 @@ class _AddTile extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: AppTheme.accentLight,
+          color: AppTheme.accentLightOf(context),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: AppTheme.accent.withAlpha(120),
+            color: AppTheme.accentTextOf(context).withAlpha(120),
             style: BorderStyle.solid,
             width: 1.5,
           ),
         ),
         child: Icon(Icons.add_a_photo_outlined,
-            color: AppTheme.accent, size: 20),
+            color: AppTheme.accentTextOf(context), size: 20),
       ),
     );
   }

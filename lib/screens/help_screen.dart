@@ -396,6 +396,7 @@ class _HelpScreenState extends State<HelpScreen> {
           _HelpItem.text(l10n.helpFaqQ22, l10n.helpFaqA22),
           _HelpItem.text(l10n.helpFaqQ23, l10n.helpFaqA23),
           _HelpItem.text(l10n.helpFaqQ24, l10n.helpFaqA24),
+          _HelpItem.text(l10n.helpFaqQ25, l10n.helpFaqA25),
         ],
       ),
       _HelpSection(

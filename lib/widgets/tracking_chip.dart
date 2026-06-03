@@ -20,6 +20,7 @@ class TrackingChip extends StatelessWidget {
     required this.tracking,
     this.compact = false,
     this.shopAmazonCountry,
+    this.dealCarrier,
   });
 
   final String tracking;
@@ -35,6 +36,12 @@ class TrackingChip extends StatelessWidget {
   /// Country-Accounts — der Long-Press-Country-Picker wird übersprungen.
   final String? shopAmazonCountry;
 
+  /// Carrier aus `deal.carrier` (lowercase 'dhl'|'amazon'|'dpd'). Wenn
+  /// gesetzt, wird dieser Wert direkt auf [Carrier] gemappt statt
+  /// `CarrierService.detect` client-seitig neu zu rechnen. Fallback auf
+  /// detect nur wenn `null`.
+  final String? dealCarrier;
+
   @override
   Widget build(BuildContext context) {
     // Shop-Override: Wenn der Deal einem Amazon-Country-Shop zugeordnet ist
@@ -43,9 +50,14 @@ class TrackingChip extends StatelessWidget {
     // sind zwar DHL-Codes, aber der User will sie aus der Amazon-FR-
     // Bestellhistorie öffnen, nicht aus dem DHL-Tracker. Long-Press
     // erlaubt weiterhin den manuellen Override auf einen anderen Carrier.
-    final detected = shopAmazonCountry != null
-        ? Carrier.amazon
-        : CarrierService.detect(tracking);
+    final Carrier detected;
+    if (shopAmazonCountry != null) {
+      detected = Carrier.amazon;
+    } else if (dealCarrier != null) {
+      detected = _carrierFromString(dealCarrier!);
+    } else {
+      detected = CarrierService.detect(tracking);
+    }
     return _ChipBody(
       tracking: tracking,
       detected: detected,
@@ -53,6 +65,15 @@ class TrackingChip extends StatelessWidget {
       shopAmazonCountry: shopAmazonCountry,
     );
   }
+
+  /// Mappt den lowercase DB-Carrier-String auf [Carrier]. Unbekannte Werte
+  /// fallen auf [Carrier.unknown] zurück.
+  static Carrier _carrierFromString(String s) => switch (s.toLowerCase()) {
+        'dhl' => Carrier.dhl,
+        'amazon' => Carrier.amazon,
+        'dpd' => Carrier.dpd,
+        _ => Carrier.unknown,
+      };
 }
 
 class _ChipBody extends StatelessWidget {
@@ -373,16 +394,16 @@ class _CountrySuffix extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
+        color: AppTheme.warningBgOf(context),
         borderRadius: BorderRadius.circular(3),
-        border: Border.all(color: const Color(0xFFFED7AA)),
+        border: Border.all(color: AppTheme.warningBorderOf(context)),
       ),
       child: Text(
         country,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 9,
           fontWeight: FontWeight.w800,
-          color: Color(0xFFD97706),
+          color: AppTheme.warningTextOf(context),
           letterSpacing: 0.4,
         ),
       ),

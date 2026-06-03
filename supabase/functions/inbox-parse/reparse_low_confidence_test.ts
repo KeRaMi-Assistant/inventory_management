@@ -19,11 +19,16 @@ import {
 // Council-Finding #1: Re-Parse muss BEIDE Body-Quellen lesen. Wir
 // simulieren einen parsed_payload-Row mit Plain-Text-only-Body (kein HTML)
 // und prüfen, dass findAllTrackings einen Treffer findet.
-Deno.test('reparseLowConfidence: liest plain-text _raw.text Pfad', () => {
+//
+// Plan 2026-06-03 §1/§2.8: UPS ist out-of-scope, das `ups-1z`-Pattern ist aus
+// `TRACKING_PATTERNS` gelöscht. Wir testen den plain-text-Body-Pfad jetzt mit
+// einer DHL-JJD-Nummer (in-scope, format-eindeutig) — die Body-Quellen-Merge-
+// Logik (text + html) bleibt unverändert getestet.
+Deno.test('reparseLowConfidence: liest plain-text _raw.text Pfad (DHL JJD)', () => {
   const payload = {
     _raw: {
       text:
-        'Hallo,\nIhre Sendungsnummer lautet: 1Z999AA10123456784\nDanke.',
+        'Hallo,\nIhre Sendungsnummer lautet: JJD012345678901234\nDanke.',
     },
   }
   const html = (payload as Record<string, unknown>)._raw_html ?? ''
@@ -34,17 +39,18 @@ Deno.test('reparseLowConfidence: liest plain-text _raw.text Pfad', () => {
   const candidates = findAllTrackings(body, { html: html as string })
   const { primary } = gateTracking(candidates, { minConfidence: 'strong' })
 
-  // UPS-Anchor + valid 1Z-Pattern → strong-Candidate erwartet.
+  // DHL-JJD-Pattern → strong-Candidate erwartet, carrier lowercase.
   assertEquals(primary !== null, true)
-  assertEquals(primary?.value, '1Z999AA10123456784')
-  assertEquals(primary?.carrier, 'UPS')
+  assertEquals(primary?.value, 'JJD012345678901234')
+  assertEquals(primary?.carrier, 'dhl')
 })
 
 // Council-Finding #1: HTML-Pfad (bestehendes Verhalten) bleibt intakt.
-Deno.test('reparseLowConfidence: liest _raw_html Pfad', () => {
+// DHL-href (nolp.dhl…/?piececode=…) → strong html-href-Candidate.
+Deno.test('reparseLowConfidence: liest _raw_html Pfad (DHL href)', () => {
   const payload = {
     _raw_html:
-      '<p>Tracking-Nummer: <a href="https://www.ups.com/track?tracknum=1Z999AA10123456784">1Z999AA10123456784</a></p>',
+      '<p>Tracking-Nummer: <a href="https://nolp.dhl.de/nextt-online-public/set_identcodes.do?idc=JJD012345678901234">JJD012345678901234</a></p>',
   }
   const html = (payload._raw_html as string | undefined) ?? ''
   const rawObj = (payload as Record<string, unknown>)._raw ?? {}
@@ -54,7 +60,7 @@ Deno.test('reparseLowConfidence: liest _raw_html Pfad', () => {
   const { primary } = gateTracking(candidates, { minConfidence: 'strong' })
 
   assertEquals(primary !== null, true)
-  assertEquals(primary?.value, '1Z999AA10123456784')
+  assertEquals(primary?.value, 'JJD012345678901234')
 })
 
 // Skip-Branch: weder html noch text → keine Verarbeitung.

@@ -34,6 +34,11 @@ class Deal {
   /// User oder Re-Parse korrigiert werden sollte.
   final bool trackingNeedsReview;
 
+  /// Carrier der Sendung, gesetzt vom Detection-Algorithmus oder manuell.
+  /// Lowercase: `'dhl'` | `'amazon'` | `'dpd'` | `null`.
+  /// `null` = kein Carrier erkannt oder Legacy-Deal.
+  final String? carrier;
+
   /// Live-Status der Sendung, befüllt vom `tracking-poll`-Adapter.
   /// `null` = Legacy-Deal oder noch nie gepollt.
   final LiveTrackingStatus? liveStatus;
@@ -72,6 +77,7 @@ class Deal {
     this.attachmentPaths = const [],
     this.trackingConfidence,
     this.trackingNeedsReview = false,
+    this.carrier,
     this.liveStatus,
     this.liveStatusLastEvent,
     this.liveStatusUpdatedAt,
@@ -131,6 +137,7 @@ class Deal {
         'attachmentPaths': attachmentPaths,
         'trackingConfidence': trackingConfidence?.toJson(),
         'trackingNeedsReview': trackingNeedsReview,
+        'carrier': carrier,
         'liveStatus': liveStatus?.toJson(),
         'liveStatusLastEvent': liveStatusLastEvent,
         'liveStatusUpdatedAt': liveStatusUpdatedAt?.toIso8601String(),
@@ -173,6 +180,7 @@ class Deal {
         trackingConfidence:
             TrackingConfidence.fromString(json['trackingConfidence'] as String?),
         trackingNeedsReview: json['trackingNeedsReview'] as bool? ?? false,
+        carrier: json['carrier'] as String?,
         liveStatus:
             LiveTrackingStatus.fromString(json['liveStatus'] as String?),
         liveStatusLastEvent: json['liveStatusLastEvent'] as String?,
@@ -207,6 +215,7 @@ class Deal {
         'attachment_paths': attachmentPaths,
         'tracking_confidence': trackingConfidence?.toJson(),
         'tracking_needs_review': trackingNeedsReview,
+        'carrier': carrier,
         'live_status': liveStatus?.toJson(),
         'live_status_last_event': liveStatusLastEvent,
         'live_status_updated_at': liveStatusUpdatedAt?.toIso8601String(),
@@ -250,6 +259,7 @@ class Deal {
       trackingConfidence:
           TrackingConfidence.fromString(row['tracking_confidence'] as String?),
       trackingNeedsReview: row['tracking_needs_review'] as bool? ?? false,
+      carrier: row['carrier'] as String?,
       liveStatus:
           LiveTrackingStatus.fromString(row['live_status'] as String?),
       liveStatusLastEvent: row['live_status_last_event'] as String?,
@@ -300,6 +310,7 @@ class Deal {
     List<String>? attachmentPaths,
     Object? trackingConfidence = _sentinel,
     bool? trackingNeedsReview,
+    Object? carrier = _sentinel,
     Object? liveStatus = _sentinel,
     Object? liveStatusLastEvent = _sentinel,
     Object? liveStatusUpdatedAt = _sentinel,
@@ -340,6 +351,7 @@ class Deal {
             ? this.trackingConfidence
             : trackingConfidence as TrackingConfidence?,
         trackingNeedsReview: trackingNeedsReview ?? this.trackingNeedsReview,
+        carrier: carrier == _sentinel ? this.carrier : carrier as String?,
         liveStatus: liveStatus == _sentinel
             ? this.liveStatus
             : liveStatus as LiveTrackingStatus?,

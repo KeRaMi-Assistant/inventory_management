@@ -17,12 +17,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   detectAndParse,
   detectShop,
-  findAllTrackings,
-  gateTracking,
   isAccountingMail,
   isCarrierOnly,
+  senderDomainFromHeader,
 } from '../_shared/inbox_adapters.ts'
-import { applyDhlValidation, runParseSweep, stripBody } from '../_shared/inbox_parse_runner.ts'
+import { detect as detectTracking } from '../_shared/tracking_detection.ts'
+import { runParseSweep, stripBody } from '../_shared/inbox_parse_runner.ts'
 import { stampPipelineHeartbeat } from '../_shared/tracking_validation.ts'
 
 // T12: Rate-Limit für User-getriggerte Re-Parse-Calls (5 min Cooldown).
@@ -246,6 +246,29 @@ Deno.serve(async (req) => {
     const result = await resetWorkspaceInbox(admin, targetWs)
     return jsonResp({ ok: true, mode: 'reset_all', ...result })
   }
+
+  // ── [Council-Fix §3.3] Bulk-Re-Parse-Drossel — TODO-FÜR-T5-KOORDINATION ──
+  // Der Event-Trigger `deals_enqueue_tracking_poll` (T5, noch nicht deployt)
+  // feuert bei JEDEM `deals.tracking`-Write einen Sofort-Poll. Eine bulk
+  // "Sendungsnummern neu prüfen"-Aktion über N Deals würde damit N Sofort-Polls
+  // auslösen und das Carrier-Rate-Limit (DHL ~3 req/s, §3.2) reißen.
+  //
+  // Geplante Drossel: der Re-Parse setzt in DERSELBEN Transaktion wie die
+  // Deal-Writes `SET LOCAL app.suppress_tracking_poll = 'on'`; der Trigger
+  // prüft `current_setting('app.suppress_tracking_poll', true) = 'on'` und
+  // skippt das Enqueue → der Daily-Sweep (§3.2) zieht stattdessen nach.
+  //
+  // STAND T3: Die Re-Parse-Pfade in DIESER Function schreiben ausschliesslich
+  // `parsed_messages` + `pending_deal_suggestions` (NIE `deals.tracking`
+  // direkt) — sie lösen den Trigger heute also gar nicht aus. `SET LOCAL` über
+  // den Supabase-JS-Client ist zudem nicht zuverlässig nutzbar, weil jeder
+  // PostgREST-Call eine eigene Pool-Connection/Transaktion bekommt (das GUC
+  // überlebt den `.update()`-Call nicht). T5 muss die Drossel deshalb dort
+  // verankern, wo der Re-Parse tatsächlich `deals.tracking` schreibt — am
+  // saubersten als SECURITY-DEFINER-RPC (`reparse_apply_deal(... ) SET LOCAL`)
+  // oder über einen Session-GUC, der vom Trigger gelesen wird. Sobald T5 den
+  // Trigger + RPC bereitstellt, wird hier `await admin.rpc('set_suppress_tracking_poll')`
+  // vor den Deal-Writes eingehängt.
 
   if (body.reparse_unclassified === true) {
     const result = await reparseUnclassified(admin)
@@ -474,10 +497,9 @@ async function reparseNoTracking(
   }
   let cursor: string | null = null
   const PAGE = 100
-  // Plan 2026-05-16 §D3: Re-Parse muss durch dieselbe DHL-API-Validation
-  // wie der Live-Sweep. Sonst persistieren wir Pattern-Hits, die DHL
-  // nie bestaetigt hat. KeyCache ist Run-scoped → max 1 RPC pro Workspace.
-  const keyCache = new Map<string, string | null>()
+  // Plan 2026-06-03, T3: KEIN DHL-API-Gate mehr im Re-Parse — Detection ist
+  // rein algorithmisch und persistiert immer. Heartbeat-Stempel bleibt, damit
+  // der User in Settings „Zuletzt geprüft" sieht (sofern ein Key gesetzt ist).
   const heartbeatStamped = new Set<string>()
   for (let i = 0; i < 25; i++) {
     // Council-Finding #1: BEIDE Body-Quellen (_raw_html + _raw.text) müssen
@@ -560,9 +582,11 @@ async function reparseNoTracking(
           stats.unchanged++
           continue
         }
-        // Plan 2026-05-16 §D3: DHL-API-Validation NACH detectAndParse.
-        // Pattern-Heuristik allein reicht nicht — DHL muss bestaetigen.
-        await applyDhlValidation(admin, parsed, row.workspace_id, keyCache)
+        // Plan 2026-06-03, T3: KEIN DHL-API-Gate mehr (zweite, vergessene
+        // `applyDhlValidation`-Call-Site entfernt — sonst löschte der Re-Parse
+        // ein frisch erkanntes Tracking wieder, weil ohne Key gedroppt wurde).
+        // `detectAndParse` hat über `resolveStatusAndTracking`/detect() bereits
+        // tracking/carrier (lowercase) gesetzt.
         if (!parsed.tracking) {
           stats.unchanged++
           continue
@@ -732,11 +756,11 @@ async function reparseForensics(
 //
 // Liest alle parsed_messages mit `tracking_needs_review = TRUE` ODER
 // `tracking_confidence = 'none'` aus den gegebenen Workspaces, läuft mit
-// `findAllTrackings()` + `gateTracking({minConfidence:'strong'})` über
-// BEIDE Body-Quellen (_raw_html UND _raw.text — Council-Finding #1) und
-// aktualisiert tracking + carrier + confidence + needs_review + candidates.
-// Manuelle Trackings (`tracking_confidence = 'manual'`) werden NICHT
-// angetastet (Plan §5.2 Manual-Guard).
+// `tracking_detection.detect()` (Plan 2026-06-03, T3 — rein algorithmisch,
+// kein DHL-API-Gate) über BEIDE Body-Quellen (_raw_html UND _raw.text —
+// Council-Finding #1) und aktualisiert tracking + carrier (lowercase) +
+// confidence + needs_review + candidates. Manuelle Trackings
+// (`tracking_confidence = 'manual'`) werden NICHT angetastet (Manual-Guard).
 interface ReparseLowConfidenceStats {
   scanned: number
   updated: number
@@ -805,14 +829,23 @@ async function reparseLowConfidence(
           stats.skipped_no_body++
           continue
         }
-        const body = text + (text && html ? '\n\n' : '') + html
-        const candidates = findAllTrackings(body, { html })
-        const { primary } = gateTracking(candidates, { minConfidence: 'strong' })
-
-        const newConfidence = primary ? 'strong' : 'none'
-        const newNeedsReview = primary ? false : true
-        const newTracking = primary?.value ?? null
-        const newCarrier = primary?.carrier ?? null
+        // Plan 2026-06-03, T3: Re-Detection läuft über `detect()` (algorithmisch,
+        // kein API-Gate). Wir kennen den ursprünglichen Versand-Status hier nicht
+        // mehr zuverlässig — diese Rows sind bereits als `suggested`/`matched`
+        // klassifiziert (shipped-like), darum probe-Status 'shipped' für das
+        // Status-Gate. detect() emittiert carrier lowercase.
+        const det = detectTracking({
+          subject: row.subject ?? '',
+          text,
+          html,
+          status: 'shipped',
+          senderDomain: senderDomainFromHeader(row.from_address),
+        })
+        const newConfidence = det.tracking ? 'strong' : 'none'
+        const newNeedsReview = det.tracking ? false : true
+        const newTracking = det.tracking ?? null
+        const newCarrier = det.carrier ?? null
+        const candidates = det.candidates
 
         const oldTracking = (payload.tracking as string | undefined) ?? null
         const oldConfidence =
@@ -848,7 +881,7 @@ async function reparseLowConfidence(
         // Spiegele auf pending_deal_suggestions — nur wenn confidence='strong'
         // (Plan §3.2: medium/weak nie in Deal/Suggestion-Pfad). Manual bleibt
         // intakt (RLS-Layer kann das nicht garantieren → wir filtern hier).
-        if (primary) {
+        if (det.tracking) {
           await admin
             .from('pending_deal_suggestions')
             .update({

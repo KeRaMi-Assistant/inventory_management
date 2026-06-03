@@ -18,8 +18,6 @@ import {
   type ParsedOrder,
 } from './inbox_adapters.ts'
 import {
-  enrichWithDhlValidation,
-  type ParsedMessageLike,
   stampPipelineHeartbeat,
 } from './tracking_validation.ts'
 
@@ -66,7 +64,15 @@ interface DealRow {
   status: string
   tracking: string | null
   arrival_date: string | null
+  carrier?: string | null
 }
+
+// Plan 2026-06-03 §3.4 / §2.8 Amazon-Seed: Amazon Logistics hat keine
+// öffentliche Status-API → wird nie gepollt. Beim Deal-Write setzen wir
+// daher einen stabilen l10n-KEY (kein hardcoded DE/EN-String) als
+// `live_status_last_event`; die Auflösung in einen Anzeige-Text macht der
+// Client (T7). `live_status='pending'` bleibt DB-konform (im CHECK-Enum).
+const AMAZON_NO_LIVE_STATUS_KEY = 'amazon_no_live_status'
 
 type SbClient = ReturnType<typeof createClient>
 
@@ -152,7 +158,7 @@ export async function runParseSweep(
       await stampPipelineHeartbeat(admin as any, row.workspace_id)
       heartbeatStamped.add(row.workspace_id)
     }
-    const result = await processOne(admin, row, keyCache)
+    const result = await processOne(admin, row)
     if (result === 'matched') stats.matched++
     else if (result === 'suggested') stats.suggested++
     else stats.unclassified++
@@ -163,7 +169,6 @@ export async function runParseSweep(
 export async function processOne(
   admin: SbClient,
   row: PendingMessage,
-  keyCache?: DhlKeyCache,
 ): Promise<'matched' | 'suggested' | 'unclassified'> {
   const text = row.parsed_payload?._raw?.text ?? ''
   const html = row.parsed_payload?._raw?.html ?? ''
@@ -193,11 +198,11 @@ export async function processOne(
     return 'unclassified'
   }
 
-  // Plan 2026-05-16 §D3: DHL-API-Validation als Wrapper NACH parsen.
-  // Mutiert tracking/trackings/trackingConfidence/trackingNeedsReview
-  // entsprechend des DHL-API-Probe-Ergebnisses pro Kandidat.
-  await applyDhlValidation(admin, parsed, row.workspace_id, keyCache)
-
+  // Plan 2026-06-03, T3: KEIN DHL-API-Gate mehr. Die Detection ist rein
+  // algorithmisch (`tracking_detection.detect()` via `resolveTrackingForAdapter`)
+  // und persistiert IMMER — auch ohne konfigurierten Carrier-API-Key. Der
+  // Live-Status wird vom täglichen Poll (§3) nachgezogen. Der frühere
+  // `applyDhlValidation`-Call (löschte Trackings ohne API-Key) ist entfernt.
   const dealId = await findMatchingDeal(admin, row.workspace_id, parsed)
 
   if (dealId) {
@@ -231,7 +236,9 @@ export async function processOne(
     trackings: parsed.trackings && parsed.trackings.length > 0
       ? parsed.trackings
       : null,
-    carrier: parsed.carrier,
+    // Plan 2026-06-03 §2.8: Carrier lowercase ('dhl'|'amazon'|'dpd'); detect()
+    // emittiert das bereits lowercase, normalizeCarrierForDeal ist Defense.
+    carrier: normalizeCarrierForDeal(parsed.carrier),
     eta: parsed.eta,
     status: parsed.status ?? 'ordered',
     raw: stripBody(parsed),
@@ -250,52 +257,23 @@ export async function processOne(
   return 'suggested'
 }
 
-/// Brueckt zwischen `ParsedOrder` (camelCase) und der snake_case-API
-/// von `enrichWithDhlValidation`. Mutiert `parsed` in-place mit den
-/// DHL-API-bestaetigten Werten. Wenn kein API-Key fuer den Workspace
-/// gesetzt ist, raeumt der Wrapper Trackings/Carrier still ab und
-/// setzt `trackingNeedsReview` fuer shipped/delivered.
-///
-/// Exportiert, damit `inbox-parse`-Re-Parse-Pfade dieselbe Validation
-/// nutzen koennen wie der reguläre Sweep (sonst sehen Re-Parses die
-/// Pattern-Heuristik, aber ueberspringen die DHL-API).
-export async function applyDhlValidation(
-  admin: SbClient,
-  parsed: ParsedOrder,
-  workspaceId: string,
-  keyCache?: DhlKeyCache,
-): Promise<void> {
-  const cache = keyCache ?? new Map<string, string | null>()
-  const apiKey = await getDhlKeyForWorkspace(admin, workspaceId, cache)
+// Plan 2026-06-03, T3: `applyDhlValidation` ist ENTFERNT (beide Call-Sites:
+// hier + inbox-parse/index.ts Re-Parse). Es koppelte die Detection an eine
+// Live-DHL-API-Probe und löschte JEDES Tracking, wenn kein API-Key gesetzt war
+// — die Hauptursache, warum „nichts ankam". Die Detection ist jetzt rein
+// algorithmisch (`tracking_detection.detect()`); Carrier kommt lowercase
+// ('dhl'|'amazon'|'dpd') direkt aus `parsed.carrier`.
 
-  const bridge: ParsedMessageLike = {
-    tracking: parsed.tracking ?? null,
-    trackings: parsed.trackings ?? null,
-    tracking_confidence: parsed.trackingConfidence ?? null,
-    tracking_needs_review: parsed.trackingNeedsReview ?? null,
-    trackingCandidates: parsed.trackingCandidates,
-  }
-
-  // `supabaseAdmin` ist hier der Service-Role-Client (vom Caller
-  // `inbox-poll`/`inbox-parse` erzeugt). Casts noetig, weil unser Local-
-  // Shape (`SupabaseAdminLike`) bewusst minimal ist.
-  await enrichWithDhlValidation(bridge, {
-    status: parsed.status,
-    workspaceId,
-    apiKey,
-    // deno-lint-ignore no-explicit-any
-    supabaseAdmin: admin as any,
-  })
-
-  // Ergebnisse zurueck in camelCase mappen.
-  parsed.tracking = bridge.tracking ?? undefined
-  parsed.trackings = bridge.trackings ?? undefined
-  parsed.trackingConfidence = bridge.tracking_confidence ?? 'none'
-  parsed.trackingNeedsReview = bridge.tracking_needs_review ?? false
-  // Wenn DHL-Validation alle Kandidaten verworfen hat, ist der
-  // Carrier-Label nicht mehr gerechtfertigt.
-  if (!parsed.tracking) parsed.carrier = undefined
-  else parsed.carrier = parsed.carrier ?? 'DHL'
+/// Normalisiert einen Carrier-Wert auf lowercase, bevor er nach
+/// `deals.carrier`/`pending_deal_suggestions.carrier` geschrieben wird.
+/// Der DB-CHECK erlaubt nur `('dhl','amazon','dpd')` (lowercase) — ein
+/// uppercase-Write würde `check_violation` werfen und den Deal-Write
+/// komplett rollbacken (Plan §2.8 Casing-Fix). Unbekannte Werte → null.
+function normalizeCarrierForDeal(carrier?: string | null): string | null {
+  if (!carrier || typeof carrier !== 'string') return null
+  const c = carrier.trim().toLowerCase()
+  if (c === 'dhl' || c === 'amazon' || c === 'dpd') return c
+  return null
 }
 
 async function findMatchingDeal(
@@ -340,7 +318,7 @@ async function applyUpdateToDeal(
 ): Promise<void> {
   const { data: dealData, error: readErr } = await admin
     .from('deals')
-    .select('status, tracking, arrival_date, note')
+    .select('status, tracking, arrival_date, note, carrier')
     .eq('id', dealId)
     .maybeSingle()
   if (readErr || !dealData) {
@@ -351,9 +329,26 @@ async function applyUpdateToDeal(
   const update: Record<string, unknown> = {}
   const changes: string[] = []
 
+  // Plan 2026-06-03 §2.8 / §3.1 [Council-Fix]: Carrier (lowercase) IMMER mit
+  // dem Tracking schreiben. Ohne expliziten carrier-Write landet der Deal mit
+  // carrier=NULL → Poller fällt auf detectAdapter zurück → DPD→DHL-Fehlrouting.
+  const carrierLc = normalizeCarrierForDeal(parsed.carrier)
   if (parsed.tracking && !before.tracking) {
     update.tracking = parsed.tracking
     changes.push(`Tracking ${parsed.tracking}`)
+    // Carrier nur setzen, wenn wir frisch ein Tracking zuweisen und der Deal
+    // noch keinen Carrier trägt (kein manuell gesetzter Carrier überschreiben).
+    if (carrierLc && !before.carrier) {
+      update.carrier = carrierLc
+      changes.push(`Carrier ${carrierLc}`)
+      // Amazon-Seed (§3.4): Amazon Logistics wird nie gepollt → Live-Status
+      // sofort als 'pending' + stabiler l10n-Key seeden, damit die UI nicht
+      // ewig „Wird vorbereitet" zeigt (Client-Resolution in T7).
+      if (carrierLc === 'amazon') {
+        update.live_status = 'pending'
+        update.live_status_last_event = AMAZON_NO_LIVE_STATUS_KEY
+      }
+    }
   }
 
   const targetStatus = mapShipStatusToDeal(parsed.status)

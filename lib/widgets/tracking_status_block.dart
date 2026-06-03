@@ -23,6 +23,9 @@ enum TrackingDisplayState {
 
   /// Amazon-Logistics-Shipment-ID ohne vollwertige externe Sendungsnummer.
   amazonShipmentIdOnly,
+
+  /// Amazon-Carrier erkannt — Live-Status per API nicht verfügbar.
+  amazonNoLiveStatus,
 }
 
 /// Zeigt den Tracking-Status eines Deals in 5 verschiedenen States.
@@ -75,6 +78,11 @@ class TrackingStatusBlock extends StatelessWidget {
   /// Caller setzt das während des Edge-Function-Calls.
   final bool retrackInProgress;
 
+  /// Wenn true, ist der Carrier Amazon — Retrack-Button wird disabled mit
+  /// Tooltip angezeigt (Amazon bietet keine Live-Status-API). Außerdem wird
+  /// ein eigener Badge-State gerendert statt „Wird vorbereitet".
+  final bool isAmazonCarrier;
+
   const TrackingStatusBlock({
     super.key,
     this.trackingNumber,
@@ -90,12 +98,21 @@ class TrackingStatusBlock extends StatelessWidget {
     this.liveStatusUpdatedAt,
     this.onRetrack,
     this.retrackInProgress = false,
+    this.isAmazonCarrier = false,
   });
 
   TrackingDisplayState _resolveState() {
     if (amazonShipmentIdHint &&
         (trackingNumber == null || trackingNumber!.isEmpty)) {
       return TrackingDisplayState.amazonShipmentIdOnly;
+    }
+    // Amazon-Carrier mit erkannter Tracking-Nummer → eigener Badge-State.
+    // Muss vor needsReview/strong geprüft werden, damit der Amazon-State
+    // auch bei confidence=strong greift.
+    if (isAmazonCarrier &&
+        trackingNumber != null &&
+        trackingNumber!.isNotEmpty) {
+      return TrackingDisplayState.amazonNoLiveStatus;
     }
     if (needsReview &&
         trackingNumber != null &&
@@ -194,6 +211,17 @@ class TrackingStatusBlock extends StatelessWidget {
           detail: l10n.trackingAmazonShipmentIdHint,
           ctaLabel: l10n.trackingEnterManuallyCta,
           onManualInput: onManualInput,
+        );
+      case TrackingDisplayState.amazonNoLiveStatus:
+        return _AmazonNoLiveStatusState(
+          trackingNumber: trackingNumber!,
+          badgeLabel: l10n.trackingAmazonNoLiveStatusBadge,
+          retrackDisabledTooltip: l10n.trackingRetrackUnavailableAmazon,
+          editLabel: l10n.actionEdit,
+          onManualInput: onManualInput,
+          // Retrack-Button sichtbar machen wenn ein Callback existiert,
+          // aber immer disabled — Amazon hat keine Live-Status-API.
+          showRetrackDisabled: onRetrack != null || retrackInProgress,
         );
     }
   }
@@ -669,6 +697,120 @@ class _NeedsReviewState extends StatelessWidget {
                 );
               },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// State: amazonNoLiveStatus
+// ---------------------------------------------------------------------------
+
+/// Zeigt die erkannte Amazon-Tracking-Nummer mit einem Info-Badge
+/// „Sendung erkannt — Live-Status nicht verfügbar". Der Retrack-Button
+/// ist sichtbar aber permanent disabled (mit Tooltip), weil Amazon keine
+/// öffentliche Status-API anbietet.
+class _AmazonNoLiveStatusState extends StatelessWidget {
+  const _AmazonNoLiveStatusState({
+    required this.trackingNumber,
+    required this.badgeLabel,
+    required this.retrackDisabledTooltip,
+    required this.editLabel,
+    this.onManualInput,
+    this.showRetrackDisabled = false,
+  });
+
+  final String trackingNumber;
+  final String badgeLabel;
+  final String retrackDisabledTooltip;
+  final String editLabel;
+  final VoidCallback? onManualInput;
+
+  /// Ob der disabled Retrack-Button angezeigt werden soll (nur wenn im
+  /// übergeordneten Deal-Detail-Kontext, nicht in der Inbox-Vorschau).
+  final bool showRetrackDisabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('tracking-amazon-no-live-status'),
+      decoration: BoxDecoration(
+        color: AppTheme.infoBgOf(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.infoBorderOf(context)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              size: 20,
+              color: AppTheme.infoTextOf(context),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Badge-Zeile
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppTheme.infoBorderOf(context).withAlpha(40),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                          color: AppTheme.infoBorderOf(context)),
+                    ),
+                    child: Text(
+                      badgeLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.infoTextOf(context),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SelectableText(
+                    trackingNumber,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimaryOf(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Disabled Retrack-Button mit Tooltip — Touch-Target 48×48 dp.
+            if (showRetrackDisabled)
+              Tooltip(
+                message: retrackDisabledTooltip,
+                child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Center(
+                    child: Icon(
+                      Icons.refresh_rounded,
+                      size: 18,
+                      color: AppTheme.textMutedOf(context).withAlpha(100),
+                    ),
+                  ),
+                ),
+              ),
+            if (onManualInput != null)
+              _IconCta(
+                key: const Key('tracking-edit-cta-amazon'),
+                icon: Icons.edit_outlined,
+                semanticsLabel: editLabel,
+                onTap: onManualInput,
+                color: AppTheme.textMutedOf(context),
+              ),
           ],
         ),
       ),
