@@ -60,7 +60,8 @@ Deno.test('Amazon DE mit Amazon Logistics (TBA nur im href)', async () => {
   assertEquals(parsed!.orderId, '305-1122334-4556677')
   assertEquals(parsed!.status, 'shipped')
   assertEquals(parsed!.tracking, 'TBA987654321098')
-  assertEquals(parsed!.carrier, 'Amazon Logistics')
+  // Plan 2026-06-03 §2.8: Carrier lowercase 'amazon' (war 'Amazon Logistics').
+  assertEquals(parsed!.carrier, 'amazon')
 })
 
 Deno.test.ignore('Amazon COM Versandbestätigung mit UPS Strong-Pattern', async () => {
@@ -80,7 +81,11 @@ Deno.test.ignore('Amazon COM Versandbestätigung mit UPS Strong-Pattern', async 
   assertEquals(parsed!.carrier, 'UPS')
 })
 
-Deno.test('Amazon FR Versandbestätigung mit Chronopost', async () => {
+Deno.test('Amazon FR Chronopost: Out-of-scope-Carrier → kein Tracking', async () => {
+  // Plan 2026-06-03 §1: Carrier-Scope ist DHL/Amazon/DPD. Chronopost ist
+  // OUT-of-scope → kein href-/Pattern-Promote mehr. Tracking bleibt leer.
+  // (Status hängt von Keyword-Heuristik ab — „expédiée"/„dispatched" matcht
+  // nicht shippedRe, daher 'ordered'.)
   const html = await loadFixture('amazon_fr_shipped_chronopost.html')
   const c = ctx(
     'expedition-confirmation@amazon.fr',
@@ -90,9 +95,8 @@ Deno.test('Amazon FR Versandbestätigung mit Chronopost', async () => {
   const parsed = detectAndParse(c)
   assertExists(parsed)
   assertEquals(parsed!.orderId, '401-5566778-8990011')
-  assertEquals(parsed!.status, 'shipped')
-  assertEquals(parsed!.tracking, 'XJ123456789FR')
-  assertEquals(parsed!.carrier, 'Chronopost')
+  assertEquals(parsed!.tracking, undefined)
+  assertEquals(parsed!.carrier, undefined)
 })
 
 Deno.test('Amazon IT Versandbestätigung mit TBA + track.amazon.it', async () => {
@@ -107,10 +111,13 @@ Deno.test('Amazon IT Versandbestätigung mit TBA + track.amazon.it', async () =>
   assertEquals(parsed!.orderId, '405-6677889-9001122')
   assertEquals(parsed!.status, 'shipped')
   assertEquals(parsed!.tracking, 'TBA456789012345')
-  assertEquals(parsed!.carrier, 'Amazon Logistics')
+  // Plan 2026-06-03 §2.8: Carrier lowercase 'amazon'.
+  assertEquals(parsed!.carrier, 'amazon')
 })
 
-Deno.test('Amazon ES Versandbestätigung mit SEUR', async () => {
+Deno.test('Amazon ES SEUR: Out-of-scope-Carrier → kein Tracking', async () => {
+  // Plan 2026-06-03 §1: SEUR ist OUT-of-scope → kein Tracking-Promote.
+  // Status bleibt 'shipped' (Subject „enviado" matcht shippedRe).
   const html = await loadFixture('amazon_es_shipped_seur.html')
   const c = ctx(
     'confirmar-envio@amazon.es',
@@ -121,8 +128,8 @@ Deno.test('Amazon ES Versandbestätigung mit SEUR', async () => {
   assertExists(parsed)
   assertEquals(parsed!.orderId, '408-1199887-7665544')
   assertEquals(parsed!.status, 'shipped')
-  assertEquals(parsed!.tracking, '14001122334455')
-  assertEquals(parsed!.carrier, 'SEUR')
+  assertEquals(parsed!.tracking, undefined)
+  assertEquals(parsed!.carrier, undefined)
 })
 
 Deno.test('Amazon UK Versandbestätigung mit DPD Pfad-Tracking', async () => {
@@ -136,8 +143,9 @@ Deno.test('Amazon UK Versandbestätigung mit DPD Pfad-Tracking', async () => {
   assertExists(parsed)
   assertEquals(parsed!.orderId, '202-9988776-5544332')
   assertEquals(parsed!.status, 'shipped')
+  // DPD via href (track.dpd.<tld>/parcels/…) → strong, carrier lowercase 'dpd'.
   assertEquals(parsed!.tracking, '15501234567890')
-  assertEquals(parsed!.carrier, 'DPD')
+  assertEquals(parsed!.carrier, 'dpd')
 })
 
 Deno.test('Amazon Bestellbestätigung (NICHT versandt) liefert kein Tracking', async () => {
@@ -199,12 +207,14 @@ Deno.test('Mehrere Carrier-Keys: Sammlung aus Fixtures liefert >= 2 distinct', a
     const parsed = detectAndParse(c)
     if (parsed?.carrier) carriers.add(parsed.carrier)
   }
-  // Plan 2026-05-16 §D1/§D5: TRACKING_PATTERNS reduziert auf DHL-only,
-  // DHL-/UPS-Pattern-Detection entfernt. HTML-href-Pfad liefert weiterhin
-  // Carrier-Labels fuer Amazon Logistics / Chronopost / SEUR / DPD. Mit
-  // den 7 Fixtures kommen wir damit auf >=3 distincte Carrier (statt 5).
-  assert(
-    carriers.size >= 3,
-    `Erwartete >= 3 distinct Carrier (nach §D1), gefunden: ${[...carriers].join(', ')}`,
-  )
+  // Plan 2026-06-03 §1: Carrier-Scope = DHL/Amazon/DPD (lowercase). UPS,
+  // Chronopost, SEUR sind OUT-of-scope → kein Promote. Die 7 Fixtures liefern
+  // damit genau die 3 in-scope-Carrier (dhl/amazon/dpd), alle lowercase.
+  assertEquals(carriers, new Set(['dhl', 'amazon', 'dpd']))
+  for (const carrier of carriers) {
+    assert(
+      ['dhl', 'amazon', 'dpd'].includes(carrier),
+      `Out-of-scope-Carrier nicht erlaubt: ${carrier}`,
+    )
+  }
 })

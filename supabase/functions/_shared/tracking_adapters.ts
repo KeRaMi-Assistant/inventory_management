@@ -730,21 +730,31 @@ export const ADAPTERS: Record<TrackingAdapter['id'], TrackingAdapter> = {
   ups: upsAdapter,
 }
 
-/// Carrier-Detection: aus einer Tracking-Nummer den passenden Adapter ableiten.
-/// Bewusst konservativ — bei Mehrdeutigkeit (z.B. 14-stellige Ziffern) wird
-/// DHL bevorzugt (analog zu lib/services/carrier_service.dart).
+/// Carrier-Detection (Fallback): aus einer Tracking-Nummer den passenden
+/// Adapter ableiten. Wird vom Poller NUR als Fallback genutzt, wenn
+/// `deals.carrier` nicht gesetzt ist (Legacy-Rows / Backfill-Lücke) — der
+/// persistierte `carrier` ist primär (siehe Plan §3.1).
+///
+/// Bewusst konservativ — bei Mehrdeutigkeit (reine numerische Sendungsnummern)
+/// wird DHL bevorzugt (analog zu lib/services/carrier_service.dart). Amazon
+/// Logistics (TB[ACM]…) ist **detection-only** und hat keine öffentliche
+/// Status-API → liefert hier `null` (kein Adapter, Poller skippt, Plan §3.4).
 export function detectAdapter(tracking: string): TrackingAdapter | null {
   const v = tracking.trim().replace(/\s+/g, '').toUpperCase()
   if (!v) return null
-  if (/^1Z[0-9A-Z]{16}$/.test(v)) return upsAdapter
-  // DPD-Pattern: 14-stellige Zahl, die mit 0500 oder 0599 (Carrier-Prefix)
-  // anfängt — sehr eng, falsch-positive Treffer auf DHL sollen vermieden
-  // werden. Bei reinem 14-stellig ohne Prefix bleiben wir auf DHL.
+  // Amazon Logistics: detection-only, kein Poll-Adapter → explizit null.
+  if (/^TB[ACM]\d{12}$/.test(v)) return null
+  // DPD: 14-stellige Zahl mit Carrier-Prefix `05` — sehr eng gehalten, damit
+  // keine DHL-Nummer fälschlich auf DPD geroutet wird.
   if (/^05\d{12}$/.test(v)) return dpdAdapter
-  // DHL: JJD-Prefix, DE-Prefix, 20-stellig, 12-stellig.
-  if (/^JJD\d{10,18}$/.test(v)) return dhlAdapter
-  if (/^[A-Z]{2}\d{8,14}$/.test(v) && v.startsWith('DE')) return dhlAdapter
-  if (/^\d{20,22}$/.test(v)) return dhlAdapter
+  // DHL: JJD/J[A-Z]{2}-Prefix.
+  if (/^J[A-Z]{2,3}\d{10,21}$/.test(v)) return dhlAdapter
+  // DHL S10 international: 2 Service-Buchstaben + 9 Ziffern + 2 ISO-Land.
+  if (/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(v)) return dhlAdapter
+  // DHL: 20-stellige Sendungsnummer.
+  if (/^\d{20}$/.test(v)) return dhlAdapter
+  // DHL: 12–14-stellige Numerik (Identcode/Leitcode), DPD ohne `05` fällt
+  // ebenfalls hierher (Research R3 Kollisionsregel: default DHL).
   if (/^\d{12,14}$/.test(v)) return dhlAdapter
   return null
 }

@@ -38,6 +38,7 @@ interface DealRow {
   user_id: string
   product: string
   tracking: string | null
+  carrier: 'dhl' | 'amazon' | 'dpd' | null
   tracking_confidence: 'strong' | 'manual' | 'none' | null
   tracking_needs_review: boolean | null
   status: string
@@ -95,15 +96,33 @@ Deno.serve(async (req) => {
   // ist (dann erlauben wir JWT-User-Auth als Alternative zu cron/service).
   let onlyWorkspace: string | undefined
   let onlyDealId: number | undefined
+  // Daily-Sweep-Steuerung (Plan §3.2). `mode='daily-sweep'` aktiviert den
+  // Hour-Guard; alles andere (undefined/manual/service) läuft durch.
+  let mode: string | undefined
+  let targetBerlinHours: number[] | undefined
   try {
     if (req.headers.get('content-type')?.includes('application/json')) {
       const body = await req.json()
       if (typeof body?.workspace_id === 'string') {
         onlyWorkspace = body.workspace_id
       }
+      // deal_id-Validierung zuerst (kann 400 werfen) — strikt getrennt von
+      // der mode/target-Parse, damit es keine 400-Kollision gibt.
       const parsed = parseDealIdFromBody(body)
       if (parsed.error) return jsonResp({ error: parsed.error }, 400)
       if (parsed.dealId !== undefined) onlyDealId = parsed.dealId
+
+      // mode/target_berlin_hours separat NACH der deal_id-Validierung parsen.
+      // Diese Felder lösen NIE einen 400 aus: ungültige Werte werden ignoriert,
+      // der Default greift (fail-closed bzw. [13]) — siehe dailySweepShouldRun.
+      const m = (body as Record<string, unknown> | null)?.mode
+      if (typeof m === 'string') mode = m
+      const th = (body as Record<string, unknown> | null)?.target_berlin_hours
+      if (Array.isArray(th)) {
+        targetBerlinHours = th.filter(
+          (h): h is number => typeof h === 'number' && Number.isInteger(h) && h >= 0 && h <= 23,
+        )
+      }
     }
   } catch {
     // body optional
@@ -183,6 +202,15 @@ Deno.serve(async (req) => {
     onlyWorkspace = dealWorkspaceId
   }
 
+  // Off-Hour-Guard (Plan §3.2): Der pg_cron-Daily-Sweep feuert an BEIDEN
+  // UTC-Kandidatenstunden (11/12), aber nur EINE entspricht 13:00 Berlin
+  // (DST-abhängig). Wir gaten serverseitig auf die echte Berliner Wanduhr.
+  // Nur der Daily-Sweep (mode='daily-sweep', kein deal_id) wird gegated;
+  // Single-Deal-Trigger, manuelle Retracks und Service-Calls laufen durch.
+  if (onlyDealId === undefined && !dailySweepShouldRun(mode, targetBerlinHours)) {
+    return jsonResp({ ok: true, skipped: 'off-hour', berlin_hour: berlinHourNow() })
+  }
+
   const admin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -249,7 +277,7 @@ async function pollWorkspace(
   let dealQuery = admin
     .from('deals')
     .select(
-      'id, workspace_id, user_id, product, tracking, tracking_confidence, tracking_needs_review, status, arrival_date, order_date, live_status, live_status_last_event, live_status_updated_at',
+      'id, workspace_id, user_id, product, tracking, carrier, tracking_confidence, tracking_needs_review, status, arrival_date, order_date, live_status, live_status_last_event, live_status_updated_at',
     )
     .eq('workspace_id', workspaceId)
     .eq('status', 'Unterwegs')
@@ -305,7 +333,25 @@ async function pollWorkspace(
 
   for (const deal of eligible) {
     if (!deal.tracking || deal.tracking.trim().length === 0) continue
-    const adapter = detectAdapter(deal.tracking)
+    // Amazon = detection-only (keine öffentliche Status-API, Plan §3.4).
+    // Defensiver Short-Circuit VOR der Adapter-Wahl: weder fetchStatus noch
+    // markCarrierError noch checked-Increment. Greift sowohl über den
+    // persistierten carrier ALS auch über das TBA-Pattern (Backfill-Lücke).
+    if (
+      deal.carrier === 'amazon' ||
+      /^TB[ACM]\d{12}$/i.test((deal.tracking ?? '').trim())
+    ) {
+      continue
+    }
+    // Carrier-Routing (Plan §3.1): persistierter `deal.carrier` ist primär,
+    // `detectAdapter` nur Fallback (Legacy-Rows ohne carrier). `'amazon'`
+    // wurde oben per Short-Circuit aussortiert → `deal.carrier` ist hier nur
+    // noch `'dhl' | 'dpd' | null`, also ein gültiger ADAPTERS-Key oder null
+    // (→ Fallback). Das `!== 'amazon'`-Gate aus §3.1 ist damit bereits
+    // erfüllt; eine erneute Prüfung wäre toter Code (TS narrowt amazon weg).
+    const adapter =
+      (deal.carrier ? ADAPTERS[deal.carrier] : undefined) ??
+      detectAdapter(deal.tracking)
     if (!adapter) continue
     if (!carriers.has(adapter.id)) continue
     const apiKey = await getKey(adapter.id)
@@ -470,6 +516,54 @@ export function computeRetrackCooldown(
   if (elapsed < 0) return null // future timestamp → ignore
   if (elapsed >= cooldownMs) return null
   return Math.ceil((cooldownMs - elapsed) / 1000)
+}
+
+/// Default-Zielstunde des Daily-Sweeps (Berlin-Wanduhr). Server-seitig hart
+/// verdrahtet (User-Spec: exakt 13:00 Europe/Berlin). Das Body-Feld
+/// `target_berlin_hours` ist nur ein Override.
+export const DEFAULT_TARGET_BERLIN_HOURS: readonly number[] = [13]
+
+/// Aktuelle Stunde (0–23) auf der Berliner Wanduhr — DST-sicher via
+/// `Intl.DateTimeFormat('Europe/Berlin')`. Reine Funktion, unit-getestet.
+export function berlinHourNow(nowMs: number = Date.now()): number {
+  return Number(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Berlin',
+      hour: '2-digit',
+      hour12: false,
+    }).format(new Date(nowMs)),
+  )
+}
+
+/// Entscheidet, ob der Daily-Sweep in diesem Aufruf laufen darf (Plan §3.2).
+///
+/// Semantik (klar dokumentiert, getestet):
+///   - `mode !== 'daily-sweep'`  → IMMER true (Bypass: single-deal/manual/
+///     service-Calls werden NIE gegated).
+///   - `mode === 'daily-sweep'`:
+///       * `targetHours` ist ein nicht-leeres, gültiges Array
+///         → `targetHours.includes(berlinHourNow())`.
+///       * `targetHours` ist undefined / kein Array (Body lieferte kein
+///         gültiges Override) → Default `[13]` wird verwendet (NICHT
+///         fail-closed): `DEFAULT_TARGET_BERLIN_HOURS.includes(...)`.
+///       * `targetHours` ist ein LEERES Array (explizit `[]` übergeben, z.B.
+///         nach Filtern aller invaliden Werte) → **FAIL-CLOSED → false**
+///         (Plan-Direktive: leere/invalide targetHours bei daily-sweep
+///         laufen nicht, damit ein Konfig-Fehler nie einen ungewollten
+///         Sweep auslöst).
+export function dailySweepShouldRun(
+  mode: string | undefined,
+  targetHours: number[] | undefined,
+  nowMs: number = Date.now(),
+): boolean {
+  if (mode !== 'daily-sweep') return true // single-deal/manual/service → bypass
+  // Body lieferte gar kein Array → Server-Default [13].
+  if (targetHours === undefined) {
+    return DEFAULT_TARGET_BERLIN_HOURS.includes(berlinHourNow(nowMs))
+  }
+  // Explizit leeres (oder vollständig aussortiertes) Array → fail-closed.
+  if (targetHours.length === 0) return false
+  return targetHours.includes(berlinHourNow(nowMs))
 }
 
 /// Reine Body-Validierung für `deal_id`. Gibt entweder die geparste

@@ -14,6 +14,14 @@
 //                          die Mail im Unklassifiziert-Tab mit shop_key, der
 //                          User kann manuell daraus einen Deal machen.
 
+// Tracking-Detection (Plan 2026-06-03, T3): die Adapter-Pipeline delegiert die
+// Sendungsnummer-Extraktion ausschliesslich an `detect()` aus
+// `tracking_detection.ts`. Die alte Pattern-/API-Probe-Detection (dhl-de-prefix,
+// context-numeric, enrichWithDhlValidation) ist entfernt. Der Import ist
+// runtime-only (zirkulaer, aber kein Top-Level-Init-Zyklus): `tracking_detection.ts`
+// nutzt `ANCHOR_WORDS`/`findAnchorBefore`/`MAX_BODY_LEN`/`TrackingCandidate` von
+// hier, dieses Modul ruft `detect()` nur innerhalb von `resolveTrackingForAdapter`.
+import { detect as detectTracking } from './tracking_detection.ts'
 
 export interface ParsedOrderItem {
   product: string
@@ -257,64 +265,27 @@ export type AdapterPattern = {
   normalizable?: boolean
 }
 
+// Plan 2026-06-03, T3: Die produktive Sendungsnummer-Detection läuft jetzt
+// AUSSCHLIESSLICH über `tracking_detection.detect()`. Die alten DHL-/numeric-
+// Patterns (`dhl-de-prefix` = VAT-Kollision `DE\d{8,14}`, `dhl-de-suffix`,
+// `context-numeric-10-22`) sind ENTFERNT — sie sind durch S10-Checksum +
+// anchored dhl-20/dhl-12 + href-Patterns in `tracking_detection.ts` ersetzt.
+//
+// `TRACKING_PATTERNS` + `findAllTrackings`/`gateTracking` bleiben als
+// schmales Legacy-Gerüst bestehen (nur noch `dhl-jjd`, format-eindeutig,
+// keine VAT-Gefahr), damit die exportierte Schnittstelle stabil bleibt und
+// Bestandstests/Re-Parse-Forensik kompilieren. KEINE neue Detection-Logik
+// hier ergänzen — alles Neue gehört nach `tracking_detection.ts`.
 export const TRACKING_PATTERNS: AdapterPattern[] = [
-  // ── DHL-only Patterns (Plan 2026-05-16, §D1) ──────────────────────
-  // Stakeholder-Wunsch: Tracking-Detection läuft ausschliesslich gegen
-  // die DHL-API. Alle Non-DHL-Patterns (UPS-1Z, Amazon-TBA, S10-UPU,
-  // context-numeric, context-alphanumeric) wurden entfernt. Final
-  // entscheidet `enrichWithDhlValidation` per API-Probe, ob ein Match
-  // wirklich eine gueltige DHL-Sendung ist.
   {
     id: 'dhl-jjd',
     re: /\bJJD\d{10,18}\b/g,
     requiresAnchor: false,
     defaultConfidence: 'strong',
-    carrier: 'DHL',
+    carrier: 'dhl',
     source: 'strong-pattern',
     validator: 'jkeen',
     normalizable: true,
-  },
-  {
-    id: 'dhl-de-suffix',
-    // [LL]NNN…NN[LL] mit `DE`-Suffix — eindeutiger DHL-Code.
-    re: /\b[A-Z]{2}\d{9}DE\b/g,
-    requiresAnchor: false,
-    defaultConfidence: 'strong',
-    carrier: 'DHL',
-    source: 'strong-pattern',
-    validator: 'jkeen',
-  },
-  {
-    id: 'dhl-de-prefix',
-    // DE-Prefix + 8–14 Digits ("DE5455279839", 12 Zeichen). Wird sowohl
-    // von Amazon Logistics als auch DHL national genutzt — Plan D1
-    // entscheidet, dass die DHL-API-Validierung den finalen Carrier-
-    // Filter uebernimmt. Wenn die DHL-API 404 liefert, wird der Kandidat
-    // verworfen.
-    re: /\bDE\d{8,14}\b/g,
-    requiresAnchor: false,
-    defaultConfidence: 'strong',
-    carrier: 'DHL',
-    source: 'strong-pattern',
-    validator: 'length-only',
-  },
-  // ── Anchor-gated permissive (Plan 2026-05-16 Phase A, Iteration 2) ─
-  // 10-22 stellige Numerics in Anchor-Naehe ('Sendungsnummer',
-  // 'Tracking', 'verfolgen', ...) → MEDIUM-Confidence. DHL-API
-  // entscheidet final via `enrichWithDhlValidation`-Wrapper.
-  // False-Positive-Risiko tolerierbar, weil ein 404 von DHL den
-  // Kandidaten wegwirft (Cache markiert `invalid`, 30-Tage-TTL).
-  // Begrenzt API-Cost durch Anchor-Gating + Hard-Limit-5/Mail im
-  // Wrapper. Wieder eingefuehrt nach User-Feedback "Amazon-Mails mit
-  // verstecktem DE-Tracking werden nicht gefunden".
-  {
-    id: 'context-numeric-10-22',
-    re: /\b\d{10,22}\b/g,
-    requiresAnchor: true,
-    defaultConfidence: 'medium',
-    carrier: 'DHL',
-    source: 'context-anchor',
-    validator: 'length-only',
   },
 ]
 
@@ -571,7 +542,10 @@ function findTrackingsInHtml(html: string): TrackingCandidate[] {
           const rawValue = m[1]
           const value = rawValue.replace(/\s+/g, '').toUpperCase()
           const rejectedBy = checkRejectPatterns(value) ?? undefined
-          const carrier = p.carrier ?? 'DHL'
+          // T3: Carrier-Default lowercase (deals.carrier CHECK erlaubt nur
+          // lowercase). Diese Legacy-Liste fließt nicht mehr in den Deal-Write
+          // (Produktion läuft über detect()), aber wir halten das Casing sauber.
+          const carrier = p.carrier ?? 'dhl'
           let confidence: TrackingConfidence = p.confidence
           if (rejectedBy) confidence = 'none'
           const candidate: TrackingCandidate = {
@@ -710,7 +684,7 @@ export function findAllTrackings(
       return
     }
 
-    const carrier = pattern.carrier ?? 'DHL'
+    const carrier = pattern.carrier ?? 'dhl'
 
     const candidate: TrackingCandidate = {
       value,
@@ -878,29 +852,76 @@ function detectShipStatus(
   return 'ordered'
 }
 
-/// Tracking-Nummern gibt es nur, wenn die Bestellung tatsächlich
-/// versandt/zugestellt ist. Bestellbestätigungen, Stornos und Erstattungen
-/// referenzieren manchmal die ALTE Tracking-Nr im Body — die wollen wir
-/// nicht als gültig durchreichen, weil das den Deal-Status verfälscht.
-///
-/// T3c: heißt jetzt `gateTrackingByStatus` — die neue confidence-aware
-/// Variante `gateTracking(candidates, opts)` ist ein separater Helper
-/// weiter unten in der Pipeline.
-function gateTrackingByStatus(
-  status: 'ordered' | 'shipped' | 'delivered' | 'cancelled' | 'refunded',
-  candidates: TrackingCandidate[],
-): TrackingCandidate[] {
-  if (status !== 'shipped' && status !== 'delivered') return []
-  return candidates
+// T3 (Plan 2026-06-03): `gateTrackingByStatus` ist entfernt — das Status-Gate
+// (Tracking nur bei shipped/delivered) lebt jetzt in `tracking_detection.detect()`
+// (§2.7). Der frühere Doppel-Gate (Status-Gate + Confidence-Gate) im alten
+// `resolveTrackingForAdapter` ist durch den einen `detect()`-Call ersetzt.
+
+/// Extrahiert die Absender-Domain (lowercase, ohne `@`) aus einem
+/// From-Header. `"Amazon <shipment-tracking@amazon.de>"` → `amazon.de`.
+/// Liefert `undefined`, wenn keine Domain erkennbar ist.
+export function senderDomainFromHeader(from: string | null | undefined): string | undefined {
+  if (!from || typeof from !== 'string') return undefined
+  const at = from.lastIndexOf('@')
+  if (at < 0) return undefined
+  // Alles nach dem letzten `@` bis zum ersten Whitespace/`>`/`"`.
+  const tail = from.slice(at + 1)
+  const m = /^([A-Za-z0-9.-]+)/.exec(tail)
+  if (!m) return undefined
+  const domain = m[1].toLowerCase().replace(/\.+$/, '')
+  return domain.length > 0 ? domain : undefined
 }
 
-/// Adapter-internes Helper: kombiniert `findAllTrackings` + Status-Gate +
-/// Candidate-Gate (min='strong') zu einem Block, der die existierenden
-/// 18 Call-Sites kurzhält. Liefert das Property-Bundle, das `ParsedOrder`
-/// erwartet.
+/// Kombiniert Status-Detection + Tracking-Detection in einem Aufruf — der
+/// gemeinsame Block aller Adapter-Call-Sites (Plan 2026-06-03, T3). Reihen-
+/// folge: (1) lightweight Tracking-Probe mit `status='shipped'`, um zu wissen,
+/// ob ueberhaupt eine pollbare Sendungsnummer im Body steckt (füttert
+/// `detectShipStatus`-Heuristik „ordered → shipped, wenn Tracking vorhanden");
+/// (2) echter Status; (3) finale Detection mit dem echten Status (gated).
+/// Liefert `status` + die `ParsedOrder`-Tracking-Felder als ein Bundle.
+export function resolveStatusAndTracking(ctx: MailContext): {
+  status: 'ordered' | 'shipped' | 'delivered' | 'cancelled' | 'refunded'
+  tracking?: string
+  trackings?: string[]
+  carrier?: string
+  trackingConfidence: 'strong' | 'none'
+  trackingCandidates: TrackingCandidate[]
+  trackingNeedsReview: boolean
+} {
+  const subject = ctx.subject ?? ''
+  const body = haystack(ctx)
+  // (1) Probe: detect() mit shipped umgeht das Status-Gate, damit wir wissen,
+  //     ob eine valide Sendungsnummer existiert (für die ordered→shipped-Nudge).
+  const probe = detectTracking({
+    subject,
+    text: ctx.text ?? '',
+    html: ctx.html ?? '',
+    status: 'shipped',
+    senderDomain: senderDomainFromHeader(ctx.from),
+  })
+  const hasTracking = !!probe.tracking
+  // (2) Status (subject-first, body-second, Tracking-Nudge).
+  const status = detectShipStatus(subject, body, hasTracking)
+  // (3) Finale Detection mit echtem Status — bei ordered/cancelled/refunded
+  //     liefert detect() NONE (Status-Gate).
+  const resolved = resolveTrackingForAdapter(ctx, status)
+  return { status, ...resolved }
+}
+
+/// Adapter-internes Helper (Plan 2026-06-03, T3): delegiert die Tracking-
+/// Detection ausschliesslich an `tracking_detection.detect()`. Baut den
+/// `DetectionInput` aus dem `MailContext` + dem bereits ermittelten
+/// `status` (subject, text, html, senderDomain). `detect()` kapselt das
+/// Status-Gate (Tracking nur bei shipped/delivered), Reject-/VAT-Filter,
+/// Checksum-Validierung und Cross-Carrier-Widerspruch.
+///
+/// Mapping `DetectionResult` → `ParsedOrder`-Tracking-Felder:
+///   * `carrier` ist bereits lowercase ('dhl'|'amazon'|'dpd') aus detect().
+///   * `confidence: 'strong'` → primary akzeptiert; `'none'` → kein primary.
+///   * `needsReview` → `trackingNeedsReview`.
+/// Die 15 Adapter-Call-Sites laufen alle durch diesen einen Helper.
 function resolveTrackingForAdapter(
-  body: string,
-  html: string,
+  ctx: MailContext,
   status: 'ordered' | 'shipped' | 'delivered' | 'cancelled' | 'refunded',
 ): {
   tracking?: string
@@ -910,39 +931,33 @@ function resolveTrackingForAdapter(
   trackingCandidates: TrackingCandidate[]
   trackingNeedsReview: boolean
 } {
-  const allCandidates = findAllTrackings(body, { html })
-  // Erst Status-Gate (Bestellbestätigungen ohne shipped/delivered →
-  // Tracking-Nrn dropped).
-  const statusGated = gateTrackingByStatus(status, allCandidates)
-  // Dann Confidence-Gate (min='strong').
-  const { primary } = gateTracking(statusGated, { minConfidence: 'strong' })
-  // Max 10 Candidates in Forensik (Plan §3.2).
-  const trackingCandidates = allCandidates.slice(0, 10)
+  const result = detectTracking({
+    subject: ctx.subject ?? '',
+    text: ctx.text ?? '',
+    html: ctx.html ?? '',
+    status,
+    senderDomain: senderDomainFromHeader(ctx.from),
+  })
 
-  if (!primary) {
-    // needs_review = true wenn der Mail-Status shipped/delivered ist,
-    // aber kein strong-Candidate da ist.
-    const shippedLike = status === 'shipped' || status === 'delivered'
+  if (!result.tracking) {
     return {
       tracking: undefined,
       trackings: undefined,
       carrier: undefined,
       trackingConfidence: 'none',
-      trackingCandidates,
-      trackingNeedsReview: shippedLike && allCandidates.length > 0,
+      trackingCandidates: result.candidates,
+      trackingNeedsReview: result.needsReview,
     }
   }
 
-  const strongList = statusGated
-    .filter((c) => _CONFIDENCE_ORDER[c.confidence] >= _CONFIDENCE_ORDER['strong'])
-    .map((c) => c.value)
-
   return {
-    tracking: primary.value,
-    trackings: strongList.length > 0 ? strongList : [primary.value],
-    carrier: primary.carrier,
+    tracking: result.tracking,
+    trackings: result.trackings.length > 0 ? result.trackings : [result.tracking],
+    // `detect()` emittiert Carrier lowercase. carrier kann nie 'amazon'-poll-
+    // bar sein, aber wird zur Anzeige/Skip-Logik (T4) gespeichert.
+    carrier: result.carrier ?? undefined,
     trackingConfidence: 'strong',
-    trackingCandidates,
+    trackingCandidates: result.candidates,
     trackingNeedsReview: false,
   }
 }
@@ -1481,11 +1496,7 @@ const amazon: Adapter = {
     const qty = Number(/(?:Menge|Anzahl|Quantity|Cantidad)\s*[:\s]+(\d{1,3})/i.exec(s)?.[1] ?? '1')
     const totalSrc = /(?:Gesamtsumme|Order Total|Zwischensumme|Total|Importe)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     const etaDate = extractEtaDate(ctx.html, s)
     const shippedAt = extractShippedAt(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1527,11 +1538,7 @@ const mediamarkt: Adapter = {
     ])) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1567,11 +1574,7 @@ const saturn: Adapter = {
     ) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1650,11 +1653,7 @@ const pccomponentes: Adapter = {
     const qty = Number(/Einheiten\s*[:=]\s*(\d{1,3})/i.exec(s)?.[1] ?? '1')
     const totalSrc = /(?:Gesamtbetrag|Gesamtsumme|Zwischensumme|Total|Importe)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1693,11 +1692,7 @@ const xkom: Adapter = {
     ])) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Suma|Razem|Wartość|Total)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1744,11 +1739,7 @@ const lego: Adapter = {
     ])) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Gesamtbetrag|Order Total)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1800,11 +1791,7 @@ const tink: Adapter = {
     ])) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const shippedAt = extractShippedAt(ctx.html, s)
@@ -1846,11 +1833,7 @@ const anker: Adapter = {
     ])) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Gesamtbetrag|Order Total)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1893,11 +1876,7 @@ const euronics: Adapter = {
     ])) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Gesamtbetrag|Endbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -1953,11 +1932,7 @@ const kaufland: Adapter = {
     ])) ?? productFromArticleTable(s) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Gesamtsumme|Summe|Total|Rechnungsbetrag|Endbetrag|Gesamtbetrag)[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     // Kaufland-Marketplace listet jeden Artikel als eigenen Versandblock
     // mit "Sendungsnummer: <Nr.>". Wir zählen ausschließlich diese
     // Label-Form (nicht URL-Param "?sendungsnummer=…", nicht reine
@@ -2006,11 +1981,7 @@ const dell: Adapter = {
     ])) ?? productFromSubject(ctx.subject)
     const totalSrc = /(?:Order\s+Total|Bestellsumme|Gesamt)\s*[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -2050,11 +2021,7 @@ const ebay: Adapter = {
     const seller = extractSeller(s)
     const totalSrc = /(?:Total|Gesamt|Importe)\s*[:\s]+([^\n]{1,40})/i.exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -2092,11 +2059,7 @@ const galaxus: Adapter = {
     // CHF default für galaxus.ch.
     const isCh = /galaxus\.ch/i.test(ctx.from) || /CHF/i.test(s)
     const currency = parsedCurrency === 'EUR' && isCh ? 'CHF' : parsedCurrency
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -2139,11 +2102,7 @@ const alza: Adapter = {
       : /alza\.co\.uk/i.test(ctx.from) ? 'GBP'
       : /alza\.hu/i.test(ctx.from) ? 'HUF'
       : parsedCurrency
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     if (!orderId && !tracking) return null
     const etaDate = extractEtaDate(ctx.html, s)
     const orderTotal = extractOrderTotal(s)
@@ -2182,11 +2141,7 @@ const xxxlutz: Adapter = {
     const totalSrc = /(?:Gesamtsumme(?:\s+inkl\.\s+MwSt)?|Gesamt|Endbetrag)\s*[:\s]+([^\n]{1,40})/i
       .exec(s)?.[1] ?? ''
     const { total, currency } = parseMoney(totalSrc)
-    const _trkScan = findAllTrackings(s, { html: ctx.html })
-    const _hasStrong = _trkScan.some((c) => c.confidence === 'strong')
-    const status = detectShipStatus(ctx.subject, s, _hasStrong)
-    const _trk = resolveTrackingForAdapter(s, ctx.html, status)
-    const { tracking, trackings, carrier: rawCarrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = _trk
+    const { status, tracking, trackings, carrier: rawCarrier, trackingConfidence, trackingCandidates, trackingNeedsReview } = resolveStatusAndTracking(ctx)
     // Carrier-Override: wenn Spedition genannt, ist das wichtiger.
     const speditionMatch = /Versand\s+durch:\s*([A-Z][A-Za-z\s]{2,40})/i.exec(s)
     const carrier = speditionMatch

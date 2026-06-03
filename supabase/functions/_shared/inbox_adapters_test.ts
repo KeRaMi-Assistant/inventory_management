@@ -279,11 +279,14 @@ Deno.test('Amazon DE Bestellbestätigung weiterhin erkannt', () => {
 // Regression: User-reported Bug. Eine echte Amazon-Versand-Mail
 // ("Your tracking number is: DE5455279839") landete in der App mit
 // `tracking = '109727463192302'` — das war die `orderingShipmentId`
-// aus dem progress-tracker-Link, NICHT die echte Carrier-Tracking-
-// Nummer. Ursache: CONTEXT_TRACKING_RE erlaubte zwischen Keyword und
-// Wert nur Whitespace/Trenner; "tracking number IS: …" matchte nicht,
-// also fiel der Adapter stumm auf den HTML-href-Fallback zurück.
-Deno.test('Amazon Logistics: "Your tracking number is: DE…" gewinnt gegen progress-tracker-URL', () => {
+// aus dem progress-tracker-Link, NICHT die echte Carrier-Tracking-Nummer.
+//
+// Plan 2026-06-03 §2.8: Das `DE\d{8,14}`-Pattern (`dhl-de-prefix`) ist
+// GELÖSCHT — es kollidierte mit USt-IdNr. `DE5455279839` (DE + 10 Ziffern)
+// ist KEIN gültiges DHL/Amazon/DPD-Format mehr → wird NICHT als Tracking
+// erkannt („nichts falsches"-Wand). Der entscheidende Invariant bleibt: die
+// `orderingShipmentId` wird NIEMALS zum primären Tracking (kein Falsch-Positiv).
+Deno.test('Amazon Logistics: bare "DE…"-Plaintext wird NICHT mehr als Tracking erkannt (kein FP)', () => {
   const html = `
     <p>Your item(s) is (are) being sent by Amazon Logistics.
        Your tracking number is: DE5455279839. Depending on the
@@ -303,30 +306,20 @@ Deno.test('Amazon Logistics: "Your tracking number is: DE…" gewinnt gegen prog
   const parsed = detectAndParse(c)
   assertExists(parsed)
   assertEquals(parsed!.shopKey, 'amazon')
-  assertEquals(
-    parsed!.tracking, 'DE5455279839',
-    'Plain-Text-Tracking muss vor HTML-orderingShipmentId-Fallback gewinnen',
-  )
-  // orderingShipmentId darf höchstens als zweite Tracking-Nr im Array
-  // landen, niemals als primary tracking — das hat den User in die Irre
-  // geführt.
+  // `DE5455279839` ist kein in-scope-Format mehr → kein primary Tracking.
+  assertEquals(parsed!.tracking, undefined)
+  // orderingShipmentId darf NIE primary tracking sein (der ursprüngliche Bug).
   assert(
     parsed!.tracking !== '109727463192302',
-    'orderingShipmentId aus progress-tracker-URL darf NICHT primary sein',
+    'orderingShipmentId aus progress-tracker-URL darf NIE primary sein',
   )
-  // Plan 2026-05-16 §D1: inferCarrier() entfernt, Carrier kommt jetzt
-  // direkt aus `pattern.carrier ?? 'DHL'`. dhl-de-prefix-Pattern ist
-  // mit carrier='DHL' definiert — Amazon-Logistics-Inference faellt weg.
-  assertEquals(parsed!.carrier, 'DHL')
 })
 
 // Regression: das HTML, das `seed-demo-workspace.buildDemoAmazonHtml`
-// generiert, MUSS vom Adapter als DE-Tracking erkannt werden — sonst
-// hat der Test-Workspace immer noch keine Coverage und der User-Frust
-// kommt zurück. Wir testen hier 1:1 das geseedete Pattern (Plain-Text-
-// "Your tracking number is: DE…" + parallel orderingShipmentId im
-// shiptrack-Redirect-Link).
-Deno.test('Amazon Demo-Seeder HTML: DE-Plain-Text gewinnt gegen orderingShipmentId-Fallback', () => {
+// generiert. Plan 2026-06-03 §2.8: `DE\d{8,14}` ist gelöscht → das
+// Demo-Seeder-„DE…"-Tracking wird nicht mehr erkannt. Wichtig bleibt:
+// die orderingShipmentId wird NICHT primary (kein Falsch-Positiv).
+Deno.test('Amazon Demo-Seeder HTML: bare "DE…" liefert kein primary, orderingShipmentId nie primary', () => {
   const orderId = '306-4234293-3555528'
   const shipmentId = '106121425175302'
   const trackingDe = 'DE5455279839'
@@ -352,15 +345,11 @@ Deno.test('Amazon Demo-Seeder HTML: DE-Plain-Text gewinnt gegen orderingShipment
   assertExists(parsed)
   assertEquals(parsed!.shopKey, 'amazon')
   assertEquals(parsed!.orderId, orderId)
-  assertEquals(
-    parsed!.tracking, trackingDe,
-    'Demo-Seeder-HTML muss DE-Carrier-Tracking als primary liefern',
-  )
-  // Plan 2026-05-16 §D1: inferCarrier() entfernt — DE-Prefix kommt jetzt
-  // mit carrier='DHL' aus dem dhl-de-prefix-Pattern.
-  assertEquals(parsed!.carrier, 'DHL')
-  // Sicherheitsnetz: orderingShipmentId darf NICHT primary werden,
-  // sonst kehrt der Bug zurück.
+  // `DE…`-Format ist gelöscht → kein primary.
+  assertEquals(parsed!.tracking, undefined)
+  // `trackingDe` wird absichtlich NICHT erkannt (VAT-Kollisions-Wand).
+  assert(parsed!.tracking !== trackingDe)
+  // Sicherheitsnetz: orderingShipmentId darf NICHT primary werden.
   assert(
     parsed!.tracking !== shipmentId,
     'orderingShipmentId darf nicht als primary tracking gewählt werden',
@@ -399,34 +388,41 @@ Deno.test.ignore('DE-Tracking + Body "Amazon Logistics" → carrier=Amazon Logis
   assertEquals(parsed!.carrier, 'Amazon Logistics')
 })
 
-Deno.test('DE-Tracking + Body "DHL" → carrier=DHL (nicht Amazon Logistics!)', () => {
+Deno.test('DE-Tracking + Body "DHL" wird NICHT erkannt (VAT-Kollisions-Wand, Plan §2.8)', () => {
   // Echter Fall aus dem User-Screenshot: x-kom-Bestellung mit
-  // "DE294559406" als Tracking, Body sagt "DHL". Vorher wurde das als
-  // "Amazon Logistics" beschriftet — falsch.
+  // "DE294559406" als „Tracking". Plan 2026-06-03 §2.8: `DE\d{8,14}` ist
+  // gelöscht (kollidiert mit USt-IdNr.) — auch ein expliziter „DHL"-Hinweis
+  // im Body promotet das Format NICHT mehr. Lieber kein Tracking als ein
+  // falsches. (Echte DHL-Sendungen kommen als JJD / S10 / 20-stellig.)
   const c = ctx(
     'noreply@x-kom.pl',
     'Deine x-kom-Bestellung wurde versendet',
     'Sendung wird versendet mit DHL. Sendungsnummer: DE294559406.',
   )
   const parsed = detectAndParse(c)
-  assertExists(parsed)
-  assertEquals(parsed!.tracking, 'DE294559406')
-  assertEquals(parsed!.carrier, 'DHL')
+  // x-kom ist kein gemappter Shop → kein ParsedOrder. Falls ein generischer
+  // Fallback doch greift, darf das DE-Format NIE als Tracking erscheinen.
+  if (parsed) {
+    assert(
+      parsed.tracking !== 'DE294559406',
+      `DE-Format darf nicht als Tracking durchgehen, war "${parsed.tracking}"`,
+    )
+  }
 })
 
-Deno.test('DE-Tracking ohne Body-Hint → carrier=undefined (kein Label > falsches Label)', () => {
+Deno.test('DE-Tracking ohne Body-Hint wird NICHT als Tracking erkannt', () => {
   const c = ctx(
     'noreply@example.com',
     'Bestellung versendet',
     'Sendungsnummer: DE5455279839. Lieferung in 2-3 Werktagen.',
   )
   const parsed = detectAndParse(c)
-  // Adapter erkennt evtl. nicht den Shop (kein Match) — aber wenn doch
-  // (z.B. via generischen Fallback), darf carrier nicht hardcoded sein.
-  if (parsed && parsed.tracking === 'DE5455279839') {
+  // Unbekannter Shop → kein ParsedOrder. Auch via Fallback darf `DE…`
+  // niemals als Tracking promoten (Plan §2.8).
+  if (parsed) {
     assert(
-      parsed.carrier === undefined || parsed.carrier === null,
-      `carrier sollte undefined sein, war "${parsed.carrier}"`,
+      parsed.tracking !== 'DE5455279839',
+      `DE-Format darf nicht als Tracking durchgehen, war "${parsed.tracking}"`,
     )
   }
 })
@@ -487,36 +483,35 @@ Deno.test('Plan §D1: Amazon-TBA-Pattern wird NICHT mehr detected', () => {
   assertEquals(candidates.length, 0)
 })
 
-Deno.test('Plan Phase A: context-numeric (13-digit) MIT Anchor wird wieder detected (medium)', () => {
-  // Anchor-gated re-introduction: 'Sendungsnummer:' triggert das
-  // permissive Pattern. DHL-API entscheidet final, ob die Nummer real
-  // ist — die Heuristik muss nur den Kandidaten liefern.
+Deno.test('Plan §2.8: bare context-numeric (13-digit) wird im Legacy-Scan NICHT mehr detected', () => {
+  // Plan 2026-06-03 §2.8: `context-numeric-10-22` ist aus TRACKING_PATTERNS
+  // gelöscht (Bestellnr/Kundennr-Falsch-Positiv-Quelle). Der schmale
+  // Legacy-`findAllTrackings`-Scan kennt nur noch `dhl-jjd`. Eine generische
+  // 13-stellige Zahl — auch MIT „Sendungsnummer:"-Anchor — taucht hier nicht
+  // mehr auf. Die produktive anchor-gated dhl-12/dhl-20-Detection lebt jetzt
+  // in `tracking_detection.detect()`.
   const candidates = findAllTrackings('Sendungsnummer: 1234567890123', {})
-  const ctx = candidates.find((c) => c.value === '1234567890123')
-  assert(ctx !== undefined, 'context-numeric mit Anchor muss matchen')
-  assertEquals(ctx!.confidence, 'medium')
-  assertEquals(ctx!.carrier, 'DHL')
+  assertEquals(candidates.length, 0)
 })
 
-Deno.test('Plan Phase A: context-numeric (13-digit) OHNE Anchor → weak (Wrapper filtert raus)', () => {
-  // requiresAnchor:true + kein Anchor → Confidence wird gestepdown von
-  // medium → weak. Der Validation-Wrapper akzeptiert nur strong+medium,
-  // also wird der Kandidat NICHT an DHL geschickt → kein API-Cost-Risiko.
+Deno.test('Plan §2.8: bare context-numeric OHNE Anchor wird im Legacy-Scan NICHT detected', () => {
   const candidates = findAllTrackings('Random text 1234567890123 here', {})
-  const ctx = candidates.find((c) => c.value === '1234567890123')
-  assert(ctx !== undefined, 'Candidate existiert, aber als weak')
-  assertEquals(ctx!.confidence, 'weak')
+  assertEquals(candidates.length, 0)
 })
 
-Deno.test('Plan §D1: S10-UPU-Pattern (XJ12345678FR) wird NICHT mehr detected', () => {
+Deno.test('Plan §D1: S10-UPU-Pattern (XJ12345678FR) wird im Legacy-Scan NICHT detected', () => {
+  // S10 lebt jetzt in detect() (anchor-gated + ISO-3166 + Checksum), nicht
+  // im Legacy-`findAllTrackings`-Scan.
   const candidates = findAllTrackings('Tracking: XJ12345678FR', {})
   assertEquals(candidates.length, 0)
 })
 
-Deno.test('Plan §D1: DHL-JJD-Pattern wird WEITERHIN detected (Sanity)', () => {
+Deno.test('Plan §2.8: DHL-JJD-Pattern bleibt im Legacy-Scan, carrier lowercase', () => {
   const candidates = findAllTrackings('Sendungsnummer: JJD012345678901234', {})
   assert(candidates.length >= 1, 'JJD-Pattern muss weiterhin matchen')
   const jjd = candidates.find((c) => c.value === 'JJD012345678901234')
   assert(jjd !== undefined, 'JJD012345678901234 muss als Candidate erscheinen')
-  assertEquals(jjd!.carrier, 'DHL')
+  // T3-Casing-Fix: Carrier ist lowercase (deals.carrier CHECK erlaubt nur
+  // 'dhl'|'amazon'|'dpd').
+  assertEquals(jjd!.carrier, 'dhl')
 })

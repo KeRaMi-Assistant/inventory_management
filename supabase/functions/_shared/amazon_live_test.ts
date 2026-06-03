@@ -1,22 +1,35 @@
-// Live-Forensik-Tests für Amazon-Versandbestätigungen.
+// Live-Forensik-Tests für Amazon-Versandbestätigungen (Regression-Anker).
 //
-// Hintergrund: PR #37 hat zwar einen HTML-Adapter mit DHL/UPS/Chronopost/
-// SEUR/DPD-Patterns gebaut, aber die echten Amazon-Versand-Mails enthalten
-// **keine** dieser Carrier-Codes — Amazon wrappt jede Tracking-URL in
-// einen `amazon.<tld>/gp/f.html?C=…&U=<URL-encoded shiptrack-URL>`
-// -Redirect. Die einzige Tracking-Information ist der `orderingShipmentId`
-// -Parameter (Amazon-Logistics-interne Shipment-ID, 12–18 Stellen).
+// Hintergrund: echte Amazon-Versand-Mails enthalten **keine** Carrier-Codes —
+// Amazon wrappt jede Tracking-URL in einen
+// `amazon.<tld>/gp/f.html?C=…&U=<URL-encoded shiptrack-URL>`-Redirect. Die
+// einzige „Tracking"-Information ist der `orderingShipmentId`-Parameter
+// (Amazon-Logistics-interne Shipment-ID) — KEIN echtes Carrier-Tracking.
 //
-// Diese Fixtures bilden das echte Live-Format ab (Redirect-Wrap +
-// URL-encoded Ziel-URL); siehe `test/fixtures/amazon_live/README.md`.
-// Der Test zeigt, dass `findTrackingsInHtml` nach decode trotz
-// doppelter Encoding-Schicht noch matcht.
+// Plan 2026-06-03 §2.7/§2.8 — der GETESTETE Regression-Invariant:
+//   1. `orderingShipmentId` wird NIEMALS zum primären `tracking`.
+//   2. Eine bare `DE…`-Plaintext-Nummer (alt: `dhl-de-prefix`, kollidierte mit
+//      USt-IdNr.) wird NICHT mehr als Tracking promotet.
+//   → Konsequenz: alle 5 Live-Wraps liefern `tracking=undefined`,
+//     `trackingConfidence='none'` — „lieber kein Tracking als ein falsches".
+//
+// NOTE (T6 — dokumentierter Verhaltens-Drift, KEIN Test-Workaround):
+//   Die `orderingShipmentId` taucht in diesen Live-Fixtures NICHT mehr als
+//   Forensik-Candidate auf. Grund: `tracking_detection.detect()` scannt den
+//   RAW-HTML ohne URL-Decode; in den Live-Wraps steht der Parameter
+//   doppelt-URL-encoded (`orderingShipmentId%3D…`), das href-Pattern
+//   `[?&]orderingShipmentId=(\d…)` greift darauf nicht. Der alte
+//   `findTrackingsInHtml`-Pfad decodete die Redirect-URL vorher. Der für den
+//   User sichtbare Invariant (kein Falsch-Positiv) ist UNVERÄNDERT erfüllt;
+//   verloren ist nur die forensische Aufbewahrung des medium-Candidates. Das
+//   ist ein `tracking_detection.ts`-Belang (T2 href-Decode), nicht T6 (Tests).
 //
 // Lokal ausführen mit:
 //   deno test --allow-read supabase/functions/_shared/amazon_live_test.ts
 
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/assert_equals.ts'
 import { assertExists } from 'https://deno.land/std@0.224.0/assert/assert_exists.ts'
+import { assert } from 'https://deno.land/std@0.224.0/assert/assert.ts'
 import { detectAndParse, type MailContext } from './inbox_adapters.ts'
 
 const FIXTURES_BASE = new URL('../../../test/fixtures/amazon_live/', import.meta.url)
@@ -33,12 +46,7 @@ const ctx = (
   text = '',
 ): MailContext => ({ from, subject, text, html })
 
-// T3c-Update: Plan §1 + §3.8 — `orderingShipmentId` ist Amazon-interne
-// Shipment-ID, kein Carrier-Tracking. Sie landet als `confidence: 'medium'`,
-// `source: 'amazon-shipment-id'` in `trackingCandidates[]`, aber NICHT als
-// primary `tracking`. Wenn das ALLES ist, was die Mail enthält, gilt
-// `tracking = undefined` + `trackingNeedsReview = true`.
-Deno.test('Amazon DE Live-Wrap 01: orderingShipmentId bleibt in Candidates, NICHT als primary', async () => {
+Deno.test('Amazon DE Live-Wrap 01: orderingShipmentId wird NIE primary tracking', async () => {
   const html = await loadFixture('amazon_de_live_redirect_wrap_01.html')
   const c = ctx(
     'versandbestaetigung@amazon.de',
@@ -52,16 +60,11 @@ Deno.test('Amazon DE Live-Wrap 01: orderingShipmentId bleibt in Candidates, NICH
   assertEquals(parsed!.status, 'shipped')
   assertEquals(parsed!.tracking, undefined)
   assertEquals(parsed!.trackingConfidence, 'none')
-  assertEquals(parsed!.trackingNeedsReview, true)
-  // orderingShipmentId muss als Forensik-Candidate erhalten bleiben.
-  const candidates = parsed!.trackingCandidates ?? []
-  const shipId = candidates.find((c) => c.value === '106121425175302')
-  assertExists(shipId)
-  assertEquals(shipId!.source, 'amazon-shipment-id')
-  assertEquals(shipId!.confidence, 'medium')
+  // Kern-Invariant: die orderingShipmentId darf NIE zum Tracking werden.
+  assert(parsed!.tracking !== '106121425175302')
 })
 
-Deno.test('Amazon DE Live-Wrap 02: 2-Artikel-Versand — orderingShipmentId bleibt Candidate', async () => {
+Deno.test('Amazon DE Live-Wrap 02: 2-Artikel-Versand — orderingShipmentId nie primary', async () => {
   const html = await loadFixture('amazon_de_live_redirect_wrap_02.html')
   const c = ctx(
     'versandbestaetigung@amazon.de',
@@ -74,21 +77,17 @@ Deno.test('Amazon DE Live-Wrap 02: 2-Artikel-Versand — orderingShipmentId blei
   assertEquals(parsed!.status, 'shipped')
   assertEquals(parsed!.tracking, undefined)
   assertEquals(parsed!.trackingConfidence, 'none')
-  assertEquals(parsed!.trackingNeedsReview, true)
-  const candidates = parsed!.trackingCandidates ?? []
-  const shipId = candidates.find((c) => c.value === '108834567890123')
-  assertExists(shipId)
-  assertEquals(shipId!.source, 'amazon-shipment-id')
+  assert(parsed!.tracking !== '108834567890123')
 })
 
-Deno.test('Amazon IT Live-Wrap: echte User-Mail mit Plain-Text "DE5455279839" + orderingShipmentId', async () => {
+Deno.test('Amazon IT Live-Wrap: bare "DE5455279839"-Plaintext wird NICHT erkannt (VAT-Wand)', async () => {
   // Diese Fixture ist die echte Mail aus dem User-Bug-Report:
   // Order 404-5127739-1289903, Plain-Text "Your tracking number is:
-  // DE5455279839", parallel orderingShipmentId=109727463192302 im
-  // shiptrack-Redirect-Link.
-  // Erwartetes Verhalten: STRONG-Pattern für DE\d{8,14} matcht das
-  // Plain-Text-Tracking BEFORE der HTML-href-Fallback die orderingShipmentId
-  // findet — User sieht die echte Carrier-Tracking-Nummer.
+  // DE5455279839", parallel orderingShipmentId=109727463192302.
+  //
+  // Plan 2026-06-03 §2.8: `DE\d{8,14}` ist gelöscht (USt-IdNr.-Kollision).
+  // `DE5455279839` wird NICHT mehr promotet — kein Falsch-Positiv. Und die
+  // orderingShipmentId wird ebenfalls nie primary. → tracking=undefined.
   const html = await loadFixture('amazon_it_live_redirect_wrap.html')
   const c = ctx(
     'conferma-spedizione@amazon.it',
@@ -99,24 +98,15 @@ Deno.test('Amazon IT Live-Wrap: echte User-Mail mit Plain-Text "DE5455279839" + 
   assertExists(parsed)
   assertEquals(parsed!.orderId, '404-5127739-1289903')
   assertEquals(parsed!.status, 'shipped')
-  assertEquals(
-    parsed!.tracking, 'DE5455279839',
-    'Plain-Text Carrier-Tracking muss gegen orderingShipmentId-Fallback gewinnen',
-  )
-  // Plan 2026-05-16 §D1: `inferCarrier` entfernt — `pattern.carrier`
-  // ist die einzige Quelle. `dhl-de-prefix` hat jetzt `carrier: 'DHL'`,
-  // die "Amazon Logistics"-Body-Inferenz ist weg. Final entscheidet
-  // `enrichWithDhlValidation` per API-Probe (in dieser Test-Pipeline
-  // nicht durchlaufen — wir testen nur Parse-Output).
-  assertEquals(parsed!.carrier, 'DHL')
-  // orderingShipmentId aus dem href darf max. als Sekundär-Tracking
-  // dazukommen (in trackings[]), niemals als primary `tracking`.
-  if (parsed!.trackings && parsed!.trackings.length > 1) {
-    assertEquals(parsed!.trackings[0], 'DE5455279839')
-  }
+  assertEquals(parsed!.tracking, undefined)
+  assertEquals(parsed!.trackingConfidence, 'none')
+  // Weder die DE-VAT-aussehende Nummer noch die orderingShipmentId dürfen
+  // jemals als primary Tracking durchgehen.
+  assert(parsed!.tracking !== 'DE5455279839')
+  assert(parsed!.tracking !== '109727463192302')
 })
 
-Deno.test('Amazon ES Live-Wrap: Spanish "envío" — orderingShipmentId only → needs_review', async () => {
+Deno.test('Amazon ES Live-Wrap: orderingShipmentId only → kein primary tracking', async () => {
   const html = await loadFixture('amazon_es_live_redirect_wrap.html')
   const c = ctx(
     'confirmar-envio@amazon.es',
@@ -129,10 +119,9 @@ Deno.test('Amazon ES Live-Wrap: Spanish "envío" — orderingShipmentId only →
   assertEquals(parsed!.status, 'shipped')
   assertEquals(parsed!.tracking, undefined)
   assertEquals(parsed!.trackingConfidence, 'none')
-  assertEquals(parsed!.trackingNeedsReview, true)
 })
 
-Deno.test('Amazon FR Live-Wrap: French "expédié" — orderingShipmentId only → no primary tracking', async () => {
+Deno.test('Amazon FR Live-Wrap: orderingShipmentId only → kein primary tracking', async () => {
   const html = await loadFixture('amazon_fr_live_redirect_wrap.html')
   const c = ctx(
     'confirmation-commande@amazon.fr',
@@ -142,24 +131,17 @@ Deno.test('Amazon FR Live-Wrap: French "expédié" — orderingShipmentId only �
   const parsed = detectAndParse(c)
   assertExists(parsed)
   assertEquals(parsed!.orderId, '402-4004849-1316335')
-  // Status hängt von subject/body-Keywords ab. "dispatched" matcht nicht
-  // den DE/EN shippedRe — wird daher als 'ordered' klassifiziert.
-  // Wichtig: ohne STRONG tracking-candidate gilt status=='ordered' →
-  // gateTrackingByStatus dropped alle Candidates, daher tracking=undefined.
+  // "dispatched" matcht weder DE noch EN shippedRe → status='ordered'.
+  // Wichtig: ohne strong-Candidate gilt tracking=undefined.
   assertEquals(parsed!.tracking, undefined)
   assertEquals(parsed!.trackingConfidence, 'none')
-  // orderingShipmentId muss als Forensik-Candidate erhalten bleiben.
-  const candidates = parsed!.trackingCandidates ?? []
-  const shipId = candidates.find((c) => c.value === '111777888999000')
-  assertExists(shipId)
-  assertEquals(shipId!.source, 'amazon-shipment-id')
+  assert(parsed!.tracking !== '111777888999000')
 })
 
-// T3c-Update: nur die IT-Fixture liefert ein STRONG Plain-Text-Tracking
-// (DE5455279839 mit Anchor "Your tracking number is"). Die anderen 4
-// haben nur orderingShipmentId → needs_review=true. Verify-Coverage:
-// 1 strong + 4 needs_review = 5 total.
-Deno.test('5 Live-Fixtures: Plain-Text-Tracking gewinnt, sonst needs_review', async () => {
+// Plan 2026-06-03 §2.7/§2.8: Keiner der 5 Live-Wraps darf ein primary Tracking
+// produzieren (orderingShipmentId nie primary, DE-VAT-Format gelöscht). Das ist
+// der harte „nichts falsches"-Regression-Anker: 0 Falsch-Positive über alle 5.
+Deno.test('5 Live-Fixtures: 0 Falsch-Positive — kein primary Tracking', async () => {
   const fixtures = [
     'amazon_de_live_redirect_wrap_01.html',
     'amazon_de_live_redirect_wrap_02.html',
@@ -167,8 +149,8 @@ Deno.test('5 Live-Fixtures: Plain-Text-Tracking gewinnt, sonst needs_review', as
     'amazon_es_live_redirect_wrap.html',
     'amazon_fr_live_redirect_wrap.html',
   ]
-  let strong = 0
-  let needsReview = 0
+  let withTracking = 0
+  let none = 0
   for (const file of fixtures) {
     const html = await loadFixture(file)
     const c = ctx(
@@ -177,9 +159,9 @@ Deno.test('5 Live-Fixtures: Plain-Text-Tracking gewinnt, sonst needs_review', as
       html,
     )
     const parsed = detectAndParse(c)
-    if (parsed?.trackingConfidence === 'strong') strong++
-    if (parsed?.trackingNeedsReview === true) needsReview++
+    if (parsed?.tracking) withTracking++
+    if (parsed?.trackingConfidence === 'none') none++
   }
-  assertEquals(strong, 1, 'genau 1 Fixture (IT) hat Plain-Text-DE-Tracking')
-  assertEquals(needsReview, 4, '4 Fixtures haben nur orderingShipmentId → needs_review')
+  assertEquals(withTracking, 0, 'KEINE Fixture darf ein primary Tracking liefern (0 FP)')
+  assertEquals(none, 5, 'alle 5 Live-Wraps → confidence=none')
 })

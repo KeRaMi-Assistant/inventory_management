@@ -497,7 +497,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get shippingIntroBody =>
-      'Hinterlege je Carrier einen API-Key, damit die App alle 4 Stunden den Sendungsstatus pollt und Deals automatisch auf „Angekommen“ setzt.';
+      'Sendungsnummern werden automatisch aus deinen Mails erkannt (DHL, Amazon, DPD) – ganz ohne API-Key. Hinterlege je Carrier einen API-Key, damit die App den Live-Sendungsstatus abruft (täglich um 13:00 Uhr und einmal sofort, sobald ein Deal ein Tracking bekommt) und Deals automatisch auf „Angekommen“ setzt.';
 
   @override
   String get shippingNoAccess =>
@@ -1500,7 +1500,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpDealsStatusInTransit =>
-      'Unterwegs — Versandbestätigung erkannt oder manuell gesetzt. Tracking-Nummer wird alle paar Stunden gepollt.';
+      'Unterwegs — Versandbestätigung erkannt oder manuell gesetzt. Sobald eine Sendungsnummer zugewiesen wird, fragt die App den Status einmal sofort ab und danach täglich um 13:00 Uhr.';
 
   @override
   String get helpDealsStatusArrived =>
@@ -1519,7 +1519,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpDealsTrackingDesc =>
-      'Wenn eine Versandmail mit einer DHL-Tracking-Nummer eintrifft, fragt die App die DHL-API direkt an: nur wenn DHL die Nummer bestätigt, wird der Deal automatisch auf „Unterwegs\" gesetzt. Sobald DHL die Zustellung meldet, springt der Deal auf „Angekommen\". Andere Carrier (DPD, UPS, Hermes, Amazon Logistics, GLS) werden nicht mehr aus Mails erkannt — Tracking-Nummern dort manuell im Deal eintragen. Details siehe Sektion „Versand & Carrier-API-Keys\".';
+      'Trifft eine Versandmail ein, erkennt die App die Sendungsnummer rein anhand ihrer Struktur (Format + Prüfsumme) — DHL, Amazon Logistics und DPD werden unterstützt. Dafür ist kein Carrier-API-Key nötig: die Nummer wird immer gespeichert und der Deal automatisch auf „Unterwegs\" gesetzt. Den Live-Status (in Zustellung, zugestellt) holt die App, sobald ein passender Carrier-API-Key hinterlegt ist — sofort bei der Zuweisung und danach täglich um 13:00 Uhr. Amazon-Logistics-Sendungen werden erkannt, lassen sich aber nicht live verfolgen (siehe FAQ). Andere Carrier (UPS, Hermes, GLS) trägst du bei Bedarf manuell im Deal ein. Details siehe Sektion „Versand & Carrier-API-Keys\".';
 
   @override
   String get helpDealsDropShipTitle => 'Multi-Drop-Ship';
@@ -1534,7 +1534,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpDealsRetrackDesc =>
-      'Im Deal-Detail neben der Sendungsnummer gibt es ein Refresh-Icon „Status aktualisieren\". Damit fragst du den Carrier sofort nach dem aktuellen Status, ohne auf den nächsten automatischen Poll zu warten — praktisch z. B. kurz vor einem geplanten Versand.\nEin Retrack pro Deal ist alle 30 Sekunden möglich. Während der Sperre ist der Button ausgegraut und zeigt „Bitte 30s warten\" — das schützt den Carrier vor unnötigen API-Calls und dich vor Rate-Limits.';
+      'Im Deal-Detail neben der Sendungsnummer gibt es ein Refresh-Icon „Status aktualisieren\". Damit fragst du den Carrier sofort nach dem aktuellen Status, ohne auf den täglichen 13-Uhr-Poll zu warten — praktisch z. B. kurz vor einem geplanten Versand.\nEin Retrack pro Deal ist alle 30 Sekunden möglich. Während der Sperre ist der Button ausgegraut und zeigt „Bitte 30s warten\" — das schützt den Carrier vor unnötigen API-Calls und dich vor Rate-Limits.\nBei Amazon-Logistics-Sendungen ist der Button dauerhaft ausgegraut: Amazon bietet keine öffentliche Status-API, deshalb gibt es dort keinen Live-Status zum Aktualisieren.';
 
   @override
   String get helpShippingSection => 'Versand & Carrier-API-Keys';
@@ -1544,7 +1544,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpShippingIntroDesc =>
-      'Damit die App den Live-Status deiner Sendungen direkt beim Versanddienstleister abfragen kann (statt nur aus Mails zu lesen), hinterlegst du pro Carrier einen API-Key unter Einstellungen → Versand. Pro Workspace ist ein Key je Carrier nötig — alle Mitglieder profitieren davon.';
+      'Sendungsnummern erkennt die App automatisch aus deinen Mails — dafür brauchst du keinen API-Key. Der Key ist nur für den Live-Status nötig: Damit die App den aktuellen Versandstatus (in Zustellung, zugestellt) direkt beim Versanddienstleister abfragen kann, hinterlegst du pro Carrier einen API-Key unter Einstellungen → Versand. Pro Workspace ist ein Key je Carrier nötig — alle Mitglieder profitieren davon.';
 
   @override
   String get helpShippingDhlTitle => 'DHL — aktiv unterstützt';
@@ -1554,19 +1554,20 @@ class AppLocalizationsDe extends AppLocalizations {
       'DHL kannst du sofort anbinden:\n• Account auf developer.dhl.com anlegen (kostenlos).\n• Dort die API „Shipment Tracking - Unified\" abonnieren — Free-Tier reicht für privaten Gebrauch.\n• Den API-Key kopieren und unter Einstellungen → Versand → DHL → „API-Key hinterlegen\" einfügen.\n• Direkt danach einmal Einstellungen → „Sendungsnummern neu prüfen\" tippen, damit deine bestehenden Mails von der neuen DHL-API-Pipeline geparst werden.\nAb sofort werden Deals mit DHL-Trackingnummer in regelmäßigen Abständen aktualisiert und der Status (unterwegs, in Zustellung, zugestellt) erscheint direkt im Deal.';
 
   @override
-  String get helpShippingApiOnlyTitle => 'Warum DHL-API statt Mail-Heuristik?';
+  String get helpShippingApiOnlyTitle =>
+      'Wie erkennt die App eine echte Sendungsnummer?';
 
   @override
   String get helpShippingApiOnlyDesc =>
-      'Bis vor kurzem hat die App Tracking-Nummern aus Mails mit Regex-Patterns erkannt. Resultat: pro Mail oft mehrere Kandidaten, von denen nur eine echt war (Bestell-Nr, Kunden-Nr, Rechnung-Nr — alle 12-stellige Zahlen sehen wie Tracking aus). Jetzt fragt die App bei jedem Kandidaten direkt die DHL-API: liefert sie ein Shipment zurück → echte Tracking-Nummer wird übernommen, sonst verworfen. Du siehst maximal eine Pill pro Mail, und sie ist immer real.';
+      'Pro Mail sehen oft mehrere Zahlen wie eine Tracking-Nummer aus (Bestell-Nr, Kunden-Nr, Rechnungs-Nr). Die App prüft jeden Kandidaten anhand seiner Struktur: Carrier-Format, Länge und Prüfsumme müssen exakt passen, und ein Versand-Hinweiswort muss in der Nähe stehen. Werte, die nur zufällig wie ein Tracking aussehen, werden verworfen — eine deutsche USt-IdNr. (zwei Buchstaben + neun Ziffern, z. B. DE123456789) wird so nie fälschlich als Sendungsnummer gespeichert. Du siehst maximal eine Sendungsnummer pro Mail, und sie ist strukturell verifiziert. Das funktioniert komplett ohne API-Key.';
 
   @override
   String get helpShippingComingSoonTitle =>
-      'DPD, UPS, Hermes, Amazon Logistics — bald oder nie';
+      'Welche Carrier werden unterstützt?';
 
   @override
   String get helpShippingComingSoonDesc =>
-      'Aktuell läuft die automatische Tracking-Erkennung ausschließlich über die DHL-API. Andere Carrier (DPD, UPS, Hermes, Amazon Logistics, GLS) werden nicht mehr aus Versandmails geraten — das war die Hauptquelle der Falsch-Positive. DPD und UPS bekommen ihre eigene API-Anbindung in einem späteren Update. Hermes und Amazon Logistics bieten keine öffentliche Tracking-API — dort musst du die Tracking-Nummer manuell im Deal eintragen.';
+      'Automatisch aus Mails erkannt werden Sendungsnummern von DHL, Amazon Logistics und DPD.\n• DHL und DPD: Erkennung plus Live-Status, sobald der passende Carrier-API-Key hinterlegt ist.\n• Amazon Logistics: wird erkannt und gespeichert, hat aber keinen Live-Status — Amazon bietet keine öffentliche Status-API.\nAndere Carrier (UPS, Hermes, GLS) werden bewusst nicht aus Mails geraten — das war früher die Hauptquelle falscher Sendungsnummern. Dort trägst du die Tracking-Nummer bei Bedarf manuell im Deal ein.';
 
   @override
   String get helpShippingKeySafetyTitle => 'Was passiert mit meinem API-Key?';
@@ -1827,7 +1828,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpFaqA7 =>
-      'Carrier-Polling läuft alle 4 Stunden. Prüfe in Einstellungen → Versand, ob der Carrier-API-Key hinterlegt ist. Ohne Key kann die App den Status nicht abfragen — die Mail-Pipeline ergänzt das ggf. parallel über Versandmails.';
+      'Den Live-Status holt die App einmal sofort, wenn ein Deal eine Sendungsnummer bekommt, und danach täglich um 13:00 Uhr. Möchtest du nicht so lange warten, nutze im Deal-Detail das Refresh-Icon „Status aktualisieren\" (alle 30s pro Deal möglich). Bleibt der Status leer, prüfe unter Einstellungen → Versand, ob der Carrier-API-Key hinterlegt ist — die Sendungsnummer selbst wird auch ohne Key erkannt und gespeichert, aber für den Live-Status ist der Key nötig. Amazon-Logistics-Sendungen haben grundsätzlich keinen Live-Status (siehe nächste Frage).';
 
   @override
   String get helpFaqQ8 => 'Kann ich mehrere Workspaces nutzen?';
@@ -1913,7 +1914,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpFaqA19 =>
-      'Seit Mai 2026 speichert die App eine Tracking-Nummer nur, wenn sie strukturell verifiziert ist (Carrier-Pattern + Längen-/Prüfsummen-Check). Wenn die Mail nur eine interne Shop-ID enthält (z. B. Amazon-Logistics-Shipment-ID) oder die Nummer unklar formatiert ist, lässt die App das Feld bewusst leer statt einen falschen Wert zu speichern. Du kannst die Sendungsnummer direkt im Deal manuell eintragen — manuelle Eingaben werden nie automatisch überschrieben.';
+      'Die App speichert eine Sendungsnummer nur, wenn sie strukturell verifiziert ist (Carrier-Format + Längen-/Prüfsummen-Check + Versand-Hinweiswort in der Nähe). Wenn eine Mail nur eine ähnlich aussehende Zahl enthält (z. B. eine USt-IdNr., IBAN oder reine Bestell-Nummer) oder die Nummer unklar formatiert ist, lässt die App das Feld bewusst leer statt einen falschen Wert zu speichern. Du kannst die Sendungsnummer direkt im Deal manuell eintragen — manuelle Eingaben werden nie automatisch überschrieben.';
 
   @override
   String get helpTroubleSection => 'Fehlerbehebung';
@@ -2227,6 +2228,13 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get helpFaqA24 =>
       'Einstellungen → Push → Kategorie „Mindestbestand\" deaktivieren. Der Push wird dann nicht mehr verschickt; die gelbe Warnung im Dashboard und im Lager-Tab bleibt als stiller Hinweis sichtbar.';
+
+  @override
+  String get helpFaqQ25 => 'Warum hat meine Amazon-Sendung keinen Live-Status?';
+
+  @override
+  String get helpFaqA25 =>
+      'Amazon-Logistics-Sendungen erkennt die App und speichert die Sendungsnummer, aber Amazon bietet keine öffentliche Schnittstelle, um den Versandstatus abzufragen. Deshalb siehst du am Deal nur „Sendung erkannt — Live-Status nicht verfügbar\", und das Refresh-Icon „Status aktualisieren\" ist ausgegraut. Häufig übergibt Amazon das Paket an DHL — steht in derselben Mail zusätzlich eine DHL-Nummer, nutzt die App diese als verfolgbare Sendung und du bekommst dort ganz normal einen Live-Status.';
 
   @override
   String get helpPrivacySection => 'Datenschutz & Kontakt';
@@ -3662,6 +3670,18 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trackingRetrackOffline => 'Keine Verbindung';
+
+  @override
+  String get trackingAmazonNoLiveStatusBadge =>
+      'Sendung erkannt — Live-Status nicht verfügbar';
+
+  @override
+  String get trackingRetrackUnavailableAmazon =>
+      'Kein Live-Status für Amazon Logistics verfügbar';
+
+  @override
+  String get trackingManualVatRejected =>
+      'Diese Eingabe sieht wie eine Umsatzsteuer-ID aus (2 Buchstaben + 9 Ziffern) und wird nicht als Sendungsnummer gespeichert.';
 
   @override
   String get inboxSectionOrder => 'Bestellung';

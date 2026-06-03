@@ -17,13 +17,16 @@ void main() {
       expect(CarrierService.detect('TBA123456789012'), Carrier.amazon);
       expect(CarrierService.detect('tba123456789012'), Carrier.amazon);
     });
-    test('DE+Ziffern → DHL (echter Carrier; Amazons Tracker findet das nicht)', () {
-      expect(CarrierService.detect('DE5435294918'), Carrier.dhl);
-      expect(CarrierService.detect('DE12345678'), Carrier.dhl);
+    test('DE+Ziffern → unknown (T7: _dhlDePrefix entfernt, carrier kommt aus deal.carrier)', () {
+      // Nach Tracking-Rebuild T7 wird das DHL-DE-Prefix-Pattern nicht mehr
+      // client-seitig detektiert (verhinderte VAT-False-Positives wie DE123456789).
+      // Der korrekte Carrier steht in deal.carrier (von der Edge-Function gesetzt).
+      expect(CarrierService.detect('DE5435294918'), Carrier.unknown);
+      expect(CarrierService.detect('DE12345678'), Carrier.unknown);
+      // VAT-Format (9 Ziffern) ist ebenfalls unknown:
+      expect(CarrierService.detect('DE123456789'), Carrier.unknown);
     });
-    test('Deutsche Post LL+9+LL bleibt erkannt (kollidiert nicht mit DE-DHL)', () {
-      // Das DHL-DE-Pattern verlangt Ziffern bis zum Ende; Deutsche Post hat
-      // zwei Buchstaben am Ende und matcht deshalb nicht.
+    test('Deutsche Post LL+9+LL bleibt erkannt', () {
       expect(CarrierService.detect('DE123456789DE'), Carrier.deutschePost);
     });
     test('DHL Express = 10 Ziffern', () {

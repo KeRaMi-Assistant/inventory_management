@@ -88,9 +88,6 @@ class CarrierService {
     r'^https?://(?:[^/]*\.)?track\.amazon\.[a-z.]+(?:/|$)',
     caseSensitive: false,
   );
-  // 'DE' + 8–14 Ziffern: hauptsächlich DHL (Amazon Marketplace DE liefert
-  // typischerweise via DHL Paket; deren Tracker akzeptiert das Format).
-  static final _dhlDePrefix = RegExp(r'^DE\d{8,14}$');
   // Reine Ziffernfolge.
   static final _digits = RegExp(r'^\d+$');
 
@@ -117,10 +114,6 @@ class CarrierService {
     if (_ups.hasMatch(v)) return Carrier.ups;
     if (_post.hasMatch(v)) return Carrier.deutschePost;
     if (_hermesH.hasMatch(v)) return Carrier.hermes;
-    // 'DE' + Ziffern: typischer DHL-Marketplace-Code (auch bei Amazon-DE-
-    // Bestellungen). Routen wir auf DHL, weil deren Tracker das Format
-    // verarbeitet — Amazons eigene Suche tut es nicht.
-    if (_dhlDePrefix.hasMatch(v)) return Carrier.dhl;
     if (!_digits.hasMatch(v)) return Carrier.unknown;
     switch (v.length) {
       case 10:
