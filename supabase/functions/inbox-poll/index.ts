@@ -89,10 +89,11 @@ function lookbackDaysForPlan(plan: string | null | undefined): number {
 }
 
 // 2026-05-23: Default für BOOTSTRAP_NEWEST_LIMIT massiv erhöht — der alte
-// 80-Cap stammt aus dem DHL-Free-Tier (1 Call/5s = 17 280 Calls/Tag). Seit
-// dem Switch auf die Parcel-DE-Tracking-API (PR #103, 10 000 000 Calls/Tag)
-// ist der Spike-Arrest der einzige Bottleneck, und der ist linear in der
-// Anzahl Kandidaten — kein Grund mehr, das Bootstrap auf 80 zu deckeln.
+// 80-Cap stammt aus dem DHL-Free-Tier (1 Call/5s). Seit dem Tracking-Rebuild
+// (2026-06-03) ist die Detection rein ALGORITHMISCH — der Inbox-Parse macht
+// KEINEN DHL-API-Call mehr (die Carrier-API pollt nur noch bestehende Deals
+// via tracking-poll, Limit dort: 1.000 Queries/Tag + 3 req/s). Das Bootstrap
+// ist daher gar nicht mehr DHL-quota-gebunden — kein Grund, auf 80 zu deckeln.
 // 10 000 entspricht effektiv „alles im Lookback-Fenster nehmen" für
 // realistische Postfächer; der Hard-Cap pro Lauf (MAX_FETCH_PER_RUN=100)
 // drosselt sowieso noch.
