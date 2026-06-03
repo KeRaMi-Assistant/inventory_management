@@ -80,14 +80,15 @@ Deno.test('Amazon DE Live-Wrap 02: 2-Artikel-Versand — orderingShipmentId nie 
   assert(parsed!.tracking !== '108834567890123')
 })
 
-Deno.test('Amazon IT Live-Wrap: bare "DE5455279839"-Plaintext wird NICHT erkannt (VAT-Wand)', async () => {
-  // Diese Fixture ist die echte Mail aus dem User-Bug-Report:
-  // Order 404-5127739-1289903, Plain-Text "Your tracking number is:
-  // DE5455279839", parallel orderingShipmentId=109727463192302.
+Deno.test('Amazon IT Live-Wrap: "DE5455279839" wird als DHL-Tracking erkannt (DE-Prefix)', async () => {
+  // Echte Mail aus dem User-Bug-Report: Order 404-5127739-1289903, Plain-Text
+  // "Your tracking number is: DE5455279839", parallel
+  // orderingShipmentId=109727463192302.
   //
-  // Plan 2026-06-03 §2.8: `DE\d{8,14}` ist gelöscht (USt-IdNr.-Kollision).
-  // `DE5455279839` wird NICHT mehr promotet — kein Falsch-Positiv. Und die
-  // orderingShipmentId wird ebenfalls nie primary. → tracking=undefined.
+  // Fix 2026-06-03: DE + 10–14 Ziffern = Amazon-Logistics-DE/DHL-Tracking
+  // (das DOMINANTE reale Format) — MUSS erkannt werden. Nur DE + EXAKT 9
+  // Ziffern ist USt-IdNr (Reject). Die orderingShipmentId (15-stellig) darf
+  // NIE primary werden (der ursprüngliche Bug).
   const html = await loadFixture('amazon_it_live_redirect_wrap.html')
   const c = ctx(
     'conferma-spedizione@amazon.it',
@@ -98,11 +99,9 @@ Deno.test('Amazon IT Live-Wrap: bare "DE5455279839"-Plaintext wird NICHT erkannt
   assertExists(parsed)
   assertEquals(parsed!.orderId, '404-5127739-1289903')
   assertEquals(parsed!.status, 'shipped')
-  assertEquals(parsed!.tracking, undefined)
-  assertEquals(parsed!.trackingConfidence, 'none')
-  // Weder die DE-VAT-aussehende Nummer noch die orderingShipmentId dürfen
-  // jemals als primary Tracking durchgehen.
-  assert(parsed!.tracking !== 'DE5455279839')
+  assertEquals(parsed!.tracking, 'DE5455279839')
+  assertEquals(parsed!.trackingConfidence, 'strong')
+  // orderingShipmentId darf NIE als primary Tracking durchgehen.
   assert(parsed!.tracking !== '109727463192302')
 })
 
@@ -138,30 +137,26 @@ Deno.test('Amazon FR Live-Wrap: orderingShipmentId only → kein primary trackin
   assert(parsed!.tracking !== '111777888999000')
 })
 
-// Plan 2026-06-03 §2.7/§2.8: Keiner der 5 Live-Wraps darf ein primary Tracking
-// produzieren (orderingShipmentId nie primary, DE-VAT-Format gelöscht). Das ist
-// der harte „nichts falsches"-Regression-Anker: 0 Falsch-Positive über alle 5.
-Deno.test('5 Live-Fixtures: 0 Falsch-Positive — kein primary Tracking', async () => {
-  const fixtures = [
-    'amazon_de_live_redirect_wrap_01.html',
-    'amazon_de_live_redirect_wrap_02.html',
-    'amazon_it_live_redirect_wrap.html',
-    'amazon_es_live_redirect_wrap.html',
-    'amazon_fr_live_redirect_wrap.html',
-  ]
-  let withTracking = 0
-  let none = 0
-  for (const file of fixtures) {
-    const html = await loadFixture(file)
-    const c = ctx(
-      'versandbestaetigung@amazon.de',
-      'wurde versandt!',
-      html,
-    )
-    const parsed = detectAndParse(c)
-    if (parsed?.tracking) withTracking++
-    if (parsed?.trackingConfidence === 'none') none++
+// 2026-06-03 Regression-Anker: das echte DE-Tracking wird erkannt (IT-Fixture),
+// die orderingShipmentId-only-Fixtures liefern KEIN Tracking, und NIE wird eine
+// 15-stellige orderingShipmentId als Tracking promotet (der ursprüngliche Bug).
+Deno.test('5 Live-Fixtures: echtes DE-Tracking erkannt, orderingShipmentId nie Tracking', async () => {
+  const expected: Record<string, string | null> = {
+    'amazon_de_live_redirect_wrap_01.html': null, // nur orderingShipmentId
+    'amazon_de_live_redirect_wrap_02.html': null,
+    'amazon_it_live_redirect_wrap.html': 'DE5455279839', // echtes DE+10-Tracking
+    'amazon_es_live_redirect_wrap.html': null,
+    'amazon_fr_live_redirect_wrap.html': null,
   }
-  assertEquals(withTracking, 0, 'KEINE Fixture darf ein primary Tracking liefern (0 FP)')
-  assertEquals(none, 5, 'alle 5 Live-Wraps → confidence=none')
+  for (const [file, want] of Object.entries(expected)) {
+    const html = await loadFixture(file)
+    const c = ctx('versandbestaetigung@amazon.de', 'wurde versandt!', html)
+    const parsed = detectAndParse(c)
+    assertEquals(parsed?.tracking ?? null, want, `${file}: tracking`)
+    // Kein Fixture darf je eine 15-stellige orderingShipmentId als Tracking liefern.
+    assert(
+      !/^\d{15}$/.test(parsed?.tracking ?? ''),
+      `${file}: orderingShipmentId darf nie Tracking sein`,
+    )
+  }
 })
