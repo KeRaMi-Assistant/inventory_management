@@ -23,8 +23,18 @@ project_id = "inventory_management"
 # (isCron / isService / JWT-User → 401/403) bleibt im Function-Code intakt
 # — dies deaktiviert NUR den Gateway-JWT-Check, keinen App-Auth-Check.
 #
-# [Council-Fix] STRIKT nur tracking-poll. inbox-poll & andere Functions
-# NICHT hier eintragen — sie haben eine andere Auth-Matrix und behalten
-# verify_jwt=true (Default).
 [functions.tracking-poll]
+verify_jwt = false
+
+# ── inbox-poll: JWT-Verifikation AUS (Fix 2026-06-03) ─────────────────────
+# Befund via net._http_response: der pg_cron-Job `inbox-poll-5min` rief die
+# Function mit `Authorization: Bearer <CRON_SECRET>` (KEIN JWT). Bei
+# verify_jwt=true lehnte das Plattform-Gateway JEDEN Cron-Call mit 401
+# `UNAUTHORIZED_INVALID_JWT_FORMAT` ab → automatisches Inbox-Polling (alle
+# 5 Min) war faktisch tot; Mails (+ Auto-Tracking-Detection) kamen nur beim
+# manuellen „Jetzt pollen" (User-JWT) rein. inbox-poll/index.ts macht seine
+# Auth selbst (isCron / isService / JWT-User+Workspace-Scope → 401/403),
+# daher ist verify_jwt=false sicher — gleiches Pattern wie tracking-poll /
+# send-notifications. Stellt Auto-Polling + Auto-Detection wieder her.
+[functions.inbox-poll]
 verify_jwt = false
