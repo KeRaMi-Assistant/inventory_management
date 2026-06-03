@@ -64,6 +64,44 @@ Deno.test('detect: Identcode-12 mit falscher Checksum → none', () => {
   assertEquals(r.tracking, null)
 })
 
+// ── DE-Prefix-Tracking (Amazon-Logistics-DE / DHL-National) — reales
+//    dominantes Format dieses Postfachs (2026-06-03). DE+10–14 = Tracking,
+//    DE+9 = USt-IdNr (Reject), DE+20 = IBAN (Reject). ───────────────────────
+Deno.test('detect: DE-Prefix DE+10 → strong dhl (Amazon-DE-Tracking)', () => {
+  const r = detect(base({ text: 'Sendungsnummer: DE5455279839' }))
+  assertEquals(r.tracking, 'DE5455279839')
+  assertEquals(r.carrier, 'dhl')
+  assertEquals(r.confidence, 'strong')
+})
+
+Deno.test('detect: DE-Prefix braucht keinen Anchor (format-eindeutig)', () => {
+  const r = detect(base({ text: 'Ihre Lieferung DE5455279839 ist unterwegs' }))
+  assertEquals(r.tracking, 'DE5455279839')
+  assertEquals(r.carrier, 'dhl')
+})
+
+Deno.test('detect: DE+14 → strong (nicht fälschlich als IBAN gerejected)', () => {
+  const r = detect(base({ text: 'Sendungsnummer DE54552798391234' }))
+  assertEquals(r.tracking, 'DE54552798391234')
+  assertEquals(r.carrier, 'dhl')
+})
+
+Deno.test('detect: DE+9 (USt-IdNr) bleibt VAT → none', () => {
+  const r = detect(base({ text: 'USt-IdNr.: DE123456789 — vielen Dank' }))
+  assertEquals(r.tracking, null)
+  assertEquals(r.confidence, 'none')
+})
+
+Deno.test('detect: DE-IBAN (DE+20) → none (kein Tracking)', () => {
+  const r = detect(base({ text: 'Bankverbindung DE89370400440532013000' }))
+  assertEquals(r.tracking, null)
+})
+
+Deno.test('detect: ordered-Status → kein DE-Tracking', () => {
+  const r = detect(base({ text: 'Bestellung DE5455279839', status: 'ordered' }))
+  assertEquals(r.tracking, null)
+})
+
 // ── S10 international ────────────────────────────────────────────────────────
 Deno.test('detect: S10 RB123456785DE mit Anchor → strong dhl', () => {
   const r = detect(base({ text: 'Sendungsnummer RB123456785DE' }))

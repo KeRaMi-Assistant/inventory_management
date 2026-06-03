@@ -108,7 +108,12 @@ export const REJECT_PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
   { name: 'vat_eu', re: /^[A-Z]{2}\d{9}$/ },
   // IBAN (DE = DE + 20 Ziffern; generisch = 2 Buchst + 2 Prüf + 11-30 alnum).
   { name: 'iban_de', re: /^DE\d{20}$/ },
-  { name: 'iban_any', re: /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/ },
+  // Generische IBAN (Nicht-DE): 2 Buchst + 2 Prüf + 11-30 alnum. DE ist
+  // AUSGENOMMEN (negative Lookahead `(?!DE\d)`), weil DE vollständig von
+  // `iban_de` (DE+20) + `vat_eu` (DE+9) abgedeckt ist — sonst würde ein
+  // DE+13/14-stelliges Tracking (DE-Prefix-Format) fälschlich als IBAN
+  // gerejected.
+  { name: 'iban_any', re: /^(?!DE\d)[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/ },
   // Amazon-Order-ID 3-7-7 (kein Tracking).
   { name: 'amazon_order_id', re: /^\d{3}-\d{7}-\d{7}$/ },
   // Telefon — NUR mit literalem '+' (Critique C1-#1 BLOCKER: die lose Variante
@@ -175,6 +180,7 @@ type ValidatorId =
   | 's10-checksum'
   | 'dhl20-mod10'
   | 'dhl-identcode-mod10'
+  | 'de-prefix'
   | 'tba-source-gate'
   | 'dpd-name-anchor'
   | 'amazon-shipment-id'
@@ -212,6 +218,21 @@ const STRONG_PATTERNS: ReadonlyArray<BodyPattern> = [
     carrier: 'amazon',
     requiresAnchor: false,
     validator: 'tba-source-gate',
+  },
+  // DE-Prefix-Tracking: `DE` + 10–14 Ziffern (Amazon-Logistics-DE /
+  // Deutsche-Post-DHL-National). DAS ist das dominante reale Format dieses
+  // Postfachs (verifiziert 2026-06-03: 30 Deals + 30 Amazon-Mails = DE+10).
+  // ABGRENZUNG zur USt-IdNr: VAT = `DE` + EXAKT 9 Ziffern (11 Zeichen) →
+  // wird von `vat_eu` (^[A-Z]{2}\d{9}$) gerejected; dieses Pattern startet bei
+  // 10 Ziffern, matcht also NIE eine VAT. DE-IBAN (DE+20) ist via `iban_de`
+  // abgedeckt und durch die Längenobergrenze (14) ausgeschlossen. Keine
+  // öffentliche Checksum → format-eindeutig akzeptiert (requiresAnchor:false).
+  {
+    id: 'dhl-de',
+    re: /\bDE\d{10,14}\b/g,
+    carrier: 'dhl',
+    requiresAnchor: false,
+    validator: 'de-prefix',
   },
 ]
 
@@ -347,6 +368,15 @@ function classifyAndValidate(
         odds_multiplier: 9,
       })
       return ok ? { outcome: 'strong', checksumValid: true } : { outcome: 'drop', checksumValid: false }
+    }
+
+    case 'de-prefix': {
+      // DE + 10–14 Ziffern. Keine öffentliche Checksum; format-eindeutig
+      // (VAT = DE+9 ist schon per Reject raus, IBAN = DE+20 per Reject/Länge).
+      // DE+10–14 in einer Versandmail ist das Amazon-/DHL-DE-Tracking.
+      const v = m.value
+      if (!/^DE\d{10,14}$/.test(v)) return { outcome: 'drop' }
+      return { outcome: 'strong' }
     }
 
     case 'tba-source-gate': {

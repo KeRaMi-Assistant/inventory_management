@@ -281,12 +281,11 @@ Deno.test('Amazon DE Bestellbestätigung weiterhin erkannt', () => {
 // `tracking = '109727463192302'` — das war die `orderingShipmentId`
 // aus dem progress-tracker-Link, NICHT die echte Carrier-Tracking-Nummer.
 //
-// Plan 2026-06-03 §2.8: Das `DE\d{8,14}`-Pattern (`dhl-de-prefix`) ist
-// GELÖSCHT — es kollidierte mit USt-IdNr. `DE5455279839` (DE + 10 Ziffern)
-// ist KEIN gültiges DHL/Amazon/DPD-Format mehr → wird NICHT als Tracking
-// erkannt („nichts falsches"-Wand). Der entscheidende Invariant bleibt: die
-// `orderingShipmentId` wird NIEMALS zum primären Tracking (kein Falsch-Positiv).
-Deno.test('Amazon Logistics: bare "DE…"-Plaintext wird NICHT mehr als Tracking erkannt (kein FP)', () => {
+// Fix 2026-06-03: `DE` + 10–14 Ziffern (`DE5455279839`) IST das dominante reale
+// Amazon-Logistics-DE/DHL-Tracking → MUSS erkannt werden. Nur `DE` + EXAKT 9
+// Ziffern ist USt-IdNr (Reject via vat_eu). Der ursprüngliche Bug bleibt
+// abgesichert: die `orderingShipmentId` (15-stellig) wird NIEMALS primary.
+Deno.test('Amazon Logistics: DE-Prefix "DE5455279839" wird erkannt; orderingShipmentId nie primary', () => {
   const html = `
     <p>Your item(s) is (are) being sent by Amazon Logistics.
        Your tracking number is: DE5455279839. Depending on the
@@ -306,8 +305,8 @@ Deno.test('Amazon Logistics: bare "DE…"-Plaintext wird NICHT mehr als Tracking
   const parsed = detectAndParse(c)
   assertExists(parsed)
   assertEquals(parsed!.shopKey, 'amazon')
-  // `DE5455279839` ist kein in-scope-Format mehr → kein primary Tracking.
-  assertEquals(parsed!.tracking, undefined)
+  // DE+10 = echtes Tracking → wird erkannt.
+  assertEquals(parsed!.tracking, 'DE5455279839')
   // orderingShipmentId darf NIE primary tracking sein (der ursprüngliche Bug).
   assert(
     parsed!.tracking !== '109727463192302',
@@ -316,10 +315,10 @@ Deno.test('Amazon Logistics: bare "DE…"-Plaintext wird NICHT mehr als Tracking
 })
 
 // Regression: das HTML, das `seed-demo-workspace.buildDemoAmazonHtml`
-// generiert. Plan 2026-06-03 §2.8: `DE\d{8,14}` ist gelöscht → das
-// Demo-Seeder-„DE…"-Tracking wird nicht mehr erkannt. Wichtig bleibt:
-// die orderingShipmentId wird NICHT primary (kein Falsch-Positiv).
-Deno.test('Amazon Demo-Seeder HTML: bare "DE…" liefert kein primary, orderingShipmentId nie primary', () => {
+// generiert. Fix 2026-06-03: `DE5455279839` (DE+10) wird als DHL-Tracking
+// erkannt. Wichtig bleibt: die orderingShipmentId (15-stellig) wird NICHT
+// primary (kein Falsch-Positiv).
+Deno.test('Amazon Demo-Seeder HTML: DE-Prefix-Tracking erkannt, orderingShipmentId nie primary', () => {
   const orderId = '306-4234293-3555528'
   const shipmentId = '106121425175302'
   const trackingDe = 'DE5455279839'
@@ -345,10 +344,8 @@ Deno.test('Amazon Demo-Seeder HTML: bare "DE…" liefert kein primary, orderingS
   assertExists(parsed)
   assertEquals(parsed!.shopKey, 'amazon')
   assertEquals(parsed!.orderId, orderId)
-  // `DE…`-Format ist gelöscht → kein primary.
-  assertEquals(parsed!.tracking, undefined)
-  // `trackingDe` wird absichtlich NICHT erkannt (VAT-Kollisions-Wand).
-  assert(parsed!.tracking !== trackingDe)
+  // DE+10 = echtes Tracking → wird erkannt.
+  assertEquals(parsed!.tracking, trackingDe)
   // Sicherheitsnetz: orderingShipmentId darf NICHT primary werden.
   assert(
     parsed!.tracking !== shipmentId,

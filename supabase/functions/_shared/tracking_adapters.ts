@@ -754,6 +754,9 @@ export function detectAdapter(tracking: string): TrackingAdapter | null {
   if (/^J[A-Z]{2,3}\d{10,21}$/.test(v)) return dhlAdapter
   // DHL S10 international: 2 Service-Buchstaben + 9 Ziffern + 2 ISO-Land.
   if (/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(v)) return dhlAdapter
+  // DHL/Amazon-Logistics DE-Prefix: `DE` + 10–14 Ziffern (dominantes reales
+  // Format). VAT = DE+9 (ausgeschlossen), DE-IBAN = DE+20 (ausgeschlossen).
+  if (/^DE\d{10,14}$/.test(v)) return dhlAdapter
   // DHL: 20-stellige Sendungsnummer.
   if (/^\d{20}$/.test(v)) return dhlAdapter
   // DHL: 12–14-stellige Numerik (Identcode/Leitcode), DPD ohne `05` fällt
