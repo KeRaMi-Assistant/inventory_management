@@ -34,3 +34,19 @@ jobs:
       - name: Build (Web smoke)
         run: flutter build web --no-tree-shake-icons
         continue-on-error: true
+
+  # Edge-Function / Tracking-Detection Tests (Deno). Lief bis 2026-06-04 in
+  # KEINER CI — hätte u.a. den DE-Prefix-Detection-Regress gefangen. --no-check
+  # überspringt das vorbestehende supabase-js-Generics-Typrauschen in den
+  # index.ts-importierenden Suites; die Tests selbst laufen voll.
+  deno-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Deno tests (edge functions + shared detection)
+        run: deno test --allow-read --allow-net --allow-env --no-check supabase/functions/

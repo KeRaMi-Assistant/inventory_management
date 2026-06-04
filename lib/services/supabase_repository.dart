@@ -247,7 +247,16 @@ class SupabaseRepository {
           .from('inventory_movements')
           .select()
           .eq('workspace_id', ws)
-          .order('date', ascending: false)),
+          // Fenster: neueste 365 Tage, max 500 Rows.
+          // Statistik-Aggregationen (Turnover) und UI-Listen arbeiten mit
+          // diesem Window; historische Daten werden on-demand per
+          // Produkt-Detail geladen. 365 Tage deckt alle gängigen
+          // Berichts-Zeiträume (Quartals-/Jahres-Turnover) ab.
+          // Konsistentes Muster wie activity_log (.limit) und
+          // parsed_messages (._isoCutoff + .limit).
+          .gte('date', _isoCutoff(365))
+          .order('date', ascending: false)
+          .limit(500)),
       loadWithSchemaRetry(() => _client
           .from('activity_log')
           .select()
@@ -1129,13 +1138,27 @@ class SupabaseRepository {
 
   Future<Stocktake> updateStocktake(Stocktake stocktake) async {
     final payload = stocktake.toSupabaseInsert();
-    final row = await _client
+    // Belt-and-suspenders: UPDATE nur wenn status <> 'closed', damit ein
+    // Race-Condition-Doppelaufruf serverseitig 0 Rows trifft. Der Provider-
+    // Guard in closeStocktake fängt den Normalfall ab; diese Einschränkung
+    // schützt gegen den selteneren gleichzeitigen Concurrent-Aufruf.
+    final rows = await _client
         .from('stocktakes')
         .update(payload)
         .eq('id', stocktake.id as Object)
-        .select()
-        .single();
-    return Stocktake.fromSupabase(row);
+        .neq('status', 'closed')
+        .select();
+    if (rows.isEmpty) {
+      // Kein Update: Stocktake war bereits geschlossen (concurrent close).
+      // Lade den aktuellen Stand aus der DB zurück.
+      final current = await _client
+          .from('stocktakes')
+          .select()
+          .eq('id', stocktake.id as Object)
+          .single();
+      return Stocktake.fromSupabase(current);
+    }
+    return Stocktake.fromSupabase((rows as List).first as Map<String, dynamic>);
   }
 
   /// Soft-Delete: setzt `deleted_at` auf die aktuelle UTC-Zeit.
