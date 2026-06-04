@@ -113,90 +113,21 @@ interface Adapter {
 // ── Helpers ────────────────────────────────────────────────────────────
 const moneyRe = /([\d.]+,\d{2}|\d+\.\d{2})\s*(EUR|€|USD|\$|GBP|£|PLN|zł)?/i
 
-// T3c: `STRONG_TRACKING_PATTERNS` + `CONTEXT_TRACKING_RE` sind entfernt.
-// Ersatz: `TRACKING_PATTERNS`-Tabelle weiter unten (Single-Source-of-Truth)
-// + `ANCHOR_WORDS`-Liste (DE/EN/FR/IT/ES/PL) + sync `findAllTrackings()`,
-// die Candidates mit Confidence-Klassifikation zurückgibt.
+// Pattern-basierte Body-Detection lebt vollständig in `tracking_detection.ts`
+// (`detect()`). Hier bleibt nur die `ANCHOR_WORDS`-Liste (DE/EN/FR/IT/ES/PL)
+// + `findAnchorBefore`, die `detect()` für die Anchor-Pflicht importiert.
 
 // Body-Cap für Tracking-Scan (Plan §3.7, ReDoS-Mitigation).
 export const MAX_BODY_LEN = 256 * 1024
 
-// ── REJECT_PATTERNS (T3a) ──────────────────────────────────────────────
-// Negativ-Liste: läuft AUSSCHLIESSLICH gegen den bereits-gematchten Token
-// (3-30 chars), NIEMALS gegen den vollen Mail-Body. So bleibt der Scan
-// O(token-länge) und ReDoS-sicher.
-//
-// WICHTIG (Plan §3.5 + Council-Finding #6): KEIN `^\d{20}$`-Reject — das
-// würde echte DHL-20-stellige Trackings blocken. DHL-20 wird stattdessen
-// via jkeen-Checksum (T2b) validiert.
-//
-// Forensik-Report Sektion B (Falsch-Positive heute) ist die Quelle für
-// jeden Eintrag hier. Reject-Hits werden NICHT silent gedroppt, sondern
-// in `tracking_candidates[].validation.rejectedBy` geloggt (T3b liefert
-// den Persistenz-Pfad). Heute (T3a): die Logging-Struktur ist vorbereitet,
-// der konsumierende Code kommt in T3b.
-export const REJECT_PATTERNS: Array<{ name: string; re: RegExp; reason: string }> = [
-  {
-    // Amazon-Order-IDs: 3-7-7-Block, z.B. `303-1234567-1234567`.
-    // Forensik B#1.
-    name: 'amazon_order_id',
-    re: /^\d{3}-\d{7}-\d{7}$/,
-    reason: 'amazon-order-id',
-  },
-  {
-    // IBAN-Prefix DE + 20 Ziffern (DE-IBAN = 22 Zeichen). Forensik B#4.
-    // Nach Whitespace-Normalisierung (T3c) trifft das alle DE-IBANs.
-    name: 'iban_de',
-    re: /^DE\d{20}$/,
-    reason: 'iban-de',
-  },
-  {
-    // Telefon-Form: optionales `+`, dann 2-4 Vorwahl-Stellen, dann ≥3
-    // Stellen. Greift Reste wie `+498912345678`. Forensik B#6.
-    name: 'phone_intl',
-    re: /^\+\d{2,4}\d{3,}$/,
-    reason: 'phone-intl',
-  },
-  {
-    // PLZ-Fragment: 5 Ziffern, dann optionaler Whitespace, dann 6-12
-    // Telefon-Ziffern. Defensiv für „PLZ + Phone in Footer". Forensik B#5+B#6.
-    // Whitespace MANDATORY zwischen PLZ und Phone — sonst würde das
-    // Pattern legitime 11-17-stellige Carrier-Trackings (DHL 14-stellig
-    // u.a.) blocken. Whitespace im Token bleibt heute erhalten
-    // (Normalisierung erst in T3c).
-    name: 'plz_phone_combo',
-    re: /^\d{5}\s\d{6,12}$/,
-    reason: 'plz-phone-combo',
-  },
-  {
-    // 5-stellige PLZ allein als Token (würde nur durch Context-RE matchen,
-    // wenn Anchor + zu kurzes Folge-Token — defensiv). Forensik B#5.
-    name: 'plz_only',
-    re: /^\d{5}$/,
-    reason: 'plz-only',
-  },
-  {
-    // Zu kurze rein numerische IDs (1-7 Stellen). Sind nie echte
-    // Carrier-Trackings (min. UPS=18, TBA=12, JJD=13, DHL=20, S10=13).
-    // Heute matcht das CONTEXT_TRACKING_RE nicht (≥8 chars), aber Pattern
-    // wie `\d{20,22}`-Fragmente nach Whitespace-Normalisierung könnten
-    // theoretisch hier landen.
-    name: 'too_short_numeric',
-    re: /^\d{1,7}$/,
-    reason: 'too-short-numeric',
-  },
-  {
-    // Generische Auftragsnummer-Form 6-6-6. Forensik B (generischer Schutz).
-    name: 'generic_order_3block',
-    re: /^\d{6}-\d{6}-\d{6}$/,
-    reason: 'generic-order-3block',
-  },
-]
-
-// T3b: TrackingCandidate-Vollform + Pattern-Tabelle + Anchor-Logic.
-// `findAllTrackings()` ist die neue async Variante, die Candidates
-// zurückgibt (siehe weiter unten). Der bestehende sync-Pfad bleibt
-// als `findAllTrackingsLegacy(s, html?)` erhalten — Cutover in T3c.
+// Reject-Patterns + die alte `findAllTrackings`/`gateTracking`-Pipeline sind
+// mit dem Dead-Code-Cleanup (chore/audit-sustainability-1) entfernt: die
+// produktive Detection läuft AUSSCHLIESSLICH über `tracking_detection.detect()`,
+// das seine eigenen `REJECT_PATTERNS`/`checkReject` mitbringt (siehe
+// `tracking_detection.ts` §2.2). Hier bleiben nur die Bausteine, die `detect()`
+// importiert: `TrackingCandidate`/`TrackingConfidence`, `ANCHOR_WORDS`,
+// `findAnchorBefore`, `MAX_BODY_LEN` — plus die Adapter-Status-Heuristik
+// (`detectShipStatus`/`resolveStatusAndTracking`), die `detect()` aufruft.
 export type TrackingConfidence = 'strong' | 'medium' | 'weak' | 'none'
 
 export type TrackingCandidate = {
@@ -220,74 +151,17 @@ export type TrackingCandidate = {
     /// Anchor-Wort aus dem 80-Zeichen-Fenster vor dem Match. Max 50
     /// Zeichen (PII-Schutz, Council-Finding #7).
     anchorMatched?: string
-    /// Reject-Grund, falls Token von REJECT_PATTERNS abgewiesen.
+    /// Reject-Grund, falls der Token von einem Reject-Pattern abgewiesen
+    /// wurde (gesetzt von `tracking_detection.detect()`).
     rejectedBy?: string
-    /// jkeen-Checksum-Result (undefined wenn Validator nicht gelaufen).
+    /// Checksum-Result (undefined wenn keine Checksum-Validierung lief).
     checksumValid?: boolean
     /// `true` wenn Whitespace gestrippt wurde (rawValue != value).
     normalized: boolean
-    /// ID des Patterns aus TRACKING_PATTERNS, das gegriffen hat.
+    /// ID des Detection-Patterns, das gegriffen hat (Forensik).
     patternId?: string
   }
 }
-
-// ── Pattern-Tabelle (T3b) ──────────────────────────────────────────────
-// Single-Source-of-Truth für Body-Pattern-Matching. Strong-Patterns sind
-// format-eindeutig (UPS 1Z, Amazon TBA, DHL JJD, S10-UPU). Context-
-// Patterns matchen generische Tokens, die NUR mit Anchor-Wort akzeptiert
-// werden.
-//
-// T3c: Ersetzt `STRONG_TRACKING_PATTERNS` + `CONTEXT_TRACKING_RE`.
-export type AdapterPatternValidator = 'jkeen' | 'length-only' | 'no-validation'
-
-export type AdapterPattern = {
-  /// Eindeutiger Pattern-Identifier (für Logging + Forensik).
-  id: string
-  /// Regex (wird global ausgewertet — Flags werden in `findAllTrackings`
-  /// gesetzt).
-  re: RegExp
-  /// Wenn `true`: Anchor-Wort muss im 80-char-Fenster vor dem Match
-  /// stehen, sonst wird confidence reduziert.
-  requiresAnchor: boolean
-  /// Default-Confidence wenn Pattern matcht + Validator OK.
-  defaultConfidence: TrackingConfidence
-  /// Bekannter Carrier (Validator-Output gewinnt aber).
-  carrier?: string
-  /// Source-Tag im Candidate.
-  source: TrackingCandidate['source']
-  /// Welcher Validator wird auf den normalisierten Wert angewandt.
-  validator?: AdapterPatternValidator
-  /// T3c: Wenn `true`, läuft ein zweiter Pass auf einer Whitespace-
-  /// gestripten Body-Variante. Match-Position wird via Index-Map zurück
-  /// auf den Original-Body gemappt (für Anchor-Detection). Pflicht für
-  /// Patterns, deren Tokens in Mails häufig mit Spaces formatiert sind
-  /// (UPS 1Z, DHL JJD, S10).
-  normalizable?: boolean
-}
-
-// Plan 2026-06-03, T3: Die produktive Sendungsnummer-Detection läuft jetzt
-// AUSSCHLIESSLICH über `tracking_detection.detect()`. Die alten DHL-/numeric-
-// Patterns (`dhl-de-prefix` = VAT-Kollision `DE\d{8,14}`, `dhl-de-suffix`,
-// `context-numeric-10-22`) sind ENTFERNT — sie sind durch S10-Checksum +
-// anchored dhl-20/dhl-12 + href-Patterns in `tracking_detection.ts` ersetzt.
-//
-// `TRACKING_PATTERNS` + `findAllTrackings`/`gateTracking` bleiben als
-// schmales Legacy-Gerüst bestehen (nur noch `dhl-jjd`, format-eindeutig,
-// keine VAT-Gefahr), damit die exportierte Schnittstelle stabil bleibt und
-// Bestandstests/Re-Parse-Forensik kompilieren. KEINE neue Detection-Logik
-// hier ergänzen — alles Neue gehört nach `tracking_detection.ts`.
-export const TRACKING_PATTERNS: AdapterPattern[] = [
-  {
-    id: 'dhl-jjd',
-    re: /\bJJD\d{10,18}\b/g,
-    requiresAnchor: false,
-    defaultConfidence: 'strong',
-    carrier: 'dhl',
-    source: 'strong-pattern',
-    validator: 'jkeen',
-    normalizable: true,
-  },
-]
 
 // ── Anchor-Worte (DE/EN/FR/IT/ES/PL) ──────────────────────────────────
 // Quellen: Plan §3.3 + bestehende CONTEXT_TRACKING_RE-Tokens. Reihenfolge
@@ -384,37 +258,6 @@ export function findAnchorBefore(body: string, matchStart: number): string | nul
   return bestWord.slice(0, 50)
 }
 
-/**
- * Prüft, ob ein bereits gematchter Token von einem REJECT_PATTERN
- * abgewiesen wird.
- *
- * **ReDoS-Schutz:** Läuft AUSSCHLIESSLICH auf dem Token (3-30 Zeichen),
- * niemals auf der vollen Mail. Length-Cap + Patterns sind alle anchored
- * (`^…$`) → O(token-länge) worst case.
- *
- * Whitespace-Normalisierung passiert NICHT hier (kommt in T3c). Tokens
- * mit Whitespace geben `null` zurück (greifen Reject-Patterns nicht).
- *
- * @param token bereits extrahierter Tracking-Kandidat
- * @returns Reject-Grund-String, oder `null` wenn nichts matcht.
- */
-export function checkRejectPatterns(token: string | null | undefined): string | null {
-  // Defensiver Length-Cap als ReDoS-Schutz + Null-Safety.
-  if (!token || typeof token !== 'string') return null
-  if (token.length < 3 || token.length > 30) return null
-  for (const p of REJECT_PATTERNS) {
-    if (p.re.test(token)) {
-      // PII-frei: nur Pattern-Name + Token-Prefix (max 4 chars).
-      // Council-Security-Finding zu PII-Leaks.
-      const tokPrefix = token.slice(0, 4)
-      // deno-lint-ignore no-console
-      console.log(`reject: ${p.name} matched (tok=${tokPrefix}…)`)
-      return p.reason
-    }
-  }
-  return null
-}
-
 const stripHtml = (html: string): string =>
   html
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -455,372 +298,14 @@ const findFirst = (s: string, patterns: RegExp[]): string | undefined => {
   return undefined
 }
 
-// `inferCarrier()` wurde mit Plan 2026-05-16 (§D1) entfernt. Mit nur
-// noch DHL-Patterns in `TRACKING_PATTERNS` ist Body-Carrier-Inference
-// toter Code — `pattern.carrier ?? 'DHL'` liefert deterministisch den
-// Carrier-Label. Endgueltige Validierung erfolgt durch
-// `enrichWithDhlValidation` (DHL-API-Probe).
-
-/// HTML-spezifische Tracking-Extraktion: liest `href`-Attribute aus dem
-/// Roh-HTML und matcht typische Carrier-URL-Schemes. Wichtig für Amazon
-/// & Co., die Tracking-Nummern oft NUR im Link-Ziel haben (text-Strip
-/// schmeißt die `href`-Werte weg).
-///
-/// T3c: Gibt Candidates zurück (statt String-Liste). Bekannte Carrier-
-/// Domains → `confidence: 'strong'`, `source: 'html-href'`. Generic-
-/// URL-Catch → `confidence: 'medium'`. Amazon `orderingShipmentId` ist
-/// ein Sonderfall (Council-Finding: interne Amazon-Logistics-Shipment-ID,
-/// kein echtes Carrier-Tracking) → `source: 'amazon-shipment-id'`,
-/// `confidence: 'medium'` — bleibt in der Candidate-Liste sichtbar,
-/// aber nie primary.
-function findTrackingsInHtml(html: string): TrackingCandidate[] {
-  if (!html) return []
-  const byValue = new Map<string, TrackingCandidate>()
-
-  // Common Carrier-URL-Patterns. Reihenfolge: spezifisch → generisch.
-  // Wichtig für Amazon: deren Versand-Mails wrappen jeden Tracking-Link
-  // in einen `amazon.<tld>/gp/f.html?...&U=<URL-encoded-ZielURL>`-
-  // Redirect. Die echten Carrier-URL-Parameter (`piececode`, `trackingId`,
-  // `orderingShipmentId`) stehen also doppelt URL-encoded im href. Wir
-  // matchen daher gegen RAW + decoded(URL) — siehe Loop unten.
-  //
-  // T3c: Pro Pattern entscheidet `source` über die Confidence:
-  //   - 'html-href' + bekannter Carrier → 'strong'
-  //   - 'amazon-shipment-id' (orderingShipmentId) → 'medium' (Council:
-  //     interne Amazon-Logistics-ID, kein echtes Carrier-Tracking).
-  //   - 'unknown' → 'medium' (generischer URL-Param-Catch).
-  type UrlPattern = {
-    re: RegExp
-    carrier?: string
-    source: TrackingCandidate['source']
-    confidence: TrackingConfidence
-  }
-  const URL_PATTERNS: UrlPattern[] = [
-    // Amazon Logistics: track.amazon.de/123ABC oder ?trackingId=...
-    { re: /track\.amazon\.[a-z.]+\/(?:tracking\/)?([A-Z0-9]{10,30})\b/i, carrier: 'Amazon Logistics', source: 'html-href', confidence: 'strong' },
-    { re: /[?&]trackingId=([A-Z0-9-]{8,30})/i, carrier: 'Amazon Logistics', source: 'html-href', confidence: 'strong' },
-    // Amazon-Logistics-Shipment-ID (Sonderfall: T4-Notiz).
-    { re: /[?&]orderingShipmentId=([0-9]{8,20})/i, carrier: 'Amazon Logistics', source: 'amazon-shipment-id', confidence: 'medium' },
-    // DHL: nolp.dhl.de/?piececode=... oder /track/123
-    { re: /[?&]piececode=([A-Z0-9]{8,30})/i, carrier: 'DHL', source: 'html-href', confidence: 'strong' },
-    { re: /nolp\.dhl\.[a-z.]+\/.*?[?&]idc=([A-Z0-9]{10,30})/i, carrier: 'DHL', source: 'html-href', confidence: 'strong' },
-    { re: /dhl\.[a-z.]+\/.*?\/track[^?]*\?(?:trackingNumber|tracking)=([A-Z0-9]{8,30})/i, carrier: 'DHL', source: 'html-href', confidence: 'strong' },
-    // UPS
-    { re: /ups\.com\/.*?[?&]tracknum(?:s)?=(1Z[A-Z0-9]{16})/i, carrier: 'UPS', source: 'html-href', confidence: 'strong' },
-    // DPD
-    { re: /dpd\.[a-z.]+\/.*?[?&]parcelno(?:r)?=(\d{10,20})/i, carrier: 'DPD', source: 'html-href', confidence: 'strong' },
-    { re: /tracking\.dpd\.[a-z.]+\/.*?\/(\d{10,20})/i, carrier: 'DPD', source: 'html-href', confidence: 'strong' },
-    { re: /(?:track\.)?dpd\.[a-z.]+\/parcels?\/(\d{10,20})/i, carrier: 'DPD', source: 'html-href', confidence: 'strong' },
-    // GLS
-    { re: /gls-?(?:pakete|group)\.[a-z.]+\/.*?[?&]match=([A-Z0-9]{8,30})/i, carrier: 'GLS', source: 'html-href', confidence: 'strong' },
-    // Hermes
-    { re: /hermesworld\.[a-z.]+\/.*?[?&]Barcode=([A-Z0-9]{8,30})/i, carrier: 'Hermes', source: 'html-href', confidence: 'strong' },
-    // Chronopost (FR)
-    { re: /chronopost\.[a-z.]+\/.*?[?&]listeNumerosLT=([A-Z0-9]{8,30})/i, carrier: 'Chronopost', source: 'html-href', confidence: 'strong' },
-    // SEUR (ES)
-    { re: /seur\.[a-z.]+\/.*?[?&]segOnLine=([A-Z0-9]{8,30})/i, carrier: 'SEUR', source: 'html-href', confidence: 'strong' },
-    // GLS variant (US/UK)
-    { re: /gls-?[a-z]*\.[a-z.]+\/.*?[?&]trackingNumber=([A-Z0-9]{8,30})/i, carrier: 'GLS', source: 'html-href', confidence: 'strong' },
-    // Generic: any tracknum/tracking/trk parameter (last resort) — unknown carrier.
-    { re: /[?&](?:trk|tracking_?number|tracknum|tracking_id|trackingnr)=([A-Z0-9-]{8,30})/i, source: 'unknown', confidence: 'medium' },
-  ]
-
-  const hrefRe = /href\s*=\s*["']([^"']{8,2000})["']/gi
-  let h: RegExpExecArray | null
-  while ((h = hrefRe.exec(html)) !== null) {
-    const url = h[1]
-    let decoded = url
-    if (url.includes('%')) {
-      try { decoded = decodeURIComponent(url) } catch { /* ignore */ }
-    }
-    const urlVariants = decoded === url ? [url] : [url, decoded]
-    for (const p of URL_PATTERNS) {
-      let matched = false
-      for (const variant of urlVariants) {
-        const m = p.re.exec(variant)
-        if (m && m[1]) {
-          const rawValue = m[1]
-          const value = rawValue.replace(/\s+/g, '').toUpperCase()
-          const rejectedBy = checkRejectPatterns(value) ?? undefined
-          // T3: Carrier-Default lowercase (deals.carrier CHECK erlaubt nur
-          // lowercase). Diese Legacy-Liste fließt nicht mehr in den Deal-Write
-          // (Produktion läuft über detect()), aber wir halten das Casing sauber.
-          const carrier = p.carrier ?? 'dhl'
-          let confidence: TrackingConfidence = p.confidence
-          if (rejectedBy) confidence = 'none'
-          const candidate: TrackingCandidate = {
-            value,
-            rawValue,
-            carrier,
-            source: p.source,
-            confidence,
-            validation: {
-              rejectedBy,
-              normalized: value !== rawValue,
-              patternId: `html:${p.source}`,
-            },
-          }
-          const prev = byValue.get(value)
-          if (!prev || _CONFIDENCE_ORDER[confidence] > _CONFIDENCE_ORDER[prev.confidence]) {
-            byValue.set(value, candidate)
-          }
-          matched = true
-          break
-        }
-      }
-      if (matched) break // nur das erste Match pro URL
-    }
-  }
-  return Array.from(byValue.values())
-}
-
-// ── findAllTrackings (T3c: Sync, Candidate-aware) ──────────────────────
-//
-// Scannt den Body mit der zentralen `TRACKING_PATTERNS`-Tabelle, deduppt
-// auf normalisiertem Wert, gibt `TrackingCandidate[]` sortiert nach
-// Confidence (strong > medium > weak > none) zurück. Pro Token:
-//   1. Body-Cap auf `MAX_BODY_LEN` (ReDoS-Mitigation).
-//   2. Pattern-Match auf Original-Body (für Anchor-Lookup-Indizes).
-//   3. Wenn `pattern.normalizable`: zweiter Pass auf Whitespace-gestripptem
-//      Body-Clone, Index zurückmappen via Index-Map (für Patterns wie
-//      `1Z 999 AA1 0123456784`, die User-Mails häufig mit Spaces formatieren).
-//   4. Normalisierung (Whitespace-strip + uppercase) → `value`.
-//   5. Reject-Pattern-Check (Forensik-Log via validation.rejectedBy).
-//   6. Anchor-Detection wenn `pattern.requiresAnchor`.
-//   7. Confidence-Adjustment (Reject → 'none', Anchor-Miss → step down).
-//   8. HTML-href-Scan optional, wenn `html` mitgegeben.
-//
-// **Sync per Default** — der jkeen-Validator (T2b) ist nicht eingebunden,
-// um die Adapter-Pipeline (`Adapter.parse`) ohne async-Cascade zu halten.
-// Eine optionale jkeen-Validation kann als Post-Step gegen die Candidate-
-// Liste laufen.
-export interface FindAllTrackingsOptions {
-  /// Wenn true: Patterns mit `requiresAnchor: true` aber ohne Anchor
-  /// werden komplett geskippt (statt nur Confidence runter). Default
-  /// false → alle Matches landen mit reduzierter Confidence in der
-  /// Forensik-Liste.
-  skipUnanchoredContext?: boolean
-}
-
-export const _CONFIDENCE_ORDER: Record<TrackingConfidence, number> = {
-  strong: 3,
-  medium: 2,
-  weak: 1,
-  none: 0,
-}
-
-function _stepDownConfidence(c: TrackingConfidence): TrackingConfidence {
-  if (c === 'strong') return 'medium'
-  if (c === 'medium') return 'weak'
-  if (c === 'weak') return 'none'
-  return 'none'
-}
-
-/// Baut eine whitespace-gestripte Variante des Bodies UND eine Index-
-/// Map: `strippedIdx[i] = origIdx` mappt jedes Zeichen im stripped-Body
-/// zurück auf seine Position im Original-Body. Wird für die
-/// `normalizable: true` Patterns benutzt, damit `findAnchorBefore` auf
-/// dem Original arbeiten kann.
-function _buildStrippedBodyAndMap(body: string): { stripped: string; map: number[] } {
-  const map: number[] = []
-  let stripped = ''
-  for (let i = 0; i < body.length; i++) {
-    const ch = body[i]
-    if (/\s/.test(ch)) continue
-    stripped += ch
-    map.push(i)
-  }
-  return { stripped, map }
-}
-
-export function findAllTrackings(
-  body: string,
-  options?: FindAllTrackingsOptions & { html?: string },
-): TrackingCandidate[] {
-  if (!body || typeof body !== 'string') {
-    if (options?.html) return findTrackingsInHtml(options.html)
-    return []
-  }
-
-  // T3c: Hard Body-Cap auf MAX_BODY_LEN = 256 KB.
-  const scan = body.length > MAX_BODY_LEN ? body.slice(0, MAX_BODY_LEN) : body
-
-  // Lazy: stripped-Variante nur bauen, wenn ein normalizable-Pattern
-  // sie braucht.
-  let strippedCache: { stripped: string; map: number[] } | null = null
-  const getStripped = () => {
-    if (!strippedCache) strippedCache = _buildStrippedBodyAndMap(scan)
-    return strippedCache
-  }
-
-  // Deduplizierung auf normalisiertem Wert.
-  const byValue = new Map<string, TrackingCandidate>()
-
-  const addCandidate = (
-    pattern: AdapterPattern,
-    rawValue: string,
-    origMatchStart: number,
-    normalizedViaStrippedPass: boolean,
-  ) => {
-    const value = rawValue.replace(/\s+/g, '').toUpperCase()
-    const normalized = normalizedViaStrippedPass || value !== rawValue
-
-    const rejectedBy = checkRejectPatterns(value) ?? undefined
-
-    let anchorMatched: string | undefined
-    if (pattern.requiresAnchor) {
-      const a = findAnchorBefore(scan, origMatchStart)
-      if (a) anchorMatched = a
-    }
-
-    let confidence: TrackingConfidence = pattern.defaultConfidence
-    if (rejectedBy) {
-      confidence = 'none'
-    } else if (pattern.requiresAnchor && !anchorMatched) {
-      confidence = _stepDownConfidence(confidence)
-    }
-
-    if (options?.skipUnanchoredContext && pattern.requiresAnchor && !anchorMatched) {
-      return
-    }
-
-    const carrier = pattern.carrier ?? 'dhl'
-
-    const candidate: TrackingCandidate = {
-      value,
-      rawValue,
-      carrier,
-      source: pattern.source,
-      confidence,
-      validation: {
-        anchorMatched,
-        rejectedBy,
-        normalized,
-        patternId: pattern.id,
-      },
-    }
-    const prev = byValue.get(value)
-    if (!prev) {
-      byValue.set(value, candidate)
-    } else if (_CONFIDENCE_ORDER[confidence] > _CONFIDENCE_ORDER[prev.confidence]) {
-      byValue.set(value, candidate)
-    } else if (
-      _CONFIDENCE_ORDER[confidence] === _CONFIDENCE_ORDER[prev.confidence] &&
-      candidate.carrier && !prev.carrier
-    ) {
-      // Confidence-Tie: bevorzuge Candidate mit bekanntem Carrier
-      // (z.B. HTML-Pattern liefert SEUR-Label, Body-Pattern nicht).
-      byValue.set(value, candidate)
-    }
-  }
-
-  for (const pattern of TRACKING_PATTERNS) {
-    const flags = pattern.re.flags.includes('g') ? pattern.re.flags : `${pattern.re.flags}g`
-    const re = new RegExp(pattern.re.source, flags)
-
-    // Pass 1: Original-Body.
-    let m: RegExpExecArray | null
-    while ((m = re.exec(scan)) !== null) {
-      addCandidate(pattern, m[0], m.index, false)
-    }
-
-    // Pass 2: Whitespace-gestripped-Body (nur für normalizable-Patterns).
-    // T3c-Council-Finding #4: User-Mails formatieren UPS/JJD/S10 oft mit
-    // Spaces ("1Z 999 AA1 0123456784"). Pattern matchen auf Pass-1 nicht,
-    // deshalb zweiter Pass auf gestripptem Body. Index-Map mappt Match-
-    // Start zurück auf Original, damit Anchor-Lookup funktioniert.
-    //
-    // **Wichtig**: Auf stripped-Body fehlen die Whitespace-Boundaries, also
-    // matchen `\b…\b`-Anchored-Patterns oft nicht (Beispiel: `1Z…784is`).
-    // Wir transformieren `\b` → `(?:^|(?<=[^A-Z0-9]))…(?=[^A-Z0-9]|$)` für
-    // Pass-2. Defensiv: wenn der Source-Regex kein `\b` enthält, fallback
-    // auf das Original.
-    if (pattern.normalizable) {
-      const { stripped, map } = getStripped()
-      const src = pattern.re.source
-      // Trailing `\b` ist auf stripped-Body wertlos, weil das Folge-Token
-      // (z.B. `is on its way.` → `isonitsway.`) am Anfang Wort-Zeichen
-      // hat. Wir entfernen es. Leading `\b` belassen wir, damit das
-      // Pattern nicht mitten in einem alphanumerischen Block matcht.
-      // Fix-Length-Pattern wie `1Z[A-Z0-9]{16}` (UPS) sind durch die
-      // exakte Längenvorgabe trotzdem eindeutig.
-      const pass2Src = src.replace(/\\b$/, '')
-      const re2 = new RegExp(pass2Src, flags)
-      let m2: RegExpExecArray | null
-      while ((m2 = re2.exec(stripped)) !== null) {
-        const rawValue = m2[0]
-        const strippedIdx = m2.index
-        const origIdx = map[strippedIdx] ?? 0
-        // Skip, wenn das identische Token bereits aus Pass 1 vorliegt.
-        const candidateValue = rawValue.replace(/\s+/g, '').toUpperCase()
-        if (byValue.has(candidateValue)) continue
-        addCandidate(pattern, rawValue, origIdx, true)
-      }
-    }
-  }
-
-  // HTML-Pfad: Candidates aus href-Attributen.
-  if (options?.html) {
-    const htmlCandidates = findTrackingsInHtml(options.html)
-    for (const hc of htmlCandidates) {
-      const prev = byValue.get(hc.value)
-      if (!prev) {
-        byValue.set(hc.value, hc)
-      } else if (_CONFIDENCE_ORDER[hc.confidence] > _CONFIDENCE_ORDER[prev.confidence]) {
-        byValue.set(hc.value, hc)
-      } else if (
-        _CONFIDENCE_ORDER[hc.confidence] === _CONFIDENCE_ORDER[prev.confidence] &&
-        hc.carrier && !prev.carrier
-      ) {
-        byValue.set(hc.value, hc)
-      }
-    }
-  }
-
-  const candidates = Array.from(byValue.values())
-  candidates.sort(
-    (a, b) => _CONFIDENCE_ORDER[b.confidence] - _CONFIDENCE_ORDER[a.confidence],
-  )
-  return candidates
-}
-
-// ── gateTracking (T3c, Candidate-aware) ────────────────────────────────
-/// Filtert eine Candidate-Liste nach minimaler Confidence-Schwelle.
-/// Returns:
-///   - `primary`: höchster Candidate, der durch das Gate kommt (oder null)
-///   - `rest`: alle anderen Candidates (Forensik-Liste)
-///
-/// Plan §3.7: `minConfidence` Default 'strong'.
-export type GateOptions = {
-  /// Mindest-Confidence für primary. Default: `'strong'`.
-  minConfidence?: TrackingConfidence
-  /// Wenn true: primary muss `carrier !== undefined` haben. Default false.
-  requireCarrier?: boolean
-}
-
-export function gateTracking(
-  candidates: TrackingCandidate[],
-  opts?: GateOptions,
-): { primary: TrackingCandidate | null; rest: TrackingCandidate[] } {
-  const min = opts?.minConfidence ?? 'strong'
-  const requireCarrier = opts?.requireCarrier ?? false
-  const minOrder = _CONFIDENCE_ORDER[min]
-  let primary: TrackingCandidate | null = null
-  const rest: TrackingCandidate[] = []
-  for (const c of candidates) {
-    if (
-      !primary &&
-      _CONFIDENCE_ORDER[c.confidence] >= minOrder &&
-      (!requireCarrier || c.carrier !== undefined)
-    ) {
-      primary = c
-    } else {
-      rest.push(c)
-    }
-  }
-  return { primary, rest }
-}
-
+// Body-/HTML-Tracking-Extraktion (`findTrackingsInHtml`, `findAllTrackings`,
+// `gateTracking`, `TRACKING_PATTERNS`, `REJECT_PATTERNS`/`checkRejectPatterns`)
+// ist mit dem Dead-Code-Cleanup (chore/audit-sustainability-1) entfernt — der
+// Pfad war prod-tot: die Adapter rufen ausschliesslich `resolveStatusAndTracking`
+// → `tracking_detection.detect()` auf. detect() bringt eigene Pattern-,
+// Reject-, Checksum- und HTML-href-Logik mit (siehe `tracking_detection.ts`).
+// KEINE neue Detection-Logik hier ergaenzen — alles Neue gehoert nach
+// `tracking_detection.ts`.
 // Status-Detection ist subject-first und nur dann body-second, wenn das
 // Subject völlig generisch ist. Hintergrund: Body-Texte enthalten oft
 // AGB-Boilerplate ("Falls Sie stornieren möchten, klicken Sie hier")
@@ -1765,7 +1250,7 @@ const lego: Adapter = {
 //   - "Die Lieferung wurde der Empfängerin … zugestellt"
 // Order-IDs haben Format `\d{6,10}` und stehen typischerweise nur im
 // Body, nicht im Subject. Carrier ist meist DHL/Hermes — Tracking-Nrn
-// kommen aus dem Body via `findAllTrackings`.
+// kommen aus dem Body via `resolveStatusAndTracking` → `detect()`.
 const tink: Adapter = {
   key: 'tink',
   label: 'tink',

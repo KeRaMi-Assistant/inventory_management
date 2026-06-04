@@ -29,7 +29,20 @@ jobs:
         run: flutter analyze --no-fatal-infos
 
       - name: Test
-        run: flutter test --reporter=expanded
+        run: flutter test --coverage --reporter=expanded
+
+      # Service-Layer-Coverage messen (CLAUDE.md-Ziel >60%). Aktuell
+      # INFORMATIV (continue-on-error) — wird auf hartes Gate (exit 1 unter
+      # Schwelle) hochgezogen, sobald die Baseline stabil >60% liegt.
+      - name: Coverage report (lib/services)
+        continue-on-error: true
+        run: |
+          if [ ! -f coverage/lcov.info ]; then echo "no lcov"; exit 0; fi
+          awk '
+            /^SF:.*lib\/services\// {insec=1} /^SF:/{if($0 !~ /lib\/services\//) insec=0}
+            insec && /^DA:/ {tot++; split($0,a,","); if(a[2]+0>0) hit++}
+            END { if(tot>0) printf "lib/services line coverage: %.1f%% (%d/%d)\n", 100*hit/tot, hit, tot; else print "lib/services: no DA lines" }
+          ' coverage/lcov.info
 
       - name: Build (Web smoke)
         run: flutter build web --no-tree-shake-icons

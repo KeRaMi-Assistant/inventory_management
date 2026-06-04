@@ -3,9 +3,8 @@
 // Ausführen mit:
 //   deno test --allow-read supabase/functions/_shared/checksums_test.ts
 //
-// Testet die `_internal`-Primitiven aus `tracking_validators.ts` DIREKT
-// (nicht über den JSON-getriebenen Validator) gegen die im Plan §11
-// numerisch verifizierten Vektoren:
+// Testet die `_internal`-Primitiven aus `tracking_checksums.ts` DIREKT
+// gegen die im Plan §11 numerisch verifizierten Vektoren:
 //   - DHL mod-10 3/1  (20-stellig Sendungsnummer)
 //   - DHL mod-10 4/9  (12-stellig Identcode)
 //   - UPU S10 mod-11  (RB…785DE / CC…829DE)
@@ -14,7 +13,7 @@
 // MUSS fehlschlagen (beweist, dass die Checksum-Mathematik korrekt verdrahtet
 // ist und nicht nur per Pattern „durchwinkt").
 //
-// Signatur-Hinweis (verifiziert gegen tracking_validators.ts):
+// Signatur-Hinweis (verifiziert gegen tracking_checksums.ts):
 //   checkMod10(serial, check, { name, evens_multiplier, odds_multiplier, reverse? })
 //     - serial = alle Ziffern AUSSER der Prüfziffer
 //     - check  = die Prüfziffer (als String)
@@ -24,7 +23,7 @@
 //     - serial = Body (ohne Prüfzeichen), check = 1 Prüfzeichen
 
 import { assert, assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { _internal } from './tracking_validators.ts'
+import { _internal } from './tracking_checksums.ts'
 
 const { checkMod10, checkS10, checkMod37_36 } = _internal
 
