@@ -509,12 +509,15 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.close, size: 18,
-                        color: AppTheme.textMutedOf(context)),
-                    onPressed: () => Navigator.maybePop(context),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+                  SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: IconButton(
+                      icon: Icon(Icons.close, size: 18,
+                          color: AppTheme.textMutedOf(context)),
+                      onPressed: () => Navigator.maybePop(context),
+                      tooltip: MaterialLocalizations.of(context).closeButtonLabel,
+                    ),
                   ),
                 ],
               ),
@@ -522,7 +525,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
             // ── Form ─────────────────────────────────────────────────────
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.fromLTRB(
+                    24, 24, 24, 24 + MediaQuery.viewInsetsOf(context).bottom),
                 child: Form(
                   key: _formKey,
                   child: LayoutBuilder(builder: (ctx, formConstraints) {

@@ -647,12 +647,22 @@ class _InventoryScreenState extends State<InventoryScreen>
                     height: 48,
                     child: IconButton(
                       tooltip: l10n.actionDelete,
-                      onPressed: () =>
-                          provider.deleteInventoryItem(item.id),
-                      icon: const Icon(
+                      onPressed: () async {
+                        final confirmed = await showConfirmDialog(
+                          context: context,
+                          title: l10n.inventoryDeleteTitle,
+                          message: l10n.inventoryDeleteConfirm(item.name),
+                          confirmLabel: l10n.actionDelete,
+                          isDestructive: true,
+                        );
+                        if (confirmed) {
+                          await provider.deleteInventoryItem(item.id);
+                        }
+                      },
+                      icon: Icon(
                         Icons.delete_outlined,
                         size: 18,
-                        color: Color(0xFFDC2626),
+                        color: AppTheme.dangerTextOf(context),
                       ),
                       padding: EdgeInsets.zero,
                     ),
@@ -1309,8 +1319,19 @@ class _InventoryScreenState extends State<InventoryScreen>
                         ),
                         IconButton(
                           tooltip: l10n.actionDelete,
-                          onPressed: () => provider.deleteInventoryItem(item.id),
-                          icon: const Icon(Icons.delete_outlined, size: 18, color: Color(0xFFDC2626)),
+                          onPressed: () async {
+                            final confirmed = await showConfirmDialog(
+                              context: ctx,
+                              title: l10n.inventoryDeleteTitle,
+                              message: l10n.inventoryDeleteConfirm(item.name),
+                              confirmLabel: l10n.actionDelete,
+                              isDestructive: true,
+                            );
+                            if (confirmed) {
+                              await provider.deleteInventoryItem(item.id);
+                            }
+                          },
+                          icon: Icon(Icons.delete_outlined, size: 18, color: AppTheme.dangerTextOf(ctx)),
                         ),
                       ]);
                     }),

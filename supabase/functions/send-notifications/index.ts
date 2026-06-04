@@ -476,14 +476,19 @@ async function computeDelivery(
   admin: any,
   userId: string,
 ): Promise<DueNotification[]> {
+  // arrival_date ist TIMESTAMPTZ: .eq(<date-string>) matchte nur Rows mit exakt
+  // UTC-Mitternacht → feuerte fast nie (Audit-Fix 2026-06-04). Stattdessen
+  // Tages-Range [heute 00:00Z, morgen 00:00Z).
   const today = new Date().toISOString().slice(0, 10)
+  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
   const { data } = await admin
     .from('deals')
     .select('id, product, arrival_date, status')
     .eq('user_id', userId)
     .is('deleted_at', null)
     .eq('status', 'Unterwegs')
-    .eq('arrival_date', today)
+    .gte('arrival_date', `${today}T00:00:00Z`)
+    .lt('arrival_date', `${tomorrow}T00:00:00Z`)
   return ((data ?? []) as Array<Record<string, unknown>>).map((d) => ({
     title: 'Lieferung heute erwartet',
     body: `${d.product ?? ''} sollte heute ankommen.`,

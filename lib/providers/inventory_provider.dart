@@ -1662,6 +1662,12 @@ class InventoryProvider extends ChangeNotifier {
       throw StateError('closeStocktake: kein aktiver Workspace gesetzt.');
     }
 
+    // Idempotenz-Guard: bereits abgeschlossene Inventuren nicht nochmals buchen.
+    // Verhindert Doppel-Buchung bei Doppel-Tap oder Retry.
+    if (stocktake.status == StocktakeStatus.closed) {
+      return stocktake;
+    }
+
     final now = DateTime.now().toUtc();
 
     // 1. Pro gezählte Position mit Differenz: Differenz-Movement schreiben.
