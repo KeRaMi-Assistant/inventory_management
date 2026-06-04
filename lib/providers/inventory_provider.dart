@@ -83,6 +83,15 @@ class InventoryProvider extends ChangeNotifier {
   bool _loading = false;
   bool _initialLoadAttempted = false;
   Object? _lastError;
+  // Gesetzt in dispose() — alle async-Continuations prüfen dieses Flag
+  // vor notifyListeners(), um post-dispose-Notifies zu verhindern.
+  bool _disposed = false;
+
+  /// In-flight Future des laufenden [loadData]-Calls. Solange ein Load läuft,
+  /// gibt jeder weitere Aufrufer dasselbe Future zurück (Coalescing), statt
+  /// einen zweiten konkurrierenden Load zu starten. Wird in [loadData] gesetzt
+  /// und im finally-Block auf null zurückgesetzt.
+  Future<void>? _loadDataInFlight;
 
   bool get isLoading => _loading;
 
@@ -353,7 +362,17 @@ class InventoryProvider extends ChangeNotifier {
     await loadData();
   }
 
-  Future<void> loadData() async {
+  Future<void> loadData() {
+    // Concurrent-call guard via Future-Coalescing: wenn ein Load bereits läuft,
+    // dasselbe Future zurückgeben statt einen zweiten zu starten. Verhindert,
+    // dass ein Workspace-Switch + gleichzeitiges retrackDeal den Cache
+    // inkonsistent überschreiben und _loading falsch zurücksetzen.
+    if (_loadDataInFlight != null) return _loadDataInFlight!;
+    _loadDataInFlight = _doLoadData();
+    return _loadDataInFlight!;
+  }
+
+  Future<void> _doLoadData() async {
     _loading = true;
     _lastError = null;
     notifyListeners();
@@ -415,6 +434,7 @@ class InventoryProvider extends ChangeNotifier {
     } finally {
       _loading = false;
       _initialLoadAttempted = true;
+      _loadDataInFlight = null;
       notifyListeners();
     }
   }
@@ -678,11 +698,14 @@ class InventoryProvider extends ChangeNotifier {
     final deal = _deals.where((d) => d.id == id).firstOrNull;
     // Async fire-and-forget — Fehler werden geloggt, aber kein UI-State
     // wechselt (Item ist bereits aus der Ansicht verschwunden).
+    // _disposed-Check verhindert notifyListeners() nach dispose().
     _repository.deleteDeal(id).then((_) {
+      if (_disposed) return;
       _deals.removeWhere((d) => d.id == id);
       if (deal != null) _log('Deal gelöscht (commit): ${deal.product}', 'deal');
       notifyListeners();
     }).catchError((Object e) {
+      if (_disposed) return;
       // _log() persistiert in `activity_log` und rendert via
       // _ActivityItem im Dashboard — sanitizeError verhindert
       // PostgresException-Stacktrace-Leaks in UI + DB.
@@ -693,6 +716,7 @@ class InventoryProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     // Laufende Timers beim Dispose canceln — sie würden sonst nach Dispose
     // auf einem ungültigen Provider feuern.
     for (final timer in _pendingDeleteTimers.values) {

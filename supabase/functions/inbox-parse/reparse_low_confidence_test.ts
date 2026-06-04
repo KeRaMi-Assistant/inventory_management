@@ -7,23 +7,21 @@
 //   2. Rate-Limit-Math: 5 min Cooldown via mailbox_accounts.last_reparse_at.
 //   3. Endpoint-Contract: workspace_id-Resolution.
 //
-// Die `findAllTrackings` + `gateTracking`-Adapter werden über das
-// existierende `_shared/inbox_adapters_test.ts` abgedeckt.
+// Die Tracking-Detection selbst (DHL/Amazon/DPD) ist in
+// `_shared/tracking_detection_test.ts` abgedeckt. Hier prüfen wir nur, dass
+// der Re-Parse beide Body-Quellen (`_raw.text` + `_raw_html`) an `detect()`
+// durchreicht — genau die Live-Logik aus `reparseLowConfidence`.
 
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import {
-  findAllTrackings,
-  gateTracking,
-} from '../_shared/inbox_adapters.ts'
+import { detect as detectTracking } from '../_shared/tracking_detection.ts'
 
 // Council-Finding #1: Re-Parse muss BEIDE Body-Quellen lesen. Wir
 // simulieren einen parsed_payload-Row mit Plain-Text-only-Body (kein HTML)
-// und prüfen, dass findAllTrackings einen Treffer findet.
+// und prüfen, dass detect() einen Treffer findet.
 //
-// Plan 2026-06-03 §1/§2.8: UPS ist out-of-scope, das `ups-1z`-Pattern ist aus
-// `TRACKING_PATTERNS` gelöscht. Wir testen den plain-text-Body-Pfad jetzt mit
-// einer DHL-JJD-Nummer (in-scope, format-eindeutig) — die Body-Quellen-Merge-
-// Logik (text + html) bleibt unverändert getestet.
+// Plan 2026-06-03 §1/§2.8 + Dead-Code-Cleanup: die Detection läuft jetzt
+// ausschliesslich über `tracking_detection.detect()`. Wir spiegeln die Live-
+// Logik aus `reparseLowConfidence` (subject/text/html + status='shipped').
 Deno.test('reparseLowConfidence: liest plain-text _raw.text Pfad (DHL JJD)', () => {
   const payload = {
     _raw: {
@@ -31,22 +29,20 @@ Deno.test('reparseLowConfidence: liest plain-text _raw.text Pfad (DHL JJD)', () 
         'Hallo,\nIhre Sendungsnummer lautet: JJD012345678901234\nDanke.',
     },
   }
-  const html = (payload as Record<string, unknown>)._raw_html ?? ''
+  const html = ((payload as Record<string, unknown>)._raw_html as string | undefined) ?? ''
   const rawObj = payload._raw ?? {}
   const text = rawObj.text ?? ''
-  // Genau die Logik aus reparseLowConfidence:
-  const body = text + (text && html ? '\n\n' : '') + html
-  const candidates = findAllTrackings(body, { html: html as string })
-  const { primary } = gateTracking(candidates, { minConfidence: 'strong' })
+  // Genau die Detection-Call-Logik aus reparseLowConfidence:
+  const det = detectTracking({ subject: '', text, html, status: 'shipped' })
 
-  // DHL-JJD-Pattern → strong-Candidate erwartet, carrier lowercase.
-  assertEquals(primary !== null, true)
-  assertEquals(primary?.value, 'JJD012345678901234')
-  assertEquals(primary?.carrier, 'dhl')
+  // DHL-JJD-Pattern → strong, carrier lowercase.
+  assertEquals(det.tracking, 'JJD012345678901234')
+  assertEquals(det.confidence, 'strong')
+  assertEquals(det.carrier, 'dhl')
 })
 
 // Council-Finding #1: HTML-Pfad (bestehendes Verhalten) bleibt intakt.
-// DHL-href (nolp.dhl…/?piececode=…) → strong html-href-Candidate.
+// DHL-href (nolp.dhl…/?idc=…) → strong.
 Deno.test('reparseLowConfidence: liest _raw_html Pfad (DHL href)', () => {
   const payload = {
     _raw_html:
@@ -55,12 +51,10 @@ Deno.test('reparseLowConfidence: liest _raw_html Pfad (DHL href)', () => {
   const html = (payload._raw_html as string | undefined) ?? ''
   const rawObj = (payload as Record<string, unknown>)._raw ?? {}
   const text = (rawObj as { text?: string }).text ?? ''
-  const body = text + (text && html ? '\n\n' : '') + html
-  const candidates = findAllTrackings(body, { html })
-  const { primary } = gateTracking(candidates, { minConfidence: 'strong' })
+  const det = detectTracking({ subject: '', text, html, status: 'shipped' })
 
-  assertEquals(primary !== null, true)
-  assertEquals(primary?.value, 'JJD012345678901234')
+  assertEquals(det.tracking, 'JJD012345678901234')
+  assertEquals(det.confidence, 'strong')
 })
 
 // Skip-Branch: weder html noch text → keine Verarbeitung.

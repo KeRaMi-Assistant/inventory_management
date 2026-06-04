@@ -16,7 +16,7 @@
 //       status ordered → none, Source-Priorität (href > body).
 
 import { assert, assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { detect, type DetectionInput } from './tracking_detection.ts'
+import { detect, MAX_BODY_LEN, type DetectionInput } from './tracking_detection.ts'
 
 function base(over: Partial<DetectionInput>): DetectionInput {
   return { subject: '', text: '', html: '', status: 'shipped', ...over }
@@ -327,4 +327,27 @@ Deno.test('detect: candidates auf 10 gekappt', () => {
   }
   const r = detect(base({ text: parts.join('\n') }))
   assert(r.candidates.length <= 10, `expected ≤10 candidates, got ${r.candidates.length}`)
+})
+
+// ── Body-Cap (256 KB) ─────────────────────────────────────────────────────────
+// ReDoS-Mitigation (Plan §3.7): detect() cappt subject+text+stripHtml(html) auf
+// MAX_BODY_LEN. Ein valides Tracking JENSEITS des Caps darf nicht mehr gefunden
+// werden — diese Safety-Net-Coverage lag früher im (entfernten) tracking_t3c_test.
+Deno.test('detect: MAX_BODY_LEN = 256 KB', () => {
+  assertEquals(MAX_BODY_LEN, 256 * 1024)
+})
+
+Deno.test('detect: valides JJD VOR dem Body-Cap → gefunden', () => {
+  const body = 'Sendungsnummer JJD000390007299011234 ' + 'x'.repeat(MAX_BODY_LEN + 100)
+  const r = detect(base({ text: body }))
+  assert(r.trackings.includes('JJD000390007299011234'), 'Token vor dem Cap muss matchen')
+})
+
+Deno.test('detect: valides JJD JENSEITS des Body-Caps → abgeschnitten', () => {
+  const body = 'x'.repeat(MAX_BODY_LEN + 100) + ' Sendungsnummer JJD000390007299011234'
+  const r = detect(base({ text: body }))
+  assert(
+    !r.trackings.includes('JJD000390007299011234'),
+    'Token jenseits des Body-Caps darf nicht matchen (ReDoS-Cap)',
+  )
 })

@@ -14,38 +14,19 @@
 //   * `normalizeTracking` — Whitespace-strip + uppercase.
 //   * `stampPipelineHeartbeat` — stempelt `workspace_carrier_credentials.
 //     last_polled_at`, damit der User in Settings „Zuletzt geprüft" sieht.
-//   * `isCacheFresh` / `CacheRow` / `ResultState` / TTL — TTL-Helper für den
-//     (separat in T6 abzubauenden) `tracking_validation_cache`-Lese-Pfad.
-
-const TTL_MS = {
-  valid: 7 * 24 * 60 * 60 * 1000,
-  invalid: 30 * 24 * 60 * 60 * 1000,
-  unknown: 1 * 60 * 60 * 1000,
-} as const
-
-export type ResultState = 'valid' | 'invalid' | 'unknown'
-
-export interface CacheRow {
-  tracking_norm: string
-  is_valid: boolean
-  result_state: ResultState
-  last_checked_at: string
-}
+//
+// ENTFERNT (Dead-Code-Cleanup, chore/audit-sustainability-1):
+//   * `isCacheFresh` / `CacheRow` / `ResultState` / `TTL_MS` — TTL-Lese-Helper
+//     für die `tracking_validation_cache`-Tabelle. Die Tabelle wurde mit
+//     Migration `20260603081508_drop_tracking_validation_cache.sql` gedroppt;
+//     die Helper waren prod-tot. `SupabaseAdminLike` ist auf den schlanken
+//     `.from().update().eq()`-Shape reduziert, den `stampPipelineHeartbeat`
+//     noch braucht (Cache-Read-Methoden `select`/`maybeSingle`/`upsert` weg).
 
 // Minimaler Supabase-Client-Shape, ohne `@supabase/supabase-js` zu
 // importieren — vermeidet Typ-Zyklus mit dem Runner.
 interface SupabaseAdminLike {
-  from(table: string): {
-    select(cols: string): {
-      eq(col: string, val: string): {
-        maybeSingle(): Promise<{ data: CacheRow | null; error: unknown }>
-      }
-    }
-    upsert(
-      row: Record<string, unknown>,
-      opts?: { onConflict?: string },
-    ): Promise<{ error: unknown }>
-  }
+  from(table: string): unknown
 }
 
 export function normalizeTracking(v: string): string {
@@ -80,11 +61,4 @@ export async function stampPipelineHeartbeat(
       workspace_id: workspaceId,
     }))
   }
-}
-
-export function isCacheFresh(row: CacheRow, nowMs: number): boolean {
-  const ts = new Date(row.last_checked_at).getTime()
-  if (!Number.isFinite(ts)) return false
-  const ageMs = nowMs - ts
-  return ageMs < TTL_MS[row.result_state]
 }

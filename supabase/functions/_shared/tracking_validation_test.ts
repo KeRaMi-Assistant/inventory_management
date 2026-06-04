@@ -6,11 +6,14 @@
 // rein algorithmisch in `tracking_detection.ts` (`detect()`), abgedeckt von
 // `tracking_detection_test.ts` + `inbox_vat_reject_test.ts`.
 //
-// Hier verbleiben nur Smoke-Tests für die 3 Helper, die `tracking_validation.ts`
+// Hier verbleiben nur Smoke-Tests für die 2 Helper, die `tracking_validation.ts`
 // noch exportiert:
 //   * `normalizeTracking`        — Whitespace-strip + uppercase.
-//   * `isCacheFresh`             — TTL-Helper (valid 7d / invalid 30d / unknown 1h).
 //   * `stampPipelineHeartbeat`   — best-effort last_polled_at-Stempel.
+//
+// Die `isCacheFresh`/`CacheRow`-Cache-Helper wurden mit dem Dead-Code-Cleanup
+// entfernt (Tabelle `tracking_validation_cache` gedroppt) — ihre Tests fielen
+// ersatzlos weg.
 //
 // Ausführen mit:
 //   deno test --allow-all supabase/functions/_shared/tracking_validation_test.ts
@@ -20,8 +23,6 @@ import {
   assertEquals,
 } from 'https://deno.land/std@0.224.0/assert/mod.ts'
 import {
-  type CacheRow,
-  isCacheFresh,
   normalizeTracking,
   stampPipelineHeartbeat,
 } from './tracking_validation.ts'
@@ -36,50 +37,6 @@ Deno.test('normalizeTracking: strippt Whitespace + uppercased', () => {
 
 Deno.test('normalizeTracking: bereits normalisiert bleibt stabil', () => {
   assertEquals(normalizeTracking('JJD012345678901'), 'JJD012345678901')
-})
-
-// ── isCacheFresh ──────────────────────────────────────────────────────
-
-const cacheRow = (
-  state: CacheRow['result_state'],
-  ageMs: number,
-  nowMs: number,
-): CacheRow => ({
-  tracking_norm: 'JJD012345678901',
-  is_valid: state === 'valid',
-  result_state: state,
-  last_checked_at: new Date(nowMs - ageMs).toISOString(),
-})
-
-Deno.test('isCacheFresh: valid TTL = 7 Tage', () => {
-  const now = Date.now()
-  const day = 24 * 60 * 60 * 1000
-  assert(isCacheFresh(cacheRow('valid', 6 * day, now), now), 'valid 6d ist frisch')
-  assert(!isCacheFresh(cacheRow('valid', 8 * day, now), now), 'valid 8d ist abgelaufen')
-})
-
-Deno.test('isCacheFresh: invalid TTL = 30 Tage', () => {
-  const now = Date.now()
-  const day = 24 * 60 * 60 * 1000
-  assert(isCacheFresh(cacheRow('invalid', 29 * day, now), now), 'invalid 29d ist frisch')
-  assert(!isCacheFresh(cacheRow('invalid', 31 * day, now), now), 'invalid 31d ist abgelaufen')
-})
-
-Deno.test('isCacheFresh: unknown TTL = 1 Stunde', () => {
-  const now = Date.now()
-  const hour = 60 * 60 * 1000
-  assert(isCacheFresh(cacheRow('unknown', 30 * 60 * 1000, now), now), 'unknown 30min ist frisch')
-  assert(!isCacheFresh(cacheRow('unknown', 2 * hour, now), now), 'unknown 2h ist abgelaufen')
-})
-
-Deno.test('isCacheFresh: ungültiger Timestamp → nicht frisch', () => {
-  const row: CacheRow = {
-    tracking_norm: 'X',
-    is_valid: true,
-    result_state: 'valid',
-    last_checked_at: 'not-a-date',
-  }
-  assertEquals(isCacheFresh(row, Date.now()), false)
 })
 
 // ── stampPipelineHeartbeat ────────────────────────────────────────────

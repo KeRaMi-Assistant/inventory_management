@@ -211,6 +211,10 @@ class InboxProvider extends ChangeNotifier {
       _shopFilter != null || _statusFilter != null;
 
   Future<void> refresh() async {
+    // Concurrent-call guard: identisch zum Muster in markAllRead/pollNow.
+    // Verhindert, dass fire-and-forget-Aufrufe aus _runPump.onProgress den
+    // laufenden Load überschreiben (stale-wins-Race).
+    if (_loading) return;
     _loading = true;
     _lastError = null;
     notifyListeners();

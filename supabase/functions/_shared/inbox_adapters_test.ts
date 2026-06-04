@@ -11,7 +11,6 @@ import { assert } from 'https://deno.land/std@0.224.0/assert/assert.ts'
 import {
   detectAndParse,
   detectShop,
-  findAllTrackings,
   isAccountingMail,
   isCarrierOnly,
   shouldStore,
@@ -464,51 +463,9 @@ Deno.test('Unbekannter Shop mit Order-Subject bleibt unclassified-eligible', () 
   assert(detectShop(c) === null)
 })
 
-// ── DHL-only-Regression-Guards (Plan 2026-05-16 §D1) ─────────────────
-// Diese Tests garantieren, dass entfernte Non-DHL-Patterns NICHT mehr
-// als Tracking-Candidates auftauchen. Falls die Patterns je zurueckkehren
-// (z.B. ueber DPD/UPS-API-Adapter), MUESSEN diese Tests aktualisiert
-// werden, nicht stillschweigend kippen.
-
-Deno.test('Plan §D1: UPS-1Z-Pattern wird NICHT mehr detected', () => {
-  const candidates = findAllTrackings('Versand: 1Z999AA10123456784', {})
-  assertEquals(candidates.length, 0)
-})
-
-Deno.test('Plan §D1: Amazon-TBA-Pattern wird NICHT mehr detected', () => {
-  const candidates = findAllTrackings('Tracking: TBA123456789012', {})
-  assertEquals(candidates.length, 0)
-})
-
-Deno.test('Plan §2.8: bare context-numeric (13-digit) wird im Legacy-Scan NICHT mehr detected', () => {
-  // Plan 2026-06-03 §2.8: `context-numeric-10-22` ist aus TRACKING_PATTERNS
-  // gelöscht (Bestellnr/Kundennr-Falsch-Positiv-Quelle). Der schmale
-  // Legacy-`findAllTrackings`-Scan kennt nur noch `dhl-jjd`. Eine generische
-  // 13-stellige Zahl — auch MIT „Sendungsnummer:"-Anchor — taucht hier nicht
-  // mehr auf. Die produktive anchor-gated dhl-12/dhl-20-Detection lebt jetzt
-  // in `tracking_detection.detect()`.
-  const candidates = findAllTrackings('Sendungsnummer: 1234567890123', {})
-  assertEquals(candidates.length, 0)
-})
-
-Deno.test('Plan §2.8: bare context-numeric OHNE Anchor wird im Legacy-Scan NICHT detected', () => {
-  const candidates = findAllTrackings('Random text 1234567890123 here', {})
-  assertEquals(candidates.length, 0)
-})
-
-Deno.test('Plan §D1: S10-UPU-Pattern (XJ12345678FR) wird im Legacy-Scan NICHT detected', () => {
-  // S10 lebt jetzt in detect() (anchor-gated + ISO-3166 + Checksum), nicht
-  // im Legacy-`findAllTrackings`-Scan.
-  const candidates = findAllTrackings('Tracking: XJ12345678FR', {})
-  assertEquals(candidates.length, 0)
-})
-
-Deno.test('Plan §2.8: DHL-JJD-Pattern bleibt im Legacy-Scan, carrier lowercase', () => {
-  const candidates = findAllTrackings('Sendungsnummer: JJD012345678901234', {})
-  assert(candidates.length >= 1, 'JJD-Pattern muss weiterhin matchen')
-  const jjd = candidates.find((c) => c.value === 'JJD012345678901234')
-  assert(jjd !== undefined, 'JJD012345678901234 muss als Candidate erscheinen')
-  // T3-Casing-Fix: Carrier ist lowercase (deals.carrier CHECK erlaubt nur
-  // 'dhl'|'amazon'|'dpd').
-  assertEquals(jjd!.carrier, 'dhl')
-})
+// Hinweis: Die früheren „DHL-only-Regression-Guards" gegen die Legacy-
+// `findAllTrackings`-Scan-Pipeline sind mit dem Dead-Code-Cleanup entfernt
+// worden — `findAllTrackings`/`TRACKING_PATTERNS` existieren nicht mehr.
+// Die Garantie „UPS/TBA/S10/bare-numeric werden NICHT fälschlich als Tracking
+// erkannt" liegt jetzt vollständig bei `tracking_detection.detect()` und ist
+// dort getestet (`tracking_detection_test.ts` + `inbox_vat_reject_test.ts`).

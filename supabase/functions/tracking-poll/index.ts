@@ -606,3 +606,53 @@ export function isPollEligible(deal: {
     deal.tracking_confidence === 'strong' || deal.tracking_confidence === 'manual'
   )
 }
+
+/// Auth-Typ: bestimmt aus Request-Header + Env-Secrets, welcher Caller-Typ
+/// vorliegt. Reine Funktion, kein I/O — testbar ohne Netzwerk.
+///
+///   'cron'    — gültiges CRON_SECRET im Authorization-Header.
+///   'service' — SUPABASE_SERVICE_ROLE_KEY im Authorization-Header.
+///   'jwt'     — Bearer-Token vorhanden, aber keines der Backend-Secrets.
+///   'none'    — kein Authorization-Header (leer oder fehlt).
+///
+/// Priorität: cron vor service (beide könnten zufällig identisch sein — in
+/// der Praxis sind sie es nie, aber die Reihenfolge ist dokumentiert).
+export type AuthType = 'cron' | 'service' | 'jwt' | 'none'
+
+export function resolveAuthType(
+  authHeader: string,
+  cronSecret: string | undefined,
+  serviceKey: string | undefined,
+): AuthType {
+  if (!authHeader) return 'none'
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) return 'cron'
+  if (serviceKey && authHeader === `Bearer ${serviceKey}`) return 'service'
+  if (authHeader.startsWith('Bearer ')) return 'jwt'
+  return 'none'
+}
+
+/// Auth-Gate-Entscheidung für den HTTP-Handler. Reine Funktion — kein
+/// DB-Lookup, kein I/O. Gibt die erforderliche Weiterverarbeitung zurück:
+///
+///   'allow-full'        — Backend-Pfad (cron/service): kein weiterer Check.
+///   'allow-single-deal' — JWT-User + deal_id gesetzt: Membership-Check nötig.
+///   'deny-401'          — kein Auth, kein deal_id → 401.
+///   'deny-no-deal'      — JWT-User, aber kein deal_id → 401 (kein Bulk-Zugriff
+///                         für JWT-User erlaubt).
+export type AuthGateResult =
+  | 'allow-full'
+  | 'allow-single-deal'
+  | 'deny-401'
+  | 'deny-no-deal'
+
+export function authGateDecision(
+  authType: AuthType,
+  hasDealId: boolean,
+): AuthGateResult {
+  if (authType === 'cron' || authType === 'service') return 'allow-full'
+  // JWT oder none — ohne deal_id kein Zugriff.
+  if (!hasDealId) return authType === 'jwt' ? 'deny-no-deal' : 'deny-401'
+  if (authType === 'jwt') return 'allow-single-deal'
+  // none + deal_id → kein gültiges Token vorhanden → 401.
+  return 'deny-401'
+}

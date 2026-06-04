@@ -1,7 +1,7 @@
 // Tracking-Detection — algorithmischer Detektor (DHL / Amazon / DPD).
 //
 // Self-contained Modul (Plan 2026-06-03 §2, Task T2). Importiert nur:
-//   - Checksum-Primitiven aus `tracking_validators.ts` (`_internal.*`),
+//   - Checksum-Primitiven aus `tracking_checksums.ts` (`_internal.*`),
 //   - Anchor-Helper + Reject-Konstanten aus `inbox_adapters.ts`
 //     (`ANCHOR_WORDS`, `findAnchorBefore`, `MAX_BODY_LEN`, `TrackingCandidate`).
 //
@@ -15,7 +15,7 @@
 // REJECT_PATTERNS laufen ausschliesslich auf dem normalisierten 3–30-Zeichen-
 // Token (ReDoS-safe), niemals gegen den Body.
 
-import { _internal } from './tracking_validators.ts'
+import { _internal } from './tracking_checksums.ts'
 import {
   ANCHOR_WORDS,
   findAnchorBefore,
