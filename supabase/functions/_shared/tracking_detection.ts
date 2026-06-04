@@ -226,12 +226,19 @@ const STRONG_PATTERNS: ReadonlyArray<BodyPattern> = [
   // wird von `vat_eu` (^[A-Z]{2}\d{9}$) gerejected; dieses Pattern startet bei
   // 10 Ziffern, matcht also NIE eine VAT. DE-IBAN (DE+20) ist via `iban_de`
   // abgedeckt und durch die Längenobergrenze (14) ausgeschlossen. Keine
-  // öffentliche Checksum → format-eindeutig akzeptiert (requiresAnchor:false).
+  // öffentliche Checksum. ANCHOR PFLICHT (Fix 2026-06-04, Audit-Finding): ohne
+  // Checksum ist `DE`+10-14 sonst ununterscheidbar von Kunden-/Referenz-/
+  // Vertragsnummern (`Kundennummer: DE1234567890`) → Falsch-Positiv auf einem
+  // echten Deal (verletzt „Falsch-Positive-Budget = 0"). Mit requiresAnchor wird
+  // nur akzeptiert, wenn ein Tracking-Anchor (Sendungsnummer/Tracking/…) im
+  // 80-Zeichen-Fenster davor steht — reale Amazon-/DHL-DE-Mails ("Your tracking
+  // number is: DE…", "Sendungsnummer: DE…") erfüllen das; ein „Kundennummer:"-
+  // Footer nicht (kein Tracking-Anchor).
   {
     id: 'dhl-de',
     re: /\bDE\d{10,14}\b/g,
     carrier: 'dhl',
-    requiresAnchor: false,
+    requiresAnchor: true,
     validator: 'de-prefix',
   },
 ]

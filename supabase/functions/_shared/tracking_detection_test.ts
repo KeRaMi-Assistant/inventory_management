@@ -74,10 +74,13 @@ Deno.test('detect: DE-Prefix DE+10 → strong dhl (Amazon-DE-Tracking)', () => {
   assertEquals(r.confidence, 'strong')
 })
 
-Deno.test('detect: DE-Prefix braucht keinen Anchor (format-eindeutig)', () => {
-  const r = detect(base({ text: 'Ihre Lieferung DE5455279839 ist unterwegs' }))
-  assertEquals(r.tracking, 'DE5455279839')
-  assertEquals(r.carrier, 'dhl')
+Deno.test('detect: DE-Prefix OHNE Tracking-Anchor → kein Tracking (Kundennummer-FP-Schutz)', () => {
+  // Audit-Fix 2026-06-04: `DE`+10-14 hat keine Checksum → ohne Tracking-Anchor
+  // ununterscheidbar von Kunden-/Referenz-/Vertragsnummern. MUSS abgelehnt
+  // werden (Falsch-Positive-Budget = 0).
+  assertEquals(detect(base({ text: 'Kundennummer: DE1234567890. Vielen Dank!' })).tracking, null)
+  assertEquals(detect(base({ text: 'Referenz DE123456789012 zu Ihrer Bestellung' })).tracking, null)
+  assertEquals(detect(base({ text: 'Ihre Lieferung DE5455279839 ist heute unterwegs' })).tracking, null)
 })
 
 Deno.test('detect: DE+14 → strong (nicht fälschlich als IBAN gerejected)', () => {
