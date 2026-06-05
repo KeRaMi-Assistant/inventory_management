@@ -7,7 +7,7 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/product_category.dart';
 import '../providers/active_workspace_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/catalog_provider.dart';
 import '../utils/validators.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/app_screen_scaffold.dart';
@@ -43,7 +43,7 @@ class CategoriesScreen extends StatelessWidget {
 
   Future<void> _confirmDelete(
     BuildContext context,
-    InventoryProvider provider,
+    CatalogProvider provider,
     ProductCategory category,
   ) async {
     final l10n = AppLocalizations.of(context);
@@ -76,7 +76,7 @@ class CategoriesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer2<InventoryProvider, ActiveWorkspaceProvider>(
+    return Consumer2<CatalogProvider, ActiveWorkspaceProvider>(
       builder: (context, provider, wsProvider, _) {
         final canEdit = wsProvider.role?.canEdit ?? false;
         final categories = provider.productCategories;
@@ -448,7 +448,7 @@ class _AddEditCategoryDialogState extends State<AddEditCategoryDialog> {
 
     setState(() => _saving = true);
 
-    final provider = context.read<InventoryProvider>();
+    final provider = context.read<CatalogProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final l10n = AppLocalizations.of(context);
@@ -494,7 +494,7 @@ class _AddEditCategoryDialogState extends State<AddEditCategoryDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final provider = context.watch<InventoryProvider>();
+    final provider = context.watch<CatalogProvider>();
     final categories = provider.productCategories;
 
     // Only top-level categories are selectable as parent (max 2 levels).

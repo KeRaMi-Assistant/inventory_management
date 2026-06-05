@@ -11,7 +11,6 @@ import '../models/deal_comment.dart';
 import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
 import '../models/product.dart';
-import '../models/product_category.dart';
 import '../models/product_stock.dart';
 import '../models/purchase_order.dart';
 import '../models/purchase_order_item.dart';
@@ -26,16 +25,43 @@ import '../services/carrier_service.dart';
 import '../services/csv_service.dart';
 import '../services/supabase_repository.dart';
 import '../utils/error_messages.dart';
+import 'catalog_provider.dart';
 
 /// Holds the full working set of cloud data for the signed-in user and routes
 /// every mutation through [SupabaseRepository]. Local lists are caches kept in
 /// sync with the server so the rest of the UI can stay synchronous.
+///
+/// The catalog domain (products + categories) has been extracted into
+/// [CatalogProvider]. InventoryProvider receives a reference via
+/// [updateCatalogProvider] (called from `main.dart` via
+/// [ChangeNotifierProxyProvider2]) and delegates product reads to it.
 class InventoryProvider extends ChangeNotifier {
-  InventoryProvider({required SupabaseRepository repository})
-      : _repository = repository;
+  InventoryProvider({
+    required SupabaseRepository repository,
+    CatalogProvider? catalogProvider,
+  })  : _repository = repository,
+        _catalogProvider = catalogProvider;
 
   final SupabaseRepository _repository;
   final _uuid = const Uuid();
+
+  CatalogProvider? _catalogProvider;
+
+  /// Called by [ChangeNotifierProxyProvider2] in `main.dart` whenever the
+  /// upstream [CatalogProvider] instance is replaced. Safe to call repeatedly
+  /// with the same instance.
+  void updateCatalogProvider(CatalogProvider? catalog) {
+    _catalogProvider = catalog;
+    // No notifyListeners() here — callers that depend on products read via
+    // the CatalogProvider directly; InventoryProvider only uses the reference
+    // for internal cross-domain reads (criticalStockCount, importCsvAll, etc.).
+  }
+
+  /// Convenience read — returns the product list from [CatalogProvider] if
+  /// available, otherwise an empty list. Used internally by methods that
+  /// operate across the Catalog + Inventory domains.
+  List<Product> get _catalogProducts =>
+      _catalogProvider?.products ?? const [];
 
   List<Deal> _deals = [];
 
@@ -57,8 +83,6 @@ class InventoryProvider extends ChangeNotifier {
   List<InventoryMovement> _movements = [];
   List<ActivityEntry> _activities = [];
   List<Ticket> _tickets = [];
-  List<ProductCategory> _productCategories = [];
-  List<Product> _products = [];
 
   /// Bestellköpfe (Epic C). `purchase_order_items` werden NICHT global
   /// gehalten — sie werden lazy pro Detail-Screen geladen (Committee-
@@ -122,9 +146,6 @@ class InventoryProvider extends ChangeNotifier {
   List<InventoryMovement> get movements => List.unmodifiable(_movements);
   List<ActivityEntry> get activities => List.unmodifiable(_activities);
   List<Ticket> get tickets => List.unmodifiable(_tickets);
-  List<ProductCategory> get productCategories =>
-      List.unmodifiable(_productCategories);
-  List<Product> get products => List.unmodifiable(_products);
 
   /// Bestellköpfe, absteigend nach Erstellungsdatum sortiert.
   List<PurchaseOrder> get purchaseOrders =>
@@ -230,9 +251,10 @@ class InventoryProvider extends ChangeNotifier {
     //    Das ist akzeptabel: 0 Bestand bei 0 Mindestbestand = nicht kritisch;
     //    und Produkte mit echter min_stock-Anforderung aber ohne Bestands-Rows
     //    werden in D4 (Low-Stock-Alerts) separat behandelt.
-    final productIds = _products.map((p) => p.id).toSet();
+    final products = _catalogProducts;
+    final productIds = products.map((p) => p.id).toSet();
     final productMinStock = <String, int>{
-      for (final p in _products) p.id: p.minStock,
+      for (final p in products) p.id: p.minStock,
     };
 
     int criticalProductCount = 0;
@@ -449,8 +471,6 @@ class InventoryProvider extends ChangeNotifier {
     _movements = [];
     _activities = [];
     _tickets = [];
-    _productCategories = [];
-    _products = [];
     _purchaseOrders = [];
     _warehouses = [];
     _stocktakes = [];
@@ -476,10 +496,6 @@ class InventoryProvider extends ChangeNotifier {
     _activities = List.of(snapshot.activities)
       ..sort((a, b) => b.date.compareTo(a.date));
     _tickets = List.of(snapshot.tickets);
-    _productCategories = List.of(snapshot.productCategories)
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    _products = List.of(snapshot.products)
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     _purchaseOrders = List.of(snapshot.purchaseOrders)
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _warehouses = List.of(snapshot.warehouses)
@@ -904,22 +920,26 @@ class InventoryProvider extends ChangeNotifier {
     // After each insert we record csv-parsed-id → db-saved-id so dependent
     // entities can reference the real row.
 
-    // 1. Categories – skip by name; track csv-id → db-id for product FK remap
+    // 1. Categories – delegated to CatalogProvider; track csv-id → db-id for
+    //    product FK remap. Direct repository calls are used here because
+    //    importCsvAll needs to build the remap table incrementally during a
+    //    single async operation — delegating each insert via CatalogProvider
+    //    would cause multiple redundant notifyListeners() calls. After the
+    //    import completes, CatalogProvider.loadData() is called to resync.
     final importCategoryIdRemap = <String, String>{}; // csv id → db id
     final existingCategoryByName = <String, String>{
-      for (final c in _productCategories) c.name.toLowerCase(): c.id,
+      for (final c in _catalogProvider?.productCategories ?? const [])
+        c.name.toLowerCase(): c.id,
     };
     for (final category in result.categories) {
       final key = category.name.toLowerCase();
       if (existingCategoryByName.containsKey(key)) {
         // Remap csv id to the existing canonical id so products can resolve it.
-        importCategoryIdRemap[category.id] =
-            existingCategoryByName[key]!;
+        importCategoryIdRemap[category.id] = existingCategoryByName[key]!;
         continue;
       }
       try {
         final saved = await _repository.insertProductCategory(category);
-        _productCategories.add(saved);
         existingCategoryByName[key] = saved.id;
         importCategoryIdRemap[category.id] = saved.id;
       } catch (e) {
@@ -929,7 +949,6 @@ class InventoryProvider extends ChangeNotifier {
         }
       }
     }
-    _productCategories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     // 2. Warehouses – skip by name; no FK deps
     final existingWarehouseByName = <String, String>{
@@ -952,11 +971,13 @@ class InventoryProvider extends ChangeNotifier {
     _warehouses.sort(
         (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
-    // 3. Products – skip by name; remap category_id and default_supplier_id.
-    //    Track csv-id → db-id for PO item FK remap.
+    // 3. Products – delegated via direct repository calls (same rationale as
+    //    categories above). CatalogProvider is resynced via loadData() after
+    //    the import. Track csv-id → db-id for PO item FK remap.
     final importProductIdRemap = <String, String>{}; // csv id → db id
     final existingProductByName = <String, String>{
-      for (final p in _products) p.name.toLowerCase(): p.id,
+      for (final p in _catalogProvider?.products ?? const [])
+        p.name.toLowerCase(): p.id,
     };
     for (final product in result.products) {
       final key = product.name.toLowerCase();
@@ -980,7 +1001,6 @@ class InventoryProvider extends ChangeNotifier {
       );
       try {
         final saved = await _repository.insertProduct(remapped);
-        _products.add(saved);
         existingProductByName[key] = saved.id;
         importProductIdRemap[product.id] = saved.id;
       } catch (e) {
@@ -989,8 +1009,6 @@ class InventoryProvider extends ChangeNotifier {
         }
       }
     }
-    _products.sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     // 4. Purchase orders – skip by order number; remap supplier_id.
     //    Track csv synthetic-id → db BIGSERIAL id for PO item FK remap.
@@ -1056,6 +1074,16 @@ class InventoryProvider extends ChangeNotifier {
       }
     }
     // ── End new sections ─────────────────────────────────────────────────────
+
+    // Resync CatalogProvider after import so its in-memory cache is consistent
+    // with the newly inserted categories and products.
+    if (result.categories.isNotEmpty || result.products.isNotEmpty) {
+      unawaited(_catalogProvider?.loadData().catchError((Object e) {
+        if (kDebugMode) {
+          debugPrint('importCsvAll: CatalogProvider resync failed (non-fatal): $e');
+        }
+      }));
+    }
 
     if (dealCount > 0 ||
         shopCount > 0 ||
@@ -1221,69 +1249,6 @@ class InventoryProvider extends ChangeNotifier {
     return (added: added, skipped: skipped);
   }
 
-  // ── PRODUCT CATEGORIES ────────────────────────────────────────────────────
-
-  Future<void> addProductCategory(ProductCategory category) async {
-    final saved = await _repository.insertProductCategory(category);
-    _productCategories.add(saved);
-    _productCategories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    _log('Warengruppe hinzugefügt: ${saved.name}', 'category');
-    notifyListeners();
-  }
-
-  Future<void> updateProductCategory(ProductCategory category) async {
-    final saved = await _repository.updateProductCategory(category);
-    final idx = _productCategories.indexWhere((c) => c.id == saved.id);
-    if (idx == -1) return;
-    _productCategories[idx] = saved;
-    _productCategories.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    _log('Warengruppe aktualisiert: ${saved.name}', 'category');
-    notifyListeners();
-  }
-
-  Future<void> deleteProductCategory(String id) async {
-    final category =
-        _productCategories.where((c) => c.id == id).firstOrNull;
-    await _repository.deleteProductCategory(id);
-    _productCategories.removeWhere((c) => c.id == id);
-    if (category != null) {
-      _log('Warengruppe gelöscht: ${category.name}', 'category');
-    }
-    notifyListeners();
-  }
-
-  // ── PRODUCTS ──────────────────────────────────────────────────────────────
-
-  Future<void> addProduct(Product product) async {
-    final saved = await _repository.insertProduct(product);
-    _products.add(saved);
-    _products.sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    _log('Artikel hinzugefügt: ${saved.name}', 'product');
-    notifyListeners();
-  }
-
-  Future<void> updateProduct(Product product) async {
-    final saved = await _repository.updateProduct(product);
-    final idx = _products.indexWhere((p) => p.id == saved.id);
-    if (idx == -1) return;
-    _products[idx] = saved;
-    _products.sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    _log('Artikel aktualisiert: ${saved.name}', 'product');
-    notifyListeners();
-  }
-
-  Future<void> deleteProduct(String id) async {
-    final product = _products.where((p) => p.id == id).firstOrNull;
-    await _repository.deleteProduct(id);
-    _products.removeWhere((p) => p.id == id);
-    if (product != null) {
-      _log('Artikel gelöscht: ${product.name}', 'product');
-    }
-    notifyListeners();
-  }
-
   // ── PURCHASE ORDERS ───────────────────────────────────────────────────────
 
   /// Legt eine neue Bestellung an. Die `order_number` wird im Repository
@@ -1438,8 +1403,8 @@ class InventoryProvider extends ChangeNotifier {
       // Keine existierende Bestands-Row für dieses Produkt →
       // schlanke neue Row anlegen. Lager-Zuordnung (warehouse_id) ist
       // Epic D — hier genügt eine Row mit productId + quantity.
-      // Produktname aus dem lokalen Cache auflösen.
-      final product = _products.where((p) => p.id == productId).firstOrNull;
+      // Produktname aus dem Catalog-Cache auflösen.
+      final product = _catalogProducts.where((p) => p.id == productId).firstOrNull;
       final newItem = InventoryItem(
         id: _uuid.v4(),
         name: product?.name ?? productId,
@@ -1995,11 +1960,11 @@ class InventoryProvider extends ChangeNotifier {
   }
 
   /// Sucht ein bestehendes [Product] per SKU (primär, case-insensitiv) oder
-  /// Name (sekundär, case-insensitiv) in `_products`. Wird kein Treffer
-  /// gefunden, wird ein neues Produkt über das Repository angelegt und in
-  /// `_products` aufgenommen. Schlägt das Anlegen fehl (z. B. SKU-UNIQUE-
-  /// Kollision durch Race), wird `null` zurückgegeben — der Caller bucht
-  /// das Item dann ohne `product_id` ein.
+  /// Name (sekundär, case-insensitiv) in [CatalogProvider]. Wird kein Treffer
+  /// gefunden, wird ein neues Produkt über das Repository angelegt und
+  /// anschließend in [CatalogProvider] nachgezogen. Schlägt das Anlegen fehl
+  /// (z. B. SKU-UNIQUE-Kollision durch Race), wird `null` zurückgegeben —
+  /// der Caller bucht das Item dann ohne `product_id` ein.
   ///
   /// `status` wird NICHT auf das Produkt verschoben — es bleibt auf der
   /// `inventory_items`-Bestands-Row. Der Archive-Trigger
@@ -2012,10 +1977,11 @@ class InventoryProvider extends ChangeNotifier {
   }) async {
     final nameLower = name.toLowerCase().trim();
     final skuLower = sku?.toLowerCase().trim();
+    final catalogProducts = _catalogProducts;
 
     // 1. Primäres Matching: SKU (case-insensitiv) — nur wenn SKU vorhanden.
     if (skuLower != null && skuLower.isNotEmpty) {
-      final bysku = _products.where((p) {
+      final bysku = catalogProducts.where((p) {
         final pSku = p.sku?.toLowerCase().trim();
         return pSku != null && pSku == skuLower;
       }).firstOrNull;
@@ -2023,12 +1989,12 @@ class InventoryProvider extends ChangeNotifier {
     }
 
     // 2. Sekundäres Matching: Name (exakt, case-insensitiv).
-    final byName = _products.where((p) {
+    final byName = catalogProducts.where((p) {
       return p.name.toLowerCase().trim() == nameLower;
     }).firstOrNull;
     if (byName != null) return byName.id;
 
-    // 3. Kein Treffer → neues Produkt anlegen.
+    // 3. Kein Treffer → neues Produkt anlegen; CatalogProvider resync async.
     try {
       final now = DateTime.now().toUtc();
       final newProduct = Product(
@@ -2041,9 +2007,13 @@ class InventoryProvider extends ChangeNotifier {
         updatedAt: now,
       );
       final saved = await _repository.insertProduct(newProduct);
-      _products.add(saved);
-      _products.sort(
-          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      // Resync CatalogProvider so subsequent calls see the new product.
+      unawaited(_catalogProvider?.loadData().catchError((Object e) {
+        if (kDebugMode) {
+          debugPrint(
+              '_matchOrCreateProduct: CatalogProvider resync failed (non-fatal): $e');
+        }
+      }));
       return saved.id;
     } catch (e) {
       // Defensiv: Wareneingang darf nicht an der Produkt-Verknüpfung scheitern.

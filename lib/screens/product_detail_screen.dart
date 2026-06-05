@@ -9,6 +9,7 @@ import '../models/product.dart';
 import '../models/product_stock.dart';
 import '../models/supplier.dart';
 import '../providers/active_workspace_provider.dart';
+import '../providers/catalog_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/status_l10n.dart';
 import '../widgets/inventory_batches_sheet.dart';
@@ -86,6 +87,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final provider = Provider.of<InventoryProvider>(context);
+    final catalog = Provider.of<CatalogProvider>(context);
     final wsProvider = Provider.of<ActiveWorkspaceProvider>(context);
     final canEdit = wsProvider.role?.canEdit ?? false;
 
@@ -108,7 +110,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     // ── Produkt-Aggregations-Modus ───────────────────────────────────────────
     final productId = liveItem.productId;
     final Product? product = productId != null
-        ? provider.products.where((p) => p.id == productId).firstOrNull
+        ? catalog.products.where((p) => p.id == productId).firstOrNull
         : null;
 
     // Aggregierter Bestand aus product_stock-View.

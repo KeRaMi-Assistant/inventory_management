@@ -8,6 +8,7 @@ import '../models/product.dart';
 import '../models/stocktake.dart';
 import '../models/stocktake_item.dart';
 import '../providers/active_workspace_provider.dart';
+import '../providers/catalog_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/barcode_scanner_sheet.dart';
@@ -159,7 +160,8 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
     // Capture context-dependent objects before any async gap.
     final l10n = AppLocalizations.of(ctx);
     final messenger = ScaffoldMessenger.of(ctx);
-    final provider = Provider.of<InventoryProvider>(ctx, listen: false);
+    // Produkte aus dem CatalogProvider für EAN/SKU-Match — vor dem await lesen.
+    final products = Provider.of<CatalogProvider>(ctx, listen: false).products;
 
     final code = await BarcodeScannerSheet.show(
       ctx,
@@ -169,9 +171,6 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
 
     final items = _items;
     if (items == null) return;
-
-    // Produkte aus dem Provider für EAN/SKU-Match.
-    final products = provider.products;
     Product? matched;
     for (final p in products) {
       if ((p.ean != null && p.ean == code) ||
@@ -364,7 +363,7 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
           _DiffReportSection(
             items: items,
             localCounted: _localCounted,
-            products: context.read<InventoryProvider>().products,
+            products: context.read<CatalogProvider>().products,
           ),
           const Divider(height: 1),
         ],
@@ -390,7 +389,7 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
                   itemBuilder: (context, i) {
                     final item = displayItems[i];
                     final product = context
-                        .read<InventoryProvider>()
+                        .read<CatalogProvider>()
                         .products
                         .where((p) => p.id == item.productId)
                         .firstOrNull;

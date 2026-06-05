@@ -7,6 +7,7 @@ import '../models/purchase_order.dart';
 import '../models/purchase_order_item.dart';
 import '../models/product.dart';
 import '../providers/active_workspace_provider.dart';
+import '../providers/catalog_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/purchase_order_pdf_service.dart';
 import '../widgets/app_feedback.dart';
@@ -159,7 +160,6 @@ class _PurchaseOrderDetailScreenState
   Future<void> _scanBarcode() async {
     // Use State's own context — safe because all async gaps check `mounted`.
     final l10n = AppLocalizations.of(context);
-    final provider = Provider.of<InventoryProvider>(context, listen: false);
 
     final code = await BarcodeScannerSheet.show(
       context,
@@ -170,8 +170,8 @@ class _PurchaseOrderDetailScreenState
     final items = _items;
     if (items == null) return;
 
-    // Produkte aus dem Provider für Barcode-Match (EAN oder SKU)
-    final products = provider.products;
+    // Produkte aus dem CatalogProvider für Barcode-Match (EAN oder SKU)
+    final products = Provider.of<CatalogProvider>(context, listen: false).products;
     Product? matchedProduct;
     for (final p in products) {
       if ((p.ean != null && p.ean == code) ||
@@ -276,7 +276,7 @@ class _PurchaseOrderDetailScreenState
         order: _order,
         items: items,
         supplier: supplier,
-        products: provider.products,
+        products: Provider.of<CatalogProvider>(context, listen: false).products,
         labels: labels,
       );
 
@@ -434,7 +434,7 @@ class _PurchaseOrderDetailScreenState
               else
                 _ItemsList(
                   items: _items!,
-                  products: Provider.of<InventoryProvider>(context,
+                  products: Provider.of<CatalogProvider>(context,
                           listen: false)
                       .products,
                   receivedQty: _receivedQty,

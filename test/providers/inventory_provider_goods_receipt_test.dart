@@ -3,6 +3,7 @@ import 'package:inventory_management/models/inventory_item.dart';
 import 'package:inventory_management/models/product.dart';
 import 'package:inventory_management/models/purchase_order.dart';
 import 'package:inventory_management/models/purchase_order_item.dart';
+import 'package:inventory_management/providers/catalog_provider.dart';
 import 'package:inventory_management/providers/inventory_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
@@ -180,8 +181,28 @@ class _FakeRepository extends SupabaseRepository {
 
 // ── Hilfsfunktionen ──────────────────────────────────────────────────────────
 
-InventoryProvider _makeProvider(_FakeRepository repo) =>
-    InventoryProvider(repository: repo);
+/// Creates an [InventoryProvider] wired to a [CatalogProvider] that shares
+/// the same [repo]. Use [loadBoth] to populate both providers from the repo.
+InventoryProvider _makeProvider(_FakeRepository repo) {
+  final catalog = CatalogProvider(repository: repo);
+  return InventoryProvider(repository: repo, catalogProvider: catalog);
+}
+
+/// Loads both the [CatalogProvider] (products) and [InventoryProvider] from
+/// the same repo. Because [InventoryProvider] reads products via the injected
+/// [CatalogProvider], the catalog must be loaded first so that product name-
+/// lookups in [bookGoodsReceipt] and [checkInDeal] see the seeded data.
+Future<void> _loadBoth(InventoryProvider provider, _FakeRepository repo) =>
+    Future.wait([
+      CatalogProvider(repository: repo).loadData().then((_) {
+        // Re-inject a freshly loaded catalog so the provider's cross-domain
+        // reads use the seeded products.
+        provider.updateCatalogProvider(
+          CatalogProvider(repository: repo)..loadData(),
+        );
+      }),
+      provider.loadData(),
+    ]);
 
 PurchaseOrderItem _makePoItem({
   required String id,
@@ -259,7 +280,7 @@ void main() {
       repo.seedPurchaseOrderItems = [poItem];
 
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       await provider.bookGoodsReceipt(item: poItem, receivedQty: 5);
 
@@ -278,7 +299,7 @@ void main() {
       repo.seedPurchaseOrderItems = [poItem];
 
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       await provider.bookGoodsReceipt(item: poItem, receivedQty: 3);
 
@@ -305,7 +326,7 @@ void main() {
       repo.seedPurchaseOrderItems = [poItem];
 
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       await provider.bookGoodsReceipt(item: poItem, receivedQty: 4);
 
@@ -327,7 +348,7 @@ void main() {
       repo.seedPurchaseOrderItems = [poItem];
 
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       await provider.bookGoodsReceipt(item: poItem, receivedQty: 7);
 
@@ -367,7 +388,7 @@ void main() {
       repo.seedPurchaseOrderItems = [poItem];
 
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       // Würde mit altem Code StateError werfen (FK-Simulation),
       // weil 'poi-fk-id' keine inventory_items-ID ist.
@@ -412,7 +433,7 @@ void main() {
       repo.seedPurchaseOrderItems = [poItem];
 
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       await provider.bookGoodsReceipt(item: poItem, receivedQty: 3);
 
@@ -430,7 +451,7 @@ void main() {
       final repo = _FakeRepository();
       final poItem = _makePoItem(id: 'poi-1', productId: 'prod-1');
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       expect(
         () => provider.bookGoodsReceipt(item: poItem, receivedQty: 0),
@@ -456,7 +477,7 @@ void main() {
         updatedAt: now,
       );
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       expect(
         () => provider.bookGoodsReceipt(item: poItem, receivedQty: 2),
@@ -492,7 +513,7 @@ void main() {
       repo.seedPurchaseOrderItems = [poItem];
 
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       // Beide Calls gleichzeitig starten — weder auf das andere warten noch
       // sequenziell ausführen.
@@ -544,7 +565,7 @@ void main() {
       repo.seedPurchaseOrderItems = [poItem];
 
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       const calls = [3, 7, 5, 2, 8]; // Summe = 25
       await Future.wait(
@@ -606,7 +627,7 @@ void main() {
       repo.seedPoRefetch(1, refreshedPoHeader);
 
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       // Vor dem Buchen: Status ist `ordered` im lokalen Cache.
       expect(
@@ -648,7 +669,7 @@ void main() {
       // Dies simuliert einen Re-Fetch-Fehler oder eine gelöschte PO.
 
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       // Der Aufruf darf NICHT werfen — Re-Fetch-Fehler sind Best-Effort.
       final result = await provider.bookGoodsReceipt(
@@ -687,7 +708,7 @@ void main() {
       repo.seedPurchaseOrderItems = [poItemNullPoId];
 
       final provider = _makeProvider(repo);
-      await provider.loadData();
+      await _loadBoth(provider, repo);
 
       // Kein Fehler, kein Re-Fetch-Versuch.
       await provider.bookGoodsReceipt(item: poItemNullPoId, receivedQty: 2);

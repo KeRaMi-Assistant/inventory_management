@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management/models/deal.dart';
 import 'package:inventory_management/models/inventory_item.dart';
 import 'package:inventory_management/models/product.dart';
+import 'package:inventory_management/providers/catalog_provider.dart';
 import 'package:inventory_management/providers/inventory_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
@@ -150,14 +151,19 @@ Product _makeProduct({
 
 void main() {
   late _FakeRepository repo;
+  late CatalogProvider catalog;
   late InventoryProvider provider;
 
   setUp(() {
     repo = _FakeRepository();
-    provider = InventoryProvider(repository: repo);
+    catalog = CatalogProvider(repository: repo);
+    provider = InventoryProvider(repository: repo, catalogProvider: catalog);
   });
 
-  tearDown(() => provider.dispose());
+  tearDown(() {
+    provider.dispose();
+    catalog.dispose();
+  });
 
   // ── addInventoryItem ──────────────────────────────────────────────────────
 
@@ -355,10 +361,10 @@ void main() {
   // ── checkInDeal — Produkt-Matching ────────────────────────────────────────
 
   group('checkInDeal — Produkt-Matching', () {
-    /// Lädt einen Seed-Produkt-State in den Provider (via loadData).
+    /// Lädt einen Seed-Produkt-State in CatalogProvider + InventoryProvider.
     Future<void> seedWithProducts(List<Product> products) async {
       repo.seedProducts = products;
-      await provider.loadData();
+      await Future.wait([catalog.loadData(), provider.loadData()]);
       repo.insertedMovements.clear();
     }
 

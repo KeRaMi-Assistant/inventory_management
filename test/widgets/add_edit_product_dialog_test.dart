@@ -6,6 +6,7 @@ import 'package:inventory_management/l10n/app_localizations.dart';
 import 'package:inventory_management/models/product.dart';
 import 'package:inventory_management/models/workspace.dart';
 import 'package:inventory_management/providers/active_workspace_provider.dart';
+import 'package:inventory_management/providers/catalog_provider.dart';
 import 'package:inventory_management/providers/inventory_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 import 'package:inventory_management/services/workspace_service.dart';
@@ -68,6 +69,8 @@ class _FakeWorkspaceProvider extends ActiveWorkspaceProvider {
 Widget _buildApp({Product? product}) {
   return MultiProvider(
     providers: [
+      ChangeNotifierProvider<CatalogProvider>(
+          create: (_) => CatalogProvider(repository: _FakeRepository())),
       ChangeNotifierProvider<InventoryProvider>(
           create: (_) => _FakeInventoryProvider()),
       ChangeNotifierProvider<ActiveWorkspaceProvider>(
