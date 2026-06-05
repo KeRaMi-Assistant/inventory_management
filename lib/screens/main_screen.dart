@@ -10,6 +10,7 @@ import '../providers/active_workspace_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
 import '../providers/filter_provider.dart';
+import '../providers/catalog_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/csv_service.dart';
 import '../widgets/add_edit_deal_dialog.dart';
@@ -70,7 +71,11 @@ class _MainScreenState extends State<MainScreen> {
         l10n.navWarehouse,  // MainTab.warehouse (10) — AF11
       ];
 
-  Future<void> _export(BuildContext context, InventoryProvider provider) async {
+  Future<void> _export(
+    BuildContext context,
+    InventoryProvider provider,
+    CatalogProvider catalog,
+  ) async {
     final l10n = AppLocalizations.of(context);
     final (path, err) = await CsvService.exportAll(
       List.from(provider.deals),
@@ -78,8 +83,8 @@ class _MainScreenState extends State<MainScreen> {
       List.from(provider.buyers),
       List.from(provider.inventoryItems),
       suppliers: List.from(provider.suppliers),
-      categories: List.from(provider.productCategories),
-      products: List.from(provider.products),
+      categories: List.from(catalog.productCategories),
+      products: List.from(catalog.products),
       warehouses: List.from(provider.warehouses),
       purchaseOrders: List.from(provider.purchaseOrders),
       // PO items are not held in the global cache (lazy-loaded per detail
@@ -483,7 +488,11 @@ class _MainScreenState extends State<MainScreen> {
                             title: labels[_selectedIndex.index],
                             provider: provider,
                             onImport: () => _import(context, provider),
-                            onExport: () => _export(context, provider),
+                            onExport: () => _export(
+                              context,
+                              provider,
+                              context.read<CatalogProvider>(),
+                            ),
                             onSearch: _openSearch,
                           ),
                           Expanded(child: body),

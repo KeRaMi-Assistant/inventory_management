@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management/models/inventory_item.dart';
 import 'package:inventory_management/models/product.dart';
 import 'package:inventory_management/models/product_stock.dart';
+import 'package:inventory_management/providers/catalog_provider.dart';
 import 'package:inventory_management/providers/inventory_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
@@ -137,14 +138,19 @@ ProductStock _makeStock({
 
 void main() {
   late _FakeRepository repo;
+  late CatalogProvider catalog;
   late InventoryProvider provider;
 
   setUp(() {
     repo = _FakeRepository();
-    provider = InventoryProvider(repository: repo);
+    catalog = CatalogProvider(repository: repo);
+    provider = InventoryProvider(repository: repo, catalogProvider: catalog);
   });
 
-  tearDown(() => provider.dispose());
+  tearDown(() {
+    provider.dispose();
+    catalog.dispose();
+  });
 
   // ── Kern-Regressions-Test (Committee-Bug #9) ──────────────────────────────
 
@@ -172,7 +178,7 @@ void main() {
         _makeStock(productId: productId, warehouseId: 'wh-c', qty: 2),
       ];
 
-      await provider.loadData();
+      await Future.wait([catalog.loadData(), provider.loadData()]);
 
       // Gesamt = 6, minStock = 5 → NICHT kritisch → 0
       expect(provider.criticalStockCount, equals(0),
@@ -200,7 +206,7 @@ void main() {
         _makeStock(productId: productId, warehouseId: 'wh-c', qty: 2),
       ];
 
-      await provider.loadData();
+      await Future.wait([catalog.loadData(), provider.loadData()]);
 
       // Gesamt = 6, minStock = 7 → kritisch → 1
       expect(provider.criticalStockCount, equals(1));
@@ -253,7 +259,7 @@ void main() {
         _makeStock(productId: productId, qty: 5), // gesamt 5 < minStock 10
       ];
 
-      await provider.loadData();
+      await Future.wait([catalog.loadData(), provider.loadData()]);
 
       // 1 kritisches Produkt + 1 kritisches nicht-verknüpftes Item = 2
       expect(provider.criticalStockCount, equals(2));
@@ -286,7 +292,7 @@ void main() {
         _makeStock(productId: productId, qty: 8), // 8 >= 5 → OK
       ];
 
-      await provider.loadData();
+      await Future.wait([catalog.loadData(), provider.loadData()]);
 
       expect(provider.criticalStockCount, equals(0));
     });
@@ -316,7 +322,7 @@ void main() {
       ];
       repo.seedProductStock = []; // leer
 
-      await provider.loadData();
+      await Future.wait([catalog.loadData(), provider.loadData()]);
 
       // product_stock leer → für Produkt keine Aggregation → 0 kritische Produkte
       // Nicht-verknüpfte Items gibt es keine → gesamt 0
@@ -341,7 +347,7 @@ void main() {
         _makeStock(productId: productId, qty: 0),
       ];
 
-      await provider.loadData();
+      await Future.wait([catalog.loadData(), provider.loadData()]);
 
       // 0 >= 0 → nicht kritisch
       expect(provider.criticalStockCount, equals(0));
@@ -358,7 +364,7 @@ void main() {
         _makeStock(productId: 'stale-product-id', qty: 0),
       ];
 
-      await provider.loadData();
+      await Future.wait([catalog.loadData(), provider.loadData()]);
 
       // Stale product_stock-Rows ohne Cache-Produkt → ignoriert → 0
       expect(provider.criticalStockCount, equals(0));
@@ -375,7 +381,7 @@ void main() {
         _makeStock(productId: 'prod-crit', qty: 4),  // 4 < 10 → kritisch
       ];
 
-      await provider.loadData();
+      await Future.wait([catalog.loadData(), provider.loadData()]);
 
       expect(provider.criticalStockCount, equals(1));
     });
@@ -392,7 +398,7 @@ void main() {
       ];
       repo.seedProductStock = [];
 
-      await provider.loadData();
+      await Future.wait([catalog.loadData(), provider.loadData()]);
 
       expect(provider.totalStockQuantity, equals(18));
     });
@@ -435,7 +441,7 @@ void main() {
     });
 
     test('initialLoadAttempted is true after successful loadData', () async {
-      await provider.loadData();
+      await Future.wait([catalog.loadData(), provider.loadData()]);
       expect(provider.initialLoadAttempted, isTrue);
     });
 
@@ -453,7 +459,7 @@ void main() {
     });
 
     test('initialLoadAttempted resets to false after clearLocalState', () async {
-      await provider.loadData();
+      await Future.wait([catalog.loadData(), provider.loadData()]);
       expect(provider.initialLoadAttempted, isTrue);
 
       provider.clearLocalState();

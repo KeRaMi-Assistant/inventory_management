@@ -5,7 +5,7 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/product.dart';
 import '../providers/active_workspace_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/catalog_provider.dart';
 import '../widgets/add_edit_product_dialog.dart';
 import '../widgets/app_screen_scaffold.dart';
 
@@ -52,7 +52,7 @@ class ProductCatalogScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer2<InventoryProvider, ActiveWorkspaceProvider>(
+    return Consumer2<CatalogProvider, ActiveWorkspaceProvider>(
       builder: (context, provider, wsProvider, _) {
         final canEdit = wsProvider.role?.canEdit ?? false;
         final products = provider.products;
@@ -107,7 +107,7 @@ class ProductCatalogScreen extends StatelessWidget {
 
 class _ProductList extends StatelessWidget {
   final List<Product> products;
-  final InventoryProvider provider;
+  final CatalogProvider provider;
   final bool canEdit;
   final void Function(Product) onTap;
 
@@ -144,7 +144,7 @@ class _ProductList extends StatelessWidget {
 
 class _ProductCard extends StatelessWidget {
   final Product product;
-  final InventoryProvider provider;
+  final CatalogProvider provider;
   final bool canEdit;
   final VoidCallback onTap;
 

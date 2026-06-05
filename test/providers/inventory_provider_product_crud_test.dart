@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management/models/inventory_item.dart';
 import 'package:inventory_management/models/product.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/catalog_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
 // ignore_for_file: avoid_redundant_argument_values
@@ -112,11 +112,11 @@ Product _makeProduct({
 
 void main() {
   late _FakeRepository repo;
-  late InventoryProvider provider;
+  late CatalogProvider provider;
 
   setUp(() {
     repo = _FakeRepository();
-    provider = InventoryProvider(repository: repo);
+    provider = CatalogProvider(repository: repo);
   });
 
   tearDown(() => provider.dispose());

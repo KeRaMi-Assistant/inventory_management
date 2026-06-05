@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/deal.dart';
 import '../models/inventory_item.dart';
 import '../models/product.dart';
+import '../providers/catalog_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
@@ -447,15 +448,16 @@ class _InventoryScreenState extends State<InventoryScreen>
     AppLocalizations l10n,
     bool isMasterDetail,
   ) {
+    final catalogProducts = context.read<CatalogProvider>().products;
     final groups = _groupByProduct(
       items,
-      provider.products,
+      catalogProducts,
       l10n.productGroupWithoutProduct,
     );
 
     // Wenn alle Items ohne Produkt-Verknüpfung sind UND keine Produkte im
     // Katalog existieren → flache Liste wie bisher (keine leere Gruppe-Wrapper).
-    if (groups.length == 1 && groups.first.productId == null && provider.products.isEmpty) {
+    if (groups.length == 1 && groups.first.productId == null && catalogProducts.isEmpty) {
       return _buildCardList(context, provider, money, items, isMasterDetail);
     }
 
@@ -714,14 +716,15 @@ class _InventoryScreenState extends State<InventoryScreen>
     List<InventoryItem> items,
     AppLocalizations l10n,
   ) {
+    final catalogProducts = context.read<CatalogProvider>().products;
     final groups = _groupByProduct(
       items,
-      provider.products,
+      catalogProducts,
       l10n.productGroupWithoutProduct,
     );
 
     // Keine Produkte → flache Tabelle wie bisher
-    if (groups.length == 1 && groups.first.productId == null && provider.products.isEmpty) {
+    if (groups.length == 1 && groups.first.productId == null && catalogProducts.isEmpty) {
       return _buildTable(context, provider, money, items);
     }
 
@@ -1719,6 +1722,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<InventoryProvider>();
+    final catalogProvider = context.watch<CatalogProvider>();
     final ticketNumbers = provider.ticketSummaries
         .map((t) => t.ticketNumber)
         .where((t) => t != 'Kein Ticket')
@@ -1989,7 +1993,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                 ),
                 const SizedBox(height: 12),
                 // ── Stammartikel-Verknüpfung (optional) ─────────────────
-                if (provider.products.isNotEmpty)
+                if (catalogProvider.products.isNotEmpty)
                   DropdownButtonFormField<String?>(
                     initialValue: _productId,
                     isExpanded: true,
@@ -2004,7 +2008,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                         value: null,
                         child: Text(l10n.productNoLink),
                       ),
-                      ...provider.products.map(
+                      ...catalogProvider.products.map(
                         (p) => DropdownMenuItem<String?>(
                           value: p.id,
                           child: Text(

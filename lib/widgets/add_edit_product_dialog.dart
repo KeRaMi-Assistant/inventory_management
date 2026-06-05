@@ -5,6 +5,7 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/product.dart';
 import '../providers/active_workspace_provider.dart';
+import '../providers/catalog_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../utils/error_messages.dart';
 import '../utils/validators.dart';
@@ -184,7 +185,7 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
 
-    final provider = context.read<InventoryProvider>();
+    final catalog = context.read<CatalogProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
@@ -213,9 +214,9 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
     final l10n = AppLocalizations.of(context);
     try {
       if (widget.product != null) {
-        await provider.updateProduct(product);
+        await catalog.updateProduct(product);
       } else {
-        await provider.addProduct(product);
+        await catalog.addProduct(product);
       }
       navigator.pop();
     } catch (e) {
@@ -241,7 +242,8 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final provider = context.watch<InventoryProvider>();
+    final catalog = context.watch<CatalogProvider>();
+    final invProvider = context.watch<InventoryProvider>();
     final wsProvider = context.watch<ActiveWorkspaceProvider>();
     final canEdit = wsProvider.role?.canEdit ?? false;
 
@@ -335,7 +337,7 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
                               value: null,
                               child: Text(l10n.commonNone),
                             ),
-                            ...provider.productCategories.map(
+                            ...catalog.productCategories.map(
                               (c) => DropdownMenuItem<String?>(
                                 value: c.id,
                                 child: Text(
@@ -369,7 +371,7 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
                               value: null,
                               child: Text(l10n.commonNone),
                             ),
-                            ...provider.activeSuppliers.map(
+                            ...invProvider.activeSuppliers.map(
                               (s) => DropdownMenuItem<String?>(
                                 value: s.id,
                                 child: Text(

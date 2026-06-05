@@ -9,6 +9,7 @@ import '../models/purchase_order_item.dart';
 import '../models/product.dart';
 import '../models/supplier.dart';
 import '../providers/active_workspace_provider.dart';
+import '../providers/catalog_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/app_screen_scaffold.dart';
@@ -535,8 +536,10 @@ class _AddEditOrderDialogState extends State<_AddEditOrderDialog> {
     final l10n = AppLocalizations.of(context);
     final provider = Provider.of<InventoryProvider>(context, listen: false);
     final suppliers = provider.activeSuppliers;
-    final products =
-        provider.products.where((p) => p.isActive && p.deletedAt == null).toList();
+    final products = Provider.of<CatalogProvider>(context, listen: false)
+        .products
+        .where((p) => p.isActive && p.deletedAt == null)
+        .toList();
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
