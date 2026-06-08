@@ -18,10 +18,11 @@ import 'warehouses_screen.dart';
 /// `detailPane`, `detailPaneEmpty`) sind identisch mit der früheren
 /// baked-in Implementierung.
 ///
-/// **T1.3 — Reporting-Doppelung entfernt:** Das ehemalige Reporting-Tile
-/// (das `StatisticsScreen` in einem inline-Scaffold renderte) wurde durch
-/// einen direkten `Navigator.push`-Aufruf auf `StatisticsScreen` ersetzt.
-/// Das eliminiert die doppelte, leicht abweichende Statistics-Instanz.
+/// **T3.1b — Reporting embeddable:** Das Reporting-Tile nutzt jetzt
+/// `StatisticsScreen(embedded: true)` via `build:` statt `onPushFullscreen`.
+/// Auf Phone wird es von [SectionHubScreen] in ein Scaffold gewrappt (mit
+/// AppBar title = label), auf Desktop erscheint es in der Detail-Pane —
+/// konsistent mit allen anderen Warenwirtschaft-Kacheln.
 ///
 /// **T1.8b — Icon-Disambiguierung:** Artikelstamm-Kachel verwendet jetzt
 /// `Icons.style_outlined` statt `Icons.inventory_2_outlined`, das mit dem
@@ -92,18 +93,17 @@ class WarehouseHubScreen extends StatelessWidget {
           build: () => const StocktakeScreen(embedded: true),
         ),
 
-        // ── Reporting — T1.3: direkter Push auf StatisticsScreen ──────
-        // Das frühere inline Scaffold + StatisticsScreen-Embed ist entfernt.
-        // onPushFullscreen navigiert zur echten StatisticsScreen-Instanz
-        // (kein doppelter, abweichender Inline-Screen mehr).
+        // ── Reporting — T3.1b: embeddable Detail-Pane ────────────────
+        // StatisticsScreen(embedded: true) liefert nur TabBar + TabBarView
+        // ohne eigenen Scaffold/AppBar. SectionHubScreen wrappt das auf
+        // Phone selbst in ein Scaffold(AppBar(title: label)), auf Desktop
+        // landet es direkt in der Detail-Pane. Icon wird dadurch automatisch
+        // chevron_right (konsistent mit allen anderen Kacheln).
         SectionHubTile(
           key: const Key('hubTileReporting'),
           icon: Icons.bar_chart_outlined,
           label: l10n.warehouseHubTileReporting,
-          onPushFullscreen: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const StatisticsScreen()),
-          ),
+          build: () => const StatisticsScreen(embedded: true),
         ),
       ],
     );
