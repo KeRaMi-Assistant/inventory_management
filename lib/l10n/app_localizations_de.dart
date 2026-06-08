@@ -212,10 +212,16 @@ class AppLocalizationsDe extends AppLocalizations {
       'Diese Funktion wird in einem der nächsten Updates freigeschaltet.';
 
   @override
+  String get warehouseHubTileInventory => 'Bestand';
+
+  @override
   String get warehouseHubTileProductCatalog => 'Artikelstamm';
 
   @override
   String get warehouseHubTilePurchaseOrders => 'Bestellungen';
+
+  @override
+  String get warehouseHubTileSuppliers => 'Lieferanten';
 
   @override
   String get warehouseHubTileWarehouses => 'Lager';

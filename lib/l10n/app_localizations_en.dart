@@ -212,10 +212,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'This feature will be available in an upcoming update.';
 
   @override
+  String get warehouseHubTileInventory => 'Stock';
+
+  @override
   String get warehouseHubTileProductCatalog => 'Product catalog';
 
   @override
   String get warehouseHubTilePurchaseOrders => 'Orders';
+
+  @override
+  String get warehouseHubTileSuppliers => 'Suppliers';
 
   @override
   String get warehouseHubTileWarehouses => 'Warehouses';

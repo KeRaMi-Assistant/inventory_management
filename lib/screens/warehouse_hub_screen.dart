@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/section_hub_screen.dart';
 import 'categories_screen.dart';
+import 'inventory_screen.dart';
 import 'product_catalog_screen.dart';
 import 'purchase_orders_screen.dart';
 import 'statistics_screen.dart';
 import 'stocktake_screen.dart';
+import 'suppliers_screen.dart';
 import 'warehouses_screen.dart';
 
 /// Hub-Screen für die Warenwirtschaft (AF11).
@@ -33,7 +35,15 @@ class WarehouseHubScreen extends StatelessWidget {
 
     return SectionHubScreen(
       tiles: [
-        // ── Artikelstamm ─────────────────────────────────────────────
+        // ── Bestand (Nav Tier-2a: neue Default-Kachel, erste Position) ─
+        SectionHubTile(
+          key: const Key('hubTileInventory'),
+          icon: Icons.inventory_2_outlined,
+          label: l10n.warehouseHubTileInventory,
+          build: () => const InventoryScreen(embedded: true),
+        ),
+
+        // ── Artikelstamm ──────────────────────────────────────────────
         // T1.8b: Icons.style_outlined (war: Icons.inventory_2_outlined).
         SectionHubTile(
           key: const Key('hubTileProductCatalog'),
@@ -50,7 +60,15 @@ class WarehouseHubScreen extends StatelessWidget {
           build: () => const PurchaseOrdersScreen(embedded: true),
         ),
 
-        // ── Lager (Epic D, Task D4) ───────────────────────────────────
+        // ── Lieferanten (Nav Tier-2a) ─────────────────────────────────
+        SectionHubTile(
+          key: const Key('hubTileSuppliers'),
+          icon: Icons.handshake_outlined,
+          label: l10n.warehouseHubTileSuppliers,
+          build: () => const SuppliersScreen(embedded: true),
+        ),
+
+        // ── Lager / Standorte (Epic D, Task D4) ──────────────────────
         SectionHubTile(
           key: const Key('hubTileWarehouses'),
           icon: Icons.warehouse_outlined,

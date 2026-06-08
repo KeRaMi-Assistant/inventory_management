@@ -470,6 +470,12 @@ abstract class AppLocalizations {
   /// **'Diese Funktion wird in einem der nächsten Updates freigeschaltet.'**
   String get warehouseHubComingSoonHint;
 
+  /// No description provided for @warehouseHubTileInventory.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestand'**
+  String get warehouseHubTileInventory;
+
   /// No description provided for @warehouseHubTileProductCatalog.
   ///
   /// In de, this message translates to:
@@ -481,6 +487,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Bestellungen'**
   String get warehouseHubTilePurchaseOrders;
+
+  /// No description provided for @warehouseHubTileSuppliers.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferanten'**
+  String get warehouseHubTileSuppliers;
 
   /// No description provided for @warehouseHubTileWarehouses.
   ///

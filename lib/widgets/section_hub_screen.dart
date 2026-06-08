@@ -85,8 +85,20 @@ class SectionHubScreen extends StatefulWidget {
 class _SectionHubScreenState extends State<SectionHubScreen> {
   /// Currently selected tile in desktop master-detail mode.
   ///
-  /// `null` → detail pane shows empty state. Unused on phone (taps push).
+  /// `null` → falls back to the first embeddable tile (see [_effectiveSelected])
+  /// so the detail pane shows the default section on load instead of an empty
+  /// placeholder. Unused on phone (taps push).
   SectionHubTile? _selected;
+
+  /// First tile that renders embedded (has a [SectionHubTile.build]); used as
+  /// the default desktop selection so the master-detail pane is never empty on
+  /// first paint.
+  SectionHubTile? get _firstEmbeddable {
+    for (final tile in widget.tiles) {
+      if (tile.build != null) return tile;
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +106,9 @@ class _SectionHubScreenState extends State<SectionHubScreen> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final wide = isLarge(constraints.maxWidth);
+          // On desktop, default to the first embeddable section so the detail
+          // pane shows real content immediately (B-2: no empty pane on load).
+          final effectiveSelected = _selected ?? _firstEmbeddable;
 
           if (!wide) {
             return _TileList(
@@ -127,7 +142,7 @@ class _SectionHubScreenState extends State<SectionHubScreen> {
                 width: 320,
                 child: _TileList(
                   tiles: widget.tiles,
-                  selected: _selected,
+                  selected: effectiveSelected,
                   isDesktop: true,
                   onTileTap: (tile) {
                     if (tile.build != null) {
@@ -148,7 +163,7 @@ class _SectionHubScreenState extends State<SectionHubScreen> {
 
               // Detail column
               Expanded(
-                child: _DetailPane(selected: _selected),
+                child: _DetailPane(selected: effectiveSelected),
               ),
             ],
           );

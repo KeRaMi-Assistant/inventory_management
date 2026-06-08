@@ -22,7 +22,12 @@ import '../widgets/skeletons/list_skeleton.dart';
 import 'product_detail_screen.dart';
 
 class InventoryScreen extends StatefulWidget {
-  const InventoryScreen({super.key});
+  /// Wenn `true`, wird kein eigenes [AppBar]-Wrapper gerendert — geeignet
+  /// für Master-Detail-Embeds im Warehouse-Hub (Desktop). Default `false`
+  /// (rückwärtskompatibel — Top-Level-Tab-Nutzung unverändert).
+  final bool embedded;
+
+  const InventoryScreen({super.key, this.embedded = false});
 
   /// Convenience helper for external callers (e.g. MainScreen FAB).
   static void showAddDialog(BuildContext context) {
