@@ -5,6 +5,7 @@ import 'package:inventory_management/models/purchase_order.dart';
 import 'package:inventory_management/models/purchase_order_item.dart';
 import 'package:inventory_management/providers/catalog_provider.dart';
 import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/purchasing_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
 // ignore_for_file: avoid_redundant_argument_values
@@ -181,17 +182,32 @@ class _FakeRepository extends SupabaseRepository {
 
 // ── Hilfsfunktionen ──────────────────────────────────────────────────────────
 
-/// Creates an [InventoryProvider] wired to a [CatalogProvider] that shares
-/// the same [repo]. Use [loadBoth] to populate both providers from the repo.
+/// The [PurchasingProvider] injected into the most recently created
+/// [InventoryProvider] via [_makeProvider]. After the split, the PO-header
+/// cache lives in [PurchasingProvider]; `bookGoodsReceipt` refreshes it via
+/// [PurchasingProvider.replacePurchaseOrderHeader]. Tests read PO state from
+/// here. Each [_makeProvider] call resets it (tests are single-provider).
+late PurchasingProvider _purchasing;
+
+/// Creates an [InventoryProvider] wired to a [CatalogProvider] AND a
+/// [PurchasingProvider] that all share the same [repo]. Use [_loadBoth] to
+/// populate all three providers from the repo.
 InventoryProvider _makeProvider(_FakeRepository repo) {
   final catalog = CatalogProvider(repository: repo);
-  return InventoryProvider(repository: repo, catalogProvider: catalog);
+  _purchasing = PurchasingProvider(repository: repo);
+  return InventoryProvider(
+    repository: repo,
+    catalogProvider: catalog,
+    purchasingProvider: _purchasing,
+  );
 }
 
-/// Loads both the [CatalogProvider] (products) and [InventoryProvider] from
-/// the same repo. Because [InventoryProvider] reads products via the injected
-/// [CatalogProvider], the catalog must be loaded first so that product name-
-/// lookups in [bookGoodsReceipt] and [checkInDeal] see the seeded data.
+/// Loads the [CatalogProvider] (products), the injected [PurchasingProvider]
+/// (POs/suppliers) and [InventoryProvider] from the same repo. Because
+/// [InventoryProvider] reads products via the injected [CatalogProvider] and
+/// writes PO-header refreshes into the injected [PurchasingProvider], both
+/// upstream providers must be loaded so the seeded data is visible during
+/// [bookGoodsReceipt].
 Future<void> _loadBoth(InventoryProvider provider, _FakeRepository repo) =>
     Future.wait([
       CatalogProvider(repository: repo).loadData().then((_) {
@@ -201,6 +217,7 @@ Future<void> _loadBoth(InventoryProvider provider, _FakeRepository repo) =>
           CatalogProvider(repository: repo)..loadData(),
         );
       }),
+      _purchasing.loadData(),
       provider.loadData(),
     ]);
 
@@ -629,9 +646,9 @@ void main() {
       final provider = _makeProvider(repo);
       await _loadBoth(provider, repo);
 
-      // Vor dem Buchen: Status ist `ordered` im lokalen Cache.
+      // Vor dem Buchen: Status ist `ordered` im PurchasingProvider-Cache.
       expect(
-        provider.purchaseOrders.first.status,
+        _purchasing.purchaseOrders.first.status,
         equals(PurchaseOrderStatus.ordered),
       );
 
@@ -640,12 +657,16 @@ void main() {
       // Nach dem Buchen: `loadPurchaseOrderById` muss aufgerufen worden sein.
       expect(repo.refetchedPoIds, contains(1));
 
-      // Der lokale Cache-Status muss nun `received` zeigen (trigger-Wert).
+      // Der PurchasingProvider-Cache-Status muss nun `received` zeigen
+      // (trigger-Wert) — bookGoodsReceipt hat replacePurchaseOrderHeader auf
+      // dem injizierten PurchasingProvider aufgerufen.
       expect(
-        provider.purchaseOrders.first.status,
+        _purchasing.purchaseOrders.first.status,
         equals(PurchaseOrderStatus.received),
         reason: 'PO-Header-Status muss nach dem Buchungs-Re-Fetch aktuell sein '
-            '(kein Stale-State bis zum nächsten App-Reload).',
+            '(kein Stale-State bis zum nächsten App-Reload). '
+            'bookGoodsReceipt schreibt via replacePurchaseOrderHeader in den '
+            'PurchasingProvider.',
       );
     });
 
@@ -681,10 +702,10 @@ void main() {
       expect(repo.incrementCalls, hasLength(1));
       expect(result.quantityReceived, equals(3));
 
-      // Der lokale PO-Status bleibt auf dem alten Wert (kein Crash, kein
-      // Rollback — UI korrigiert sich beim nächsten Load).
+      // Der PurchasingProvider-PO-Status bleibt auf dem alten Wert (kein Crash,
+      // kein Rollback — UI korrigiert sich beim nächsten Load).
       expect(
-        provider.purchaseOrders.first.status,
+        _purchasing.purchaseOrders.first.status,
         equals(PurchaseOrderStatus.ordered),
       );
     });

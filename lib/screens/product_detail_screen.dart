@@ -11,6 +11,7 @@ import '../models/supplier.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/catalog_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../providers/purchasing_provider.dart';
 import '../utils/status_l10n.dart';
 import '../widgets/inventory_batches_sheet.dart';
 
@@ -88,6 +89,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final l10n = AppLocalizations.of(context);
     final provider = Provider.of<InventoryProvider>(context);
     final catalog = Provider.of<CatalogProvider>(context);
+    // Suppliers now live in PurchasingProvider; inventory items / stock /
+    // movements stay on InventoryProvider.
+    final purchasing = Provider.of<PurchasingProvider>(context);
     final wsProvider = Provider.of<ActiveWorkspaceProvider>(context);
     final canEdit = wsProvider.role?.canEdit ?? false;
 
@@ -102,7 +106,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         widget.item;
 
     final supplier = liveItem.supplierId != null
-        ? provider.suppliers
+        ? purchasing.suppliers
             .where((s) => s.id == liveItem.supplierId)
             .firstOrNull
         : null;

@@ -8,6 +8,7 @@ import '../models/inventory_item.dart';
 import '../models/product.dart';
 import '../providers/catalog_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../providers/purchasing_provider.dart';
 import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
@@ -1728,6 +1729,8 @@ class _InventoryDialogState extends State<_InventoryDialog> {
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<InventoryProvider>();
     final catalogProvider = context.watch<CatalogProvider>();
+    // Suppliers now live in PurchasingProvider; tickets/warehouses stay on Inv.
+    final purchasingProvider = context.watch<PurchasingProvider>();
     final ticketNumbers = provider.ticketSummaries
         .map((t) => t.ticketNumber)
         .where((t) => t != 'Kein Ticket')
@@ -1986,7 +1989,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                       value: null,
                       child: Text(l10n.inventoryNoSupplier),
                     ),
-                    ...provider.activeSuppliers.map(
+                    ...purchasingProvider.activeSuppliers.map(
                       (s) => DropdownMenuItem<String?>(
                         value: s.id,
                         child:

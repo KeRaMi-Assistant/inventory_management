@@ -20,6 +20,7 @@ import 'providers/billing_provider.dart';
 import 'providers/carrier_credentials_provider.dart';
 import 'providers/catalog_provider.dart';
 import 'providers/filter_provider.dart';
+import 'providers/purchasing_provider.dart';
 import 'providers/inbox_provider.dart';
 import 'providers/inventory_provider.dart';
 import 'providers/invites_provider.dart';
@@ -160,20 +161,36 @@ class InventoryApp extends StatelessWidget {
           update: (_, repository, previous) =>
               previous ?? CatalogProvider(repository: repository),
         ),
-        ChangeNotifierProxyProvider2<SupabaseRepository, CatalogProvider,
-            InventoryProvider>(
+        // PurchasingProvider MUST be registered BEFORE InventoryProvider — the
+        // latter depends on it via the ChangeNotifierProxyProvider3 below
+        // (registration order = dependency order; Gotcha #5/#9).
+        ChangeNotifierProxyProvider<SupabaseRepository, PurchasingProvider>(
+          create: (ctx) => PurchasingProvider(
+            repository: ctx.read<SupabaseRepository>(),
+          ),
+          update: (_, repository, previous) =>
+              previous ?? PurchasingProvider(repository: repository),
+        ),
+        ChangeNotifierProxyProvider3<SupabaseRepository, CatalogProvider,
+            PurchasingProvider, InventoryProvider>(
           create: (ctx) => InventoryProvider(
             repository: ctx.read<SupabaseRepository>(),
             catalogProvider: ctx.read<CatalogProvider>(),
+            purchasingProvider: ctx.read<PurchasingProvider>(),
           ),
-          update: (_, repository, catalog, previous) {
+          update: (_, repository, catalog, purchasing, previous) {
             if (previous != null) {
+              // Both upstream refs MUST be re-injected on every rebuild
+              // (Gotcha #4) — otherwise importCsvAll/bookGoodsReceipt would
+              // write against a stale/null reference and silently no-op.
               previous.updateCatalogProvider(catalog);
+              previous.updatePurchasingProvider(purchasing);
               return previous;
             }
             return InventoryProvider(
               repository: repository,
               catalogProvider: catalog,
+              purchasingProvider: purchasing,
             );
           },
         ),
@@ -288,6 +305,7 @@ class _AuthGateState extends State<_AuthGate> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           context.read<CatalogProvider>().clearLocalState();
+          context.read<PurchasingProvider>().clearLocalState();
           context.read<InventoryProvider>().clearLocalState();
           context.read<InboxProvider>().clear();
           context.read<CarrierCredentialsProvider>().clear();
@@ -326,6 +344,7 @@ class _AuthGateState extends State<_AuthGate> {
   Future<void> _hydrate(String userId) async {
     final inventory = context.read<InventoryProvider>();
     final catalog = context.read<CatalogProvider>();
+    final purchasing = context.read<PurchasingProvider>();
     final push = context.read<PushService>();
     final workspaces = context.read<ActiveWorkspaceProvider>();
     final invites = context.read<InvitesProvider>();
@@ -336,11 +355,12 @@ class _AuthGateState extends State<_AuthGate> {
     await workspaces.loadForCurrentUser(userId);
     final activeId = workspaces.active?.id;
     _lastWsId = activeId;
-    // CatalogProvider and InventoryProvider both need the active workspace.
-    // CatalogProvider is loaded first so InventoryProvider's cross-domain
-    // reads (criticalStockCount etc.) see up-to-date products on first render.
+    // CatalogProvider, PurchasingProvider and InventoryProvider all need the
+    // active workspace. Catalog + Purchasing load alongside Inventory so the
+    // latter's cross-domain reads/writes see up-to-date products/suppliers/POs.
     await Future.wait([
       catalog.setActiveWorkspace(activeId),
+      purchasing.setActiveWorkspace(activeId),
       inventory.setActiveWorkspace(activeId),
       invites.refresh(),
       billing.load(),
@@ -377,8 +397,9 @@ class _AuthGateState extends State<_AuthGate> {
     final newId = ws.active?.id;
     if (newId == _lastWsId) return;
     _lastWsId = newId;
-    // Reload Catalog + Inventory gegen neuen Workspace.
+    // Reload Catalog + Purchasing + Inventory gegen neuen Workspace.
     context.read<CatalogProvider>().setActiveWorkspace(newId);
+    context.read<PurchasingProvider>().setActiveWorkspace(newId);
     context.read<InventoryProvider>().setActiveWorkspace(newId);
     // Carrier-Keys sind workspace-scoped — neu laden statt Stale-Cache zeigen.
     context.read<CarrierCredentialsProvider>().refresh();

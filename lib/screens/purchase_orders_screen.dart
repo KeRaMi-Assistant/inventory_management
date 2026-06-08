@@ -10,7 +10,7 @@ import '../models/product.dart';
 import '../models/supplier.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/catalog_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/purchasing_provider.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/app_screen_scaffold.dart';
 import 'purchase_order_detail_screen.dart';
@@ -43,7 +43,7 @@ class PurchaseOrdersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer2<InventoryProvider, ActiveWorkspaceProvider>(
+    return Consumer2<PurchasingProvider, ActiveWorkspaceProvider>(
       builder: (context, provider, wsProvider, _) {
         final canEdit = wsProvider.role?.canEdit ?? false;
         final orders = provider.purchaseOrders
@@ -455,7 +455,7 @@ class _AddEditOrderDialogState extends State<_AddEditOrderDialog> {
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final provider = Provider.of<InventoryProvider>(context, listen: false);
+      final provider = Provider.of<PurchasingProvider>(context, listen: false);
       final wsProvider =
           Provider.of<ActiveWorkspaceProvider>(context, listen: false);
       // workspaceId + userId werden vom Repository injiziert (wie in categories_screen).
@@ -534,7 +534,7 @@ class _AddEditOrderDialogState extends State<_AddEditOrderDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final provider = Provider.of<InventoryProvider>(context, listen: false);
+    final provider = Provider.of<PurchasingProvider>(context, listen: false);
     final suppliers = provider.activeSuppliers;
     final products = Provider.of<CatalogProvider>(context, listen: false)
         .products

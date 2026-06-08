@@ -6,7 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/product.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/catalog_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/purchasing_provider.dart';
 import '../utils/error_messages.dart';
 import '../utils/validators.dart';
 import 'unsaved_changes_guard.dart';
@@ -243,7 +243,7 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final catalog = context.watch<CatalogProvider>();
-    final invProvider = context.watch<InventoryProvider>();
+    final purchasing = context.watch<PurchasingProvider>();
     final wsProvider = context.watch<ActiveWorkspaceProvider>();
     final canEdit = wsProvider.role?.canEdit ?? false;
 
@@ -371,7 +371,7 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
                               value: null,
                               child: Text(l10n.commonNone),
                             ),
-                            ...invProvider.activeSuppliers.map(
+                            ...purchasing.activeSuppliers.map(
                               (s) => DropdownMenuItem<String?>(
                                 value: s.id,
                                 child: Text(

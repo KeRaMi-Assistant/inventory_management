@@ -58,6 +58,12 @@ class CatalogProvider extends ChangeNotifier {
   Future<void> setActiveWorkspace(String? workspaceId) async {
     if (_activeWorkspaceId == workspaceId) return;
     _activeWorkspaceId = workspaceId;
+    // Geteilten Repo-Workspace setzen BEVOR loadData/loadAll läuft — sonst
+    // liest loadAll() einen null-Workspace und liefert still einen LEEREN
+    // Snapshot (supabase_repository.dart:192-195). main._hydrate startet
+    // Catalog/Purchasing/Inventory parallel via Future.wait; ohne dieses Set
+    // ist das Laden race-abhängig. Mirror InventoryProvider.setActiveWorkspace.
+    _repository.setActiveWorkspace(workspaceId);
     if (workspaceId == null) {
       clearLocalState();
       return;

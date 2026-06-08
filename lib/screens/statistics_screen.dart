@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../models/inventory_batch.dart';
 import '../providers/app_preferences_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../providers/purchasing_provider.dart';
 import '../providers/statistics_filter_provider.dart';
 import '../services/statistics_export_service.dart';
 import '../services/statistics_service.dart';
@@ -135,11 +136,14 @@ class _StatisticsScreenState extends State<StatisticsScreen>
             if (inv.isLoading) {
               return const Center(child: CircularProgressIndicator());
             }
+            // Suppliers now live in PurchasingProvider — watch it so the supplier
+            // filter/breakdown rebuilds when the supplier list changes.
+            final suppliers = context.watch<PurchasingProvider>().suppliers;
             final batches = snap.data ?? const <InventoryBatch>[];
             final stats = StatisticsService(
               allDeals: inv.deals,
               allItems: inv.inventoryItems,
-              suppliers: inv.suppliers,
+              suppliers: suppliers,
               batches: batches,
               allMovements: inv.movements,
               filter: filter,

@@ -26,28 +26,36 @@ import '../services/csv_service.dart';
 import '../services/supabase_repository.dart';
 import '../utils/error_messages.dart';
 import 'catalog_provider.dart';
+import 'purchasing_provider.dart';
 
 /// Holds the full working set of cloud data for the signed-in user and routes
 /// every mutation through [SupabaseRepository]. Local lists are caches kept in
 /// sync with the server so the rest of the UI can stay synchronous.
 ///
 /// The catalog domain (products + categories) has been extracted into
-/// [CatalogProvider]. InventoryProvider receives a reference via
-/// [updateCatalogProvider] (called from `main.dart` via
-/// [ChangeNotifierProxyProvider2]) and delegates product reads to it.
+/// [CatalogProvider] and the purchasing domain (suppliers + purchase orders)
+/// into [PurchasingProvider]. InventoryProvider receives references via
+/// [updateCatalogProvider] / [updatePurchasingProvider] (called from `main.dart`
+/// via [ChangeNotifierProxyProvider3]) and delegates the corresponding reads
+/// to them. Two cross-domain orchestrators stay here — `importCsvAll` and
+/// `bookGoodsReceipt` — and write into purchasing state through the public
+/// write-back hooks on [PurchasingProvider].
 class InventoryProvider extends ChangeNotifier {
   InventoryProvider({
     required SupabaseRepository repository,
     CatalogProvider? catalogProvider,
+    PurchasingProvider? purchasingProvider,
   })  : _repository = repository,
-        _catalogProvider = catalogProvider;
+        _catalogProvider = catalogProvider,
+        _purchasingProvider = purchasingProvider;
 
   final SupabaseRepository _repository;
   final _uuid = const Uuid();
 
   CatalogProvider? _catalogProvider;
+  PurchasingProvider? _purchasingProvider;
 
-  /// Called by [ChangeNotifierProxyProvider2] in `main.dart` whenever the
+  /// Called by [ChangeNotifierProxyProvider3] in `main.dart` whenever the
   /// upstream [CatalogProvider] instance is replaced. Safe to call repeatedly
   /// with the same instance.
   void updateCatalogProvider(CatalogProvider? catalog) {
@@ -57,11 +65,33 @@ class InventoryProvider extends ChangeNotifier {
     // for internal cross-domain reads (criticalStockCount, importCsvAll, etc.).
   }
 
+  /// Called by [ChangeNotifierProxyProvider3] in `main.dart` whenever the
+  /// upstream [PurchasingProvider] instance is replaced. Safe to call
+  /// repeatedly with the same instance. MUST be re-injected on every rebuild
+  /// (Gotcha #4) — otherwise importCsvAll/bookGoodsReceipt silently no-op
+  /// against a stale/null reference.
+  void updatePurchasingProvider(PurchasingProvider? purchasing) {
+    _purchasingProvider = purchasing;
+    // No notifyListeners() here — callers that depend on suppliers/POs read via
+    // the PurchasingProvider directly; InventoryProvider only uses the
+    // reference for cross-domain writes (importCsvAll, bookGoodsReceipt).
+  }
+
   /// Convenience read — returns the product list from [CatalogProvider] if
   /// available, otherwise an empty list. Used internally by methods that
   /// operate across the Catalog + Inventory domains.
   List<Product> get _catalogProducts =>
       _catalogProvider?.products ?? const [];
+
+  /// Null-safe raw supplier list from [PurchasingProvider]. The `?? const []`
+  /// masks an early-init null reference — see the kDebugMode assert in
+  /// [importCsvAll] which surfaces that case loudly in debug (Risk §7.3).
+  List<Supplier> get _purchSuppliers =>
+      _purchasingProvider?.suppliersRaw ?? const [];
+
+  /// Null-safe raw PO list from [PurchasingProvider].
+  List<PurchaseOrder> get _purchPurchaseOrders =>
+      _purchasingProvider?.purchaseOrdersRaw ?? const [];
 
   List<Deal> _deals = [];
 
@@ -78,16 +108,10 @@ class InventoryProvider extends ChangeNotifier {
 
   List<Buyer> _buyers = [];
   List<Shop> _shops = [];
-  List<Supplier> _suppliers = [];
   List<InventoryItem> _inventoryItems = [];
   List<InventoryMovement> _movements = [];
   List<ActivityEntry> _activities = [];
   List<Ticket> _tickets = [];
-
-  /// Bestellköpfe (Epic C). `purchase_order_items` werden NICHT global
-  /// gehalten — sie werden lazy pro Detail-Screen geladen (Committee-
-  /// Empfehlung 1, analog `loadBatchesForItem`).
-  List<PurchaseOrder> _purchaseOrders = [];
 
   /// Lager (Epic D — Mehrlager). Klein und workspace-weit relevant, daher
   /// global gehalten (Committee-Empfehlung 1, analog `_productCategories`).
@@ -139,17 +163,10 @@ class InventoryProvider extends ChangeNotifier {
         );
   List<Buyer> get buyers => List.unmodifiable(_buyers);
   List<Shop> get shops => List.unmodifiable(_shops);
-  List<Supplier> get suppliers => List.unmodifiable(_suppliers);
-  List<Supplier> get activeSuppliers =>
-      List.unmodifiable(_suppliers.where((s) => s.active));
   List<InventoryItem> get inventoryItems => List.unmodifiable(_inventoryItems);
   List<InventoryMovement> get movements => List.unmodifiable(_movements);
   List<ActivityEntry> get activities => List.unmodifiable(_activities);
   List<Ticket> get tickets => List.unmodifiable(_tickets);
-
-  /// Bestellköpfe, absteigend nach Erstellungsdatum sortiert.
-  List<PurchaseOrder> get purchaseOrders =>
-      List.unmodifiable(_purchaseOrders);
 
   /// Lager des aktiven Workspaces, alphabetisch nach Name sortiert.
   /// Das Default-Lager (falls vorhanden) ist via `w.isDefault` erkennbar.
@@ -466,12 +483,10 @@ class InventoryProvider extends ChangeNotifier {
     _deals = [];
     _buyers = [];
     _shops = [];
-    _suppliers = [];
     _inventoryItems = [];
     _movements = [];
     _activities = [];
     _tickets = [];
-    _purchaseOrders = [];
     _warehouses = [];
     _stocktakes = [];
     _productStock = [];
@@ -487,8 +502,6 @@ class InventoryProvider extends ChangeNotifier {
     _buyers = List.of(snapshot.buyers)
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     _shops = List.of(snapshot.shops);
-    _suppliers = List.of(snapshot.suppliers)
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     _inventoryItems = List.of(snapshot.inventoryItems)
       ..sort((a, b) => a.name.compareTo(b.name));
     _movements = List.of(snapshot.movements)
@@ -496,8 +509,6 @@ class InventoryProvider extends ChangeNotifier {
     _activities = List.of(snapshot.activities)
       ..sort((a, b) => b.date.compareTo(a.date));
     _tickets = List.of(snapshot.tickets);
-    _purchaseOrders = List.of(snapshot.purchaseOrders)
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _warehouses = List.of(snapshot.warehouses)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     _stocktakes = List.of(snapshot.stocktakes)
@@ -833,6 +844,19 @@ class InventoryProvider extends ChangeNotifier {
   ///
   /// Returns counts in order: (deals, shops, buyers, suppliers, items).
   Future<(int, int, int, int, int)> importCsvAll(CsvImportResult result) async {
+    // Risk §7.3: suppliers/POs are written into PurchasingProvider via the
+    // public write-back hooks. If the reference was never injected (early-init
+    // race / mis-wired ProxyProvider), those writes silently no-op and CSV
+    // supplier/PO rows would be lost. The `?? const []` getters mask the null,
+    // so surface it loudly in debug builds. Release builds tolerate it (the
+    // rest of the import — deals/shops/buyers/items/products — still runs).
+    assert(
+      _purchasingProvider != null,
+      'importCsvAll: _purchasingProvider is null — supplier/PO write-back would '
+      'silently no-op. Check the ChangeNotifierProxyProvider3 wiring in '
+      'main.dart (updatePurchasingProvider must be called on rebuild).',
+    );
+
     // Deals
     int dealCount = 0;
     if (result.deals.isNotEmpty) {
@@ -866,10 +890,14 @@ class InventoryProvider extends ChangeNotifier {
     }
     _buyers.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
-    // Suppliers – skip names that already exist; build name→id map for inventory remap
+    // Suppliers – skip names that already exist; build name→id map for inventory
+    // remap. Suppliers live in PurchasingProvider now: dedup-seed reads the raw
+    // list via [_purchSuppliers]; saved rows are written back through the
+    // public import hooks. The remap tables (existingSupplierByName /
+    // importSupplierIdRemap) stay local to this orchestrator.
     int supplierCount = 0;
     final existingSupplierByName = <String, String>{
-      for (final s in _suppliers) s.name.toLowerCase(): s.id,
+      for (final s in _purchSuppliers) s.name.toLowerCase(): s.id,
     };
     for (final supplier in result.suppliers) {
       final key = supplier.name.toLowerCase();
@@ -877,12 +905,11 @@ class InventoryProvider extends ChangeNotifier {
       final withId =
           supplier.id.isEmpty ? supplier.copyWith(id: _uuid.v4()) : supplier;
       final saved = await _repository.insertSupplier(withId);
-      _suppliers.add(saved);
+      _purchasingProvider?.upsertSupplierFromImport(saved);
       existingSupplierByName[key] = saved.id;
       supplierCount++;
     }
-    _suppliers.sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _purchasingProvider?.sortSuppliers();
 
     // Map import-supplier-id → existing supplier-id by name (so items
     // referencing an import-time supplier-id resolve to the canonical row).
@@ -1014,7 +1041,7 @@ class InventoryProvider extends ChangeNotifier {
     //    Track csv synthetic-id → db BIGSERIAL id for PO item FK remap.
     final importPoIdRemap = <int, int>{}; // csv synthetic id → db id
     final existingPoByNumber = <String, int>{
-      for (final po in _purchaseOrders) po.orderNumber: po.id ?? -1,
+      for (final po in _purchPurchaseOrders) po.orderNumber: po.id ?? -1,
     };
     for (final po in result.purchaseOrders) {
       final number = po.orderNumber;
@@ -1035,7 +1062,7 @@ class InventoryProvider extends ChangeNotifier {
       );
       try {
         final saved = await _repository.insertPurchaseOrder(withoutId);
-        _purchaseOrders.insert(0, saved);
+        _purchasingProvider?.insertPurchaseOrderFromImport(saved);
         if (saved.id != null) {
           existingPoByNumber[number] = saved.id!;
           if (po.id != null) importPoIdRemap[po.id!] = saved.id!;
@@ -1046,7 +1073,7 @@ class InventoryProvider extends ChangeNotifier {
         }
       }
     }
-    _purchaseOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _purchasingProvider?.sortPurchaseOrders();
 
     // 5. PO items – remap product_id and purchase_order_id.
     for (final item in result.purchaseOrderItems) {
@@ -1083,6 +1110,14 @@ class InventoryProvider extends ChangeNotifier {
           debugPrint('importCsvAll: CatalogProvider resync failed (non-fatal): $e');
         }
       }));
+    }
+
+    // Notify PurchasingProvider listeners once after the suppliers/POs were
+    // written back through its hooks above (the hooks themselves don't notify,
+    // to avoid a notify-storm per inserted row).
+    if (result.suppliers.isNotEmpty ||
+        result.purchaseOrders.isNotEmpty) {
+      _purchasingProvider?.notifyAfterCrossDomainWrite();
     }
 
     if (dealCount > 0 ||
@@ -1182,142 +1217,11 @@ class InventoryProvider extends ChangeNotifier {
     return (added: added, skipped: skipped);
   }
 
-  // ── SUPPLIERS ─────────────────────────────────────────────────────────────
-
-  Future<void> addSupplier(Supplier supplier) async {
-    final saved = await _repository.insertSupplier(supplier);
-    _suppliers.add(saved);
-    _suppliers.sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    _log('Lieferant hinzugefügt: ${saved.name}', 'supplier');
-    notifyListeners();
-  }
-
-  Future<void> updateSupplier(Supplier supplier) async {
-    final saved = await _repository.updateSupplier(supplier);
-    final idx = _suppliers.indexWhere((s) => s.id == saved.id);
-    if (idx == -1) return;
-    _suppliers[idx] = saved;
-    _suppliers.sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    _log('Lieferant aktualisiert: ${saved.name}', 'supplier');
-    notifyListeners();
-  }
-
-  Future<void> deleteSupplier(String id) async {
-    final supplier = _suppliers.where((s) => s.id == id).firstOrNull;
-    await _repository.deleteSupplier(id);
-    _suppliers.removeWhere((s) => s.id == id);
-    if (supplier != null) {
-      _log('Lieferant gelöscht: ${supplier.name}', 'supplier');
-    }
-    notifyListeners();
-  }
-
-  /// Fügt die Standard-Versanddienste (DHL, UPS, Hermes, etc.) als Supplier
-  /// hinzu. Idempotent: Einträge, deren Name (case-insensitive) bereits
-  /// vorhanden ist, werden übersprungen.
-  ///
-  /// Liefert ein Tupel `(added, skipped)` für die UI-Rückmeldung zurück.
-  Future<({int added, int skipped})> seedCarrierSuppliers() async {
-    final existing = _suppliers
-        .map((s) => s.name.trim().toLowerCase())
-        .toSet();
-    var added = 0;
-    var skipped = 0;
-    for (final seed in carrierSupplierSeeds) {
-      if (existing.contains(seed.name.toLowerCase())) {
-        skipped++;
-        continue;
-      }
-      final supplier = Supplier(
-        id: '',
-        name: seed.name,
-        website: seed.website,
-        note: 'Versanddienstleister',
-      );
-      final saved = await _repository.insertSupplier(supplier);
-      _suppliers.add(saved);
-      added++;
-    }
-    if (added > 0) {
-      _suppliers.sort(
-          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      _log('$added Versanddienst-Lieferanten hinzugefügt', 'supplier');
-      notifyListeners();
-    }
-    return (added: added, skipped: skipped);
-  }
-
-  // ── PURCHASE ORDERS ───────────────────────────────────────────────────────
-
-  /// Legt eine neue Bestellung an. Die `order_number` wird im Repository
-  /// client-seitig vergeben (mit UNIQUE-Constraint-Retry — siehe
-  /// `SupabaseRepository.insertPurchaseOrder`). Der zurückgegebene
-  /// `PurchaseOrder` hat die server-seitig zugewiesene `id` (BIGSERIAL).
-  Future<PurchaseOrder> addPurchaseOrder(PurchaseOrder order) async {
-    final saved = await _repository.insertPurchaseOrder(order);
-    _purchaseOrders.insert(0, saved);
-    _log('Bestellung angelegt: ${saved.orderNumber}', 'purchase_order');
-    notifyListeners();
-    return saved;
-  }
-
-  Future<void> updatePurchaseOrder(PurchaseOrder order) async {
-    final saved = await _repository.updatePurchaseOrder(order);
-    final idx = _purchaseOrders.indexWhere((po) => po.id == saved.id);
-    if (idx == -1) return;
-    _purchaseOrders[idx] = saved;
-    _purchaseOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    _log('Bestellung aktualisiert: ${saved.orderNumber}', 'purchase_order');
-    notifyListeners();
-  }
-
-  /// Soft-Delete. Entfernt die Bestellung aus dem lokalen Cache.
-  /// Bestellpositionen (`purchase_order_items`) werden DB-seitig
-  /// durch `ON DELETE CASCADE` entfernt — sie liegen nicht im globalen
-  /// Cache, daher ist kein lokales Aufräumen nötig.
-  Future<void> deletePurchaseOrder(int id) async {
-    final order = _purchaseOrders.where((po) => po.id == id).firstOrNull;
-    await _repository.deletePurchaseOrder(id);
-    _purchaseOrders.removeWhere((po) => po.id == id);
-    if (order != null) {
-      _log('Bestellung gelöscht: ${order.orderNumber}', 'purchase_order');
-    }
-    notifyListeners();
-  }
-
-  // ── PURCHASE ORDER ITEMS (lazy — nur pro Detail-Screen) ──────────────────
-
-  /// Lädt alle Positionen einer Bestellung on-demand.
-  /// Pattern analog `loadBatchesForItem`: kein globaler State, der
-  /// Detail-Screen hält den State selbst (oder via Provider-Slot).
-  Future<List<PurchaseOrderItem>> loadPurchaseOrderItems(
-    int purchaseOrderId,
-  ) {
-    final wsId = _repository.activeWorkspaceId;
-    if (wsId == null) return Future.value(const []);
-    return _repository.loadPurchaseOrderItems(wsId, purchaseOrderId);
-  }
-
-  Future<PurchaseOrderItem> addPurchaseOrderItem(
-      PurchaseOrderItem item) async {
-    final saved = await _repository.insertPurchaseOrderItem(item);
-    _log('Bestellposition hinzugefügt', 'purchase_order');
-    return saved;
-  }
-
-  Future<PurchaseOrderItem> updatePurchaseOrderItem(
-      PurchaseOrderItem item) async {
-    final saved = await _repository.updatePurchaseOrderItem(item);
-    _log('Bestellposition aktualisiert', 'purchase_order');
-    return saved;
-  }
-
-  Future<void> deletePurchaseOrderItem(String id) async {
-    await _repository.deletePurchaseOrderItem(id);
-    _log('Bestellposition gelöscht', 'purchase_order');
-  }
+  // ── SUPPLIERS + PURCHASE ORDERS moved to PurchasingProvider ──────────────
+  // addSupplier/updateSupplier/deleteSupplier/seedCarrierSuppliers and the full
+  // PO-header + PO-item CRUD now live in lib/providers/purchasing_provider.dart.
+  // bookGoodsReceipt below stays here (cross-domain: writes inventory state,
+  // refreshes the PO header in PurchasingProvider via replacePurchaseOrderHeader).
 
   // ── WARENEINGANG BUCHEN (C4) ──────────────────────────────────────────────
 
@@ -1446,13 +1350,14 @@ class InventoryProvider extends ChangeNotifier {
     // ── D. PO-Header-Refresh (Best-Effort) ──────────────────────────────────
     // Der DB-Trigger `purchase_order_items_status_trg` aktualisiert serverseitig
     // `purchase_orders.status` (z. B. `ordered` → `partially_received` →
-    // `received`). Da der Provider `_purchaseOrders` lokal cached, spiegelt der
-    // lokale State den neuen Status erst nach einem App-Reload wider — ohne
-    // diesen Re-Fetch.
+    // `received`). Da der PO-Header-Cache jetzt in [PurchasingProvider] liegt,
+    // spiegelt dessen lokaler State den neuen Status erst nach einem App-Reload
+    // wider — ohne diesen Re-Fetch.
     //
     // Strategie: den betroffenen PO-Header-Eintrag gezielt neu laden und im
-    // `_purchaseOrders`-Cache ersetzen. Schlägt der Re-Fetch fehl (Netzwerk,
-    // PO wurde zwischenzeitlich gelöscht), bleibt der bereits gebuchte
+    // PurchasingProvider-Cache ersetzen ([replacePurchaseOrderHeader]) +
+    // dort notifizieren ([notifyAfterCrossDomainWrite]). Schlägt der Re-Fetch
+    // fehl (Netzwerk, PO zwischenzeitlich gelöscht), bleibt der bereits gebuchte
     // Wareneingang bestehen — kein Fehler, kein Rollback. Der UI-State korrigiert
     // sich beim nächsten regulären Load.
     final poId = item.purchaseOrderId;
@@ -1461,10 +1366,8 @@ class InventoryProvider extends ChangeNotifier {
       try {
         final freshPo = await _repository.loadPurchaseOrderById(wsId, poId);
         if (freshPo != null) {
-          final idx = _purchaseOrders.indexWhere((po) => po.id == poId);
-          if (idx != -1) {
-            _purchaseOrders[idx] = freshPo;
-          }
+          _purchasingProvider?.replacePurchaseOrderHeader(freshPo);
+          _purchasingProvider?.notifyAfterCrossDomainWrite();
         }
       } catch (_) {
         // Best-Effort: Re-Fetch-Fehler still schlucken.

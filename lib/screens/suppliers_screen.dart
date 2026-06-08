@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/supplier.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/purchasing_provider.dart';
 import '../widgets/add_edit_supplier_dialog.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/confirm_dialog.dart';
@@ -19,7 +19,7 @@ class SuppliersScreen extends StatelessWidget {
 
   Future<void> _confirmDelete(
     BuildContext context,
-    InventoryProvider provider,
+    PurchasingProvider provider,
     Supplier supplier,
   ) async {
     final l10n = AppLocalizations.of(context);
@@ -46,7 +46,7 @@ class SuppliersScreen extends StatelessWidget {
 
   Future<void> _seedCarriers(
     BuildContext context,
-    InventoryProvider provider,
+    PurchasingProvider provider,
   ) async {
     final l10n = AppLocalizations.of(context);
     try {
@@ -66,7 +66,7 @@ class SuppliersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer<InventoryProvider>(
+    return Consumer<PurchasingProvider>(
       builder: (context, provider, _) {
         final suppliers = provider.suppliers;
 
@@ -133,7 +133,7 @@ class SuppliersScreen extends StatelessWidget {
 
   Widget _buildList(
     BuildContext context,
-    InventoryProvider provider,
+    PurchasingProvider provider,
     List<Supplier> suppliers,
     AppLocalizations l10n,
   ) {

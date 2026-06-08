@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/supplier.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/purchasing_provider.dart';
 import '../utils/error_messages.dart';
 import '../utils/validators.dart';
 import 'unsaved_changes_guard.dart';
@@ -217,7 +217,7 @@ class _AddEditSupplierDialogState extends State<AddEditSupplierDialog> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    final provider = context.read<InventoryProvider>();
+    final provider = context.read<PurchasingProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final l10n = AppLocalizations.of(context);

@@ -10,6 +10,7 @@ import '../models/shop.dart';
 import '../models/supplier.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../providers/purchasing_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../utils/responsive.dart';
 import '../widgets/app_feedback.dart';
@@ -112,6 +113,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _finish() async {
     final inv = context.read<InventoryProvider>();
+    // Suppliers now live in PurchasingProvider; shops/deals stay on Inventory.
+    final purchasing = context.read<PurchasingProvider>();
     final activeWs = context.read<ActiveWorkspaceProvider>();
     final ob = context.read<OnboardingProvider>();
     final l10n = AppLocalizations.of(context);
@@ -152,11 +155,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ));
       },
       onAddSupplier: (name) async {
-        if (inv.suppliers.any((s) =>
+        if (purchasing.suppliers.any((s) =>
             s.name.toLowerCase() == name.toLowerCase())) {
           return;
         }
-        await inv.addSupplier(Supplier(
+        await purchasing.addSupplier(Supplier(
           id: _uuid.v4(),
           name: name,
           contactName: 'Onboarding',
