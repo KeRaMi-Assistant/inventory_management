@@ -5466,4 +5466,97 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get semanticsChartLoading => 'Chart loading.';
+
+  @override
+  String get paletteNavGroupLabel => 'Navigation';
+
+  @override
+  String get paletteActionGroupLabel => 'Actions';
+
+  @override
+  String get paletteNavDashboard => 'Open Dashboard';
+
+  @override
+  String get paletteNavDeals => 'Open Deals';
+
+  @override
+  String get paletteNavTickets => 'Open Tickets';
+
+  @override
+  String get paletteNavInbox => 'Open Inbox';
+
+  @override
+  String get paletteNavInventory => 'Open Inventory';
+
+  @override
+  String get paletteNavSuppliers => 'Open Suppliers';
+
+  @override
+  String get paletteNavStatistics => 'Open Statistics';
+
+  @override
+  String get paletteNavActivity => 'Open Activity';
+
+  @override
+  String get paletteNavSettings => 'Open Settings';
+
+  @override
+  String get paletteNavWarehouse => 'Open Warehousing';
+
+  @override
+  String get paletteNavHelp => 'Open Help';
+
+  @override
+  String get paletteSubInventory => 'Inventory (Stock)';
+
+  @override
+  String get paletteSubProductCatalog => 'Product catalog (Warehousing)';
+
+  @override
+  String get paletteSubPurchaseOrders => 'Orders (Warehousing)';
+
+  @override
+  String get paletteSubWarehouses => 'Warehouses (Warehousing)';
+
+  @override
+  String get paletteSubCategories => 'Categories (Warehousing)';
+
+  @override
+  String get paletteSubStocktake => 'Stocktake (Warehousing)';
+
+  @override
+  String get paletteSubSettingsInbox => 'Mailbox settings';
+
+  @override
+  String get paletteSubSettingsShipping => 'Shipping settings';
+
+  @override
+  String get paletteSubSettingsPush => 'Push settings';
+
+  @override
+  String get paletteSubSettingsTeam => 'Team settings';
+
+  @override
+  String get paletteSubSettingsGeneral => 'General settings';
+
+  @override
+  String get paletteActionNewDeal => 'New deal';
+
+  @override
+  String get paletteActionCsvImport => 'Import CSV';
+
+  @override
+  String get paletteActionCsvExport => 'Export CSV';
+
+  @override
+  String get paletteActionToggleTheme => 'Toggle theme (light/dark)';
+
+  @override
+  String get breadcrumbSeparatorTooltip => 'Navigation path';
+
+  @override
+  String get appBarMenuCsvImport => 'Import CSV';
+
+  @override
+  String get appBarMenuCsvExport => 'Export CSV';
 }
