@@ -10,7 +10,12 @@ import '../widgets/app_feedback.dart';
 import '../widgets/confirm_dialog.dart';
 
 class SuppliersScreen extends StatelessWidget {
-  const SuppliersScreen({super.key});
+  /// Wenn `true`, wird kein eigenes [Scaffold] gerendert — geeignet für
+  /// Master-Detail-Embeds im Warehouse-Hub (Desktop). FAB und Body bleiben
+  /// in einem Scaffold ohne AppBar. Default `false` (rückwärtskompatibel).
+  final bool embedded;
+
+  const SuppliersScreen({super.key, this.embedded = false});
 
   Future<void> _confirmDelete(
     BuildContext context,
@@ -64,49 +69,63 @@ class SuppliersScreen extends StatelessWidget {
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final suppliers = provider.suppliers;
-        return Scaffold(
-          floatingActionButton: FloatingActionButton.extended(
-            // D4: tooltip → explicit Semantics-Label for screen readers.
-            tooltip: l10n.suppliersNew,
-            onPressed: () => showDialog(
-              context: context,
-              barrierDismissible: false, // UnsavedChangesGuard fängt Schließen ab
-              builder: (_) => const AddEditSupplierDialog(),
-            ),
-            icon: const Icon(Icons.add, size: 18),
-            label: Text(l10n.suppliersNew),
+
+        final fab = FloatingActionButton.extended(
+          // D4: tooltip → explicit Semantics-Label for screen readers.
+          tooltip: l10n.suppliersNew,
+          onPressed: () => showDialog(
+            context: context,
+            barrierDismissible: false, // UnsavedChangesGuard fängt Schließen ab
+            builder: (_) => const AddEditSupplierDialog(),
           ),
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Row(
-                  children: [
-                    const Spacer(),
-                    OutlinedButton.icon(
-                      onPressed: () => _seedCarriers(context, provider),
-                      icon: const Icon(Icons.local_shipping_outlined,
-                          size: 16),
-                      label: Text(AppLocalizations.of(context).suppliersAddCarriers),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        textStyle: const TextStyle(fontSize: 12),
-                      ),
+          icon: const Icon(Icons.add, size: 18),
+          label: Text(l10n.suppliersNew),
+        );
+
+        final bodyContent = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Row(
+                children: [
+                  const Spacer(),
+                  OutlinedButton.icon(
+                    onPressed: () => _seedCarriers(context, provider),
+                    icon: const Icon(Icons.local_shipping_outlined, size: 16),
+                    label: Text(l10n.suppliersAddCarriers),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      textStyle: const TextStyle(fontSize: 12),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: provider.isLoading && suppliers.isEmpty
-                    ? const Center(child: CircularProgressIndicator())
-                    : suppliers.isEmpty
-                        ? const _EmptyState()
-                        : _buildList(context, provider, suppliers, l10n),
-              ),
-            ],
-          ),
+            ),
+            Expanded(
+              child: provider.isLoading && suppliers.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : suppliers.isEmpty
+                      ? const _EmptyState()
+                      : _buildList(context, provider, suppliers, l10n),
+            ),
+          ],
+        );
+
+        // embedded == true: kein eigenes AppBar — Scaffold nur für FAB + Body.
+        // embedded == false (Default): Top-Level-Nutzung via MainScreen-Scaffold
+        // — gibt nur den Body zurück (MainScreen stellt AppBar + Scaffold bereit).
+        if (embedded) {
+          return Scaffold(
+            floatingActionButton: fab,
+            body: SafeArea(child: bodyContent),
+          );
+        }
+
+        return Scaffold(
+          floatingActionButton: fab,
+          body: bodyContent,
         );
       },
     );

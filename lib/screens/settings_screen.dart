@@ -34,93 +34,89 @@ import '../widgets/member_remove_confirm_dialog.dart';
 import '../widgets/workspace_switcher.dart';
 import '../widgets/add_edit_mailbox_dialog.dart';
 import '../widgets/add_edit_shop_dialog.dart';
+import '../widgets/section_hub_screen.dart';
 import '../utils/responsive.dart';
 import 'billing_profile_screen.dart';
 import 'help_screen.dart';
 import 'pricing_screen.dart';
 
-List<Tab> _settingsTabs(AppLocalizations l10n) => [
-  Tab(icon: const Icon(Icons.people_outlined, size: 18), text: l10n.settingsTabBuyers),
-  Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
-  Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
-  Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
-  Tab(icon: const Icon(Icons.mail_outlined, size: 18), text: l10n.settingsTabMailbox),
-  Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
-  Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
-  Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
-];
-
 class SettingsScreen extends StatelessWidget {
   final bool embedded;
   const SettingsScreen({super.key, this.embedded = false});
 
+  List<SectionHubTile> _tiles(AppLocalizations l10n) => [
+    SectionHubTile(
+      key: const Key('settingsHubTileBuyers'),
+      icon: Icons.people_outlined,
+      label: l10n.settingsTabBuyers,
+      build: () => const _BuyersTab(),
+    ),
+    SectionHubTile(
+      key: const Key('settingsHubTileShops'),
+      icon: Icons.store_outlined,
+      label: l10n.settingsTabShops,
+      build: () => const _ShopsTab(),
+    ),
+    SectionHubTile(
+      key: const Key('settingsHubTileTeam'),
+      icon: Icons.group_outlined,
+      label: l10n.settingsTabTeam,
+      build: () => const _TeamTab(),
+    ),
+    SectionHubTile(
+      key: const Key('settingsHubTilePush'),
+      icon: Icons.notifications_outlined,
+      label: l10n.settingsTabPush,
+      build: () => const _NotificationsTab(),
+    ),
+    SectionHubTile(
+      key: const Key('settingsHubTileMailbox'),
+      icon: Icons.mail_outlined,
+      label: l10n.settingsTabMailbox,
+      build: () => const _MailboxTab(),
+    ),
+    SectionHubTile(
+      key: const Key('settingsHubTileShipping'),
+      icon: Icons.local_shipping_outlined,
+      label: l10n.settingsTabShipping,
+      build: () => const _ShippingTab(),
+    ),
+    SectionHubTile(
+      key: const Key('settingsHubTilePublicProfile'),
+      icon: Icons.public,
+      label: l10n.publicProfileTab,
+      build: () => const _PublicProfileTab(),
+    ),
+    SectionHubTile(
+      key: const Key('settingsHubTileGeneral'),
+      icon: Icons.tune,
+      label: l10n.settingsTabGeneral,
+      build: () => const _GeneralTab(),
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final tabs = DefaultTabController(
-      length: 8,
-      child: Column(
-        children: [
-          if (!embedded)
-            AppBar(
-              title: Text(l10n.settingsTitle),
-              bottom: TabBar(
-                isScrollable: true,
-                indicatorColor: Colors.white,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white60,
-                tabs: _settingsTabs(l10n),
-              ),
-            )
-          else
-            Material(
-              color: AppTheme.bgSurfaceOf(context),
-              child: TabBar(
-                isScrollable: true,
-                indicatorColor: AppTheme.accentTextOf(context),
-                labelColor: AppTheme.accentTextOf(context),
-                unselectedLabelColor: AppTheme.textMutedOf(context),
-                dividerColor: AppTheme.borderOf(context),
-                tabs: _settingsTabs(l10n),
-              ),
-            ),
-          const Expanded(
-            child: TabBarView(
-              children: [
-                _BuyersTab(),
-                _ShopsTab(),
-                _TeamTab(),
-                _NotificationsTab(),
-                _MailboxTab(),
-                _ShippingTab(),
-                _PublicProfileTab(),
-                _GeneralTab(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    final hub = SectionHubScreen(tiles: _tiles(l10n));
 
-    if (embedded) return tabs;
+    if (embedded) return hub;
 
-    // Non-embedded: use AppScreenScaffold for the maxWidth container on
-    // desktop/tablet. The AppBar and TabBar are embedded inside [tabs]
-    // (a DefaultTabController > Column), so we pass no [appBar] slot here
-    // and let the inner Column own the AppBar. The [body] is a LayoutBuilder
-    // wrapper that applies the maxWidth constraint on wider screens while
-    // filling the full width on phone — identical to AppScreenScaffold's
-    // container logic, but without a separate Scaffold nesting.
+    // Non-embedded: own Scaffold + AppBar, then hub fills the body.
+    // LayoutBuilder applies a maxWidth constraint on wider screens so the
+    // hub mirrors the old TabBar-based behaviour on desktop.
     return Scaffold(
       backgroundColor: AppTheme.bgAppOf(context),
+      appBar: AppBar(
+        title: Text(l10n.settingsTitle),
+      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isWide = !isCompact(constraints.maxWidth);
-          if (!isWide) return tabs;
+          if (isCompact(constraints.maxWidth)) return hub;
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1200),
-              child: tabs,
+              child: hub,
             ),
           );
         },
@@ -140,118 +136,132 @@ class _BuyersTab extends StatelessWidget {
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
         final buyers = provider.buyers;
-        return Scaffold(
-          backgroundColor: AppTheme.bgAppOf(context),
-          floatingActionButton: FloatingActionButton.extended(
-            heroTag: 'addBuyer',
-            // D4: tooltip → explicit Semantics-Label for screen readers.
-            tooltip: l10n.buyersAdd,
-            onPressed: () => showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => const AddEditBuyerDialog(),
-            ),
-            icon: const Icon(Icons.person_add_outlined),
-            label: Text(l10n.buyersAdd),
-          ),
-          body: buyers.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.people_outline,
-                          size: 52,
-                          color: AppTheme.textDisabledOf(context)),
-                      const SizedBox(height: 12),
-                      Text(l10n.buyersEmpty,
-                          style: TextStyle(
-                              color: AppTheme.textMutedOf(context))),
-                    ],
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: buyers.length,
-                  separatorBuilder: (context, i) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final buyer = buyers[i];
-                    return Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: AppTheme.borderOf(context)),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 6),
-                        leading: Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: buyer.buyerCellColor,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Center(
-                            child: Text(
-                              buyer.name.isNotEmpty
-                                  ? buyer.name[0].toUpperCase()
-                                  : '?',
+        return Stack(
+          children: [
+            Container(
+              color: AppTheme.bgAppOf(context),
+              child: buyers.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.people_outline,
+                              size: 52,
+                              color: AppTheme.textDisabledOf(context)),
+                          const SizedBox(height: 12),
+                          Text(l10n.buyersEmpty,
                               style: TextStyle(
-                                  color: buyer.fontColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16),
-                            ),
+                                  color: AppTheme.textMutedOf(context))),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      // Extra bottom padding so FAB does not obscure last item.
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                      itemCount: buyers.length,
+                      separatorBuilder: (context, i) =>
+                          const SizedBox(height: 8),
+                      itemBuilder: (context, i) {
+                        final buyer = buyers[i];
+                        return Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side:
+                                BorderSide(color: AppTheme.borderOf(context)),
                           ),
-                        ),
-                        title: Text(buyer.name,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600)),
-                        subtitle: buyer.discordServerIds.isNotEmpty
-                            ? Row(
-                                children: [
-                                  const Icon(Icons.discord,
-                                      size: 12,
-                                      color: Color(0xFF5865F2)),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      buyer.discordServerIds.join(', '),
-                                      style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFF5865F2)),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : null,
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon:
-                                  const Icon(Icons.edit_outlined, size: 20),
-                              color: AppTheme.textMutedOf(context),
-                              onPressed: () => showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (_) =>
-                                    AddEditBuyerDialog(buyer: buyer),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 6),
+                            leading: Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: buyer.buyerCellColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  buyer.name.isNotEmpty
+                                      ? buyer.name[0].toUpperCase()
+                                      : '?',
+                                  style: TextStyle(
+                                      color: buyer.fontColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16),
+                                ),
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline,
-                                  size: 20),
-                              color: AppTheme.dangerTextOf(context),
-                              onPressed: () => _confirmDeleteBuyer(
-                                  context, provider, buyer.id, buyer.name),
+                            title: Text(buyer.name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600)),
+                            subtitle: buyer.discordServerIds.isNotEmpty
+                                ? Row(
+                                    children: [
+                                      const Icon(Icons.discord,
+                                          size: 12,
+                                          color: Color(0xFF5865F2)),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          buyer.discordServerIds.join(', '),
+                                          style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Color(0xFF5865F2)),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : null,
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined,
+                                      size: 20),
+                                  color: AppTheme.textMutedOf(context),
+                                  onPressed: () => showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) =>
+                                        AddEditBuyerDialog(buyer: buyer),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline,
+                                      size: 20),
+                                  color: AppTheme.dangerTextOf(context),
+                                  onPressed: () => _confirmDeleteBuyer(
+                                      context,
+                                      provider,
+                                      buyer.id,
+                                      buyer.name),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            // Floating action button aligned bottom-right.
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: FloatingActionButton.extended(
+                heroTag: 'addBuyer',
+                tooltip: l10n.buyersAdd,
+                onPressed: () => showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const AddEditBuyerDialog(),
                 ),
+                icon: const Icon(Icons.person_add_outlined),
+                label: Text(l10n.buyersAdd),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -336,91 +346,111 @@ class _ShopsTab extends StatelessWidget {
         final otherShops = shops.where((s) => !_isAmazon(s)).toList()
           ..sort((a, b) =>
               a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-        return Scaffold(
-          backgroundColor: AppTheme.bgAppOf(context),
-          floatingActionButton: FloatingActionButton.extended(
-            heroTag: 'addShop',
-            // D4: tooltip → explicit Semantics-Label for screen readers.
-            tooltip: l10n.shopsAdd,
-            onPressed: () => showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => const AddEditShopDialog(),
-            ),
-            icon: const Icon(Icons.add_business_outlined),
-            label: Text(l10n.shopsAdd),
-          ),
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Row(
-                  children: [
-                    const Spacer(),
-                    OutlinedButton.icon(
-                      onPressed: () => _seedAmazon(context, provider),
-                      icon: const Icon(Icons.shopping_bag_outlined, size: 16),
-                      label: Text(AppLocalizations.of(context).settingsAddAmazonShops),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        textStyle: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: shops.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.store_outlined,
-                                size: 52,
-                                color: AppTheme.textDisabledOf(context)),
-                            const SizedBox(height: 12),
-                            Text(l10n.shopsEmpty,
-                                style: TextStyle(
-                                    color: AppTheme.textMutedOf(context))),
-                          ],
+        return Stack(
+          children: [
+            Container(
+              color: AppTheme.bgAppOf(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Row(
+                      children: [
+                        const Spacer(),
+                        OutlinedButton.icon(
+                          onPressed: () => _seedAmazon(context, provider),
+                          icon: const Icon(Icons.shopping_bag_outlined,
+                              size: 16),
+                          label: Text(AppLocalizations.of(context)
+                              .settingsAddAmazonShops),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            textStyle: const TextStyle(fontSize: 12),
+                          ),
                         ),
-                      )
-                    : ListView(
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          if (amazonShops.isNotEmpty) ...[
-                            _AmazonShopsGroup(
-                              shops: amazonShops,
-                              onEdit: (shop) => showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (_) => AddEditShopDialog(shop: shop),
-                              ),
-                              onDelete: (shop) => _confirmDeleteShop(
-                                  context, provider, shop.id, shop.name),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: shops.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.store_outlined,
+                                    size: 52,
+                                    color: AppTheme.textDisabledOf(context)),
+                                const SizedBox(height: 12),
+                                Text(l10n.shopsEmpty,
+                                    style: TextStyle(
+                                        color:
+                                            AppTheme.textMutedOf(context))),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                          ],
-                          for (final shop in otherShops) ...[
-                            _ShopTile(
-                              shop: shop,
-                              onEdit: () => showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (_) => AddEditShopDialog(shop: shop),
-                              ),
-                              onDelete: () => _confirmDeleteShop(
-                                  context, provider, shop.id, shop.name),
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-                        ],
-                      ),
+                          )
+                        : ListView(
+                            // Extra bottom padding so FAB does not obscure last item.
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                            children: [
+                              if (amazonShops.isNotEmpty) ...[
+                                _AmazonShopsGroup(
+                                  shops: amazonShops,
+                                  onEdit: (shop) => showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) =>
+                                        AddEditShopDialog(shop: shop),
+                                  ),
+                                  onDelete: (shop) => _confirmDeleteShop(
+                                      context,
+                                      provider,
+                                      shop.id,
+                                      shop.name),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                              for (final shop in otherShops) ...[
+                                _ShopTile(
+                                  shop: shop,
+                                  onEdit: () => showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) =>
+                                        AddEditShopDialog(shop: shop),
+                                  ),
+                                  onDelete: () => _confirmDeleteShop(
+                                      context,
+                                      provider,
+                                      shop.id,
+                                      shop.name),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            ],
+                          ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            // Floating action button aligned bottom-right.
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: FloatingActionButton.extended(
+                heroTag: 'addShop',
+                tooltip: l10n.shopsAdd,
+                onPressed: () => showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const AddEditShopDialog(),
+                ),
+                icon: const Icon(Icons.add_business_outlined),
+                label: Text(l10n.shopsAdd),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -2331,76 +2361,95 @@ class _MailboxTabState extends State<_MailboxTab> {
         final hasInbox = pricing.hasInbox;
         final atLimit = mailboxLimit > 0 &&
             provider.accounts.length >= mailboxLimit;
-        return Scaffold(
-          backgroundColor: AppTheme.bgAppOf(context),
-          floatingActionButton: hasInbox
-              ? FloatingActionButton.extended(
-                  heroTag: 'addMailbox',
-                  // D4: tooltip mirrors the visible label text so screen
-                  // readers get an explicit semantics label in both states.
-                  tooltip: atLimit
-                      ? l10n.settingsMailboxLimitLabel(mailboxLimit)
-                      : l10n.settingsMailboxAddLabel,
-                  onPressed: atLimit
-                      ? () => _showMailboxLimitReached(
-                          context, billing.currentPlan, mailboxLimit)
-                      : () => showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (_) => const AddEditMailboxDialog(),
-                          ),
-                  backgroundColor: atLimit ? Colors.grey : null,
-                  icon: Icon(atLimit ? Icons.lock_outlined : Icons.add),
-                  label: Text(atLimit
-                      ? l10n.settingsMailboxLimitLabel(mailboxLimit)
-                      : l10n.settingsMailboxAddLabel),
-                )
-              : null,
-          body: !hasInbox
-              ? _MailboxFreePlanGate(plan: billing.currentPlan)
-              : provider.isLoading && provider.accounts.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : provider.accounts.isEmpty
-                      ? _MailboxEmptyState(
-                          mailboxLimit: mailboxLimit,
-                          plan: billing.currentPlan,
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: provider.accounts.length + 3,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (context, i) {
-                            if (i == 0) {
-                              return _MailboxIntroCard(
-                                plan: billing.currentPlan,
-                                mailboxLimit: mailboxLimit,
-                                used: provider.accounts.length,
-                                visibilityDays: pricing.inboxVisibilityDays,
-                              );
-                            }
-                            if (i == provider.accounts.length + 1) {
-                              // T12: Re-Parse-Sendungsnummern-Button.
-                              return const _TrackingReparseTile();
-                            }
-                            if (i == provider.accounts.length + 2) {
-                              // Plan 2026-05-16 Phase B: Hard-Reset.
-                              return const _InboxResetTile();
-                            }
-                            final account = provider.accounts[i - 1];
-                            return _MailboxAccountTile(
-                              account: account,
-                              onEdit: () => showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (_) =>
-                                    AddEditMailboxDialog(existing: account),
-                              ),
-                              onDelete: () =>
-                                  _confirmDelete(context, provider, account),
+        final bodyContent = !hasInbox
+            ? _MailboxFreePlanGate(plan: billing.currentPlan)
+            : provider.isLoading && provider.accounts.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : provider.accounts.isEmpty
+                    ? _MailboxEmptyState(
+                        mailboxLimit: mailboxLimit,
+                        plan: billing.currentPlan,
+                      )
+                    : ListView.separated(
+                        // Extra bottom padding so FAB does not obscure last item.
+                        padding: hasInbox
+                            ? const EdgeInsets.fromLTRB(16, 16, 16, 88)
+                            : const EdgeInsets.all(16),
+                        itemCount: provider.accounts.length + 3,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, i) {
+                          if (i == 0) {
+                            return _MailboxIntroCard(
+                              plan: billing.currentPlan,
+                              mailboxLimit: mailboxLimit,
+                              used: provider.accounts.length,
+                              visibilityDays: pricing.inboxVisibilityDays,
                             );
-                          },
+                          }
+                          if (i == provider.accounts.length + 1) {
+                            // T12: Re-Parse-Sendungsnummern-Button.
+                            return const _TrackingReparseTile();
+                          }
+                          if (i == provider.accounts.length + 2) {
+                            // Plan 2026-05-16 Phase B: Hard-Reset.
+                            return const _InboxResetTile();
+                          }
+                          final account = provider.accounts[i - 1];
+                          return _MailboxAccountTile(
+                            account: account,
+                            onEdit: () => showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) =>
+                                  AddEditMailboxDialog(existing: account),
+                            ),
+                            onDelete: () =>
+                                _confirmDelete(context, provider, account),
+                          );
+                        },
+                      );
+
+        if (!hasInbox) {
+          return Container(
+            color: AppTheme.bgAppOf(context),
+            child: bodyContent,
+          );
+        }
+
+        return Stack(
+          children: [
+            Container(
+              color: AppTheme.bgAppOf(context),
+              child: bodyContent,
+            ),
+            // Floating action button aligned bottom-right.
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: FloatingActionButton.extended(
+                heroTag: 'addMailbox',
+                // D4: tooltip mirrors the visible label text so screen
+                // readers get an explicit semantics label in both states.
+                tooltip: atLimit
+                    ? l10n.settingsMailboxLimitLabel(mailboxLimit)
+                    : l10n.settingsMailboxAddLabel,
+                onPressed: atLimit
+                    ? () => _showMailboxLimitReached(
+                        context, billing.currentPlan, mailboxLimit)
+                    : () => showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) => const AddEditMailboxDialog(),
                         ),
+                backgroundColor:
+                    atLimit ? AppTheme.textDisabledOf(context) : null,
+                icon: Icon(atLimit ? Icons.lock_outlined : Icons.add),
+                label: Text(atLimit
+                    ? l10n.settingsMailboxLimitLabel(mailboxLimit)
+                    : l10n.settingsMailboxAddLabel),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -3009,9 +3058,9 @@ class _ShippingTabState extends State<_ShippingTab> {
     final l10n = AppLocalizations.of(context);
     return Consumer<CarrierCredentialsProvider>(
       builder: (context, provider, _) {
-        return Scaffold(
-          backgroundColor: AppTheme.bgAppOf(context),
-          body: provider.isLoading && provider.credentials.isEmpty
+        return Container(
+          color: AppTheme.bgAppOf(context),
+          child: provider.isLoading && provider.credentials.isEmpty
               ? const Center(child: CircularProgressIndicator())
               : provider.lastError != null && provider.credentials.isEmpty
                   ? Padding(
@@ -3354,9 +3403,9 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      backgroundColor: AppTheme.bgAppOf(context),
-      body: Consumer2<ActiveWorkspaceProvider, InventoryProvider>(
+    return Container(
+      color: AppTheme.bgAppOf(context),
+      child: Consumer2<ActiveWorkspaceProvider, InventoryProvider>(
         builder: (context, wsProv, inv, _) {
           final ws = wsProv.active;
           if (ws == null) {
@@ -3412,7 +3461,9 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
                         onPressed: _saving || _handleError != null
                             ? null
                             : () async {
-                                final v = _handleCtrl.text.trim().toLowerCase();
+                                final v = _handleCtrl.text
+                                    .trim()
+                                    .toLowerCase();
                                 final err = _validateHandle(v, l10n);
                                 if (err != null) {
                                   setState(() => _handleError = err);
@@ -3431,7 +3482,9 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
                       onChanged: _saving
                           ? null
                           : (v) {
-                              if (v && (ws.handle == null || ws.handle!.isEmpty)) {
+                              if (v &&
+                                  (ws.handle == null ||
+                                      ws.handle!.isEmpty)) {
                                 AppFeedback.info(
                                   context,
                                   l10n.publicProfileNeedsHandle,
@@ -3442,7 +3495,8 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
                             },
                       title: Text(l10n.publicProfileEnableLabel),
                     ),
-                    if (publicUrl != null && ws.publicProfileEnabled) ...[
+                    if (publicUrl != null &&
+                        ws.publicProfileEnabled) ...[
                       const SizedBox(height: 8),
                       Row(
                         children: [
