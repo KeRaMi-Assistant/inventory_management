@@ -199,6 +199,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get navMoreSectionAccount => 'Konto';
 
   @override
+  String get navSectionSales => 'Verkauf';
+
+  @override
+  String get navSectionWarehouse => 'Lager';
+
+  @override
+  String get navSectionInsights => 'Auswertung';
+
+  @override
+  String get navSectionAccount => 'Konto';
+
+  @override
   String get navWarehouse => 'Warenwirtschaft';
 
   @override

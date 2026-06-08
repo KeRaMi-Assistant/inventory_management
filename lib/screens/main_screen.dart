@@ -18,18 +18,16 @@ import '../widgets/add_edit_deal_dialog.dart';
 import '../widgets/app_nav_rail.dart';
 import '../widgets/global_search_dialog.dart';
 import '../widgets/invites_bell.dart';
-import 'activity_screen.dart';
+import 'analytics_section_screen.dart';
 import 'dashboard_screen.dart';
-import 'deals_screen.dart';
 import 'help_screen.dart';
-import 'inbox_screen.dart';
 import 'inventory_screen.dart';
 import 'pricing_screen.dart';
+import 'sales_section_screen.dart';
 import 'settings_screen.dart';
-import 'statistics_screen.dart';
 import 'suppliers_screen.dart';
+import 'main_section.dart';
 import 'main_tab.dart';
-import 'tickets_screen.dart';
 import 'warehouse_hub_screen.dart';
 import '../utils/responsive.dart';
 
@@ -44,33 +42,46 @@ class _MainScreenState extends State<MainScreen> {
   MainTab _selectedIndex = MainTab.dashboard;
   String? _selectedTicket;
 
-  static const _navIcons = [
-    (Icons.dashboard_outlined, Icons.dashboard_rounded),
-    (Icons.list_alt_outlined, Icons.list_alt_rounded),
-    (Icons.confirmation_number_outlined, Icons.confirmation_number_rounded),
-    (Icons.mail_outlined, Icons.mail_rounded),
-    (Icons.inventory_2_outlined, Icons.inventory_2_rounded),
-    (Icons.local_shipping_outlined, Icons.local_shipping),
-    (Icons.bar_chart_outlined, Icons.bar_chart_rounded),
-    (Icons.history_outlined, Icons.history_rounded),
-    (Icons.settings_outlined, Icons.settings_rounded),  // MainTab.settings (8)
-    (Icons.help_outline_rounded, Icons.help_rounded),   // MainTab.help (9)
-    (Icons.storefront_outlined, Icons.storefront),       // MainTab.warehouse (10) — AF11
-  ];
+  // ── Sektions-Ebene (Tier-2b) ───────────────────────────────────────────
+  // Die 5 Sektionen liegen ÜBER dem stabilen MainTab-Enum. Icons/Labels
+  // werden pro Sektion aufgelöst — der State-Schlüssel bleibt _selectedIndex
+  // (MainTab), siehe main_section.dart.
 
-  List<String> _navLabels(AppLocalizations l10n) => [
-        l10n.navDashboard,
-        l10n.navDeals,
-        l10n.navTickets,
-        l10n.navInbox,
-        l10n.navInventory,
-        l10n.navSuppliers,
-        l10n.navStatistics,
-        l10n.navActivity,
-        l10n.navSettings,   // MainTab.settings (8)
-        l10n.navHelp,       // MainTab.help (9)
-        l10n.navWarehouse,  // MainTab.warehouse (10) — AF11
-      ];
+  /// (outline, filled)-Icon-Paar pro Sektion.
+  static const Map<MainSection, (IconData, IconData)> _sectionIcons = {
+    MainSection.dashboard: (Icons.dashboard_outlined, Icons.dashboard_rounded),
+    MainSection.verkauf: (Icons.point_of_sale_outlined, Icons.point_of_sale),
+    MainSection.lager: (Icons.warehouse_outlined, Icons.warehouse),
+    MainSection.auswertung: (Icons.insights_outlined, Icons.insights),
+    MainSection.konto: (Icons.account_circle_outlined, Icons.account_circle),
+  };
+
+  String _sectionLabel(AppLocalizations l10n, MainSection section) =>
+      switch (section) {
+        MainSection.dashboard => l10n.navDashboard,
+        MainSection.verkauf => l10n.navSectionSales,
+        MainSection.lager => l10n.navSectionWarehouse,
+        MainSection.auswertung => l10n.navSectionInsights,
+        MainSection.konto => l10n.navSectionAccount,
+      };
+
+  /// Sub-Tab-Label für die Breadcrumb (Desktop): das konkrete Ziel
+  /// innerhalb einer Sektion (Deals/Tickets/Inbox, Statistik/Aktivität,
+  /// Bestand/Lieferanten als Deep-Link). `null`, wenn die Sektion nur ein
+  /// einziges Ziel hat (Dashboard).
+  String? _subTabLabel(AppLocalizations l10n, MainTab tab) => switch (tab) {
+        MainTab.deals => l10n.navDeals,
+        MainTab.tickets => l10n.navTickets,
+        MainTab.inbox => l10n.navInbox,
+        MainTab.inventory => l10n.navInventory,
+        MainTab.suppliers => l10n.navSuppliers,
+        MainTab.stats => l10n.navStatistics,
+        MainTab.activity => l10n.navActivity,
+        MainTab.settings => l10n.navSettings,
+        MainTab.help => l10n.navHelp,
+        // dashboard + warehouse-Hub sind selbst das Sektions-Ziel.
+        MainTab.dashboard || MainTab.warehouse => null,
+      };
 
   Future<void> _export(
     BuildContext context,
@@ -178,11 +189,6 @@ class _MainScreenState extends State<MainScreen> {
     };
   }
 
-  void _select(MainTab tab) {
-    setState(() => _selectedIndex = tab);
-    Navigator.maybePop(context);
-  }
-
   void _openTicket(String ticket) {
     setState(() {
       _selectedTicket = ticket;
@@ -245,130 +251,81 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // ── Bottom-Nav helpers (Phone only, width < 800) ─────────────────────────
+  // ── Bottom-Nav (Phone) — 5 Sektions-Slots, kein „Mehr" mehr ──────────────
 
-  /// The 5 (or 4 if Inbox-hidden) tabs shown in the NavigationBar.
-  List<MainTab> _bottomNavTabs(Map<MainTab, bool> visibility) {
-    const baseOrder = [
-      MainTab.dashboard,
-      MainTab.deals,
-      MainTab.tickets,
-      MainTab.inbox,
-      MainTab.inventory,
-    ];
-    return baseOrder.where((t) => visibility[t] != false).toList();
+  /// Wechselt IN eine Sektion (Bottom-Nav-Tap oder Rail-Klick). No-op, wenn
+  /// die Sektion bereits aktiv ist (verhindert Sub-Tab-Reset).
+  void _selectSection(MainSection section) {
+    if (sectionOf(_selectedIndex) == section) return;
+    setState(() => _selectedIndex = defaultTabOf(section));
   }
 
-  /// Index inside the NavigationBar for the currently selected tab.
-  /// Returns the "Mehr"-slot index when the active tab is not in the bar.
-  int _bottomNavSelectedIndex(Map<MainTab, bool> visibility) {
-    final tabs = _bottomNavTabs(visibility);
-    final i = tabs.indexOf(_selectedIndex);
-    return i >= 0 ? i : tabs.length; // "Mehr"-slot is the last entry
-  }
-
-  void _bottomNavOnTap(
-      int i, Map<MainTab, bool> visibility, BuildContext context) {
-    final tabs = _bottomNavTabs(visibility);
-    if (i < tabs.length) {
-      setState(() => _selectedIndex = tabs[i]);
-    } else {
-      _openMoreSheet(context, visibility);
-    }
-  }
-
+  /// Baut die 5 Sektions-Destinations für die Phone-NavigationBar.
+  /// Der Verkauf-Slot trägt den aggregierten Tracking-Badge.
   List<NavigationDestination> _bottomNavDestinations(
     AppLocalizations l10n,
-    List<String> labels,
-    Map<MainTab, bool> visibility,
-    Map<MainTab, int> navBadgeCounts,
+    int trackingBadgeCount,
   ) {
-    final tabs = _bottomNavTabs(visibility);
     return [
-      for (final tab in tabs)
+      for (final section in MainSection.values)
         NavigationDestination(
-          key: Key('main-tab-${tab.name}'),
-          icon: Badge(
-            isLabelVisible: (navBadgeCounts[tab] ?? 0) > 0,
-            label: Text(
-              '${navBadgeCounts[tab] ?? 0}',
-              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
-            ),
-            backgroundColor: AppTheme.warning,
-            child: Icon(_navIcons[tab.index].$1),
-          ),
-          selectedIcon: Badge(
-            isLabelVisible: (navBadgeCounts[tab] ?? 0) > 0,
-            label: Text(
-              '${navBadgeCounts[tab] ?? 0}',
-              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
-            ),
-            backgroundColor: AppTheme.warning,
-            child: Icon(_navIcons[tab.index].$2),
-          ),
-          label: labels[tab.index],
+          key: Key('main-tab-${section.name}'),
+          icon: _bottomNavIcon(section, false, trackingBadgeCount),
+          selectedIcon: _bottomNavIcon(section, true, trackingBadgeCount),
+          label: _sectionLabel(l10n, section),
         ),
-      NavigationDestination(
-        key: const Key('main-tab-more'),
-        icon: const Icon(Icons.more_horiz),
-        label: l10n.navMore,
-      ),
     ];
   }
 
-  Future<void> _openMoreSheet(
-      BuildContext context, Map<MainTab, bool> visibility) async {
-    final l10n = AppLocalizations.of(context);
-    final labels = _navLabels(l10n);
-    // Tabs already in the bottom-nav — exclude them from the sheet.
-    final bottomTabs = _bottomNavTabs(visibility);
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppTheme.navBg,
-      isScrollControlled: true,
-      builder: (sheetCtx) => _MoreNavSheet(
-        key: const Key('moreNavSheet'),
-        icons: _navIcons,
-        labels: labels,
-        visibility: visibility,
-        excludeTabs: bottomTabs,
-        onSelect: (tab) {
-          Navigator.pop(sheetCtx);
-          setState(() => _selectedIndex = tab);
-        },
-        onSearch: () {
-          Navigator.pop(sheetCtx);
-          _openSearch();
-        },
-        badgeCounts: const {},
-        sheetTitle: l10n.navMoreSheetTitle,
+  Widget _bottomNavIcon(
+      MainSection section, bool selected, int trackingBadgeCount) {
+    final (outlined, filled) = _sectionIcons[section]!;
+    final icon = Icon(selected ? filled : outlined);
+    // Aggregierter Tracking-Badge sitzt auf dem Verkauf-Slot.
+    final badgeCount =
+        section == MainSection.verkauf ? trackingBadgeCount : 0;
+    if (badgeCount <= 0) return icon;
+    return Badge(
+      label: Text(
+        '$badgeCount',
+        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
       ),
+      backgroundColor: AppTheme.warning,
+      child: icon,
     );
   }
 
-  Widget _buildBody() {
+  /// Dispatcht den aktiven [MainTab] auf den passenden Body. Sektions-
+  /// Wrapper (Verkauf/Auswertung) bündeln ihre Sub-Tabs intern; die
+  /// Deep-Link-Ziele inventory/suppliers/help bleiben direkt erreichbar.
+  Widget _buildBody(bool inboxEnabled, int trackingBadgeCount) {
     return switch (_selectedIndex) {
       MainTab.dashboard => const DashboardScreen(),
-      MainTab.deals => DealsScreen(onOpenTicket: _openTicket),
-      MainTab.tickets => TicketsScreen(initialTicket: _selectedTicket),
-      MainTab.inbox => InboxScreen(
+      MainTab.deals || MainTab.tickets || MainTab.inbox => SalesSectionScreen(
+          activeTab: _selectedIndex,
+          inboxEnabled: inboxEnabled,
+          badgeCount: trackingBadgeCount,
+          onSelectSubTab: (t) => setState(() => _selectedIndex = t),
           onOpenTicket: _openTicket,
+          selectedTicket: _selectedTicket,
           onGoToDealsReview: _goToDealsReview,
         ),
+      // Deep-Link-Ziele (global_search / dashboard) — eigene Vollbild-Bodies.
       MainTab.inventory => const InventoryScreen(),
       MainTab.suppliers => const SuppliersScreen(),
-      MainTab.stats => const StatisticsScreen(),
-      MainTab.activity => const ActivityScreen(),
+      MainTab.warehouse => const WarehouseHubScreen(),
+      MainTab.stats || MainTab.activity => AnalyticsSectionScreen(
+          activeTab: _selectedIndex,
+          onSelectSubTab: (t) => setState(() => _selectedIndex = t),
+        ),
       MainTab.settings => const SettingsScreen(embedded: true),
       MainTab.help => const HelpScreen(embedded: true),
-      MainTab.warehouse => const WarehouseHubScreen(), // AF11
     };
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final labels = _navLabels(l10n);
     return Consumer2<InventoryProvider, BillingProvider>(
       builder: (context, provider, billing, _) {
         // T1.3b (Phase B): Shell-Switch-Schwellen aktiv geändert.
@@ -383,21 +340,26 @@ class _MainScreenState extends State<MainScreen> {
         final narrow = width < Breakpoints.navRail;
         final extended = width >= Breakpoints.railExtended;
         final visibility = _navVisibility(billing);
+        final inboxEnabled = visibility[MainTab.inbox] != false;
         // Wenn der User auf einen Plan ohne Postfach downgradet, während
         // er den Inbox-Tab offen hat, automatisch zurück aufs Dashboard.
-        if (_selectedIndex == MainTab.inbox &&
-            visibility[MainTab.inbox] == false) {
+        if (_selectedIndex == MainTab.inbox && !inboxEnabled) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) setState(() => _selectedIndex = MainTab.dashboard);
           });
         }
-        final body = _buildBody();
 
-        // Counter badge on the Inbox tab: show tracking needs-review count.
+        // Aggregierter Tracking-Needs-Review-Count: sitzt auf dem Verkauf-
+        // Slot (Bottom-Nav + Rail) sowie auf dem Inbox-Segment der
+        // Verkauf-Sektion.
         final trackingBadgeCount = provider.trackingNeedsReviewCount;
-        final navBadgeCounts = trackingBadgeCount > 0
-            ? {MainTab.inbox: trackingBadgeCount}
-            : const <MainTab, int>{};
+
+        final body = _buildBody(inboxEnabled, trackingBadgeCount);
+
+        // Sektions-Label für AppBar/Header; Sub-Tab-Label für Breadcrumb.
+        final currentSection = sectionOf(_selectedIndex);
+        final sectionTitle = _sectionLabel(l10n, currentSection);
+        final subTabTitle = _subTabLabel(l10n, _selectedIndex);
 
         // G2: FAB covers deals, tickets AND inventory (phone-reachability).
         // Suppliers has its own FAB in suppliers_screen.dart.
@@ -438,7 +400,7 @@ class _MainScreenState extends State<MainScreen> {
         final scaffold = narrow
             ? Scaffold(
                 appBar: AppBar(
-                  title: Text(labels[_selectedIndex.index]),
+                  title: Text(sectionTitle),
                   actions: [
                     const InvitesBell(),
                     IconButton(
@@ -503,27 +465,24 @@ class _MainScreenState extends State<MainScreen> {
                     FloatingActionButtonLocation.endFloat,
                 bottomNavigationBar: NavigationBarTheme(
                   data: NavigationBarThemeData(
-                    // Enforce single-line labels — prevents "Dashboar/d"
-                    // wrap on narrow Phone viewports (360-390 dp wide).
+                    // Enforce single-line labels — 5 Sektions-Slots auf
+                    // 360 dp dürfen nicht wrappen/überlaufen. fontSize 11
+                    // + ellipsis + height:1 halten jedes Label einzeilig.
                     labelTextStyle: WidgetStateProperty.resolveWith(
                       (states) => const TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         overflow: TextOverflow.ellipsis,
-                        // height: 1 clamps the line-height so Flutter
-                        // does not allocate a second line even when the
-                        // label barely fits.
                         height: 1,
                       ),
                     ),
                   ),
                   child: NavigationBar(
                     key: const Key('mainBottomNav'),
-                    selectedIndex:
-                        _bottomNavSelectedIndex(visibility),
+                    selectedIndex: sectionOf(_selectedIndex).index,
                     onDestinationSelected: (i) =>
-                        _bottomNavOnTap(i, visibility, context),
-                    destinations: _bottomNavDestinations(
-                        l10n, labels, visibility, navBadgeCounts),
+                        _selectSection(MainSection.values[i]),
+                    destinations:
+                        _bottomNavDestinations(l10n, trackingBadgeCount),
                   ),
                 ),
                 body: body,
@@ -533,19 +492,22 @@ class _MainScreenState extends State<MainScreen> {
                 body: Row(
                   children: [
                     AppNavRail(
-                      tabs: MainTab.values,
-                      visibility: visibility,
-                      selectedTab: _selectedIndex,
-                      onSelect: _select,
+                      sections: MainSection.values,
+                      selectedSection: currentSection,
+                      onSelect: _selectSection,
                       extended: extended,
-                      iconBuilder: (tab, selected) {
-                        final (outlined, filled) = _navIcons[tab.index];
+                      iconBuilder: (section, selected) {
+                        final (outlined, filled) = _sectionIcons[section]!;
                         return Icon(selected ? filled : outlined);
                       },
-                      labelBuilder: (tab) => labels[tab.index],
-                      badgeBuilder: (tab) {
-                        final count = navBadgeCounts[tab] ?? 0;
-                        if (count <= 0) return null;
+                      labelBuilder: (section) =>
+                          _sectionLabel(l10n, section),
+                      badgeBuilder: (section) {
+                        // Aggregierter Tracking-Badge auf der Verkauf-Sektion.
+                        if (section != MainSection.verkauf ||
+                            trackingBadgeCount <= 0) {
+                          return null;
+                        }
                         // Minimal Marker — wird von AppNavRail via
                         // Stack/Positioned über das Icon gelegt.
                         return Container(
@@ -556,7 +518,7 @@ class _MainScreenState extends State<MainScreen> {
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
-                            '$count',
+                            '$trackingBadgeCount',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 9,
@@ -571,7 +533,8 @@ class _MainScreenState extends State<MainScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _ContentHeader(
-                            title: labels[_selectedIndex.index],
+                            title: sectionTitle,
+                            subTabTitle: subTabTitle,
                             provider: provider,
                             onImport: () => _import(context, provider),
                             onExport: () => _export(
@@ -590,30 +553,31 @@ class _MainScreenState extends State<MainScreen> {
               );
 
         // T1.2 — Keyboard shortcuts (Desktop/Web only, additiv).
-        // Cmd/Ctrl+1..5 → Tab-Ziele (reorder-robust via Enum-Index).
-        // Slash → Suche/Palette öffnen.
+        // Cmd/Ctrl+1..5 → Sektionen (reorder-robust via MainSection +
+        // defaultTabOf). Slash → Suche/Palette öffnen.
         // n → kontextuelles „Neu" (FAB-Aktion des aktiven Tabs).
+        void goSection(MainSection s) => _selectSection(s);
         final tabShortcuts = <ShortcutActivator, VoidCallback>{
           const SingleActivator(LogicalKeyboardKey.digit1, meta: true):
-              () => _select(MainTab.dashboard),
+              () => goSection(MainSection.dashboard),
           const SingleActivator(LogicalKeyboardKey.digit1, control: true):
-              () => _select(MainTab.dashboard),
+              () => goSection(MainSection.dashboard),
           const SingleActivator(LogicalKeyboardKey.digit2, meta: true):
-              () => _select(MainTab.deals),
+              () => goSection(MainSection.verkauf),
           const SingleActivator(LogicalKeyboardKey.digit2, control: true):
-              () => _select(MainTab.deals),
+              () => goSection(MainSection.verkauf),
           const SingleActivator(LogicalKeyboardKey.digit3, meta: true):
-              () => _select(MainTab.tickets),
+              () => goSection(MainSection.lager),
           const SingleActivator(LogicalKeyboardKey.digit3, control: true):
-              () => _select(MainTab.tickets),
+              () => goSection(MainSection.lager),
           const SingleActivator(LogicalKeyboardKey.digit4, meta: true):
-              () => _select(MainTab.inventory),
+              () => goSection(MainSection.auswertung),
           const SingleActivator(LogicalKeyboardKey.digit4, control: true):
-              () => _select(MainTab.inventory),
+              () => goSection(MainSection.auswertung),
           const SingleActivator(LogicalKeyboardKey.digit5, meta: true):
-              () => _select(MainTab.stats),
+              () => goSection(MainSection.konto),
           const SingleActivator(LogicalKeyboardKey.digit5, control: true):
-              () => _select(MainTab.stats),
+              () => goSection(MainSection.konto),
           const SingleActivator(LogicalKeyboardKey.slash): _openSearch,
           const SingleActivator(LogicalKeyboardKey.keyN): _contextualNew,
         };
@@ -636,6 +600,10 @@ class _MainScreenState extends State<MainScreen> {
 
 class _ContentHeader extends StatelessWidget {
   final String title;
+
+  /// Sub-Tab innerhalb der Sektion (Deals/Tickets, Statistik/Aktivität,
+  /// Bestand/Lieferanten als Deep-Link). `null` ⇒ Sektion hat nur ein Ziel.
+  final String? subTabTitle;
   final InventoryProvider provider;
   final VoidCallback onImport;
   final VoidCallback onExport;
@@ -643,6 +611,7 @@ class _ContentHeader extends StatelessWidget {
 
   const _ContentHeader({
     required this.title,
+    required this.subTabTitle,
     required this.provider,
     required this.onImport,
     required this.onExport,
@@ -656,8 +625,8 @@ class _ContentHeader extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // T1.6 — Breadcrumb row (thin, 28 dp)
-        _BreadcrumbRow(title: title),
+        // T1.6 — Breadcrumb row (thin, 28 dp): App › Sektion [› Sub-Tab]
+        _BreadcrumbRow(title: title, subTabTitle: subTabTitle),
         // Main header row (56 dp)
         Container(
           height: 56,
@@ -707,15 +676,26 @@ class _ContentHeader extends StatelessWidget {
 }
 
 // T1.6 — Thin breadcrumb bar shown above the desktop content header.
-// Shows the app name › current tab title so the user always has a path
-// indicator — minimal, theme-token-only.
+// Shows `App › Sektion [› Sub-Tab]` so der User immer einen Pfad-Indikator
+// hat — minimal, theme-token-only. Tier-2b: zeigt zusätzlich den Sub-Tab,
+// wenn die aktive Sektion mehrere Sub-Ziele hat (Verkauf/Auswertung/
+// Lager-Deep-Links).
 class _BreadcrumbRow extends StatelessWidget {
   final String title;
-  const _BreadcrumbRow({required this.title});
+  final String? subTabTitle;
+  const _BreadcrumbRow({required this.title, required this.subTabTitle});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    Widget separator() => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Icon(
+            Icons.chevron_right,
+            size: 14,
+            color: AppTheme.textMutedOf(context),
+          ),
+        );
     return Container(
       height: 28,
       color: AppTheme.bgSubtleOf(context),
@@ -742,22 +722,32 @@ class _BreadcrumbRow extends StatelessWidget {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Icon(
-                Icons.chevron_right,
-                size: 14,
-                color: AppTheme.textMutedOf(context),
-              ),
-            ),
+            separator(),
             Text(
               title,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textSecondaryOf(context),
+                fontWeight:
+                    subTabTitle == null ? FontWeight.w600 : FontWeight.w400,
+                color: subTabTitle == null
+                    ? AppTheme.textSecondaryOf(context)
+                    : AppTheme.textMutedOf(context),
               ),
             ),
+            if (subTabTitle != null) ...[
+              separator(),
+              Flexible(
+                child: Text(
+                  subTabTitle!,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondaryOf(context),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1100,287 +1090,5 @@ class _AccountMenu extends StatelessWidget {
   }
 }
 
-// ─── More-Nav Bottom Sheet ─────────────────────────────────────────────────────
-// Shown when the user taps the "Mehr" slot in the Phone NavigationBar.
-// Renders every tab that is NOT already shown in the bottom-nav
-// (Suppliers, Stats, Activity, Settings, Help by default).
-//
-// G1 polish (2026-05-24):
-//  • Drag-handle (4×40 dp) for sheet affordance.
-//  • Quick-search TextField filters items by label substring.
-//  • Section headers group tabs thematically.
-//  • Chevron trailing on each item.
-//  • SafeArea + MediaQuery.viewInsetsOf for keyboard awareness.
-
-// Section assignment — determines which header a tab falls under.
-_MoreNavSection _tabSection(MainTab tab) => switch (tab) {
-      MainTab.inventory ||
-      MainTab.suppliers ||
-      MainTab.warehouse =>
-        _MoreNavSection.manage,
-      MainTab.stats || MainTab.activity => _MoreNavSection.tools,
-      MainTab.settings || MainTab.help => _MoreNavSection.account,
-      // dashboard/deals/tickets/inbox are typically pinned in bottom-nav
-      // and won't show here, but fall back gracefully.
-      _ => _MoreNavSection.manage,
-    };
-
-enum _MoreNavSection { manage, tools, account }
-
 /// T1.7 — Actions available in the phone AppBar overflow menu.
 enum _PhoneMenuAction { csvImport, csvExport }
-
-class _MoreNavSheet extends StatefulWidget {
-  final List<(IconData, IconData)> icons;
-  final List<String> labels;
-  final Map<MainTab, bool> visibility;
-
-  /// Tabs already present in the bottom-nav — excluded from this sheet.
-  final List<MainTab> excludeTabs;
-  final ValueChanged<MainTab> onSelect;
-
-  /// Called when the user taps the search tile — sheet pops then global
-  /// search opens (handled by the caller so context is correct).
-  final VoidCallback onSearch;
-  final Map<MainTab, int> badgeCounts;
-  final String sheetTitle;
-
-  const _MoreNavSheet({
-    super.key,
-    required this.icons,
-    required this.labels,
-    required this.visibility,
-    required this.excludeTabs,
-    required this.onSelect,
-    required this.onSearch,
-    required this.sheetTitle,
-    this.badgeCounts = const {},
-  });
-
-  @override
-  State<_MoreNavSheet> createState() => _MoreNavSheetState();
-}
-
-class _MoreNavSheetState extends State<_MoreNavSheet> {
-  String _query = '';
-
-  List<MainTab> get _allSheetTabs => MainTab.values
-      .where((t) =>
-          widget.visibility[t] != false &&
-          !widget.excludeTabs.contains(t))
-      .toList();
-
-  List<MainTab> _filtered(List<MainTab> tabs) {
-    if (_query.isEmpty) return tabs;
-    final q = _query.toLowerCase();
-    return tabs
-        .where((t) => widget.labels[t.index].toLowerCase().contains(q))
-        .toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final allTabs = _allSheetTabs;
-    final filtered = _filtered(allTabs);
-
-    // Group filtered tabs by section — only render a section header if
-    // at least one tab in that section survived the filter.
-    final Map<_MoreNavSection, List<MainTab>> sections = {};
-    for (final tab in filtered) {
-      sections.putIfAbsent(_tabSection(tab), () => []).add(tab);
-    }
-
-    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(bottom: keyboardInset),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Drag handle ────────────────────────────────────────────
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 10, bottom: 6),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  // navBg is always dark — white/60 is appropriate here.
-                  color: Colors.white.withAlpha(60),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            // ── Sheet title ────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 2, 20, 10),
-              child: Text(
-                widget.sheetTitle,
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ),
-            // ── Quick search field ─────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: TextField(
-                key: const Key('moreNavSheet-searchField'),
-                style: const TextStyle(color: Colors.white, fontSize: 15),
-                cursorColor: Colors.white,
-                decoration: InputDecoration(
-                  hintText: l10n.navMoreSearchHint,
-                  hintStyle: TextStyle(
-                    color: Colors.white.withAlpha(100),
-                    fontSize: 15,
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: Colors.white.withAlpha(140),
-                    size: 20,
-                  ),
-                  filled: true,
-                  fillColor: Colors.white.withAlpha(18),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide:
-                        BorderSide(color: Colors.white.withAlpha(30)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide:
-                        BorderSide(color: Colors.white.withAlpha(80)),
-                  ),
-                ),
-                onChanged: (v) => setState(() => _query = v),
-              ),
-            ),
-            Container(height: 1, color: Colors.white.withAlpha(20)),
-            // ── Sectioned nav items ────────────────────────────────────
-            if (filtered.isEmpty)
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                child: Text(
-                  l10n.navMoreSearchNoResults,
-                  style: TextStyle(
-                    color: Colors.white.withAlpha(100),
-                    fontSize: 14,
-                  ),
-                ),
-              )
-            else
-              for (final section in _MoreNavSection.values)
-                if (sections[section] != null) ...[
-                  _MoreNavSectionHeader(
-                    label: switch (section) {
-                      _MoreNavSection.manage => l10n.navMoreSectionManage,
-                      _MoreNavSection.tools => l10n.navMoreSectionTools,
-                      _MoreNavSection.account => l10n.navMoreSectionAccount,
-                    },
-                  ),
-                  for (final tab in sections[section]!)
-                    _MoreNavSheetItem(
-                      key: Key('moreNavSheet-${tab.name}'),
-                      icon: widget.icons[tab.index].$1,
-                      label: widget.labels[tab.index],
-                      badgeCount: widget.badgeCounts[tab] ?? 0,
-                      onTap: () => widget.onSelect(tab),
-                    ),
-                ],
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MoreNavSectionHeader extends StatelessWidget {
-  final String label;
-  const _MoreNavSectionHeader({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          color: Colors.white.withAlpha(100),
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-        ),
-      ),
-    );
-  }
-}
-
-class _MoreNavSheetItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final int badgeCount;
-  final VoidCallback onTap;
-
-  const _MoreNavSheetItem({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.badgeCount = 0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        // min 48 dp touch target: 14+20 = 34 inner height → icon 20 dp →
-        // vertical padding 14 dp each side = 48 dp total.
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        child: Row(
-          children: [
-            Badge(
-              isLabelVisible: badgeCount > 0,
-              label: Text(
-                '$badgeCount',
-                style:
-                    const TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
-              ),
-              backgroundColor: AppTheme.warning,
-              child: Icon(icon, size: 20, color: AppTheme.navIcon),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_outlined,
-              size: 18,
-              color: Colors.white.withAlpha(80),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

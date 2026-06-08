@@ -446,6 +446,30 @@ abstract class AppLocalizations {
   /// **'Konto'**
   String get navMoreSectionAccount;
 
+  /// No description provided for @navSectionSales.
+  ///
+  /// In de, this message translates to:
+  /// **'Verkauf'**
+  String get navSectionSales;
+
+  /// No description provided for @navSectionWarehouse.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager'**
+  String get navSectionWarehouse;
+
+  /// No description provided for @navSectionInsights.
+  ///
+  /// In de, this message translates to:
+  /// **'Auswertung'**
+  String get navSectionInsights;
+
+  /// No description provided for @navSectionAccount.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto'**
+  String get navSectionAccount;
+
   /// No description provided for @navWarehouse.
   ///
   /// In de, this message translates to:
