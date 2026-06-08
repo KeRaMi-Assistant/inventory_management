@@ -76,16 +76,16 @@ class _FakeRepository extends SupabaseRepository {
 
 Supplier _makeSupplier(String name) => Supplier(id: '', name: name);
 
-PurchaseOrder _makePo(String orderNumber) {
-  final now = DateTime.utc(2026, 6, 8, 10);
+PurchaseOrder _makePo(String orderNumber, {DateTime? createdAt}) {
+  final created = createdAt ?? DateTime.utc(2026, 6, 8, 10);
   return PurchaseOrder(
     id: null,
     workspaceId: '',
     userId: '',
     orderNumber: orderNumber,
     status: PurchaseOrderStatus.draft,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: created,
+    updatedAt: created,
   );
 }
 
@@ -166,17 +166,22 @@ void main() {
       buyers: const [],
       suppliers: const [],
       inventoryItems: const [],
-      purchaseOrders: [_makePo('PO-A'), _makePo('PO-B')],
+      // PO-A älter, PO-B neuer → der sortPurchaseOrders-Hook muss B vor A bringen.
+      purchaseOrders: [
+        _makePo('PO-A', createdAt: DateTime.utc(2026, 1, 1)),
+        _makePo('PO-B', createdAt: DateTime.utc(2026, 6, 1)),
+      ],
     );
 
     await inventory.importCsvAll(result);
 
     expect(purchasing.purchaseOrders, hasLength(2));
     expect(repo.insertedPurchaseOrders, hasLength(2));
-    // PO-Insert-Hook + sortPurchaseOrders-Hook → newest-first nach createdAt.
+    // PO-Insert-Hook + sortPurchaseOrders-Hook → newest-first nach createdAt
+    // (geordnete Assertion, NICHT toSet — sonst bliebe der Sort ungetestet).
     expect(
-      purchasing.purchaseOrders.map((p) => p.orderNumber).toSet(),
-      equals({'PO-A', 'PO-B'}),
+      purchasing.purchaseOrders.map((p) => p.orderNumber).toList(),
+      equals(['PO-B', 'PO-A']),
     );
   });
 

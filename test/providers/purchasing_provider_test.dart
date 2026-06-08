@@ -85,16 +85,18 @@ PurchaseOrder _makePo({
   required int id,
   String orderNumber = 'PO-0001',
   DateTime? createdAt,
+  DateTime? updatedAt,
 }) {
-  final now = createdAt ?? DateTime.utc(2026, 6, 8, 10);
   return PurchaseOrder(
     id: id,
     workspaceId: 'ws-test',
     userId: 'user-test',
     orderNumber: orderNumber,
     status: PurchaseOrderStatus.draft,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: createdAt ?? DateTime.utc(2026, 6, 8, 10),
+    // updatedAt bewusst von createdAt ENTKOPPELT (fixer Default): so erkennt
+    // der Sort-Test einen versehentlichen Komparator-Swap createdAt→updatedAt.
+    updatedAt: updatedAt ?? DateTime.utc(2026, 6, 8, 10),
   );
 }
 
@@ -256,15 +258,37 @@ void main() {
       );
     });
 
-    test('sortiert POs absteigend nach createdAt', () async {
+    test('sortiert POs absteigend nach createdAt (nicht updatedAt)', () async {
+      // Beide POs haben identisches updatedAt (Default), nur createdAt
+      // differiert + die Insertion-Reihenfolge ist OLD-vor-NEW. Würde der
+      // Komparator versehentlich nach updatedAt sortieren, bliebe die
+      // (stabile) Insertion-Reihenfolge OLD-vor-NEW → first==NEW schlägt fehl.
       repo.seedPurchaseOrders = [
         _makePo(id: 1, orderNumber: 'OLD', createdAt: DateTime.utc(2026, 1, 1)),
         _makePo(id: 2, orderNumber: 'NEW', createdAt: DateTime.utc(2026, 6, 1)),
+        _makePo(id: 3, orderNumber: 'MID', createdAt: DateTime.utc(2026, 3, 1)),
       ];
       await provider.loadData();
 
-      expect(provider.purchaseOrders.first.orderNumber, equals('NEW'));
-      expect(provider.purchaseOrders.last.orderNumber, equals('OLD'));
+      expect(
+        provider.purchaseOrders.map((p) => p.orderNumber).toList(),
+        equals(['NEW', 'MID', 'OLD']),
+      );
+    });
+
+    test('PO-Sort ist stabil bei identischem createdAt', () async {
+      final ts = DateTime.utc(2026, 4, 1);
+      repo.seedPurchaseOrders = [
+        _makePo(id: 1, orderNumber: 'FIRST', createdAt: ts),
+        _makePo(id: 2, orderNumber: 'SECOND', createdAt: ts),
+      ];
+      await provider.loadData();
+
+      // Gleicher createdAt → Insertion-Reihenfolge bleibt erhalten.
+      expect(
+        provider.purchaseOrders.map((p) => p.orderNumber).toList(),
+        equals(['FIRST', 'SECOND']),
+      );
     });
 
     test('setzt initialLoadAttempted nach Abschluss', () async {

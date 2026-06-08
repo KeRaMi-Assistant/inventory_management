@@ -136,6 +136,13 @@ class PurchasingProvider extends ChangeNotifier {
   Future<void> setActiveWorkspace(String? workspaceId) async {
     if (_activeWorkspaceId == workspaceId) return;
     _activeWorkspaceId = workspaceId;
+    // Den geteilten Repo-Workspace setzen BEVOR loadData/loadAll läuft — sonst
+    // liest loadAll() einen null-Workspace und liefert still einen LEEREN
+    // Snapshot (supabase_repository.dart:192-195). In main._hydrate laufen
+    // Catalog/Purchasing/Inventory parallel via Future.wait; ohne dieses Set
+    // verliert Purchasing das Race → Suppliers/POs landen leer. Mirror
+    // InventoryProvider.setActiveWorkspace.
+    _repository.setActiveWorkspace(workspaceId);
     if (workspaceId == null) {
       clearLocalState();
       return;
