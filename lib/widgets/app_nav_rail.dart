@@ -1,96 +1,69 @@
 import 'package:flutter/material.dart';
 
 import '../app_theme.dart';
-import '../screens/main_tab.dart';
+import '../screens/main_section.dart';
 import 'brand_logo.dart';
 
-/// Wiederverwendbares Desktop-NavigationRail-Widget, das das alte
-/// `_Sidebar`-Custom-Widget aus [`main_screen.dart`] ersetzt
-/// (D1b — Foundation in D1a, Wire-Up in D1b).
+/// Desktop-NavigationRail der App-Shell.
 ///
-/// **Warum existiert dieses Widget?**
+/// **Tier-2b-Umbau (T2.5):** Die Rail ist jetzt **Sektions-basiert**
+/// (5 [MainSection]-Destinations) statt 11 [MainTab]-Destinations. Das
+/// behebt E3/F2 aus dem Nav-Redesign-Plan:
+/// - 11 → 5 Destinations passen komfortabel in jede Viewport-Höhe →
+///   `scrollable` ist entfernt (war eine Notlösung).
+/// - Inbox-Plan-Gating lebt nicht mehr in der Rail (kein
+///   `visibility`-Filter mehr), sondern im Verkauf-`SegmentedButton`.
+///   Alle 5 Sektionen sind immer sichtbar.
 ///
-/// Die alte Custom-Sidebar hat eigene Hover-/Selected-/Badge-Logik
-/// gebaut, ohne Material-3-Keyboard-Focus + M3-State-Layer. Wir wechseln
-/// auf [NavigationRail] aus dem Material-Framework, behalten aber
-/// Branding-Header (Logo + optional Wordmark) und das
-/// `_navVisibility`-Filter-Verhalten (Free-Plan-Gating, Feature-Flags)
-/// 1:1 bei.
+/// **API-Design:**
+/// - Callback liefert [MainSection] (Enum), nicht den int-Index.
+/// - Icon-/Label-/Badge-Resolver werden via Builder injiziert — die Logik
+///   (welches Icon, welches Label, welcher Badge-Count) lebt im Caller
+///   (`main_screen.dart`) und bleibt dort.
+/// - [extended] berechnet der Caller via Viewport-Breite (≥1200) — das
+///   Widget kennt keinen Breakpoint.
 ///
-/// **API-Design-Punkte:**
-///
-/// - Callback liefert `MainTab` (Enum), NICHT den int-Index der Rail.
-///   Der dichte `selectedIndex` der Rail ≠ `MainTab.index`, sobald ein
-///   Tab via [visibility] ausgeblendet ist. Index-Mapping (
-///   `visibleTabAtRailIndex`) passiert intern.
-/// - Icon-/Label-/Badge-Resolver werden via Builder injiziert — die
-///   Logik (welches Outline-Icon, welches Selected-Icon, welcher
-///   Badge-Count) lebt heute in `main_screen.dart` und soll dort
-///   bleiben.
-/// - [extended] berechnet der Caller via Container-Breite (≥1200) —
-///   das Widget kennt keinen Breakpoint.
-///
-/// **Bug-Hunter-Fix (Flutter-Assertion):**
-/// `extended: true` UND `labelType != null/none` löst `assert(!extended
-/// || labelType == null || labelType == NavigationRailLabelType.none)`
-/// im Material-Framework aus. Wir setzen daher:
+/// **Bug-Hunter-Fix (Flutter-Assertion, weiter gültig):**
+/// `extended: true` UND `labelType != null/none` löst die Material-
+/// Assertion aus. Daher:
 /// - `extended: true`  → `labelType: null`
 /// - `extended: false` → `labelType: NavigationRailLabelType.none`
-///   (Labels sind nicht hilfreich, wenn die Rail collapsed ist;
-///   `Tooltip` über das Icon zeigt sie. Hätten wir hier `.all` gesetzt,
-///   würden Labels unterhalb der Icons immer mitgerendert — das passt
-///   nicht zur heutigen Sidebar-Optik, in der collapsed = nur Icons.)
 ///
-/// **Scrollable (Bug-Hunter Pre-Filter-Finding):**
-/// 11 [MainTab.values] passen in 900px-Höhe knapp, sobald Branding-
-/// Header + System-UI dazu kommen, wird's eng. Flutter SDK ≥ 3.27 hat
-/// `NavigationRail.scrollable: true` — das wird gesetzt, damit
-/// vertikales Scrollen automatisch greift.
-///
-/// **A11y-Keys** (Pflicht laut Plan §5.1.1):
+/// **A11y-Keys:**
 /// - `Key('mainNavRail')` auf dem Root.
-/// - `Key('navRailDestination-<tab.name>')` auf jeder Destination.
+/// - `Key('navRailDestination-<section.name>')` auf jeder Destination
+///   (z.B. `navRailDestination-verkauf`).
 class AppNavRail extends StatelessWidget {
-  /// Alle [MainTab]s in der Reihenfolge, in der sie potenziell angezeigt
-  /// werden. Der Caller übergibt die volle Liste; der Filter passiert
-  /// intern via [visibility].
-  final List<MainTab> tabs;
+  /// Die 5 Sektionen in Anzeigereihenfolge. Der Caller übergibt die volle
+  /// Liste (`MainSection.values`).
+  final List<MainSection> sections;
 
-  /// Per-Tab-Sichtbarkeit (Free-Plan-Gating, Feature-Flags etc.).
-  /// `null` oder `true` ⇒ sichtbar, `false` ⇒ ausgeblendet.
-  final Map<MainTab, bool> visibility;
+  /// Aktuell gewählte Sektion.
+  final MainSection selectedSection;
 
-  /// Aktuell gewählter Tab. Falls dieser Tab in [visibility] auf
-  /// `false` steht, fällt das Widget defensiv auf
-  /// `selectedIndex: 0` zurück (kein Crash, kein automatischer
-  /// `onSelect`-Call — der Caller soll widersprüchliche States nicht
-  /// produzieren).
-  final MainTab selectedTab;
-
-  /// Callback bei Tab-Auswahl. Liefert [MainTab], nicht int.
-  final ValueChanged<MainTab> onSelect;
+  /// Callback bei Sektions-Auswahl. Liefert [MainSection], nicht int.
+  final ValueChanged<MainSection> onSelect;
 
   /// Erweiterte Variante (Labels neben Icons sichtbar, breitere Rail).
-  /// Caller berechnet das aus der Container-Breite (≥ 1200 dp).
+  /// Caller berechnet das aus der Viewport-Breite (≥1200 dp).
   final bool extended;
 
-  /// Icon-Resolver pro Tab. Erhält [tab] und [selected]-Flag; soll für
-  /// `selected == true` das gefüllte/aktive Icon liefern, sonst das
+  /// Icon-Resolver pro Sektion. Erhält [section] und [selected]-Flag; soll
+  /// für `selected == true` das gefüllte/aktive Icon liefern, sonst das
   /// Outline-Icon.
-  final Widget Function(MainTab tab, bool selected) iconBuilder;
+  final Widget Function(MainSection section, bool selected) iconBuilder;
 
-  /// Label-Resolver pro Tab (l10n-strings aus dem Caller).
-  final String Function(MainTab tab) labelBuilder;
+  /// Label-Resolver pro Sektion (l10n-strings aus dem Caller).
+  final String Function(MainSection section) labelBuilder;
 
-  /// Optional: Badge-Resolver (z.B. Inbox-Unread-Count). Liefert
-  /// `null`, wenn der Tab keinen Badge tragen soll.
-  final Widget? Function(MainTab tab)? badgeBuilder;
+  /// Optional: Badge-Resolver (z.B. aggregierter Tracking-Count auf der
+  /// Verkauf-Sektion). Liefert `null`, wenn die Sektion keinen Badge trägt.
+  final Widget? Function(MainSection section)? badgeBuilder;
 
   const AppNavRail({
     super.key,
-    required this.tabs,
-    required this.visibility,
-    required this.selectedTab,
+    required this.sections,
+    required this.selectedSection,
     required this.onSelect,
     required this.extended,
     required this.iconBuilder,
@@ -98,32 +71,19 @@ class AppNavRail extends StatelessWidget {
     this.badgeBuilder,
   });
 
-  /// Sicherheits-kritisch: Filter erzeugt die tatsächlich gerenderten
-  /// Tabs aus der vollen [tabs]-Liste und [visibility]-Map. Reihenfolge
-  /// bleibt erhalten — der dichte int-Index der NavigationRail
-  /// referenziert diese Liste.
-  List<MainTab> _visibleTabs() {
-    return tabs.where((t) => visibility[t] != false).toList(growable: false);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final visible = _visibleTabs();
-
-    // Defensiver Fallback: wenn [selectedTab] gerade nicht sichtbar ist
-    // (z.B. Plan-Downgrade hat einen Premium-Tab versteckt), zeigen wir
-    // die Rail mit selectedIndex 0 — kein Crash. Der Caller behält die
-    // Verantwortung, den State zu korrigieren (typischerweise via
-    // initial-Tab-Logik in main_screen).
-    final selectedIndex = visible.contains(selectedTab)
-        ? visible.indexOf(selectedTab)
+    // Defensiver Fallback: wenn [selectedSection] (warum auch immer) nicht
+    // in [sections] ist, zeigen wir Index 0 — kein Crash.
+    final selectedIndex = sections.contains(selectedSection)
+        ? sections.indexOf(selectedSection)
         : 0;
 
-    // Branding-Header — identisch zur heutigen `_Sidebar`:
-    // - BrandMark immer sichtbar, mit eingebettetem Indigo-Gradient-Hintergrund.
-    // - BrandWordmark NUR wenn extended (sonst zu breit für die 64px-Rail).
-    // - Hintergrund-Token: AppTheme.navBg (fix dunkel, keine Of(context)-Variante,
-    //   weil die Sidebar in beiden Themes Brand-dunkel bleiben soll).
+    // Branding-Header — identisch zur bisherigen Rail:
+    // - BrandMark immer sichtbar, mit Indigo-Gradient-Hintergrund.
+    // - BrandWordmark NUR wenn extended (sonst zu breit für die Rail).
+    // - Hintergrund-Token: AppTheme.navBg (fix dunkel in beiden Themes,
+    //   weil die Rail Brand-dunkel bleiben soll).
     final leading = SizedBox(
       height: 56,
       child: Padding(
@@ -148,8 +108,7 @@ class AppNavRail extends StatelessWidget {
     );
 
     // API-Fix: bei extended NIE labelType setzen, bei !extended .none.
-    final labelType =
-        extended ? null : NavigationRailLabelType.none;
+    final labelType = extended ? null : NavigationRailLabelType.none;
 
     return NavigationRail(
       key: const Key('mainNavRail'),
@@ -157,9 +116,6 @@ class AppNavRail extends StatelessWidget {
       selectedIndex: selectedIndex,
       extended: extended,
       labelType: labelType,
-      // 11 Tabs in einer 900-px-Höhe sind eng — Flutter ≥ 3.27 lässt die
-      // Rail-Items scrollen, sobald sie nicht passen.
-      scrollable: true,
       leading: leading,
       useIndicator: true,
       indicatorColor: Colors.white.withAlpha(20),
@@ -182,29 +138,27 @@ class AppNavRail extends StatelessWidget {
         fontWeight: FontWeight.w400,
       ),
       onDestinationSelected: (int railIndex) {
-        // Index-Mapping: dichter NavRail-Index → MainTab.
-        if (railIndex < 0 || railIndex >= visible.length) return;
-        onSelect(visible[railIndex]);
+        if (railIndex < 0 || railIndex >= sections.length) return;
+        onSelect(sections[railIndex]);
       },
       destinations: [
-        for (final tab in visible)
-          _buildDestination(context, tab, tab == selectedTab),
+        for (final section in sections)
+          _buildDestination(context, section, section == selectedSection),
       ],
     );
   }
 
   NavigationRailDestination _buildDestination(
     BuildContext context,
-    MainTab tab,
+    MainSection section,
     bool selected,
   ) {
-    final outlineIcon = iconBuilder(tab, false);
-    final selectedIcon = iconBuilder(tab, true);
-    final label = labelBuilder(tab);
+    final outlineIcon = iconBuilder(section, false);
+    final selectedIcon = iconBuilder(section, true);
+    final label = labelBuilder(section);
 
-    // Optional: Badge um das Icon herum (z.B. Inbox-Unread-Count).
-    // Konvention aus dem alten `_NavItem`: badgeKey = 'mobile-nav-<tab>-badge'.
-    final badge = badgeBuilder?.call(tab);
+    // Optional: Badge um das Icon herum (z.B. aggregierter Tracking-Count).
+    final badge = badgeBuilder?.call(section);
 
     Widget wrapBadge(Widget icon) {
       if (badge == null) return icon;
@@ -216,7 +170,7 @@ class AppNavRail extends StatelessWidget {
             top: -4,
             right: -4,
             child: KeyedSubtree(
-              key: Key('mobile-nav-${tab.name}-badge'),
+              key: Key('mobile-nav-${section.name}-badge'),
               child: badge,
             ),
           ),
@@ -224,14 +178,12 @@ class AppNavRail extends StatelessWidget {
       );
     }
 
-    // `NavigationRailDestination` selbst nimmt keinen `key`-Parameter
-    // für die einzelne Destination — der Test/Selector-Anker landet
-    // daher auf dem Icon-Subtree. NavigationRail rendert je nach
-    // Selection-State entweder `icon` ODER `selectedIcon` (nicht beide),
-    // daher tragen BEIDE den Destination-Key, damit ein Test sicher
-    // einen einzigen Treffer findet — egal ob das Tab gerade selected
-    // ist oder nicht.
-    final destKey = Key('navRailDestination-${tab.name}');
+    // `NavigationRailDestination` nimmt keinen `key`-Parameter — der Anker
+    // landet auf dem Icon-Subtree. NavigationRail rendert je nach
+    // Selection-State entweder `icon` ODER `selectedIcon`; daher tragen
+    // BEIDE den Destination-Key, damit ein Test sicher genau einen Treffer
+    // findet.
+    final destKey = Key('navRailDestination-${section.name}');
     return NavigationRailDestination(
       icon: KeyedSubtree(
         key: destKey,
