@@ -5611,4 +5611,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get appBarMenuCsvExport => 'CSV exportieren';
+
+  @override
+  String get quickActionsTitle => 'Schnellaktionen';
+
+  @override
+  String get quickActionsTooltip => 'Schnellaktionen';
 }
