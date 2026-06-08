@@ -20,7 +20,16 @@ import '../widgets/statistics/tabs/overview_tab.dart';
 import '../widgets/statistics/tabs/products_shops_tab.dart';
 
 class StatisticsScreen extends StatefulWidget {
-  const StatisticsScreen({super.key});
+  /// When `true`, the top-level background [Container] is omitted so the
+  /// screen can be embedded inside a detail pane (e.g. [SectionHubScreen])
+  /// without doubling the background colour. The [TabController], [TabBar]
+  /// and [TabBarView] are unaffected — they do not depend on a [Scaffold].
+  ///
+  /// Default `false` preserves the existing full-screen behaviour used by
+  /// [AnalyticsSectionScreen] and any [Navigator.push] call-sites.
+  final bool embedded;
+
+  const StatisticsScreen({super.key, this.embedded = false});
 
   @override
   State<StatisticsScreen> createState() => _StatisticsScreenState();
@@ -138,78 +147,89 @@ class _StatisticsScreenState extends State<StatisticsScreen>
               lowStockThreshold: prefs.lowStockThreshold,
             );
 
-            return Container(
-              color: AppTheme.bgAppOf(context),
-              child: Column(
-                children: [
-                  StatisticsFilterBar(onExport: () => _onExport(stats)),
-                  Material(
-                    color: AppTheme.bgSurfaceOf(context),
-                    elevation: 0,
-                    child: TabBar(
+            // Build the shared tab body (TabBar + TabBarView).
+            // StatisticsScreen never owns a Scaffold or AppBar — the tab
+            // controller lives in State via SingleTickerProviderStateMixin
+            // and is independent of any Scaffold.
+            //
+            // embedded == true  → bare Column, host detail pane provides bg.
+            // embedded == false → original Container(bgApp) wrapper intact
+            //                     (AnalyticsSectionScreen / full-screen path).
+            final tabBody = Column(
+              children: [
+                StatisticsFilterBar(onExport: () => _onExport(stats)),
+                Material(
+                  color: AppTheme.bgSurfaceOf(context),
+                  elevation: 0,
+                  child: TabBar(
+                    controller: _tab,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    indicatorColor: AppTheme.accentTextOf(context),
+                    indicatorWeight: 2,
+                    labelColor: AppTheme.accentTextOf(context),
+                    unselectedLabelColor: AppTheme.textMutedOf(context),
+                    dividerColor: AppTheme.borderOf(context),
+                    labelStyle: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700),
+                    unselectedLabelStyle: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w500),
+                    tabs: [
+                      Tab(icon: const Icon(Icons.dashboard_outlined, size: 16), text: AppLocalizations.of(context).statsTabOverview),
+                      Tab(icon: const Icon(Icons.people_outline, size: 16), text: AppLocalizations.of(context).statsTabBuyers),
+                      Tab(icon: const Icon(Icons.shopping_bag_outlined, size: 16), text: AppLocalizations.of(context).statsTabProductsShops),
+                      Tab(icon: const Icon(Icons.inventory_2_outlined, size: 16), text: AppLocalizations.of(context).statsTabInventorySuppliers),
+                      Tab(icon: const Icon(Icons.account_balance_outlined, size: 16), text: AppLocalizations.of(context).statsTabFinance),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  // ExcludeSemantics prevents accessibility_tools from
+                  // emitting false-positive "missing semantic label" warnings
+                  // on individual fl_chart canvas elements in debug builds.
+                  // Real a11y for charts is provided by Semantics-wrapper
+                  // labels on the tab headings and KPI summaries (Epic D §5.5).
+                  child: ExcludeSemantics(
+                    excluding: kDebugMode,
+                    child: TabBarView(
                       controller: _tab,
-                      isScrollable: true,
-                      tabAlignment: TabAlignment.start,
-                      indicatorColor: AppTheme.accentTextOf(context),
-                      indicatorWeight: 2,
-                      labelColor: AppTheme.accentTextOf(context),
-                      unselectedLabelColor: AppTheme.textMutedOf(context),
-                      dividerColor: AppTheme.borderOf(context),
-                      labelStyle: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w700),
-                      unselectedLabelStyle: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w500),
-                      tabs: [
-                        Tab(icon: const Icon(Icons.dashboard_outlined, size: 16), text: AppLocalizations.of(context).statsTabOverview),
-                        Tab(icon: const Icon(Icons.people_outline, size: 16), text: AppLocalizations.of(context).statsTabBuyers),
-                        Tab(icon: const Icon(Icons.shopping_bag_outlined, size: 16), text: AppLocalizations.of(context).statsTabProductsShops),
-                        Tab(icon: const Icon(Icons.inventory_2_outlined, size: 16), text: AppLocalizations.of(context).statsTabInventorySuppliers),
-                        Tab(icon: const Icon(Icons.account_balance_outlined, size: 16), text: AppLocalizations.of(context).statsTabFinance),
+                      children: [
+                        OverviewTab(stats: stats),
+                        BuyersTab(stats: stats),
+                        ProductsShopsTab(stats: stats),
+                        InventorySuppliersTab(stats: stats),
+                        FinanceTab(
+                          stats: stats,
+                          onExportTax: () async {
+                            final svc = StatisticsExportService(stats);
+                            final l10n = AppLocalizations.of(context);
+                            try {
+                              await svc.saveTaxCsv();
+                              if (!context.mounted) return;
+                              AppFeedback.success(
+                                context,
+                                l10n.statsTaxExportSaved,
+                              );
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              AppFeedback.error(
+                                context,
+                                l10n.appFeedbackErrorDefault,
+                              );
+                            }
+                          },
+                        ),
                       ],
                     ),
                   ),
-                  Expanded(
-                    // ExcludeSemantics prevents accessibility_tools from
-                    // emitting false-positive "missing semantic label" warnings
-                    // on individual fl_chart canvas elements in debug builds.
-                    // Real a11y for charts is provided by Semantics-wrapper
-                    // labels on the tab headings and KPI summaries (Epic D §5.5).
-                    child: ExcludeSemantics(
-                      excluding: kDebugMode,
-                      child: TabBarView(
-                        controller: _tab,
-                        children: [
-                          OverviewTab(stats: stats),
-                          BuyersTab(stats: stats),
-                          ProductsShopsTab(stats: stats),
-                          InventorySuppliersTab(stats: stats),
-                          FinanceTab(
-                            stats: stats,
-                            onExportTax: () async {
-                              final svc = StatisticsExportService(stats);
-                              final l10n = AppLocalizations.of(context);
-                              try {
-                                await svc.saveTaxCsv();
-                                if (!context.mounted) return;
-                                AppFeedback.success(
-                                  context,
-                                  l10n.statsTaxExportSaved,
-                                );
-                              } catch (e) {
-                                if (!context.mounted) return;
-                                AppFeedback.error(
-                                  context,
-                                  l10n.appFeedbackErrorDefault,
-                                );
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
+            );
+
+            if (widget.embedded) return tabBody;
+            return Container(
+              color: AppTheme.bgAppOf(context),
+              child: tabBody,
             );
           },
         );

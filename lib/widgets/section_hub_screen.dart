@@ -161,9 +161,32 @@ class _SectionHubScreenState extends State<SectionHubScreen> {
                 color: AppTheme.borderOf(context),
               ),
 
-              // Detail column
+              // Detail column — AnimatedSwitcher provides a soft fade when the
+              // selected tile changes (Desktop only). The ValueKey is derived
+              // from the tile's stable identity key so the switcher fires ONLY
+              // on a real selection change, never on child-widget rebuilds.
               Expanded(
-                child: _DetailPane(selected: effectiveSelected),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  transitionBuilder: (child, animation) =>
+                      FadeTransition(opacity: animation, child: child),
+                  // Prevent layout from collapsing during the cross-fade.
+                  layoutBuilder: (currentChild, previousChildren) => Stack(
+                    alignment: Alignment.topLeft,
+                    fit: StackFit.expand,
+                    children: [
+                      ...previousChildren,
+                      ?currentChild,
+                    ],
+                  ),
+                  child: _DetailPane(
+                    // ValueKey changes only when the selected tile changes, so
+                    // AnimatedSwitcher does not re-animate on every setState
+                    // inside the embedded sub-screen.
+                    key: ValueKey(effectiveSelected?.key.toString()),
+                    selected: effectiveSelected,
+                  ),
+                ),
               ),
             ],
           );
@@ -210,7 +233,7 @@ class _TileList extends StatelessWidget {
 // ─── Detail pane (Desktop right column) ───────────────────────────────────────
 
 class _DetailPane extends StatelessWidget {
-  const _DetailPane({required this.selected});
+  const _DetailPane({super.key, required this.selected});
 
   final SectionHubTile? selected;
 
