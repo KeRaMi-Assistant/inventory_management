@@ -145,11 +145,34 @@ class AdaptiveNavScaffold extends StatelessWidget {
   }
 
   // ── Phone (narrow) ──────────────────────────────────────────────────────
+  //
+  // T3.4 — Collapsing Phone-AppBar via NestedScrollView + SliverAppBar.
+  //
+  // Pattern rationale:
+  // • `floatHeaderSlivers: true` causes NestedScrollView to float the header
+  //   sliver back into view as soon as the user starts scrolling up, even if
+  //   the inner list hasn't reached the top yet (= "floating" behaviour).
+  // • `floating: true, snap: true` on the SliverAppBar means the bar pops
+  //   fully into view on the first upward scroll gesture (snap) rather than
+  //   requiring the user to scroll all the way to the top.
+  // • `pinned: false` (default) — the bar vanishes entirely when scrolling
+  //   down, reclaiming 56 dp of vertical space on small phones.
+  // • NO SliverOverlapAbsorber needed: overlap absorption is only required
+  //   when using a *pinned* SliverAppBar (which leaves a persistent gap that
+  //   the inner scroll view must be offset from). With a pure floating/snap
+  //   SliverAppBar the bar is completely out of the layout when collapsed, so
+  //   there is no persistent gap and no overlap to absorb.
+  // • `forceElevated: innerBoxIsScrolled` adds a subtle shadow on the bar
+  //   when the inner list is not at the top, matching Material 3 scroll
+  //   elevation conventions.
+  // • Screens without a primary scrollable list (e.g. empty-state centred
+  //   widgets): the bar simply stays expanded — graceful, no bug.
+  // • Bottom-Nav + FAB remain on the Scaffold (fix, never collapse).
+  // • Desktop path (_buildDesktopScaffold) is 1:1 unchanged.
 
   Widget _buildPhoneScaffold(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: _buildPhoneAppBar(context, l10n),
       floatingActionButton: floatingActionButton,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBarTheme(
@@ -181,18 +204,42 @@ class AdaptiveNavScaffold extends StatelessWidget {
           ],
         ),
       ),
-      body: body,
+      body: NestedScrollView(
+        // Fresh scroll/collapse state per section: AdaptiveNavScaffold is
+        // stateless and only `body` swaps on a section switch, so without a
+        // section-scoped key Flutter recycles this NestedScrollView's State
+        // (incl. the floating SliverAppBar's collapse offset) — the new
+        // section would then start with a hidden bar (and clip its first
+        // item). Keying by section resets the bar to expanded on every switch.
+        key: ValueKey(selectedSection),
+        floatHeaderSlivers: true,
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          _buildSliverAppBar(context, l10n, innerBoxIsScrolled),
+        ],
+        body: body,
+      ),
     );
   }
 
-  /// Single-Source der Phone-AppBar: Titel + Actions (InvitesBell, Search,
-  /// Help[Key appBar-help-action], CSV-Overflow[Key appBar-overflow-menu]).
-  PreferredSizeWidget _buildPhoneAppBar(
+  /// Single-Source der Phone-AppBar als SliverAppBar (T3.4):
+  /// floating + snap — verschwindet beim Runter-Scrollen, erscheint sofort
+  /// beim Hoch-Scrollen wieder.
+  ///
+  /// Titel + Actions (InvitesBell, Search, Help[Key appBar-help-action],
+  /// CSV-Overflow[Key appBar-overflow-menu]) sind 1:1 identisch zur
+  /// früheren `_buildPhoneAppBar`-Implementation.
+  SliverAppBar _buildSliverAppBar(
     BuildContext context,
     AppLocalizations l10n,
+    bool innerBoxIsScrolled,
   ) {
-    return AppBar(
+    return SliverAppBar(
       title: Text(sectionTitle),
+      floating: true,
+      snap: true,
+      // pinned: false (default) — Bar verschwindet beim Runter-Scrollen
+      // vollständig; kein SliverOverlapAbsorber nötig.
+      forceElevated: innerBoxIsScrolled,
       actions: [
         const InvitesBell(),
         IconButton(
