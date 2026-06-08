@@ -9961,6 +9961,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'CSV exportieren'**
   String get appBarMenuCsvExport;
+
+  /// Titel des Lager-Hub-Quick-Actions-Sheets (FAB-Tap im Warehouse-Tab).
+  ///
+  /// In de, this message translates to:
+  /// **'Schnellaktionen'**
+  String get quickActionsTitle;
+
+  /// FAB-Tooltip im Lager-Hub (Warehouse-Tab).
+  ///
+  /// In de, this message translates to:
+  /// **'Schnellaktionen'**
+  String get quickActionsTooltip;
 }
 
 class _AppLocalizationsDelegate

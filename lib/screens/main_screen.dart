@@ -38,6 +38,10 @@ class _MainScreenState extends State<MainScreen> {
   MainTab _selectedIndex = MainTab.dashboard;
   String? _selectedTicket;
 
+  // T3.6 — Sektions-Default-Memory: letzter aktiver Sub-Tab je Sektion.
+  // Wird OHNE setState aktualisiert (reines Bookkeeping, kein Rebuild-Trigger).
+  final Map<MainSection, MainTab> _lastTabPerSection = {};
+
   // ── Sektions-Ebene (Tier-2b) ───────────────────────────────────────────
   // Die 5 Sektionen liegen ÜBER dem stabilen MainTab-Enum. Icons/Labels
   // werden pro Sektion aufgelöst — der State-Schlüssel bleibt _selectedIndex
@@ -225,6 +229,131 @@ class _MainScreenState extends State<MainScreen> {
     setState(() => _selectedIndex = MainTab.deals);
   }
 
+  // T3.7 — Quick-Actions-BottomSheet für den Lager-Hub (MainTab.warehouse).
+  // rootContext ist der Context des Consumer2-Builders — bleibt nach
+  // Navigator.pop(sheetContext) noch mounted.
+  void _showLagerQuickActions(
+      BuildContext rootContext, InventoryProvider provider) {
+    final l10n = AppLocalizations.of(rootContext);
+    showModalBottomSheet<void>(
+      context: rootContext,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      backgroundColor: AppTheme.bgSurfaceOf(rootContext),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag-Handle
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 4),
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.borderOf(rootContext),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              // Sheet-Titel
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    l10n.quickActionsTitle,
+                    style: TextStyle(
+                      color: AppTheme.textPrimaryOf(rootContext),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              // 1. Neuer Artikel
+              ListTile(
+                key: const Key('quickAction-newItem'),
+                leading:
+                    Icon(Icons.inventory_2_outlined,
+                        color: AppTheme.textSecondaryOf(rootContext)),
+                title: Text(
+                  l10n.inventoryAddItem,
+                  style: TextStyle(color: AppTheme.textPrimaryOf(rootContext)),
+                ),
+                minVerticalPadding: 12,
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  InventoryScreen.showAddDialog(rootContext);
+                },
+              ),
+              // 2. Neuer Deal
+              ListTile(
+                key: const Key('quickAction-newDeal'),
+                leading: Icon(Icons.add_shopping_cart_outlined,
+                    color: AppTheme.textSecondaryOf(rootContext)),
+                title: Text(
+                  l10n.dealNew,
+                  style: TextStyle(color: AppTheme.textPrimaryOf(rootContext)),
+                ),
+                minVerticalPadding: 12,
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  showDialog(
+                    context: rootContext,
+                    barrierDismissible: false,
+                    builder: (_) => const AddEditDealDialog(),
+                  );
+                },
+              ),
+              // 3. CSV importieren
+              ListTile(
+                key: const Key('quickAction-csvImport'),
+                leading: Icon(Icons.upload_file_outlined,
+                    color: AppTheme.textSecondaryOf(rootContext)),
+                title: Text(
+                  l10n.appBarMenuCsvImport,
+                  style: TextStyle(color: AppTheme.textPrimaryOf(rootContext)),
+                ),
+                minVerticalPadding: 12,
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _import(rootContext, provider);
+                },
+              ),
+              // 4. CSV exportieren
+              ListTile(
+                key: const Key('quickAction-csvExport'),
+                leading: Icon(Icons.download_outlined,
+                    color: AppTheme.textSecondaryOf(rootContext)),
+                title: Text(
+                  l10n.appBarMenuCsvExport,
+                  style: TextStyle(color: AppTheme.textPrimaryOf(rootContext)),
+                ),
+                minVerticalPadding: 12,
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _export(
+                    rootContext,
+                    provider,
+                    rootContext.read<CatalogProvider>(),
+                  );
+                },
+              ),
+              // Sicherheitsabstand zum Home-Indicator (SafeArea übernimmt
+              // nochmal, aber explizites Padding hält das Sheet luftig)
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   /// T1.2 — kontextuelles „Neu" für den aktuellen Tab (Shortcut: n).
   /// Öffnet den jeweils passenden Erstellungsdialog/-flow, sofern vorhanden.
   void _contextualNew() {
@@ -251,9 +380,20 @@ class _MainScreenState extends State<MainScreen> {
 
   /// Wechselt IN eine Sektion (Bottom-Nav-Tap oder Rail-Klick). No-op, wenn
   /// die Sektion bereits aktiv ist (verhindert Sub-Tab-Reset).
+  /// T3.6: Stellt den zuletzt aktiven Sub-Tab der Ziel-Sektion wieder her.
   void _selectSection(MainSection section) {
     if (sectionOf(_selectedIndex) == section) return;
-    setState(() => _selectedIndex = defaultTabOf(section));
+    setState(() {
+      final restored = _lastTabPerSection[section];
+      if (restored == null) {
+        _selectedIndex = defaultTabOf(section);
+      } else {
+        // Edge-Case (a): Inbox-Tab im Memory, aber Plan ohne Postfach →
+        // Fallback auf defaultTabOf (wird im build-Körper ggf. noch einmal
+        // durch den Downgrade-Guard korrigiert).
+        _selectedIndex = restored;
+      }
+    });
   }
 
   /// Baut das Bottom-Nav-Icon einer Sektion inkl. aggregiertem Tracking-Badge
@@ -321,6 +461,21 @@ class _MainScreenState extends State<MainScreen> {
         final narrow = width < Breakpoints.navRail;
         final visibility = _navVisibility(billing);
         final inboxEnabled = visibility[MainTab.inbox] != false;
+
+        // T3.6 — Sektions-Memory aufzeichnen: idempotent, KEIN setState,
+        // kein Rebuild-Trigger. Fängt alle Pfade ab, über die _selectedIndex
+        // gesetzt wird (Bottom-Nav, Rail, Deep-Link, _openTicket, Help-Icon,
+        // GlobalSearch selectTab).
+        // ignore: invalid_use_of_protected_member
+        _lastTabPerSection[sectionOf(_selectedIndex)] = _selectedIndex;
+
+        // T3.6 Edge-Case (a): Inbox-Tab im Memory, aber Plan ohne Postfach
+        // → beim nächsten Betreten der Sektion schlägt der Memory keinen
+        //   disabled Tab vor.
+        if (!inboxEnabled) {
+          _lastTabPerSection.remove(MainSection.verkauf);
+        }
+
         // Wenn der User auf einen Plan ohne Postfach downgradet, während
         // er den Inbox-Tab offen hat, automatisch zurück aufs Dashboard.
         if (_selectedIndex == MainTab.inbox && !inboxEnabled) {
@@ -372,6 +527,14 @@ class _MainScreenState extends State<MainScreen> {
             onPressed: () => InventoryScreen.showAddDialog(context),
             icon: const Icon(Icons.add, size: 18),
             label: Text(l10n.inventoryAddItem),
+          );
+        } else if (_selectedIndex == MainTab.warehouse) {
+          // T3.7: Lager-Hub — Quick-Actions-Sheet-FAB.
+          fab = FloatingActionButton(
+            key: const Key('lagerQuickActionsFab'),
+            tooltip: l10n.quickActionsTooltip,
+            onPressed: () => _showLagerQuickActions(context, provider),
+            child: const Icon(Icons.add),
           );
         } else {
           fab = null;

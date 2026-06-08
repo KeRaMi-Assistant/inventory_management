@@ -2788,5 +2788,10 @@
   "appBarMenuCsvImport": "CSV importieren",
   "@appBarMenuCsvImport": { "description": "AppBar-Overflow-Menü-Eintrag auf Phone für CSV-Import." },
   "appBarMenuCsvExport": "CSV exportieren",
-  "@appBarMenuCsvExport": { "description": "AppBar-Overflow-Menü-Eintrag auf Phone für CSV-Export." }
+  "@appBarMenuCsvExport": { "description": "AppBar-Overflow-Menü-Eintrag auf Phone für CSV-Export." },
+
+  "quickActionsTitle": "Schnellaktionen",
+  "@quickActionsTitle": { "description": "Titel des Lager-Hub-Quick-Actions-Sheets (FAB-Tap im Warehouse-Tab)." },
+  "quickActionsTooltip": "Schnellaktionen",
+  "@quickActionsTooltip": { "description": "FAB-Tooltip im Lager-Hub (Warehouse-Tab)." }
 }

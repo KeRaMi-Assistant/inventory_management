@@ -2788,5 +2788,10 @@
   "appBarMenuCsvImport": "Import CSV",
   "@appBarMenuCsvImport": { "description": "Phone AppBar overflow menu entry for CSV import." },
   "appBarMenuCsvExport": "Export CSV",
-  "@appBarMenuCsvExport": { "description": "Phone AppBar overflow menu entry for CSV export." }
+  "@appBarMenuCsvExport": { "description": "Phone AppBar overflow menu entry for CSV export." },
+
+  "quickActionsTitle": "Quick actions",
+  "@quickActionsTitle": { "description": "Title of the warehouse hub quick-actions sheet (FAB tap on warehouse tab)." },
+  "quickActionsTooltip": "Quick actions",
+  "@quickActionsTooltip": { "description": "FAB tooltip on the warehouse hub (warehouse tab)." }
 }
