@@ -9,6 +9,7 @@ import '../models/product.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/catalog_provider.dart';
 import '../providers/inventory_provider.dart';
+import '../providers/purchasing_provider.dart';
 import '../services/purchase_order_pdf_service.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/barcode_scanner_sheet.dart';
@@ -67,7 +68,7 @@ class _PurchaseOrderDetailScreenState
       _itemsError = null;
     });
     try {
-      final provider = Provider.of<InventoryProvider>(context, listen: false);
+      final provider = Provider.of<PurchasingProvider>(context, listen: false);
       final items = await provider.loadPurchaseOrderItems(_order.id!);
       if (mounted) {
         setState(() {
@@ -93,7 +94,12 @@ class _PurchaseOrderDetailScreenState
 
   Future<void> _bookGoodsReceipt() async {
     final l10n = AppLocalizations.of(context);
+    // Dual-provider: bookGoodsReceipt is a cross-domain orchestrator that stays
+    // on InventoryProvider (writes inventory state). The refreshed PO header is
+    // read back from PurchasingProvider, whose cache InventoryProvider updates
+    // via replacePurchaseOrderHeader during the booking.
     final provider = Provider.of<InventoryProvider>(context, listen: false);
+    final purchasing = Provider.of<PurchasingProvider>(context, listen: false);
     final items = _items;
     if (items == null || items.isEmpty) return;
 
@@ -140,9 +146,9 @@ class _PurchaseOrderDetailScreenState
 
         AppFeedback.success(context, l10n.goodsReceiptSuccess);
 
-        // Reload order to get updated status
+        // Reload order to get updated status (PO header lives in Purchasing).
         final refreshed =
-            provider.purchaseOrders.where((o) => o.id == _order.id).firstOrNull;
+            purchasing.purchaseOrders.where((o) => o.id == _order.id).firstOrNull;
         if (refreshed != null) {
           setState(() => _order = refreshed);
         }
@@ -205,7 +211,7 @@ class _PurchaseOrderDetailScreenState
     final l10n = AppLocalizations.of(context);
     // Capture messenger before dialog opens (dialog-context pattern).
     final messenger = ScaffoldMessenger.of(context);
-    final provider = Provider.of<InventoryProvider>(context, listen: false);
+    final provider = Provider.of<PurchasingProvider>(context, listen: false);
 
     final ok = await showConfirmDialog(
       context: context,
@@ -239,7 +245,7 @@ class _PurchaseOrderDetailScreenState
 
   Future<void> _exportPdf() async {
     final l10n = AppLocalizations.of(context);
-    final provider = Provider.of<InventoryProvider>(context, listen: false);
+    final provider = Provider.of<PurchasingProvider>(context, listen: false);
 
     final supplier = _order.supplierId != null
         ? provider.suppliers
@@ -300,7 +306,7 @@ class _PurchaseOrderDetailScreenState
   Future<void> _delete(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
     final navigator = Navigator.of(context);
-    final provider = Provider.of<InventoryProvider>(context, listen: false);
+    final provider = Provider.of<PurchasingProvider>(context, listen: false);
 
     final ok = await showConfirmDialog(
       context: context,
@@ -479,7 +485,7 @@ class _HeadCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final provider = Provider.of<InventoryProvider>(context, listen: false);
+    final provider = Provider.of<PurchasingProvider>(context, listen: false);
     final supplier =
         provider.suppliers.where((s) => s.id == order.supplierId).firstOrNull;
 

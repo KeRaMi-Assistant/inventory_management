@@ -8,6 +8,7 @@ import 'package:inventory_management/models/workspace.dart';
 import 'package:inventory_management/providers/active_workspace_provider.dart';
 import 'package:inventory_management/providers/catalog_provider.dart';
 import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/purchasing_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 import 'package:inventory_management/services/workspace_service.dart';
 import 'package:inventory_management/widgets/add_edit_product_dialog.dart';
@@ -73,6 +74,9 @@ Widget _buildApp({Product? product}) {
           create: (_) => CatalogProvider(repository: _FakeRepository())),
       ChangeNotifierProvider<InventoryProvider>(
           create: (_) => _FakeInventoryProvider()),
+      // The supplier dropdown now reads activeSuppliers from PurchasingProvider.
+      ChangeNotifierProvider<PurchasingProvider>(
+          create: (_) => PurchasingProvider(repository: _FakeRepository())),
       ChangeNotifierProvider<ActiveWorkspaceProvider>(
           create: (_) => _FakeWorkspaceProvider()),
     ],

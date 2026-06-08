@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management/models/inventory_item.dart';
 import 'package:inventory_management/models/purchase_order.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/purchasing_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
 // ignore_for_file: avoid_redundant_argument_values
@@ -126,11 +126,11 @@ PurchaseOrder _makePo({
 
 void main() {
   late _FakeRepository repo;
-  late InventoryProvider provider;
+  late PurchasingProvider provider;
 
   setUp(() {
     repo = _FakeRepository();
-    provider = InventoryProvider(repository: repo);
+    provider = PurchasingProvider(repository: repo);
   });
 
   tearDown(() => provider.dispose());

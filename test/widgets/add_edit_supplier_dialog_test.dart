@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:inventory_management/l10n/app_localizations.dart';
 import 'package:inventory_management/models/supplier.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/purchasing_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 import 'package:inventory_management/widgets/add_edit_supplier_dialog.dart';
 
@@ -36,8 +36,8 @@ class _FakeRepository extends SupabaseRepository {
   Future<Supplier> updateSupplier(Supplier supplier) async => supplier;
 }
 
-class _FakeInventoryProvider extends InventoryProvider {
-  _FakeInventoryProvider() : super(repository: _FakeRepository());
+class _FakePurchasingProvider extends PurchasingProvider {
+  _FakePurchasingProvider() : super(repository: _FakeRepository());
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -45,8 +45,8 @@ class _FakeInventoryProvider extends InventoryProvider {
 // ─────────────────────────────────────────────────────────────────────────────
 
 Widget _buildApp({Supplier? supplier}) {
-  return ChangeNotifierProvider<InventoryProvider>(
-    create: (_) => _FakeInventoryProvider(),
+  return ChangeNotifierProvider<PurchasingProvider>(
+    create: (_) => _FakePurchasingProvider(),
     child: MaterialApp(
       localizationsDelegates: const [
         AppLocalizations.delegate,
