@@ -39,6 +39,17 @@ import 'billing_profile_screen.dart';
 import 'help_screen.dart';
 import 'pricing_screen.dart';
 
+List<Tab> _settingsTabs(AppLocalizations l10n) => [
+  Tab(icon: const Icon(Icons.people_outlined, size: 18), text: l10n.settingsTabBuyers),
+  Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
+  Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
+  Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
+  Tab(icon: const Icon(Icons.mail_outlined, size: 18), text: l10n.settingsTabMailbox),
+  Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
+  Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
+  Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
+];
+
 class SettingsScreen extends StatelessWidget {
   final bool embedded;
   const SettingsScreen({super.key, this.embedded = false});
@@ -58,16 +69,7 @@ class SettingsScreen extends StatelessWidget {
                 indicatorColor: Colors.white,
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white60,
-                tabs: [
-                  Tab(icon: const Icon(Icons.people_outlined, size: 18), text: l10n.settingsTabBuyers),
-                  Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
-                  Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
-                  Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
-                  Tab(icon: const Icon(Icons.mail_outlined, size: 18), text: l10n.settingsTabMailbox),
-                  Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
-                  Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
-                  Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
-                ],
+                tabs: _settingsTabs(l10n),
               ),
             )
           else
@@ -79,16 +81,7 @@ class SettingsScreen extends StatelessWidget {
                 labelColor: AppTheme.accentTextOf(context),
                 unselectedLabelColor: AppTheme.textMutedOf(context),
                 dividerColor: AppTheme.borderOf(context),
-                tabs: [
-                  Tab(icon: const Icon(Icons.people_outlined, size: 18), text: l10n.settingsTabBuyers),
-                  Tab(icon: const Icon(Icons.store_outlined, size: 18), text: l10n.settingsTabShops),
-                  Tab(icon: const Icon(Icons.group_outlined, size: 18), text: l10n.settingsTabTeam),
-                  Tab(icon: const Icon(Icons.notifications_outlined, size: 18), text: l10n.settingsTabPush),
-                  Tab(icon: const Icon(Icons.mail_outlined, size: 18), text: l10n.settingsTabMailbox),
-                  Tab(icon: const Icon(Icons.local_shipping_outlined, size: 18), text: l10n.settingsTabShipping),
-                  Tab(icon: const Icon(Icons.public, size: 18), text: l10n.publicProfileTab),
-                  Tab(icon: const Icon(Icons.tune, size: 18), text: l10n.settingsTabGeneral),
-                ],
+                tabs: _settingsTabs(l10n),
               ),
             ),
           const Expanded(

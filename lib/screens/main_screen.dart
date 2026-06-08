@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
 import '../models/pricing_plan.dart';
 import '../providers/active_workspace_provider.dart';
+import '../providers/app_preferences_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
 import '../providers/filter_provider.dart';
@@ -190,16 +191,58 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _openSearch() {
+    final inventoryProvider = context.read<InventoryProvider>();
+    final catalogProvider = context.read<CatalogProvider>();
+    final prefs = context.read<AppPreferencesProvider>();
     GlobalSearchDialog.show(
       context,
       selectTab: (tab) => setState(() => _selectedIndex = tab),
       openTicket: _openTicket,
+      onImport: () => _import(context, inventoryProvider),
+      onExport: () => _export(context, inventoryProvider, catalogProvider),
+      onNewDeal: () => showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AddEditDealDialog(
+          initialTicketNumber:
+              _selectedIndex == MainTab.tickets ? _selectedTicket : null,
+        ),
+      ),
+      onToggleTheme: () {
+        final current = prefs.themeMode;
+        final next = current == ThemeMode.dark
+            ? ThemeMode.light
+            : ThemeMode.dark;
+        prefs.setThemeMode(next);
+      },
     );
   }
 
   void _goToDealsReview() {
     context.read<FilterProvider>().setOnlyNeedsReview(true);
     setState(() => _selectedIndex = MainTab.deals);
+  }
+
+  /// T1.2 — kontextuelles „Neu" für den aktuellen Tab (Shortcut: n).
+  /// Öffnet den jeweils passenden Erstellungsdialog/-flow, sofern vorhanden.
+  void _contextualNew() {
+    switch (_selectedIndex) {
+      case MainTab.deals:
+      case MainTab.tickets:
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AddEditDealDialog(
+            initialTicketNumber:
+                _selectedIndex == MainTab.tickets ? _selectedTicket : null,
+          ),
+        );
+      case MainTab.inventory:
+        InventoryScreen.showAddDialog(context);
+      default:
+        // Kein kontextuelles Neu für diesen Tab — kein-op.
+        break;
+    }
   }
 
   // ── Bottom-Nav helpers (Phone only, width < 800) ─────────────────────────
@@ -410,6 +453,49 @@ class _MainScreenState extends State<MainScreen> {
                       onPressed: () =>
                           setState(() => _selectedIndex = MainTab.help),
                     ),
+                    // T1.7 — CSV import/export on phone via overflow menu.
+                    PopupMenuButton<_PhoneMenuAction>(
+                      key: const Key('appBar-overflow-menu'),
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (action) {
+                        switch (action) {
+                          case _PhoneMenuAction.csvImport:
+                            _import(context, provider);
+                          case _PhoneMenuAction.csvExport:
+                            _export(
+                              context,
+                              provider,
+                              context.read<CatalogProvider>(),
+                            );
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: _PhoneMenuAction.csvImport,
+                          child: Row(
+                            children: [
+                              Icon(Icons.upload_file_outlined,
+                                  size: 18,
+                                  color: AppTheme.textMutedOf(context)),
+                              const SizedBox(width: 12),
+                              Text(l10n.appBarMenuCsvImport),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: _PhoneMenuAction.csvExport,
+                          child: Row(
+                            children: [
+                              Icon(Icons.download_outlined,
+                                  size: 18,
+                                  color: AppTheme.textMutedOf(context)),
+                              const SizedBox(width: 12),
+                              Text(l10n.appBarMenuCsvExport),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 floatingActionButton: fab,
@@ -503,12 +589,41 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               );
 
+        // T1.2 — Keyboard shortcuts (Desktop/Web only, additiv).
+        // Cmd/Ctrl+1..5 → Tab-Ziele (reorder-robust via Enum-Index).
+        // Slash → Suche/Palette öffnen.
+        // n → kontextuelles „Neu" (FAB-Aktion des aktiven Tabs).
+        final tabShortcuts = <ShortcutActivator, VoidCallback>{
+          const SingleActivator(LogicalKeyboardKey.digit1, meta: true):
+              () => _select(MainTab.dashboard),
+          const SingleActivator(LogicalKeyboardKey.digit1, control: true):
+              () => _select(MainTab.dashboard),
+          const SingleActivator(LogicalKeyboardKey.digit2, meta: true):
+              () => _select(MainTab.deals),
+          const SingleActivator(LogicalKeyboardKey.digit2, control: true):
+              () => _select(MainTab.deals),
+          const SingleActivator(LogicalKeyboardKey.digit3, meta: true):
+              () => _select(MainTab.tickets),
+          const SingleActivator(LogicalKeyboardKey.digit3, control: true):
+              () => _select(MainTab.tickets),
+          const SingleActivator(LogicalKeyboardKey.digit4, meta: true):
+              () => _select(MainTab.inventory),
+          const SingleActivator(LogicalKeyboardKey.digit4, control: true):
+              () => _select(MainTab.inventory),
+          const SingleActivator(LogicalKeyboardKey.digit5, meta: true):
+              () => _select(MainTab.stats),
+          const SingleActivator(LogicalKeyboardKey.digit5, control: true):
+              () => _select(MainTab.stats),
+          const SingleActivator(LogicalKeyboardKey.slash): _openSearch,
+          const SingleActivator(LogicalKeyboardKey.keyN): _contextualNew,
+        };
         return CallbackShortcuts(
           bindings: {
             const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
                 _openSearch,
             const SingleActivator(LogicalKeyboardKey.keyK, control: true):
                 _openSearch,
+            ...tabShortcuts,
           },
           child: Focus(autofocus: true, child: scaffold),
         );
@@ -537,45 +652,114 @@ class _ContentHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // T1.6 — Breadcrumb row (thin, 28 dp)
+        _BreadcrumbRow(title: title),
+        // Main header row (56 dp)
+        Container(
+          height: 56,
+          decoration: BoxDecoration(
+            color: AppTheme.bgSurfaceOf(context),
+            border:
+                Border(bottom: BorderSide(color: AppTheme.borderOf(context))),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimaryOf(context),
+                ),
+              ),
+              const Spacer(),
+              _SearchHint(onTap: onSearch),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: l10n.headerImportCsv,
+                icon: Icon(Icons.upload_file_outlined,
+                    size: 18, color: AppTheme.textMutedOf(context)),
+                onPressed: onImport,
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                tooltip: l10n.headerExportCsv,
+                icon: Icon(Icons.download_outlined,
+                    size: 18, color: AppTheme.textMutedOf(context)),
+                onPressed: onExport,
+              ),
+              const SizedBox(width: 8),
+              const InvitesBell(),
+              const SizedBox(width: 4),
+              const _AccountMenu(),
+              const SizedBox(width: 4),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// T1.6 — Thin breadcrumb bar shown above the desktop content header.
+// Shows the app name › current tab title so the user always has a path
+// indicator — minimal, theme-token-only.
+class _BreadcrumbRow extends StatelessWidget {
+  final String title;
+  const _BreadcrumbRow({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: AppTheme.bgSurfaceOf(context),
-        border: Border(bottom: BorderSide(color: AppTheme.borderOf(context))),
-      ),
+      height: 28,
+      color: AppTheme.bgSubtleOf(context),
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textPrimaryOf(context),
+      child: Tooltip(
+        message: l10n.breadcrumbSeparatorTooltip,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.home_outlined,
+              size: 12,
+              color: AppTheme.textMutedOf(context),
             ),
-          ),
-          const Spacer(),
-          _SearchHint(onTap: onSearch),
-          const SizedBox(width: 8),
-          IconButton(
-            tooltip: l10n.headerImportCsv,
-            icon: Icon(Icons.upload_file_outlined,
-                size: 18, color: AppTheme.textMutedOf(context)),
-            onPressed: onImport,
-          ),
-          const SizedBox(width: 4),
-          IconButton(
-            tooltip: l10n.headerExportCsv,
-            icon: Icon(Icons.download_outlined,
-                size: 18, color: AppTheme.textMutedOf(context)),
-            onPressed: onExport,
-          ),
-          const SizedBox(width: 8),
-          const InvitesBell(),
-          const SizedBox(width: 4),
-          const _AccountMenu(),
-          const SizedBox(width: 4),
-        ],
+            const SizedBox(width: 4),
+            InkWell(
+              borderRadius: BorderRadius.circular(4),
+              onTap: () {}, // Root — no-op (could navigate to dashboard)
+              child: Text(
+                l10n.appTitle,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textMutedOf(context),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Icon(
+                Icons.chevron_right,
+                size: 14,
+                color: AppTheme.textMutedOf(context),
+              ),
+            ),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textSecondaryOf(context),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -942,6 +1126,9 @@ _MoreNavSection _tabSection(MainTab tab) => switch (tab) {
     };
 
 enum _MoreNavSection { manage, tools, account }
+
+/// T1.7 — Actions available in the phone AppBar overflow menu.
+enum _PhoneMenuAction { csvImport, csvExport }
 
 class _MoreNavSheet extends StatefulWidget {
   final List<(IconData, IconData)> icons;

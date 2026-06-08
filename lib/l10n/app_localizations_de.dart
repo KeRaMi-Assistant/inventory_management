@@ -5500,4 +5500,97 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get semanticsChartLoading => 'Diagramm lädt.';
+
+  @override
+  String get paletteNavGroupLabel => 'Navigation';
+
+  @override
+  String get paletteActionGroupLabel => 'Aktionen';
+
+  @override
+  String get paletteNavDashboard => 'Dashboard öffnen';
+
+  @override
+  String get paletteNavDeals => 'Deals öffnen';
+
+  @override
+  String get paletteNavTickets => 'Tickets öffnen';
+
+  @override
+  String get paletteNavInbox => 'Postfach öffnen';
+
+  @override
+  String get paletteNavInventory => 'Lager öffnen';
+
+  @override
+  String get paletteNavSuppliers => 'Lieferanten öffnen';
+
+  @override
+  String get paletteNavStatistics => 'Statistiken öffnen';
+
+  @override
+  String get paletteNavActivity => 'Aktivität öffnen';
+
+  @override
+  String get paletteNavSettings => 'Einstellungen öffnen';
+
+  @override
+  String get paletteNavWarehouse => 'Warenwirtschaft öffnen';
+
+  @override
+  String get paletteNavHelp => 'Hilfe öffnen';
+
+  @override
+  String get paletteSubInventory => 'Bestand (Lager)';
+
+  @override
+  String get paletteSubProductCatalog => 'Artikelstamm (Warenwirtschaft)';
+
+  @override
+  String get paletteSubPurchaseOrders => 'Bestellungen (Warenwirtschaft)';
+
+  @override
+  String get paletteSubWarehouses => 'Lager/Standorte (Warenwirtschaft)';
+
+  @override
+  String get paletteSubCategories => 'Warengruppen (Warenwirtschaft)';
+
+  @override
+  String get paletteSubStocktake => 'Inventur (Warenwirtschaft)';
+
+  @override
+  String get paletteSubSettingsInbox => 'Postfach-Einstellungen';
+
+  @override
+  String get paletteSubSettingsShipping => 'Versand-Einstellungen';
+
+  @override
+  String get paletteSubSettingsPush => 'Push-Einstellungen';
+
+  @override
+  String get paletteSubSettingsTeam => 'Team-Einstellungen';
+
+  @override
+  String get paletteSubSettingsGeneral => 'Allgemeine Einstellungen';
+
+  @override
+  String get paletteActionNewDeal => 'Neuer Deal';
+
+  @override
+  String get paletteActionCsvImport => 'CSV importieren';
+
+  @override
+  String get paletteActionCsvExport => 'CSV exportieren';
+
+  @override
+  String get paletteActionToggleTheme => 'Design umschalten (Hell/Dunkel)';
+
+  @override
+  String get breadcrumbSeparatorTooltip => 'Navigationspfad';
+
+  @override
+  String get appBarMenuCsvImport => 'CSV importieren';
+
+  @override
+  String get appBarMenuCsvExport => 'CSV exportieren';
 }

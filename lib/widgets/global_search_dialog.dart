@@ -19,15 +19,34 @@ import '../screens/main_tab.dart';
 /// suppliers. The dialog reads from [InventoryProvider] and dispatches the
 /// chosen result via [selectTab] / [openTicket] callbacks supplied by the
 /// host (MainScreen) so navigation stays under the host's control.
+///
+/// T1.1: Additional [onImport], [onExport], [onNewDeal] and [onToggleTheme]
+/// callbacks enable quick-action entries visible even on empty query.
 class GlobalSearchDialog extends StatefulWidget {
   const GlobalSearchDialog({
     super.key,
     required this.selectTab,
     required this.openTicket,
+    this.onImport,
+    this.onExport,
+    this.onNewDeal,
+    this.onToggleTheme,
   });
 
   final ValueChanged<MainTab> selectTab;
   final ValueChanged<String> openTicket;
+
+  /// Called when the user selects "CSV importieren" from the palette.
+  final VoidCallback? onImport;
+
+  /// Called when the user selects "CSV exportieren" from the palette.
+  final VoidCallback? onExport;
+
+  /// Called when the user selects "Neuer Deal" from the palette.
+  final VoidCallback? onNewDeal;
+
+  /// Called when the user selects "Theme umschalten" from the palette.
+  final VoidCallback? onToggleTheme;
 
   // Plan 2026-05-16 §Task #00: stabile Enum-Targets statt Magic-Numbers.
   // Wenn die Bottom-Nav-Reihenfolge in Task #01 ändert, brechen Sprünge
@@ -42,6 +61,10 @@ class GlobalSearchDialog extends StatefulWidget {
     BuildContext context, {
     required ValueChanged<MainTab> selectTab,
     required ValueChanged<String> openTicket,
+    VoidCallback? onImport,
+    VoidCallback? onExport,
+    VoidCallback? onNewDeal,
+    VoidCallback? onToggleTheme,
   }) {
     return showDialog<void>(
       context: context,
@@ -49,6 +72,10 @@ class GlobalSearchDialog extends StatefulWidget {
       builder: (_) => GlobalSearchDialog(
         selectTab: selectTab,
         openTicket: openTicket,
+        onImport: onImport,
+        onExport: onExport,
+        onNewDeal: onNewDeal,
+        onToggleTheme: onToggleTheme,
       ),
     );
   }
@@ -86,6 +113,10 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
     if (_highlight >= flat.length) _highlight = flat.length - 1;
     if (_highlight < 0) _highlight = 0;
 
+    // T1.1: Navigation+Actions groups shown when query is empty.
+    final emptyQueryGroups = _buildNavAndActionGroups();
+    final emptyQueryFlat = emptyQueryGroups.expand((g) => g.items).toList();
+
     return Dialog(
       alignment: Alignment.topCenter,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
@@ -110,11 +141,19 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
             actions: <Type, Action<Intent>>{
               _MoveIntent: CallbackAction<_MoveIntent>(
                 onInvoke: (intent) {
-                  if (flat.isEmpty) return null;
-                  setState(() {
-                    _highlight =
-                        (_highlight + intent.delta).clamp(0, flat.length - 1);
-                  });
+                  if (_query.trim().isEmpty) {
+                    if (emptyQueryFlat.isEmpty) return null;
+                    setState(() {
+                      _highlight = (_highlight + intent.delta)
+                          .clamp(0, emptyQueryFlat.length - 1);
+                    });
+                  } else {
+                    if (flat.isEmpty) return null;
+                    setState(() {
+                      _highlight =
+                          (_highlight + intent.delta).clamp(0, flat.length - 1);
+                    });
+                  }
                   return null;
                 },
               ),
@@ -126,7 +165,13 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
               ),
               _ActivateIntent: CallbackAction<_ActivateIntent>(
                 onInvoke: (_) {
-                  if (flat.isNotEmpty) flat[_highlight].onTap();
+                  if (_query.trim().isEmpty) {
+                    if (emptyQueryFlat.isNotEmpty) {
+                      emptyQueryFlat[_highlight].onTap();
+                    }
+                  } else {
+                    if (flat.isNotEmpty) flat[_highlight].onTap();
+                  }
                   return null;
                 },
               ),
@@ -153,8 +198,10 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
                 Divider(height: 1, color: AppTheme.borderOf(context)),
                 Flexible(
                   child: _query.trim().isEmpty
-                      ? _RecentSearchesSection(
-                          onSelect: (q) {
+                      ? _EmptyQuerySection(
+                          groups: emptyQueryGroups,
+                          highlight: _highlight,
+                          onRecentSelect: (q) {
                             _controller.text = q;
                             setState(() {
                               _query = q;
@@ -177,6 +224,143 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
           ),
         ),
       ),
+    );
+  }
+
+  /// T1.1 — Builds the Navigation + Actions groups shown when query is empty.
+  /// Also used to filter into data-search results when query is non-empty
+  /// (nav items whose label contains the query).
+  List<_ResultGroup> _buildNavAndActionGroups() {
+    final l10n = AppLocalizations.of(context);
+
+    // Navigation entries: top-level tabs
+    final navItems = <_Result>[
+      _navResult(Icons.dashboard_outlined, AppTheme.info,
+          l10n.paletteNavDashboard, MainTab.dashboard),
+      _navResult(Icons.list_alt_outlined, AppTheme.accent,
+          l10n.paletteNavDeals, MainTab.deals),
+      _navResult(Icons.confirmation_number_outlined, AppTheme.warning,
+          l10n.paletteNavTickets, MainTab.tickets),
+      _navResult(Icons.mail_outlined, AppTheme.success,
+          l10n.paletteNavInbox, MainTab.inbox),
+      _navResult(Icons.inventory_2_outlined, AppTheme.success,
+          l10n.paletteNavInventory, MainTab.inventory),
+      _navResult(Icons.local_shipping_outlined, AppTheme.accentDark,
+          l10n.paletteNavSuppliers, MainTab.suppliers),
+      _navResult(Icons.bar_chart_outlined, AppTheme.purple,
+          l10n.paletteNavStatistics, MainTab.stats),
+      _navResult(Icons.history_outlined, AppTheme.textMuted,
+          l10n.paletteNavActivity, MainTab.activity),
+      _navResult(Icons.storefront_outlined, AppTheme.warning,
+          l10n.paletteNavWarehouse, MainTab.warehouse),
+      _navResult(Icons.settings_outlined, AppTheme.textMuted,
+          l10n.paletteNavSettings, MainTab.settings),
+      _navResult(Icons.help_outline_rounded, AppTheme.info,
+          l10n.paletteNavHelp, MainTab.help),
+      // Sub-areas: Warehouse hub sections → navigate to warehouse tab
+      _navSubResult(Icons.inventory_2_outlined, AppTheme.success,
+          l10n.paletteSubInventory, MainTab.inventory),
+      _navSubResult(Icons.qr_code_2, AppTheme.accent,
+          l10n.paletteSubProductCatalog, MainTab.warehouse),
+      _navSubResult(Icons.shopping_cart_outlined, AppTheme.warning,
+          l10n.paletteSubPurchaseOrders, MainTab.warehouse),
+      _navSubResult(Icons.warehouse_outlined, AppTheme.info,
+          l10n.paletteSubWarehouses, MainTab.warehouse),
+      _navSubResult(Icons.category_outlined, AppTheme.purple,
+          l10n.paletteSubCategories, MainTab.warehouse),
+      _navSubResult(Icons.checklist_outlined, AppTheme.success,
+          l10n.paletteSubStocktake, MainTab.warehouse),
+      // Settings sub-areas → navigate to settings tab
+      _navSubResult(Icons.mail_outlined, AppTheme.accent,
+          l10n.paletteSubSettingsInbox, MainTab.settings),
+      _navSubResult(Icons.local_shipping_outlined, AppTheme.accentDark,
+          l10n.paletteSubSettingsShipping, MainTab.settings),
+      _navSubResult(Icons.notifications_outlined, AppTheme.warning,
+          l10n.paletteSubSettingsPush, MainTab.settings),
+      _navSubResult(Icons.group_outlined, AppTheme.success,
+          l10n.paletteSubSettingsTeam, MainTab.settings),
+      _navSubResult(Icons.tune_outlined, AppTheme.textMuted,
+          l10n.paletteSubSettingsGeneral, MainTab.settings),
+    ];
+
+    // Quick-action entries
+    final actionItems = <_Result>[
+      _Result(
+        icon: Icons.add_circle_outline,
+        iconColor: AppTheme.accent,
+        title: l10n.paletteActionNewDeal,
+        subtitle: '',
+        onTap: () {
+          Navigator.of(context).pop();
+          widget.onNewDeal?.call();
+        },
+      ),
+      _Result(
+        icon: Icons.upload_file_outlined,
+        iconColor: AppTheme.success,
+        title: l10n.paletteActionCsvImport,
+        subtitle: '',
+        onTap: () {
+          Navigator.of(context).pop();
+          widget.onImport?.call();
+        },
+      ),
+      _Result(
+        icon: Icons.download_outlined,
+        iconColor: AppTheme.success,
+        title: l10n.paletteActionCsvExport,
+        subtitle: '',
+        onTap: () {
+          Navigator.of(context).pop();
+          widget.onExport?.call();
+        },
+      ),
+      _Result(
+        icon: Icons.brightness_6_outlined,
+        iconColor: AppTheme.warning,
+        title: l10n.paletteActionToggleTheme,
+        subtitle: '',
+        onTap: () {
+          Navigator.of(context).pop();
+          widget.onToggleTheme?.call();
+        },
+      ),
+    ];
+
+    return [
+      _ResultGroup(l10n.paletteNavGroupLabel, navItems),
+      _ResultGroup(l10n.paletteActionGroupLabel, actionItems),
+    ];
+  }
+
+  /// T1.1 helper — creates a nav result that selects [tab] and closes dialog.
+  _Result _navResult(
+      IconData icon, Color color, String label, MainTab tab) {
+    return _Result(
+      icon: icon,
+      iconColor: color,
+      title: label,
+      subtitle: '',
+      onTap: () {
+        widget.selectTab(tab);
+        Navigator.of(context).pop();
+      },
+    );
+  }
+
+  /// T1.1 helper — creates a sub-area nav result (same as _navResult, kept
+  /// separate so callers are explicit about whether it's a top-level or sub item).
+  _Result _navSubResult(
+      IconData icon, Color color, String label, MainTab tab) {
+    return _Result(
+      icon: icon,
+      iconColor: color,
+      title: label,
+      subtitle: '',
+      onTap: () {
+        widget.selectTab(tab);
+        Navigator.of(context).pop();
+      },
     );
   }
 
@@ -505,9 +689,19 @@ class _ResultTile extends StatelessWidget {
   }
 }
 
-class _RecentSearchesSection extends StatelessWidget {
-  final ValueChanged<String> onSelect;
-  const _RecentSearchesSection({required this.onSelect});
+/// T1.1: Shown when the search query is empty.
+/// Displays recent searches (chips) followed by the Navigation + Actions
+/// groups so the palette is immediately useful without typing.
+class _EmptyQuerySection extends StatelessWidget {
+  final List<_ResultGroup> groups;
+  final int highlight;
+  final ValueChanged<String> onRecentSelect;
+
+  const _EmptyQuerySection({
+    required this.groups,
+    required this.highlight,
+    required this.onRecentSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -515,30 +709,35 @@ class _RecentSearchesSection extends StatelessWidget {
     final prefs = context.watch<AppPreferencesProvider>();
     final recent = prefs.recentSearches;
 
-    return SingleChildScrollView(
-      key: const Key('recentSearchesSection'),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                l10n.searchRecentTitle.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textMutedOf(context),
-                  letterSpacing: 0.6,
+    // Flat index offset: nav/action results start after no flat-item area,
+    // we pass highlight directly into _Results which already tracks its own
+    // internal index. We split the view: recent-chips (non-selectable via
+    // keyboard) on top, then the scrollable groups list.
+    return ListView(
+      key: const Key('emptyQuerySection'),
+      padding: EdgeInsets.zero,
+      children: [
+        if (recent.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.searchRecentTitle.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textMutedOf(context),
+                    letterSpacing: 0.6,
+                  ),
                 ),
-              ),
-              if (recent.isNotEmpty)
                 TextButton(
                   key: const Key('recentSearchesClear'),
                   onPressed: () => prefs.clearRecentSearches(),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -550,19 +749,12 @@ class _RecentSearchesSection extends StatelessWidget {
                     ),
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          if (recent.isEmpty)
-            Text(
-              l10n.searchRecentEmpty,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppTheme.textSecondaryOf(context),
-              ),
-            )
-          else
-            Wrap(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Wrap(
               spacing: 8,
               runSpacing: 6,
               children: [
@@ -570,13 +762,51 @@ class _RecentSearchesSection extends StatelessWidget {
                   _RecentChip(
                     key: Key('recentSearchItem-$i'),
                     label: recent[i],
-                    onTap: () => onSelect(recent[i]),
+                    onTap: () => onRecentSelect(recent[i]),
                   ),
               ],
             ),
+          ),
+          Divider(height: 1, color: AppTheme.borderOf(context)),
         ],
-      ),
+        // Navigation + Actions groups (keyboard-navigable via highlight)
+        for (final group in groups) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text(
+              group.label.toUpperCase(),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textMutedOf(context),
+                letterSpacing: 0.6,
+              ),
+            ),
+          ),
+          ..._buildGroupTiles(groups, group, highlight),
+        ],
+      ],
     );
+  }
+
+  List<Widget> _buildGroupTiles(
+    List<_ResultGroup> allGroups,
+    _ResultGroup group,
+    int highlightIdx,
+  ) {
+    // Compute offset for this group inside the flattened list.
+    int offset = 0;
+    for (final g in allGroups) {
+      if (g == group) break;
+      offset += g.items.length;
+    }
+    return [
+      for (var i = 0; i < group.items.length; i++)
+        _ResultTile(
+          result: group.items[i],
+          highlighted: (offset + i) == highlightIdx,
+        ),
+    ];
   }
 }
 

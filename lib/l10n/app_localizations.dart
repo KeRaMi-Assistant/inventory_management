@@ -9739,6 +9739,192 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Diagramm lädt.'**
   String get semanticsChartLoading;
+
+  /// Gruppen-Titel der Navigation-Gruppe in der Command-Palette.
+  ///
+  /// In de, this message translates to:
+  /// **'Navigation'**
+  String get paletteNavGroupLabel;
+
+  /// Gruppen-Titel der Aktions-Gruppe in der Command-Palette.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktionen'**
+  String get paletteActionGroupLabel;
+
+  /// Command-Palette-Eintrag: direkt zum Dashboard navigieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Dashboard öffnen'**
+  String get paletteNavDashboard;
+
+  /// Command-Palette-Eintrag: direkt zu Deals navigieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Deals öffnen'**
+  String get paletteNavDeals;
+
+  /// Command-Palette-Eintrag: direkt zu Tickets navigieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Tickets öffnen'**
+  String get paletteNavTickets;
+
+  /// Command-Palette-Eintrag: direkt zum Postfach navigieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach öffnen'**
+  String get paletteNavInbox;
+
+  /// Command-Palette-Eintrag: direkt zum Lager navigieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager öffnen'**
+  String get paletteNavInventory;
+
+  /// Command-Palette-Eintrag: direkt zu Lieferanten navigieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferanten öffnen'**
+  String get paletteNavSuppliers;
+
+  /// Command-Palette-Eintrag: direkt zu Statistiken navigieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Statistiken öffnen'**
+  String get paletteNavStatistics;
+
+  /// Command-Palette-Eintrag: direkt zu Aktivität navigieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivität öffnen'**
+  String get paletteNavActivity;
+
+  /// Command-Palette-Eintrag: direkt zu Einstellungen navigieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstellungen öffnen'**
+  String get paletteNavSettings;
+
+  /// Command-Palette-Eintrag: direkt zur Warenwirtschaft navigieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Warenwirtschaft öffnen'**
+  String get paletteNavWarehouse;
+
+  /// Command-Palette-Eintrag: direkt zur Hilfe navigieren.
+  ///
+  /// In de, this message translates to:
+  /// **'Hilfe öffnen'**
+  String get paletteNavHelp;
+
+  /// Command-Palette-Unterbereich: Bestand im Lager.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestand (Lager)'**
+  String get paletteSubInventory;
+
+  /// Command-Palette-Unterbereich: Artikelstamm.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikelstamm (Warenwirtschaft)'**
+  String get paletteSubProductCatalog;
+
+  /// Command-Palette-Unterbereich: Bestellungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellungen (Warenwirtschaft)'**
+  String get paletteSubPurchaseOrders;
+
+  /// Command-Palette-Unterbereich: Lager/Standorte.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager/Standorte (Warenwirtschaft)'**
+  String get paletteSubWarehouses;
+
+  /// Command-Palette-Unterbereich: Warengruppen.
+  ///
+  /// In de, this message translates to:
+  /// **'Warengruppen (Warenwirtschaft)'**
+  String get paletteSubCategories;
+
+  /// Command-Palette-Unterbereich: Inventur.
+  ///
+  /// In de, this message translates to:
+  /// **'Inventur (Warenwirtschaft)'**
+  String get paletteSubStocktake;
+
+  /// Command-Palette-Unterbereich: Postfach-Einstellungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach-Einstellungen'**
+  String get paletteSubSettingsInbox;
+
+  /// Command-Palette-Unterbereich: Versand-Einstellungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Versand-Einstellungen'**
+  String get paletteSubSettingsShipping;
+
+  /// Command-Palette-Unterbereich: Push-Einstellungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Push-Einstellungen'**
+  String get paletteSubSettingsPush;
+
+  /// Command-Palette-Unterbereich: Team-Einstellungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Team-Einstellungen'**
+  String get paletteSubSettingsTeam;
+
+  /// Command-Palette-Unterbereich: Allgemeine Einstellungen.
+  ///
+  /// In de, this message translates to:
+  /// **'Allgemeine Einstellungen'**
+  String get paletteSubSettingsGeneral;
+
+  /// Command-Palette-Quick-Action: neuen Deal anlegen.
+  ///
+  /// In de, this message translates to:
+  /// **'Neuer Deal'**
+  String get paletteActionNewDeal;
+
+  /// Command-Palette-Quick-Action: CSV-Import starten.
+  ///
+  /// In de, this message translates to:
+  /// **'CSV importieren'**
+  String get paletteActionCsvImport;
+
+  /// Command-Palette-Quick-Action: CSV-Export starten.
+  ///
+  /// In de, this message translates to:
+  /// **'CSV exportieren'**
+  String get paletteActionCsvExport;
+
+  /// Command-Palette-Quick-Action: Theme zwischen Hell und Dunkel wechseln.
+  ///
+  /// In de, this message translates to:
+  /// **'Design umschalten (Hell/Dunkel)'**
+  String get paletteActionToggleTheme;
+
+  /// Tooltip für die Breadcrumb-Trennzeichen im Desktop-Header.
+  ///
+  /// In de, this message translates to:
+  /// **'Navigationspfad'**
+  String get breadcrumbSeparatorTooltip;
+
+  /// AppBar-Overflow-Menü-Eintrag auf Phone für CSV-Import.
+  ///
+  /// In de, this message translates to:
+  /// **'CSV importieren'**
+  String get appBarMenuCsvImport;
+
+  /// AppBar-Overflow-Menü-Eintrag auf Phone für CSV-Export.
+  ///
+  /// In de, this message translates to:
+  /// **'CSV exportieren'**
+  String get appBarMenuCsvExport;
 }
 
 class _AppLocalizationsDelegate
