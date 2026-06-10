@@ -351,3 +351,75 @@ Deno.test('detect: valides JJD JENSEITS des Body-Caps → abgeschnitten', () => 
     'Token jenseits des Body-Caps darf nicht matchen (ReDoS-Cap)',
   )
 })
+
+// ── Paket 2: GLS-Detection (name-/href-gated) ────────────────────────────
+
+Deno.test('detect: GLS-Nummer mit Anchor + GLS-Name → strong gls', () => {
+  const r = detect(base({
+    text: 'Ihre GLS Sendungsnummer: 11766771249246689455',
+  }))
+  assertEquals(r.tracking, '11766771249246689455')
+  assertEquals(r.carrier, 'gls')
+  assertEquals(r.confidence, 'strong')
+})
+
+Deno.test('detect: GLS Spanisch (PcComponentes-Real-Format) → strong gls', () => {
+  const r = detect(base({
+    text: 'Tu pedido ha sido enviado por GLS. Número de seguimiento: 11766771249246689455',
+  }))
+  assertEquals(r.tracking, '11766771249246689455')
+  assertEquals(r.carrier, 'gls')
+})
+
+Deno.test('detect: 11-20-stellige Nummer mit Anchor aber OHNE GLS-Name → kein gls', () => {
+  // "Sendungsnummer" allein reicht nicht — sonst würde jede lange Zahl auf
+  // GLS geroutet (Doppel-Gate wie dpd-14).
+  const r = detect(base({
+    text: 'Sendungsnummer: 11766771249246689455',
+  }))
+  // dhl-20 greift hier auch nicht (mod-10-Checksum schlägt fehl) → none.
+  assertEquals(r.tracking, null)
+  assertEquals(r.carrier, null)
+})
+
+Deno.test('detect: GLS via match=-href → strong gls (html-href)', () => {
+  const r = detect(base({
+    html: '<a href="https://gls-group.eu/DE/de/paketverfolgung?match=11766771249246689455">Sendung verfolgen</a>',
+  }))
+  assertEquals(r.tracking, '11766771249246689455')
+  assertEquals(r.carrier, 'gls')
+  assertEquals(r.confidence, 'strong')
+})
+
+Deno.test('detect: GLS 11-stellig national mit GLS-Name → strong gls', () => {
+  const r = detect(base({ text: 'GLS Paketnummer: 57012345678' }))
+  assertEquals(r.tracking, '57012345678')
+  assertEquals(r.carrier, 'gls')
+})
+
+// ── Paket 2: Leerzeichen-tolerante Trackings (Recall-Fix) ────────────────
+
+Deno.test('detect: DE-Prefix mit internen Leerzeichen → strong dhl, normalisiert', () => {
+  const r = detect(base({ text: 'Sendungsnummer: DE 5455 2798 39' }))
+  assertEquals(r.tracking, 'DE5455279839')
+  assertEquals(r.carrier, 'dhl')
+  assertEquals(r.confidence, 'strong')
+})
+
+Deno.test('detect: DHL-20 mit Leerzeichen-Gruppen → strong dhl (mod-10 auf normalisiert)', () => {
+  const r = detect(base({ text: 'Sendungsnummer 0034 0433 8364 4263 6597' }))
+  assertEquals(r.tracking, '00340433836442636597')
+  assertEquals(r.carrier, 'dhl')
+})
+
+Deno.test('detect: gespacte VAT (DE 123456789) bleibt rejected', () => {
+  // Nach Normalisierung DE+9 → vat_eu-Reject. Der Leerzeichen-Support darf
+  // die VAT-Wand nicht aufweichen.
+  const r = detect(base({ text: 'Sendungsnummer: DE 123456789' }))
+  assertEquals(r.tracking, null)
+})
+
+Deno.test('detect: gespacte Zahl mit falscher Checksum → none (kein FP)', () => {
+  const r = detect(base({ text: 'Sendungsnummer 0034 0433 8364 4263 6598' }))
+  assertEquals(r.tracking, null)
+})

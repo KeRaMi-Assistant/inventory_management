@@ -235,6 +235,8 @@ class DealCard extends StatelessWidget {
                   if (deal.tracking != null)
                     TrackingChip(
                       tracking: deal.tracking!,
+                      dealCarrier: deal.carrier,
+                      liveStatus: deal.liveStatus,
                       shopAmazonCountry: amazonCountryFromShop(
                         shopName: shop?.name,
                         region: shop?.region,

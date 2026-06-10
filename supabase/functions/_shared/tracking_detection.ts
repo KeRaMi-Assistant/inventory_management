@@ -30,8 +30,9 @@ export type { TrackingCandidate }
 
 // ── Typen ───────────────────────────────────────────────────────────────────
 
-/** Carrier-IDs (Detection-Scope). Immer lowercase (Plan §2.8 Casing-Fix). */
-export type CarrierId = 'dhl' | 'amazon' | 'dpd'
+/** Carrier-IDs (Detection-Scope). Immer lowercase (Plan §2.8 Casing-Fix).
+ *  Kanonische Registry: `carriers.ts` (Paket 2) — neue Ids dort eintragen. */
+export type CarrierId = 'dhl' | 'amazon' | 'dpd' | 'gls'
 
 /** Versand-Status (Spiegel von `ParsedOrder.status` in inbox_adapters.ts). */
 export type ShipStatus =
@@ -183,6 +184,7 @@ type ValidatorId =
   | 'de-prefix'
   | 'tba-source-gate'
   | 'dpd-name-anchor'
+  | 'gls-name-anchor'
   | 'amazon-shipment-id'
 
 // ── Strong-Pattern (alpha-präfigiert / format-eindeutig) — Plan §2.3 ─────────
@@ -236,7 +238,12 @@ const STRONG_PATTERNS: ReadonlyArray<BodyPattern> = [
   // Footer nicht (kein Tracking-Anchor).
   {
     id: 'dhl-de',
-    re: /\bDE\d{10,14}\b/g,
+    // Leerzeichen-Toleranz (Paket 2, Audit-Recall-Fix): erlaubt EINZELNE
+    // Spaces zwischen Ziffern ("DE 5455 2798 39") — PDFs/Mails gruppieren
+    // Trackings zur Lesbarkeit. normalizeToken strippt vor Validierung;
+    // der Validator erzwingt ^DE\d{10,14}$ auf dem normalisierten Wert,
+    // falsche Gesamtlängen werden also weiterhin gedroppt.
+    re: /\bDE(?:[ \u00A0]?\d){10,14}(?![ \u00A0]?\d)\b/g,
     carrier: 'dhl',
     requiresAnchor: true,
     validator: 'de-prefix',
@@ -244,11 +251,16 @@ const STRONG_PATTERNS: ReadonlyArray<BodyPattern> = [
 ]
 
 // ── Anchor-gated numerische Pattern — Plan §2.5 (requiresAnchor: true) ────────
+// Leerzeichen-Toleranz (Paket 2): alle numerischen Pattern erlauben EINZELNE
+// Spaces/NBSPs zwischen Ziffern. Sicherheit unverändert: die Validatoren
+// (mod-10-Checksums, exakte Längen, Name-Anchors) laufen auf dem
+// normalisierten Token — ein zufällig zusammengesetzter Zahlen-Mix fällt dort
+// durch. KEIN globaler Whitespace-Strip des Bodies (Plan-Direktive bleibt).
 const ANCHORED_PATTERNS: ReadonlyArray<BodyPattern> = [
   // DHL 20-stellig — mod-10 3/1.
   {
     id: 'dhl-20',
-    re: /\b\d{20}\b/g,
+    re: /\b(?<!\d[ \u00A0])\d(?:[ \u00A0]?\d){19}(?![ \u00A0]?\d)\b/g,
     carrier: 'dhl',
     requiresAnchor: true,
     validator: 'dhl20-mod10',
@@ -256,7 +268,7 @@ const ANCHORED_PATTERNS: ReadonlyArray<BodyPattern> = [
   // DHL 12-stellig Identcode — mod-10 4/9.
   {
     id: 'dhl-12',
-    re: /\b\d{12}\b/g,
+    re: /\b(?<!\d[ \u00A0])\d(?:[ \u00A0]?\d){11}(?![ \u00A0]?\d)\b/g,
     carrier: 'dhl',
     requiresAnchor: true,
     validator: 'dhl-identcode-mod10',
@@ -265,10 +277,23 @@ const ANCHORED_PATTERNS: ReadonlyArray<BodyPattern> = [
   // reiner 14-stelliger Zahl (kollidiert mit DHL). Gate nur über URL/Anchor.
   {
     id: 'dpd-14',
-    re: /\b\d{14}\b/g,
+    re: /\b(?<!\d[ \u00A0])\d(?:[ \u00A0]?\d){13}(?![ \u00A0]?\d)\b/g,
     carrier: 'dpd',
     requiresAnchor: true,
     validator: 'dpd-name-anchor',
+  },
+  // GLS 11–20-stellig (Paket 2): national 11–12, Unit-No 14, GLS-Spain 20
+  // (Real-Fixture pccomponentesGls: 11766771249246689455). KEINE öffentliche
+  // Checksum → Doppel-Gate wie dpd-14: Tracking-Anchor PFLICHT (requiresAnchor)
+  // UND „GLS" muss explizit im 80-Zeichen-Fenster vor dem Match stehen
+  // (glsNameInWindow) — sonst DROP. GLS ist detection-only (kein Poll-Adapter,
+  // siehe carriers.ts) — der Wert dient Deep-Link + mail-getriebenem Status.
+  {
+    id: 'gls-num',
+    re: /\b(?<!\d[ \u00A0])\d(?:[ \u00A0]?\d){10,19}(?![ \u00A0]?\d)\b/g,
+    carrier: 'gls',
+    requiresAnchor: true,
+    validator: 'gls-name-anchor',
   },
 ]
 
@@ -294,6 +319,10 @@ const HREF_PATTERNS: ReadonlyArray<HrefPattern> = [
   { re: /tracking\.dpd\.[a-z.]+\/parcelstatus\?(?:[^&]*&)*query=(\d{10,20})/i, carrier: 'dpd', source: 'html-href' },
   { re: /dpd\.[a-z.]+\/.*?[?&]parcelno(?:r)?=(\d{10,20})/i, carrier: 'dpd', source: 'html-href' },
   { re: /(?:track\.)?dpd\.[a-z.]+\/parcels?\/(\d{10,20})/i, carrier: 'dpd', source: 'html-href' },
+  // GLS (Paket 2) — Paketverfolgung-Links (gls-group.eu/.com, gls-pakete.de,
+  // nationale Ableger wie gls-spain.es). `match=` ist der kanonische Param.
+  { re: /gls(?:-group|-pakete|-spain|-italy|-france)?\.[a-z.]+\/[^"'\s]*?[?&#]match=([A-Z0-9]{8,25})/i, carrier: 'gls', source: 'html-href' },
+  { re: /gls-group\.[a-z.]+\/[^"'\s]*?(?:track|paketverfolgung|parcel)[^"'\s]*?[?&]txtRefNo=([A-Z0-9]{8,25})/i, carrier: 'gls', source: 'html-href' },
 ]
 
 // Amazon-Kontext-Token (für tba-source-gate Variante 3).
@@ -314,6 +343,8 @@ interface RawMatch {
   senderDomainMatch?: boolean
   /** `true`, wenn „DPD" im 80-Zeichen-Fenster vor dem Match steht (dpd-14). */
   dpdNameInWindow?: boolean
+  /** `true`, wenn „GLS" im 80-Zeichen-Fenster vor dem Match steht (gls-num). */
+  glsNameInWindow?: boolean
 }
 
 interface ClassifyContext {
@@ -414,6 +445,19 @@ function classifyAndValidate(
       return { outcome: 'drop' }
     }
 
+    case 'gls-name-anchor': {
+      // 11–20 Ziffern aus GLS-href ODER mit explizitem „GLS"-Namen im Fenster
+      // (Doppel-Gate analog dpd-name-anchor; GLS hat keine öffentliche
+      // Checksum). Längen-Wand auf dem normalisierten Token.
+      const v = m.value
+      if (!/^\d{11,20}$/.test(v)) return { outcome: 'drop' }
+      const fromHref = m.source === 'html-href'
+      if (fromHref || m.glsNameInWindow) {
+        return { outcome: 'strong' }
+      }
+      return { outcome: 'drop' }
+    }
+
     case 'amazon-shipment-id': {
       // orderingShipmentId — bleibt medium, NIE primary (Gating filtert es raus).
       return { outcome: 'medium' }
@@ -456,6 +500,9 @@ function collectBodyMatches(
       const dpdNameInWindow = p.id === 'dpd-14'
         ? /\bdpd\b/i.test(bodyText.slice(winStart, m.index))
         : undefined
+      const glsNameInWindow = p.id === 'gls-num'
+        ? /\bgls\b/i.test(bodyText.slice(winStart, m.index))
+        : undefined
       out.push({
         value,
         raw,
@@ -466,6 +513,7 @@ function collectBodyMatches(
         patternId: p.id,
         senderDomainMatch: senderIsAmazon,
         dpdNameInWindow,
+        glsNameInWindow,
       })
     }
   }
@@ -523,7 +571,9 @@ function collectHrefMatches(rawHtml: string, senderIsAmazon: boolean): RawMatch[
             ? 'tba-source-gate'
             : p.carrier === 'dpd'
               ? 'dpd-name-anchor'
-              : 'jjd-prefix' // dhl href-capture: source-eindeutig (Domain) → strong
+              : p.carrier === 'gls'
+                ? 'gls-name-anchor'
+                : 'jjd-prefix' // dhl href-capture: source-eindeutig (Domain) → strong
         out.push({
           value,
           raw: captured,
