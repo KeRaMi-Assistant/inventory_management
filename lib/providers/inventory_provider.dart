@@ -898,16 +898,27 @@ class InventoryProvider extends ChangeNotifier {
     _purchasingProvider?.sortPurchaseOrders();
 
     // 5. PO items – remap product_id and purchase_order_id.
+    var skippedPoItems = 0;
     for (final item in result.purchaseOrderItems) {
       final remappedProductId = item.productId == null
           ? null
           : (importProductIdRemap[item.productId!] ?? item.productId);
       final csvPoId = item.purchaseOrderId;
-      final remappedPoId = csvPoId == null
-          ? null
-          : (importPoIdRemap[csvPoId] ?? csvPoId);
+      // Nur über den Remap auf eine echte DB-id auflösen. KEIN `?? csvPoId`-
+      // Fallback: schlug der Parent-PO-Insert fehl (oder fehlt der PO im CSV),
+      // ist die synthetische csv-id keine gültige FK — ein Insert würde
+      // serverseitig am `purchase_order_id`-Constraint scheitern und der Fehler
+      // wäre still verschluckt worden (PO-Items fehlgeschlagener POs gingen
+      // lautlos verloren). Stattdessen sauber überspringen + zählen.
+      final remappedPoId =
+          csvPoId == null ? null : importPoIdRemap[csvPoId];
       if (remappedPoId == null || remappedProductId == null) {
-        // FK not resolved — skip silently (parser already reported FK errors)
+        skippedPoItems++;
+        if (kDebugMode) {
+          debugPrint(
+              'importCsvAll: PO-Item übersprungen (Parent-PO $csvPoId nicht '
+              'importiert oder Produkt-FK $remappedProductId unauflösbar).');
+        }
         continue;
       }
       final remapped = item.copyWith(
@@ -917,10 +928,16 @@ class InventoryProvider extends ChangeNotifier {
       try {
         await _repository.insertPurchaseOrderItem(remapped);
       } catch (e) {
+        skippedPoItems++;
         if (kDebugMode) {
           debugPrint('importCsvAll: PO item skipped – $e');
         }
       }
+    }
+    if (skippedPoItems > 0 && kDebugMode) {
+      debugPrint(
+          'importCsvAll: $skippedPoItems PO-Item(s) übersprungen — '
+          'kein Insert mit synthetischer Parent-PO-id (FK-Schutz).');
     }
     // ── End new sections ─────────────────────────────────────────────────────
 
