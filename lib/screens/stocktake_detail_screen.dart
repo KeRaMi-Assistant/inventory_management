@@ -21,7 +21,7 @@ import 'stocktake_screen.dart' show StocktakeStatusBadge;
 
 /// Zähl-Workflow für eine Inventur-Session (Epic E, Task E3).
 ///
-/// Lädt Positionen lazy via [InventoryProvider.loadStocktakeItems].
+/// Lädt Positionen lazy via [DealsProvider.loadStocktakeItems].
 /// Inkrementelles Speichern pro Zähl-Eingabe (kein Batch-Submit).
 /// Barcode-Scan-Einsprung via [BarcodeScannerSheet].
 /// Differenz-Report als vertikale Cards nach Abschluss.

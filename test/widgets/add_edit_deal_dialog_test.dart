@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:inventory_management/l10n/app_localizations.dart';
 import 'package:inventory_management/models/deal.dart';
 import 'package:inventory_management/models/shop.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/deals_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 import 'package:inventory_management/widgets/add_edit_deal_dialog.dart';
 
@@ -15,7 +15,7 @@ import 'package:inventory_management/widgets/add_edit_deal_dialog.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Minimale SupabaseRepository-Implementierung für Tests.
-/// Überschreibt alle Methoden, die von InventoryProvider während der Dialog-
+/// Überschreibt alle Methoden, die von DealsProvider während der Dialog-
 /// Interaktion aufgerufen werden.
 class _FakeRepository extends SupabaseRepository {
   _FakeRepository() : super.forTesting();
@@ -41,10 +41,10 @@ class _FakeRepository extends SupabaseRepository {
   Future<Deal> updateDeal(Deal deal) async => deal;
 }
 
-/// InventoryProvider mit einem bestehenden Shop — der Dialog benötigt
+/// DealsProvider mit einem bestehenden Shop — der Dialog benötigt
 /// mindestens einen Shop im Dropdown, sonst schlägt die Validierung fehl.
-class _FakeInventoryProvider extends InventoryProvider {
-  _FakeInventoryProvider() : super(repository: _FakeRepository());
+class _FakeDealsProvider extends DealsProvider {
+  _FakeDealsProvider() : super(repository: _FakeRepository());
 
   static const _testShop = Shop(
     id: 'shop-1',
@@ -74,8 +74,8 @@ Widget _buildApp({
   Deal? prefill,
   String? initialTicketNumber,
 }) {
-  return ChangeNotifierProvider<InventoryProvider>(
-      create: (_) => _FakeInventoryProvider(),
+  return ChangeNotifierProvider<DealsProvider>(
+      create: (_) => _FakeDealsProvider(),
       child: MaterialApp(
         localizationsDelegates: const [
           AppLocalizations.delegate,

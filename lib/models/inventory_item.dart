@@ -58,7 +58,7 @@ class InventoryItem {
   /// Für Produkt-verknüpfte Rows (`productId != null`) ist dieser Getter
   /// NICHT die korrekte Kritisch-Wahrheit — ein Produkt kann mehrere
   /// Bestands-Rows (z. B. in unterschiedlichen Lagern) haben. Die korrekte
-  /// Aggregation erfolgt ausschließlich im `InventoryProvider.criticalStockCount`
+  /// Aggregation erfolgt ausschließlich im `DealsProvider.criticalStockCount`
   /// über den `product_stock`-View gegen `products.min_stock`.
   ///
   /// Dieser Getter ist ausschließlich für nicht-produktverknüpfte Rows

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/buyer.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../utils/validators.dart';
 import 'unsaved_changes_guard.dart';
 
@@ -175,7 +175,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
-    final provider = context.read<InventoryProvider>();
+    final provider = context.read<DealsProvider>();
     final p = _palette[_selectedPalette];
     final serverIds = _serverIdCtrls
         .map((c) => c.text.trim())

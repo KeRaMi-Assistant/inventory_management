@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/deal_comment.dart';
 import '../providers/auth_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../utils/error_messages.dart';
 
 /// Notiz-/Kommentar-Thread, der unter einem persistierten Deal angezeigt wird.
@@ -40,7 +40,7 @@ class _DealCommentsSectionState extends State<DealCommentsSection> {
   Future<void> _load() async {
     try {
       final list = await context
-          .read<InventoryProvider>()
+          .read<DealsProvider>()
           .loadCommentsForDeal(widget.dealId);
       if (!mounted) return;
       setState(() {
@@ -59,7 +59,7 @@ class _DealCommentsSectionState extends State<DealCommentsSection> {
     final author = context.read<AuthProvider>().userEmail ?? '—';
     setState(() => _saving = true);
     try {
-      final saved = await context.read<InventoryProvider>().addComment(
+      final saved = await context.read<DealsProvider>().addComment(
             dealId: widget.dealId,
             author: author,
             body: body,
@@ -104,7 +104,7 @@ class _DealCommentsSectionState extends State<DealCommentsSection> {
     );
     if (confirmed != true || !mounted) return;
     try {
-      await context.read<InventoryProvider>().deleteComment(c.id);
+      await context.read<DealsProvider>().deleteComment(c.id);
       if (!mounted) return;
       setState(() {
         _comments = (_comments ?? []).where((x) => x.id != c.id).toList();

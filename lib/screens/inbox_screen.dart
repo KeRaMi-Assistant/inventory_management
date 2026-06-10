@@ -10,7 +10,7 @@ import '../models/deal.dart';
 import '../models/inbox_message.dart';
 import '../models/mailbox_account.dart';
 import '../providers/inbox_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../utils/mail_link.dart';
 import '../utils/responsive.dart';
 import '../utils/url_helper.dart';
@@ -66,7 +66,7 @@ class _InboxScreenState extends State<InboxScreen> {
       child: Consumer<InboxProvider>(
         builder: (context, provider, _) {
           final needsReviewCount =
-              context.watch<InventoryProvider>().trackingNeedsReviewCount;
+              context.watch<DealsProvider>().trackingNeedsReviewCount;
           return Scaffold(
             backgroundColor: AppTheme.bgAppOf(context),
             body: Column(

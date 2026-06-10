@@ -90,7 +90,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final provider = Provider.of<StockProvider>(context);
     final catalog = Provider.of<CatalogProvider>(context);
     // Suppliers now live in PurchasingProvider; inventory items / stock /
-    // movements stay on InventoryProvider.
+    // movements stay on DealsProvider.
     final purchasing = Provider.of<PurchasingProvider>(context);
     final wsProvider = Provider.of<ActiveWorkspaceProvider>(context);
     final canEdit = wsProvider.role?.canEdit ?? false;

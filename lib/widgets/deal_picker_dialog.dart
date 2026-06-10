@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/deal.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 
 /// Reusable Picker für "Wähle einen bestehenden Deal aus". Wird vom Inbox-Tab
 /// genutzt, um Tracking/Mail-Inhalte einem Deal zuzuweisen. Filtert Live nach
@@ -57,7 +57,7 @@ class _DealPickerDialogState extends State<DealPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<InventoryProvider>(
+    return Consumer<DealsProvider>(
       builder: (context, inventory, _) {
         final results = _filter(inventory.deals);
         return AlertDialog(

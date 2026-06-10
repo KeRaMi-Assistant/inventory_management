@@ -12,11 +12,11 @@ import '../services/supabase_repository.dart';
 /// [ProductCategory] and [Product] lists. All mutations are routed through
 /// [SupabaseRepository]; local lists are caches kept in sync with the server.
 ///
-/// Extracted from [InventoryProvider] as the first provider-split increment.
+/// Extracted from [DealsProvider] as the first provider-split increment.
 /// Registers as [ChangeNotifierProxyProvider<SupabaseRepository, CatalogProvider>]
-/// in `main.dart`. Workspace lifecycle mirrors [InventoryProvider]:
+/// in `main.dart`. Workspace lifecycle mirrors [DealsProvider]:
 /// [setActiveWorkspace] is called by the same [_AuthGateState] listener that
-/// calls it on [InventoryProvider].
+/// calls it on [DealsProvider].
 class CatalogProvider extends ChangeNotifier {
   CatalogProvider({required SupabaseRepository repository})
       : _repository = repository;
@@ -54,7 +54,7 @@ class CatalogProvider extends ChangeNotifier {
   String? _activeWorkspaceId;
 
   /// Called by [_AuthGateState._onWorkspaceChanged] whenever the active
-  /// workspace changes — mirrors the pattern in [InventoryProvider].
+  /// workspace changes — mirrors the pattern in [DealsProvider].
   Future<void> setActiveWorkspace(String? workspaceId) async {
     if (_activeWorkspaceId == workspaceId) return;
     _activeWorkspaceId = workspaceId;
@@ -62,7 +62,7 @@ class CatalogProvider extends ChangeNotifier {
     // liest loadAll() einen null-Workspace und liefert still einen LEEREN
     // Snapshot (supabase_repository.dart:192-195). main._hydrate startet
     // Catalog/Purchasing/Inventory parallel via Future.wait; ohne dieses Set
-    // ist das Laden race-abhängig. Mirror InventoryProvider.setActiveWorkspace.
+    // ist das Laden race-abhängig. Mirror DealsProvider.setActiveWorkspace.
     _repository.setActiveWorkspace(workspaceId);
     if (workspaceId == null) {
       clearLocalState();

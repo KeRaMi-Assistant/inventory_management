@@ -13,15 +13,15 @@ import '../services/supabase_repository.dart';
 /// Holds the purchasing domain state for the signed-in user:
 /// [Supplier] and [PurchaseOrder] (header) lists. `purchase_order_items` are
 /// NOT held globally — they are loaded lazily per detail-screen via
-/// [loadPurchaseOrderItems] (mirrors the pattern in [InventoryProvider] for
+/// [loadPurchaseOrderItems] (mirrors the pattern in [DealsProvider] for
 /// `loadBatchesForItem`). All mutations are routed through
 /// [SupabaseRepository]; local lists are caches kept in sync with the server.
 ///
-/// Extracted from [InventoryProvider] as the second provider-split increment
+/// Extracted from [DealsProvider] as the second provider-split increment
 /// (after [CatalogProvider], PR #120). Registers as
 /// [ChangeNotifierProxyProvider<SupabaseRepository, PurchasingProvider>] in
-/// `main.dart`, as a sibling of [CatalogProvider] and BEFORE [InventoryProvider]
-/// (registration order matters — InventoryProvider depends on this provider via
+/// `main.dart`, as a sibling of [CatalogProvider] and BEFORE [DealsProvider]
+/// (registration order matters — DealsProvider depends on this provider via
 /// a [ChangeNotifierProxyProvider3]). Workspace lifecycle mirrors the other two
 /// providers: [setActiveWorkspace] is driven by the same `_AuthGateState`
 /// listener.
@@ -31,7 +31,7 @@ import '../services/supabase_repository.dart';
 /// writing INTO purchasing state — is exposed via the public write-back hooks
 /// below ([upsertSupplierFromImport], [insertPurchaseOrderFromImport],
 /// [replacePurchaseOrderHeader], …). These exist because two cross-domain
-/// orchestrators stay in [InventoryProvider]:
+/// orchestrators stay in [DealsProvider]:
 ///   1. `bookGoodsReceipt` — writes inventory state, refreshes the PO header
 ///      here via [replacePurchaseOrderHeader] + [notifyAfterCrossDomainWrite].
 ///   2. `importCsvAll` — writes suppliers + POs here via the import hooks while
@@ -76,7 +76,7 @@ class PurchasingProvider extends ChangeNotifier {
   List<PurchaseOrder> get purchaseOrders => List.unmodifiable(_purchaseOrders);
 
   // ── Cross-domain write-back hooks ─────────────────────────────────────────
-  // Public surface for InventoryProvider orchestrators (importCsvAll,
+  // Public surface for DealsProvider orchestrators (importCsvAll,
   // bookGoodsReceipt) that must write into purchasing state while keeping their
   // FK-remap tables local. Raw (non-copied) reads are intentional — the
   // orchestrator builds dedup-seed sets from them and must observe the same
@@ -132,7 +132,7 @@ class PurchasingProvider extends ChangeNotifier {
 
   /// Called by [_AuthGateState._onWorkspaceChanged] whenever the active
   /// workspace changes — mirrors the pattern in [CatalogProvider] /
-  /// [InventoryProvider].
+  /// [DealsProvider].
   Future<void> setActiveWorkspace(String? workspaceId) async {
     if (_activeWorkspaceId == workspaceId) return;
     _activeWorkspaceId = workspaceId;
@@ -141,7 +141,7 @@ class PurchasingProvider extends ChangeNotifier {
     // Snapshot (supabase_repository.dart:192-195). In main._hydrate laufen
     // Catalog/Purchasing/Inventory parallel via Future.wait; ohne dieses Set
     // verliert Purchasing das Race → Suppliers/POs landen leer. Mirror
-    // InventoryProvider.setActiveWorkspace.
+    // DealsProvider.setActiveWorkspace.
     _repository.setActiveWorkspace(workspaceId);
     if (workspaceId == null) {
       clearLocalState();
@@ -162,7 +162,7 @@ class PurchasingProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final snapshot = await _repository.loadAll();
-      // Sort order mirrors the original InventoryProvider._hydrateFrom:
+      // Sort order mirrors the original DealsProvider._hydrateFrom:
       //   suppliers by lowercased name, POs by descending createdAt.
       _suppliers = List.of(snapshot.suppliers)
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -195,7 +195,7 @@ class PurchasingProvider extends ChangeNotifier {
   /// repository — DB-ONLY, with NO in-memory `_activities` cache.
   ///
   /// **Gotcha (PR #120 #6, intentional):** The original `_log` in
-  /// [InventoryProvider] also prepended the entry to an in-memory `_activities`
+  /// [DealsProvider] also prepended the entry to an in-memory `_activities`
   /// list that the dashboard's recent-activity widget reads. Purchasing
   /// activities logged here therefore no longer appear instantly in that
   /// in-memory list — they surface only after the next DB load (the activity

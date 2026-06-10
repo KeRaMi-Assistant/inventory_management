@@ -7,7 +7,7 @@
 /// Das Partial-UNIQUE-Constraint `UNIQUE (workspace_id) WHERE is_default AND
 /// deleted_at IS NULL` garantiert DB-seitig, dass maximal ein Lager pro
 /// Workspace als Default markiert sein kann. Der App-seitige Bootstrap (in
-/// `InventoryProvider`) nutzt `is_default: true` beim ersten Anlegen.
+/// `DealsProvider`) nutzt `is_default: true` beim ersten Anlegen.
 class Warehouse {
   final String id;
   final String workspaceId;

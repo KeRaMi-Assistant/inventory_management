@@ -9,7 +9,7 @@ import '../models/deal.dart';
 import '../models/shop.dart';
 import '../models/supplier.dart';
 import '../providers/active_workspace_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../providers/purchasing_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../utils/responsive.dart';
@@ -112,7 +112,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _finish() async {
-    final inv = context.read<InventoryProvider>();
+    final inv = context.read<DealsProvider>();
     // Suppliers now live in PurchasingProvider; shops/deals stay on Inventory.
     final purchasing = context.read<PurchasingProvider>();
     final activeWs = context.read<ActiveWorkspaceProvider>();

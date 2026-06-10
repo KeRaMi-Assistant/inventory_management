@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:inventory_management/l10n/app_localizations.dart';
 import 'package:inventory_management/models/shop.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/deals_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 import 'package:inventory_management/widgets/add_edit_shop_dialog.dart';
 
@@ -30,8 +30,8 @@ class _FakeRepository extends SupabaseRepository {
       );
 }
 
-class _FakeInventoryProvider extends InventoryProvider {
-  _FakeInventoryProvider() : super(repository: _FakeRepository());
+class _FakeDealsProvider extends DealsProvider {
+  _FakeDealsProvider() : super(repository: _FakeRepository());
 
   @override
   List<Shop> get shops => const [];
@@ -42,8 +42,8 @@ class _FakeInventoryProvider extends InventoryProvider {
 // ─────────────────────────────────────────────────────────────────────────────
 
 Widget _buildApp({Shop? shop}) {
-  return ChangeNotifierProvider<InventoryProvider>(
-    create: (_) => _FakeInventoryProvider(),
+  return ChangeNotifierProvider<DealsProvider>(
+    create: (_) => _FakeDealsProvider(),
     child: MaterialApp(
       localizationsDelegates: const [
         AppLocalizations.delegate,

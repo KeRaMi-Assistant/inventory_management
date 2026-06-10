@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../app_theme.dart';
 import '../../l10n/app_localizations.dart';
-import '../../providers/inventory_provider.dart';
+import '../../providers/deals_provider.dart';
 import '../../providers/purchasing_provider.dart';
 import '../../providers/statistics_filter_provider.dart';
 import '../../utils/responsive.dart';
@@ -20,7 +20,7 @@ class StatisticsFilterBar extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final filter = context.watch<StatisticsFilterProvider>();
-    final inv = context.watch<InventoryProvider>();
+    final inv = context.watch<DealsProvider>();
     // Suppliers now live in PurchasingProvider; buyers/shops stay on Inventory.
     final purchasing = context.watch<PurchasingProvider>();
     final dateFmt = DateFormat.yMd(localeTag);

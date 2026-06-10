@@ -3,7 +3,7 @@ import 'package:inventory_management/models/product.dart';
 import 'package:inventory_management/models/purchase_order.dart';
 import 'package:inventory_management/models/purchase_order_item.dart';
 import 'package:inventory_management/providers/catalog_provider.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/deals_provider.dart';
 import 'package:inventory_management/providers/purchasing_provider.dart';
 import 'package:inventory_management/providers/stock_provider.dart';
 import 'package:inventory_management/services/csv_service.dart';
@@ -102,7 +102,7 @@ PurchaseOrderItem _makePoItem({
   );
 }
 
-InventoryProvider _wire(_FakeRepository repo) {
+DealsProvider _wire(_FakeRepository repo) {
   final catalog = CatalogProvider(repository: repo);
   final purchasing = PurchasingProvider(repository: repo);
   final stock = StockProvider(
@@ -110,7 +110,7 @@ InventoryProvider _wire(_FakeRepository repo) {
     catalogProvider: catalog,
     purchasingProvider: purchasing,
   );
-  return InventoryProvider(
+  return DealsProvider(
     repository: repo,
     catalogProvider: catalog,
     purchasingProvider: purchasing,

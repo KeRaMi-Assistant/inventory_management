@@ -8,7 +8,7 @@ import '../models/billing_profile.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../screens/main_section.dart';
 import '../screens/pricing_screen.dart';
 import '../utils/responsive.dart';
@@ -99,9 +99,9 @@ class AdaptiveNavScaffold extends StatelessWidget {
   /// Ziel.
   final String? subTabTitle;
 
-  /// InventoryProvider — wird an den Desktop-Header (`_ContentHeader`)
+  /// DealsProvider — wird an den Desktop-Header (`_ContentHeader`)
   /// durchgereicht (identisch zur bisherigen Konstruktion).
-  final InventoryProvider provider;
+  final DealsProvider provider;
 
   /// Phone-AppBar + Desktop-Header Action-Callbacks.
   final VoidCallback onSearch;
@@ -340,7 +340,7 @@ class _ContentHeader extends StatelessWidget {
   /// Sub-Tab innerhalb der Sektion (Deals/Tickets, Statistik/Aktivität,
   /// Bestand/Lieferanten als Deep-Link). `null` ⇒ Sektion hat nur ein Ziel.
   final String? subTabTitle;
-  final InventoryProvider provider;
+  final DealsProvider provider;
   final VoidCallback onImport;
   final VoidCallback onExport;
   final VoidCallback onSearch;

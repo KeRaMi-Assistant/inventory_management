@@ -12,13 +12,13 @@ import '../models/supplier.dart';
 import '../models/ticket_summary.dart';
 import '../providers/app_preferences_provider.dart';
 import '../providers/filter_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../providers/purchasing_provider.dart';
 import '../providers/stock_provider.dart';
 import '../screens/main_tab.dart';
 
 /// Command-palette-style global search across deals, items, tickets, buyers,
-/// suppliers. The dialog reads from [InventoryProvider] and dispatches the
+/// suppliers. The dialog reads from [DealsProvider] and dispatches the
 /// chosen result via [selectTab] / [openTicket] callbacks supplied by the
 /// host (MainScreen) so navigation stays under the host's control.
 ///
@@ -109,10 +109,10 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<InventoryProvider>();
+    final provider = context.watch<DealsProvider>();
     final stock = context.watch<StockProvider>();
     // Suppliers now live in PurchasingProvider; deals/items/tickets/buyers
-    // stay on InventoryProvider; inventoryItems on StockProvider.
+    // stay on DealsProvider; inventoryItems on StockProvider.
     final purchasing = context.watch<PurchasingProvider>();
     final results = _buildResults(provider, stock, purchasing);
     final flat = results.expand((g) => g.items).toList();
@@ -371,7 +371,7 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
   }
 
   List<_ResultGroup> _buildResults(
-    InventoryProvider provider,
+    DealsProvider provider,
     StockProvider stock,
     PurchasingProvider purchasing,
   ) {

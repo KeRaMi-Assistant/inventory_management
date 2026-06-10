@@ -7,7 +7,7 @@ import 'package:inventory_management/models/product.dart';
 import 'package:inventory_management/models/workspace.dart';
 import 'package:inventory_management/providers/active_workspace_provider.dart';
 import 'package:inventory_management/providers/catalog_provider.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/deals_provider.dart';
 import 'package:inventory_management/providers/purchasing_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 import 'package:inventory_management/services/workspace_service.dart';
@@ -41,8 +41,8 @@ class _FakeRepository extends SupabaseRepository {
   Future<Product> updateProduct(Product product) async => product;
 }
 
-class _FakeInventoryProvider extends InventoryProvider {
-  _FakeInventoryProvider() : super(repository: _FakeRepository());
+class _FakeDealsProvider extends DealsProvider {
+  _FakeDealsProvider() : super(repository: _FakeRepository());
 }
 
 class _FakeWsService extends WorkspaceService {
@@ -72,8 +72,8 @@ Widget _buildApp({Product? product}) {
     providers: [
       ChangeNotifierProvider<CatalogProvider>(
           create: (_) => CatalogProvider(repository: _FakeRepository())),
-      ChangeNotifierProvider<InventoryProvider>(
-          create: (_) => _FakeInventoryProvider()),
+      ChangeNotifierProvider<DealsProvider>(
+          create: (_) => _FakeDealsProvider()),
       // The supplier dropdown now reads activeSuppliers from PurchasingProvider.
       ChangeNotifierProvider<PurchasingProvider>(
           create: (_) => PurchasingProvider(repository: _FakeRepository())),

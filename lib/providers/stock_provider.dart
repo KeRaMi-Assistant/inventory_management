@@ -25,11 +25,11 @@ import 'purchasing_provider.dart';
 /// routed through [SupabaseRepository]; local lists are caches kept in sync
 /// with the server.
 ///
-/// Extracted from [InventoryProvider] as the third provider-split increment
+/// Extracted from [DealsProvider] as the third provider-split increment
 /// (after [CatalogProvider] PR #120 and [PurchasingProvider] PR #128).
 /// Registers as a [ChangeNotifierProxyProvider3<SupabaseRepository,
 /// CatalogProvider, PurchasingProvider, StockProvider>] in `main.dart`, AFTER
-/// [CatalogProvider] + [PurchasingProvider] and BEFORE [InventoryProvider]
+/// [CatalogProvider] + [PurchasingProvider] and BEFORE [DealsProvider]
 /// (registration order = dependency order — the provider graph is a strict DAG:
 /// `Stock → Catalog`, `Stock → Purchasing`, `Inventory → Stock`).
 ///
@@ -41,12 +41,12 @@ import 'purchasing_provider.dart';
 /// [PurchasingProvider.notifyAfterCrossDomainWrite]).
 ///
 /// **Cross-domain writes INTO this provider:** the two orchestrators that stay
-/// in [InventoryProvider] — `importCsvAll` and `checkInDeal` — write warehouses,
+/// in [DealsProvider] — `importCsvAll` and `checkInDeal` — write warehouses,
 /// inventory items and movements here through the public write-back hooks below
 /// ([warehousesRaw], [inventoryItemsRaw], [upsertWarehouseFromImport],
 /// [upsertInventoryItemFromImport], [insertMovementFromCheckIn], [sortWarehouses],
 /// [sortInventoryItems], [notifyAfterCrossDomainWrite]). Keeping those
-/// orchestrators on [InventoryProvider] (and writing INTO stock via hooks)
+/// orchestrators on [DealsProvider] (and writing INTO stock via hooks)
 /// avoids a `Stock → Inventory` edge that would create a dependency cycle
 /// (plan §3 Option A).
 class StockProvider extends ChangeNotifier {
@@ -235,7 +235,7 @@ class StockProvider extends ChangeNotifier {
       _inventoryItems.fold(0, (sum, item) => sum + item.stockValue);
 
   // ── Cross-domain write-back hooks ─────────────────────────────────────────
-  // Public surface for the InventoryProvider orchestrators (importCsvAll,
+  // Public surface for the DealsProvider orchestrators (importCsvAll,
   // checkInDeal) that must write into stock state while keeping their FK-remap /
   // deal-link tables local. Raw (non-copied) reads are intentional — the
   // orchestrator builds dedup-seed sets from them and must observe the same
@@ -291,7 +291,7 @@ class StockProvider extends ChangeNotifier {
 
   /// Called by [_AuthGateState._onWorkspaceChanged] whenever the active
   /// workspace changes — mirrors the pattern in [CatalogProvider] /
-  /// [PurchasingProvider] / [InventoryProvider].
+  /// [PurchasingProvider] / [DealsProvider].
   Future<void> setActiveWorkspace(String? workspaceId) async {
     if (_activeWorkspaceId == workspaceId) return;
     _activeWorkspaceId = workspaceId;
@@ -326,7 +326,7 @@ class StockProvider extends ChangeNotifier {
       final wsId = _repository.activeWorkspaceId ?? _activeWorkspaceId;
 
       final snapshot = await _repository.loadAll();
-      // Sort order mirrors the original InventoryProvider._hydrateFrom:
+      // Sort order mirrors the original DealsProvider._hydrateFrom:
       //   items by name; movements/stocktakes desc by date; warehouses by
       //   lowercased name.
       _inventoryItems = List.of(snapshot.inventoryItems)
@@ -403,7 +403,7 @@ class StockProvider extends ChangeNotifier {
   /// repository — DB-ONLY, with NO in-memory `_activities` cache.
   ///
   /// **Gotcha (PR #120 §7.5, intentional):** The original `_log` in
-  /// [InventoryProvider] also prepended the entry to an in-memory `_activities`
+  /// [DealsProvider] also prepended the entry to an in-memory `_activities`
   /// list that the dashboard's recent-activity widget reads. Stock activities
   /// (warehouse/item/movement/stocktake/goods-receipt) logged here therefore no
   /// longer appear instantly in that in-memory list — they surface only after
