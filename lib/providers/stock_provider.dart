@@ -397,6 +397,24 @@ class StockProvider extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
+  /// Lädt das `product_stock`-Aggregat (View `qtyInWarehouse`) neu, nachdem
+  /// eine mengen-mutierende Operation (closeStocktake / bookGoodsReceipt /
+  /// adjustStock) `inventory_items.quantity` geändert hat. Ohne diesen Refresh
+  /// zeigte z.B. die Produkt-Detail-Box „Gesamtbestand" einen Stale-Wert, weil
+  /// nur `_inventoryItems`/`_movements` aktualisiert wurden, nicht das Aggregat.
+  /// Defensiv: schlägt der Reload fehl, bleibt der bisherige Cache erhalten.
+  Future<void> _refreshProductStock() async {
+    final wsId = _repository.activeWorkspaceId ?? _activeWorkspaceId;
+    if (wsId == null) return;
+    try {
+      _productStock = await _repository.loadProductStock(wsId);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('StockProvider._refreshProductStock failed (non-fatal): $e');
+      }
+    }
+  }
+
   // ── Activity helper ───────────────────────────────────────────────────────
 
   /// Fire-and-forget activity log. Writes directly to the DB via the
@@ -645,6 +663,7 @@ class StockProvider extends ChangeNotifier {
       'Wareneingang gebucht: +$receivedQty für Produkt $productId',
       'purchase_order',
     );
+    await _refreshProductStock();
     if (!_disposed) notifyListeners();
     return updatedItem;
   }
@@ -896,6 +915,7 @@ class StockProvider extends ChangeNotifier {
       'Inventur abgeschlossen: ${savedStocktake.title ?? savedStocktake.id}',
       'stocktake',
     );
+    await _refreshProductStock();
     if (!_disposed) notifyListeners();
     return savedStocktake;
   }
@@ -1054,6 +1074,7 @@ class StockProvider extends ChangeNotifier {
 
     _log('Lagerbewegung: ${current.name} ${delta > 0 ? '+' : ''}$delta',
         'stock');
+    await _refreshProductStock();
     if (!_disposed) notifyListeners();
   }
 
