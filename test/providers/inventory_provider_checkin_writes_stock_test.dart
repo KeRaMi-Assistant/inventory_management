@@ -175,23 +175,4 @@ void main() {
     // Produkt-Matching gegen den Katalog-Seed (kein neues Produkt angelegt).
     expect(w.stock.inventoryItems.first.productId, equals('prod-1'));
   });
-
-  test('checkInDeal ohne injizierten StockProvider ist ein No-op auf Stock',
-      () async {
-    // Defensiv: _stockProvider == null darf nicht crashen (?.-Hooks).
-    final repo = _FakeRepository()
-      ..seedDeals = [_makeDeal(id: 2)]
-      ..seedProducts = [_makeProduct(id: 'prod-2', name: 'Widget')];
-    final inventory = InventoryProvider(repository: repo);
-    await inventory.loadData();
-
-    final deal = inventory.deals.firstWhere((d) => d.id == 2);
-    await inventory.checkInDeal(deal); // darf nicht werfen
-
-    // Deal-Link wird trotzdem lokal gesetzt.
-    expect(
-      inventory.deals.firstWhere((d) => d.id == 2).inventoryItemIds,
-      hasLength(1),
-    );
-  });
 }

@@ -1060,6 +1060,15 @@ class InventoryProvider extends ChangeNotifier {
     String? location,
     String? sku,
   }) async {
+    // Defensiv (wie importCsvAll): Item + Movement werden über die Stock-Hooks
+    // in den injizierten StockProvider geschrieben. Ist die Injection fehlend
+    // (Gotcha #4), würden die `?.`-Hooks still no-op-en und die DB-Rows wären
+    // vom Stock-Cache entkoppelt. Im Debug-Build laut machen.
+    assert(
+      _stockProvider != null,
+      'checkInDeal: _stockProvider ist null — Item/Movement-Write-Back würde '
+      'still no-op. ChangeNotifierProxyProvider4-Wiring in main.dart prüfen.',
+    );
     final effectiveSku = sku?.trim().isEmpty ?? true ? null : sku!.trim();
 
     // Produkt-Matching: erst im lokalen Cache suchen, dann ggf. neu anlegen.

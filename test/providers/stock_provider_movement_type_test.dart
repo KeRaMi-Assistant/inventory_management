@@ -326,19 +326,23 @@ void main() {
   group('checkInDeal — movementType', () {
     late _FakeRepository invRepo;
     late CatalogProvider catalog;
+    late StockProvider stockProv;
     late InventoryProvider inventory;
 
     setUp(() {
       invRepo = _FakeRepository();
       catalog = CatalogProvider(repository: invRepo);
+      stockProv = StockProvider(repository: invRepo, catalogProvider: catalog);
       inventory = InventoryProvider(
         repository: invRepo,
         catalogProvider: catalog,
+        stockProvider: stockProv,
       );
     });
 
     tearDown(() {
       inventory.dispose();
+      stockProv.dispose();
       catalog.dispose();
     });
 
@@ -381,19 +385,23 @@ void main() {
   group('checkInDeal — Produkt-Matching', () {
     late _FakeRepository invRepo;
     late CatalogProvider catalog;
+    late StockProvider stockProv;
     late InventoryProvider inventory;
 
     setUp(() {
       invRepo = _FakeRepository();
       catalog = CatalogProvider(repository: invRepo);
+      stockProv = StockProvider(repository: invRepo, catalogProvider: catalog);
       inventory = InventoryProvider(
         repository: invRepo,
         catalogProvider: catalog,
+        stockProvider: stockProv,
       );
     });
 
     tearDown(() {
       inventory.dispose();
+      stockProv.dispose();
       catalog.dispose();
     });
 

@@ -317,7 +317,7 @@ class StockProvider extends ChangeNotifier {
   Future<void> _doLoadData() async {
     _loading = true;
     _lastError = null;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     try {
       // Workspace-ID aus dem Repository holen (Single Source of Truth):
       // `_repository.activeWorkspaceId` ist auch für Test-Fakes korrekt
@@ -394,7 +394,7 @@ class StockProvider extends ChangeNotifier {
     _lastError = null;
     _initialLoadAttempted = false;
     _activeWorkspaceId = null;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   // ── Activity helper ───────────────────────────────────────────────────────
@@ -458,7 +458,7 @@ class StockProvider extends ChangeNotifier {
       _warehouses
           .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
       _log('Standard-Lager angelegt: ${saved.name}', 'warehouse');
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     } catch (e) {
       // Race (23505 Unique-Violation auf is_default) oder fehlende Tabelle
       // (vor D1-Migration) — beide Fälle sind nicht-fatal.
@@ -471,7 +471,7 @@ class StockProvider extends ChangeNotifier {
         _warehouses = existing;
         _warehouses.sort(
             (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-        notifyListeners();
+        if (!_disposed) notifyListeners();
       } catch (_) {
         // Auch der Fallback-Load schlägt fehl (z. B. Tabelle existiert
         // noch nicht) — ignorieren, App bleibt ohne Lager nutzbar.
@@ -520,6 +520,16 @@ class StockProvider extends ChangeNotifier {
           'bookGoodsReceipt: PurchaseOrderItem hat keine product_id — '
           'Wareneingang ohne Produkt-Verknüpfung nicht möglich.');
     }
+    // Defensiv (wie importCsvAll): macht eine fehlende Cross-Domain-Injection
+    // im Debug-Build laut, statt den PO-Header-Refresh still per `?.` zu
+    // verschlucken (Gotcha #4 — updatePurchasingProvider muss bei jedem Rebuild
+    // re-injizieren). Release-Build degradiert best-effort (Wareneingang
+    // persistiert, PO-Header bleibt ggf. stale bis zum nächsten Load).
+    assert(
+      _purchasingProvider != null,
+      'bookGoodsReceipt: _purchasingProvider ist null — PO-Header-Refresh würde '
+      'still no-op. ChangeNotifierProxyProvider3-Wiring in main.dart prüfen.',
+    );
 
     // Reihenfolge (Konsistenz-Begründung):
     //   A. inventory_items-Row auflösen ODER neu anlegen → liefert gültige
@@ -635,7 +645,7 @@ class StockProvider extends ChangeNotifier {
       'Wareneingang gebucht: +$receivedQty für Produkt $productId',
       'purchase_order',
     );
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     return updatedItem;
   }
 
@@ -647,7 +657,7 @@ class StockProvider extends ChangeNotifier {
     _warehouses
         .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     _log('Lager hinzugefügt: ${saved.name}', 'warehouse');
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> updateWarehouse(Warehouse warehouse) async {
@@ -658,7 +668,7 @@ class StockProvider extends ChangeNotifier {
     _warehouses
         .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     _log('Lager aktualisiert: ${saved.name}', 'warehouse');
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> deleteWarehouse(String id) async {
@@ -668,7 +678,7 @@ class StockProvider extends ChangeNotifier {
     if (warehouse != null) {
       _log('Lager gelöscht: ${warehouse.name}', 'warehouse');
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   // ── STOCKTAKES (Inventur — Epic E) ───────────────────────────────────────
@@ -712,7 +722,7 @@ class StockProvider extends ChangeNotifier {
     final savedStocktake = await _repository.insertStocktake(stocktake);
     _stocktakes.insert(0, savedStocktake);
     _stocktakes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    notifyListeners();
+    if (!_disposed) notifyListeners();
 
     // 2. Soll-Snapshot als stocktake_items erzeugen.
     //    Bestand pro Produkt aggregieren (Summe aller productStock-Rows mit
@@ -886,7 +896,7 @@ class StockProvider extends ChangeNotifier {
       'Inventur abgeschlossen: ${savedStocktake.title ?? savedStocktake.id}',
       'stocktake',
     );
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     return savedStocktake;
   }
 
@@ -906,7 +916,7 @@ class StockProvider extends ChangeNotifier {
     _stocktakes.insert(0, saved);
     _stocktakes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _log('Inventur hinzugefügt: ${saved.title ?? saved.id}', 'stocktake');
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     return saved;
   }
 
@@ -917,7 +927,7 @@ class StockProvider extends ChangeNotifier {
     _stocktakes[idx] = saved;
     _stocktakes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _log('Inventur aktualisiert: ${saved.title ?? saved.id}', 'stocktake');
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   /// Soft-Delete. Entfernt die Inventur aus dem lokalen Cache.
@@ -929,7 +939,7 @@ class StockProvider extends ChangeNotifier {
     if (st != null) {
       _log('Inventur gelöscht: ${st.title ?? st.id}', 'stocktake');
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   // ── INVENTORY ITEMS ───────────────────────────────────────────────────────
@@ -958,7 +968,7 @@ class StockProvider extends ChangeNotifier {
     }
 
     _log('Artikel eingebucht: ${saved.name}', 'stock');
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> updateInventoryItem(InventoryItem item) async {
@@ -994,7 +1004,7 @@ class StockProvider extends ChangeNotifier {
     }
 
     _log('Lagerartikel aktualisiert: ${saved.name}', 'stock');
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> deleteInventoryItem(String id) async {
@@ -1004,7 +1014,7 @@ class StockProvider extends ChangeNotifier {
     // ON DELETE CASCADE removes movements server-side; mirror that locally.
     _movements.removeWhere((m) => m.itemId == id);
     if (item != null) _log('Lagerartikel gelöscht: ${item.name}', 'stock');
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> adjustStock(
@@ -1044,7 +1054,7 @@ class StockProvider extends ChangeNotifier {
 
     _log('Lagerbewegung: ${current.name} ${delta > 0 ? '+' : ''}$delta',
         'stock');
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   // ── BATCHES ───────────────────────────────────────────────────────────────
@@ -1059,19 +1069,19 @@ class StockProvider extends ChangeNotifier {
   Future<InventoryBatch> addBatch(InventoryBatch batch) async {
     final saved = await _repository.insertBatch(batch);
     _log('Charge hinzugefügt: ${saved.batchNumber}', 'batch');
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     return saved;
   }
 
   Future<InventoryBatch> updateBatch(InventoryBatch batch) async {
     final saved = await _repository.updateBatch(batch);
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     return saved;
   }
 
   Future<void> deleteBatch(String id) async {
     await _repository.deleteBatch(id);
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   @override
