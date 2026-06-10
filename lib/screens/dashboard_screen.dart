@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
+import '../providers/stock_provider.dart';
 import '../utils/responsive.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/empty_state.dart';
@@ -36,10 +37,10 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final fmt = NumberFormat.currency(locale: localeTag, symbol: '€');
-    return Consumer<InventoryProvider>(
-      builder: (context, provider, _) {
+    return Consumer2<StockProvider, InventoryProvider>(
+      builder: (context, stock, provider, _) {
         final hasData = provider.deals.isNotEmpty ||
-            provider.inventoryItems.isNotEmpty ||
+            stock.inventoryItems.isNotEmpty ||
             provider.buyers.isNotEmpty;
         final showSkeleton = shouldShowSkeleton(
           isLoading: provider.isLoading,
@@ -66,8 +67,8 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     if (isEmpty) const _EmptyStateCard(),
                     if (isEmpty) const SizedBox(height: 24),
-                    _LowStockAlertBlock(criticalCount: provider.criticalStockCount),
-                    _KpiGrid(provider: provider, fmt: fmt),
+                    _LowStockAlertBlock(criticalCount: stock.criticalStockCount),
+                    _KpiGrid(provider: provider, stock: stock, fmt: fmt),
                     const SizedBox(height: 24),
                     LayoutBuilder(
                       builder: (context, c) {
@@ -291,8 +292,9 @@ class _EmptyStateCardState extends State<_EmptyStateCard> {
 
 class _KpiGrid extends StatelessWidget {
   final InventoryProvider provider;
+  final StockProvider stock;
   final NumberFormat fmt;
-  const _KpiGrid({required this.provider, required this.fmt});
+  const _KpiGrid({required this.provider, required this.stock, required this.fmt});
 
   @override
   Widget build(BuildContext context) {
@@ -303,7 +305,7 @@ class _KpiGrid extends StatelessWidget {
       (Icons.today_outlined, l10n.dashboardKpiArrivedToday, '${provider.arrivedTodayCount}', AppTheme.info),
       (Icons.trending_up_rounded, l10n.dashboardKpiTotalProfit, fmt.format(provider.totalProfit), AppTheme.success),
       (Icons.account_balance_wallet_outlined, l10n.dashboardKpiOpenAmount, fmt.format(provider.openAmount), AppTheme.warning),
-      (Icons.warning_amber_rounded, l10n.dashboardKpiCriticalStock, '${provider.criticalStockCount}', AppTheme.danger),
+      (Icons.warning_amber_rounded, l10n.dashboardKpiCriticalStock, '${stock.criticalStockCount}', AppTheme.danger),
       (Icons.receipt_long_outlined, l10n.dashboardKpiMissingInvoice, '${provider.missingInvoiceCount}', AppTheme.purple),
     ];
 

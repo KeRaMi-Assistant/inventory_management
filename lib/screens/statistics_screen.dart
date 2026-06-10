@@ -9,6 +9,7 @@ import '../models/inventory_batch.dart';
 import '../providers/app_preferences_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/purchasing_provider.dart';
+import '../providers/stock_provider.dart';
 import '../providers/statistics_filter_provider.dart';
 import '../services/statistics_export_service.dart';
 import '../services/statistics_service.dart';
@@ -44,7 +45,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   @override
   void initState() {
     super.initState();
-    final inv = context.read<InventoryProvider>();
+    final inv = context.read<StockProvider>();
     _batchFuture = inv.loadAllBatches().catchError((Object e) {
       if (kDebugMode) debugPrint('loadAllBatches: $e');
       return <InventoryBatch>[];
@@ -139,13 +140,14 @@ class _StatisticsScreenState extends State<StatisticsScreen>
             // Suppliers now live in PurchasingProvider — watch it so the supplier
             // filter/breakdown rebuilds when the supplier list changes.
             final suppliers = context.watch<PurchasingProvider>().suppliers;
+            final stock = context.watch<StockProvider>();
             final batches = snap.data ?? const <InventoryBatch>[];
             final stats = StatisticsService(
               allDeals: inv.deals,
-              allItems: inv.inventoryItems,
+              allItems: stock.inventoryItems,
               suppliers: suppliers,
               batches: batches,
-              allMovements: inv.movements,
+              allMovements: stock.movements,
               filter: filter,
               monthlyProfitGoal: prefs.monthlyProfitGoal,
               lowStockThreshold: prefs.lowStockThreshold,

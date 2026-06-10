@@ -4,7 +4,7 @@ import 'package:inventory_management/models/product_stock.dart';
 import 'package:inventory_management/models/stocktake.dart';
 import 'package:inventory_management/models/stocktake_item.dart';
 import 'package:inventory_management/models/warehouse.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/stock_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
 // ignore_for_file: avoid_redundant_argument_values
@@ -109,8 +109,8 @@ class _FakeRepository extends SupabaseRepository {
 
 // ── Hilfsfunktionen ──────────────────────────────────────────────────────────
 
-InventoryProvider _makeProvider(_FakeRepository repo) =>
-    InventoryProvider(repository: repo);
+StockProvider _makeProvider(_FakeRepository repo) =>
+    StockProvider(repository: repo);
 
 ProductStock _makeStock({
   required String productId,

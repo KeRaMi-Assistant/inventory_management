@@ -4,6 +4,7 @@ import 'package:inventory_management/models/inventory_item.dart';
 import 'package:inventory_management/models/product.dart';
 import 'package:inventory_management/providers/catalog_provider.dart';
 import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/stock_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
 // ignore_for_file: avoid_redundant_argument_values
@@ -150,27 +151,24 @@ Product _makeProduct({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 void main() {
+  // ── StockProvider — addInventoryItem / updateInventoryItem / adjustStock ───
+
   late _FakeRepository repo;
-  late CatalogProvider catalog;
-  late InventoryProvider provider;
+  late StockProvider stock;
 
   setUp(() {
     repo = _FakeRepository();
-    catalog = CatalogProvider(repository: repo);
-    provider = InventoryProvider(repository: repo, catalogProvider: catalog);
+    stock = StockProvider(repository: repo);
   });
 
-  tearDown(() {
-    provider.dispose();
-    catalog.dispose();
-  });
+  tearDown(() => stock.dispose());
 
   // ── addInventoryItem ──────────────────────────────────────────────────────
 
   group('addInventoryItem — movementType', () {
     test('addInventoryItem mit quantity > 0 erzeugt goodsIn-Movement', () async {
       final item = _makeItem(quantity: 5);
-      await provider.addInventoryItem(item);
+      await stock.addInventoryItem(item);
 
       expect(repo.insertedMovements, hasLength(1));
       expect(
@@ -181,14 +179,14 @@ void main() {
 
     test('addInventoryItem mit quantity == 0 erzeugt kein Movement', () async {
       final item = _makeItem(quantity: 0);
-      await provider.addInventoryItem(item);
+      await stock.addInventoryItem(item);
 
       expect(repo.insertedMovements, isEmpty);
     });
 
     test('addInventoryItem: Movement-quantityChange == item.quantity', () async {
       final item = _makeItem(quantity: 7);
-      await provider.addInventoryItem(item);
+      await stock.addInventoryItem(item);
 
       expect(repo.insertedMovements.first.quantityChange, equals(7));
     });
@@ -201,7 +199,7 @@ void main() {
     /// updateInventoryItem den "old"-Wert ermitteln kann. Dazu rufen wir
     /// addInventoryItem zuerst auf und leeren dann insertedMovements.
     Future<void> seed(InventoryItem item) async {
-      await provider.addInventoryItem(item);
+      await stock.addInventoryItem(item);
       repo.insertedMovements.clear();
     }
 
@@ -210,7 +208,7 @@ void main() {
       await seed(item);
 
       final updated = item.copyWith(quantity: 8); // delta = +3
-      await provider.updateInventoryItem(updated);
+      await stock.updateInventoryItem(updated);
 
       expect(repo.insertedMovements, hasLength(1));
       expect(
@@ -225,7 +223,7 @@ void main() {
       await seed(item);
 
       final updated = item.copyWith(quantity: 6); // delta = -4
-      await provider.updateInventoryItem(updated);
+      await stock.updateInventoryItem(updated);
 
       expect(repo.insertedMovements, hasLength(1));
       expect(
@@ -240,7 +238,7 @@ void main() {
       await seed(item);
 
       final updated = item.copyWith(name: 'Neuer Name'); // quantity unverändert
-      await provider.updateInventoryItem(updated);
+      await stock.updateInventoryItem(updated);
 
       expect(repo.insertedMovements, isEmpty);
     });
@@ -250,7 +248,7 @@ void main() {
 
   group('adjustStock — movementType-Parameter wird durchgereicht', () {
     Future<void> seed(InventoryItem item) async {
-      await provider.addInventoryItem(item);
+      await stock.addInventoryItem(item);
       repo.insertedMovements.clear();
     }
 
@@ -258,7 +256,7 @@ void main() {
       final item = _makeItem(id: 'j1', quantity: 5);
       await seed(item);
 
-      await provider.adjustStock('j1', 2, 'Manuelle Korrektur');
+      await stock.adjustStock('j1', 2, 'Manuelle Korrektur');
 
       expect(repo.insertedMovements, hasLength(1));
       expect(
@@ -271,7 +269,7 @@ void main() {
       final item = _makeItem(id: 'j2', quantity: 10);
       await seed(item);
 
-      await provider.adjustStock(
+      await stock.adjustStock(
         'j2',
         -3,
         'Verkauf',
@@ -290,7 +288,7 @@ void main() {
       final item = _makeItem(id: 'j3', quantity: 5);
       await seed(item);
 
-      await provider.adjustStock(
+      await stock.adjustStock(
         'j3',
         5,
         'Wareneingang',
@@ -308,82 +306,128 @@ void main() {
       final item = _makeItem(id: 'j4', quantity: 5);
       await seed(item);
 
-      await provider.adjustStock('j4', 0, 'Keine Änderung');
+      await stock.adjustStock('j4', 0, 'Keine Änderung');
 
       expect(repo.insertedMovements, isEmpty);
     });
 
     test('adjustStock mit unbekannter id erzeugt kein Movement', () async {
       // Provider hat das Item nicht im State → idx == -1 → kein Movement
-      await provider.adjustStock('non-existent', 5, 'Irrtum');
+      await stock.adjustStock('non-existent', 5, 'Irrtum');
 
       expect(repo.insertedMovements, isEmpty);
     });
   });
 
-  // ── checkInDeal ───────────────────────────────────────────────────────────
+  // ── checkInDeal — bleibt auf InventoryProvider ────────────────────────────
+  // checkInDeal ist ein Cross-Domain-Orchestrator (Plan §3 Option A) der auf
+  // InventoryProvider verbleibt und Stock über Write-Back-Hooks beschreibt.
 
   group('checkInDeal — movementType', () {
+    late _FakeRepository invRepo;
+    late CatalogProvider catalog;
+    late StockProvider stockProv;
+    late InventoryProvider inventory;
+
+    setUp(() {
+      invRepo = _FakeRepository();
+      catalog = CatalogProvider(repository: invRepo);
+      stockProv = StockProvider(repository: invRepo, catalogProvider: catalog);
+      inventory = InventoryProvider(
+        repository: invRepo,
+        catalogProvider: catalog,
+        stockProvider: stockProv,
+      );
+    });
+
+    tearDown(() {
+      inventory.dispose();
+      stockProv.dispose();
+      catalog.dispose();
+    });
+
     test('checkInDeal erzeugt goodsIn-Movement', () async {
       final deal = _makeDeal(quantity: 4);
-      await provider.checkInDeal(deal);
+      await inventory.checkInDeal(deal);
 
-      expect(repo.insertedMovements, hasLength(1));
+      expect(invRepo.insertedMovements, hasLength(1));
       expect(
-        repo.insertedMovements.first.movementType,
+        invRepo.insertedMovements.first.movementType,
         equals(InventoryMovementType.goodsIn),
       );
     });
 
     test('checkInDeal: Movement-quantityChange == deal.quantity', () async {
       final deal = _makeDeal(quantity: 7);
-      await provider.checkInDeal(deal);
+      await inventory.checkInDeal(deal);
 
-      expect(repo.insertedMovements.first.quantityChange, equals(7));
+      expect(invRepo.insertedMovements.first.quantityChange, equals(7));
     });
 
     test('checkInDeal: unitCost entspricht deal.ekBrutto', () async {
       final deal = _makeDeal(ekBrutto: 19.99);
-      await provider.checkInDeal(deal);
+      await inventory.checkInDeal(deal);
 
-      expect(repo.insertedMovements.first.unitCost, equals(19.99));
+      expect(invRepo.insertedMovements.first.unitCost, equals(19.99));
     });
 
     test('checkInDeal mit ekBrutto == null → unitCost == null im Movement',
         () async {
       final deal = _makeDeal(ekBrutto: null);
-      await provider.checkInDeal(deal);
+      await inventory.checkInDeal(deal);
 
-      expect(repo.insertedMovements.first.unitCost, isNull);
+      expect(invRepo.insertedMovements.first.unitCost, isNull);
     });
   });
 
   // ── checkInDeal — Produkt-Matching ────────────────────────────────────────
 
   group('checkInDeal — Produkt-Matching', () {
+    late _FakeRepository invRepo;
+    late CatalogProvider catalog;
+    late StockProvider stockProv;
+    late InventoryProvider inventory;
+
+    setUp(() {
+      invRepo = _FakeRepository();
+      catalog = CatalogProvider(repository: invRepo);
+      stockProv = StockProvider(repository: invRepo, catalogProvider: catalog);
+      inventory = InventoryProvider(
+        repository: invRepo,
+        catalogProvider: catalog,
+        stockProvider: stockProv,
+      );
+    });
+
+    tearDown(() {
+      inventory.dispose();
+      stockProv.dispose();
+      catalog.dispose();
+    });
+
     /// Lädt einen Seed-Produkt-State in CatalogProvider + InventoryProvider.
     Future<void> seedWithProducts(List<Product> products) async {
-      repo.seedProducts = products;
-      await Future.wait([catalog.loadData(), provider.loadData()]);
-      repo.insertedMovements.clear();
+      invRepo.seedProducts = products;
+      await Future.wait([catalog.loadData(), inventory.loadData()]);
+      invRepo.insertedMovements.clear();
     }
 
     test('kein bestehendes Produkt → neues Produkt wird angelegt', () async {
       final deal = _makeDeal(product: 'Neuer Artikel');
-      await provider.checkInDeal(deal);
+      await inventory.checkInDeal(deal);
 
       // insertProduct wurde aufgerufen
-      expect(repo.insertedProducts, hasLength(1));
-      expect(repo.insertedProducts.first.name, equals('Neuer Artikel'));
+      expect(invRepo.insertedProducts, hasLength(1));
+      expect(invRepo.insertedProducts.first.name, equals('Neuer Artikel'));
     });
 
     test('neues Produkt: Item und Movement tragen die productId', () async {
       final deal = _makeDeal(product: 'Neuer Artikel');
-      await provider.checkInDeal(deal);
+      await inventory.checkInDeal(deal);
 
-      final savedProductId = repo.insertedProducts.first.id;
-      expect(repo.lastInsertedItem?.productId, equals(savedProductId));
-      expect(repo.insertedMovements.first.productId, equals(savedProductId));
+      final savedProductId = invRepo.insertedProducts.first.id;
+      expect(invRepo.lastInsertedItem?.productId, equals(savedProductId));
+      expect(invRepo.insertedMovements.first.productId, equals(savedProductId));
     });
 
     test('Treffer per Name (case-insensitiv) → kein insertProduct', () async {
@@ -391,13 +435,13 @@ void main() {
       await seedWithProducts([existing]);
 
       final deal = _makeDeal(product: 'deal-artikel'); // Kleinbuchstaben
-      await provider.checkInDeal(deal);
+      await inventory.checkInDeal(deal);
 
       // Kein neues Produkt angelegt
-      expect(repo.insertedProducts, isEmpty);
+      expect(invRepo.insertedProducts, isEmpty);
       // Bestehende productId verknüpft
-      expect(repo.lastInsertedItem?.productId, equals('prod-existing'));
-      expect(repo.insertedMovements.first.productId, equals('prod-existing'));
+      expect(invRepo.lastInsertedItem?.productId, equals('prod-existing'));
+      expect(invRepo.insertedMovements.first.productId, equals('prod-existing'));
     });
 
     test('Treffer per SKU (case-insensitiv) hat Vorrang vor Name', () async {
@@ -416,25 +460,25 @@ void main() {
 
       // Deal mit SKU, die auf prod-sku matcht
       final deal = _makeDeal(product: 'Deal-Artikel');
-      await provider.checkInDeal(deal, sku: 'abc123'); // case-insensitiv
+      await inventory.checkInDeal(deal, sku: 'abc123'); // case-insensitiv
 
       // SKU-Treffer hat Vorrang
-      expect(repo.lastInsertedItem?.productId, equals('prod-sku'));
+      expect(invRepo.lastInsertedItem?.productId, equals('prod-sku'));
     });
 
     test(
         'insertProduct-Fehler → defensiv: Item wird ohne productId eingebucht',
         () async {
-      repo.insertProductError = Exception('UNIQUE Violation SKU');
+      invRepo.insertProductError = Exception('UNIQUE Violation SKU');
       final deal = _makeDeal(product: 'Fehler-Artikel');
       // Kein throw — checkInDeal schlägt nicht fehl
-      await expectLater(provider.checkInDeal(deal), completes);
+      await expectLater(inventory.checkInDeal(deal), completes);
 
       // Item wurde eingebucht, aber ohne productId
-      expect(repo.lastInsertedItem?.productId, isNull);
+      expect(invRepo.lastInsertedItem?.productId, isNull);
       // Movement trotzdem vorhanden
-      expect(repo.insertedMovements, hasLength(1));
-      expect(repo.insertedMovements.first.productId, isNull);
+      expect(invRepo.insertedMovements, hasLength(1));
+      expect(invRepo.insertedMovements.first.productId, isNull);
     });
 
     test('checkInDeal: product_id liegt VOR der Movement-Erzeugung am Item',
@@ -442,12 +486,12 @@ void main() {
       // Stellt sicher, dass savedItem.productId zur Zeit der Movement-Erstellung
       // bereits gesetzt ist (AF7b-Anforderung).
       final deal = _makeDeal(product: 'Reihenfolge-Test');
-      await provider.checkInDeal(deal);
+      await inventory.checkInDeal(deal);
 
       // insertProduct liefert eine ID; diese muss im Movement stehen.
-      expect(repo.insertedProducts, hasLength(1));
-      final productId = repo.insertedProducts.first.id;
-      expect(repo.insertedMovements.first.productId, equals(productId));
+      expect(invRepo.insertedProducts, hasLength(1));
+      final productId = invRepo.insertedProducts.first.id;
+      expect(invRepo.insertedMovements.first.productId, equals(productId));
     });
   });
 }

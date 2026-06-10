@@ -9,6 +9,7 @@ import '../models/product.dart';
 import '../providers/catalog_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/purchasing_provider.dart';
+import '../providers/stock_provider.dart';
 import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
@@ -98,8 +99,8 @@ class _InventoryScreenState extends State<InventoryScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer<InventoryProvider>(
-      builder: (context, provider, _) {
+    return Consumer2<StockProvider, InventoryProvider>(
+      builder: (context, stock, provider, _) {
         return LayoutBuilder(
           builder: (context, constraints) {
             // T3.3b — Layout-Switch (Plan §5.5):
@@ -122,6 +123,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                     child: _buildMasterColumn(
                       context: context,
                       provider: provider,
+                      stock: stock,
                       l10n: l10n,
                       isMasterDetail: true,
                     ),
@@ -130,6 +132,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                     child: _buildDetailPane(
                       context: context,
                       provider: provider,
+                      stock: stock,
                       l10n: l10n,
                     ),
                   ),
@@ -141,6 +144,7 @@ class _InventoryScreenState extends State<InventoryScreen>
             return _buildMasterColumn(
               context: context,
               provider: provider,
+              stock: stock,
               l10n: l10n,
               isMasterDetail: false,
               outerWidth: constraints.maxWidth,
@@ -158,6 +162,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget _buildMasterColumn({
     required BuildContext context,
     required InventoryProvider provider,
+    required StockProvider stock,
     required AppLocalizations l10n,
     required bool isMasterDetail,
     double? outerWidth,
@@ -179,8 +184,8 @@ class _InventoryScreenState extends State<InventoryScreen>
                         (i.sku?.toLowerCase().contains(query) ?? false))
                     .toList();
         final allStock =
-            provider.inventoryItems.where((i) => !_isSold(i)).toList();
-        final allSold = provider.inventoryItems.where(_isSold).toList();
+            stock.inventoryItems.where((i) => !_isSold(i)).toList();
+        final allSold = stock.inventoryItems.where(_isSold).toList();
         final stockItems = applySearch(allStock);
         final soldItems = applySearch(allSold);
 
@@ -210,6 +215,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                   _buildStockTab(
                     context: context,
                     provider: provider,
+                    stock: stock,
                     items: stockItems,
                     allStockEmpty: allStock.isEmpty,
                     isNarrow: isNarrow,
@@ -221,6 +227,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                   _buildSoldTab(
                     context: context,
                     provider: provider,
+                    stock: stock,
                     items: soldItems,
                     allSoldEmpty: allSold.isEmpty,
                     isNarrow: isNarrow,
@@ -254,12 +261,13 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget _buildDetailPane({
     required BuildContext context,
     required InventoryProvider provider,
+    required StockProvider stock,
     required AppLocalizations l10n,
   }) {
     final selectedId = _selectedItemId;
     final InventoryItem? selectedItem = selectedId == null
         ? null
-        : provider.inventoryItems
+        : stock.inventoryItems
             .where((i) => i.id == selectedId)
             .firstOrNull;
 
@@ -335,6 +343,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget _buildStockTab({
     required BuildContext context,
     required InventoryProvider provider,
+    required StockProvider stock,
     required List<InventoryItem> items,
     required bool allStockEmpty,
     required bool isNarrow,
@@ -354,7 +363,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     //   - without data → skeleton hides, EmptyState shows (no race flash).
     final showSkeleton = shouldShowSkeleton(
       isLoading: provider.isLoading,
-      hasData: provider.inventoryItems.isNotEmpty,
+      hasData: stock.inventoryItems.isNotEmpty,
       initialLoadAttempted: provider.initialLoadAttempted,
     );
 
@@ -379,15 +388,15 @@ class _InventoryScreenState extends State<InventoryScreen>
     } else {
       listContent = isNarrow
           ? _buildGroupedCardList(
-              context, provider, money, items, l10n, isMasterDetail)
-          : _buildGroupedTable(context, provider, money, items, l10n);
+              context, provider, stock, money, items, l10n, isMasterDetail)
+          : _buildGroupedTable(context, provider, stock, money, items, l10n);
     }
 
     return Column(
       children: [
-        _buildHeader(context, provider, isNarrow, money, width),
-        if (provider.criticalStockCount > 0)
-          _LowStockBanner(count: provider.criticalStockCount),
+        _buildHeader(context, provider, stock, isNarrow, money, width),
+        if (stock.criticalStockCount > 0)
+          _LowStockBanner(count: stock.criticalStockCount),
         Expanded(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
@@ -409,6 +418,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget _buildSoldTab({
     required BuildContext context,
     required InventoryProvider provider,
+    required StockProvider stock,
     required List<InventoryItem> items,
     required bool allSoldEmpty,
     required bool isNarrow,
@@ -419,7 +429,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   }) {
     return Column(
       children: [
-        _buildSoldHeader(context, provider, isNarrow, money, width),
+        _buildSoldHeader(context, provider, stock, isNarrow, money, width),
         Expanded(
           child: items.isEmpty
               ? allSoldEmpty
@@ -437,8 +447,8 @@ class _InventoryScreenState extends State<InventoryScreen>
                     )
               : isNarrow
                   ? _buildCardList(
-                      context, provider, money, items, isMasterDetail)
-                  : _buildTable(context, provider, money, items),
+                      context, provider, stock, money, items, isMasterDetail)
+                  : _buildTable(context, provider, stock, money, items),
         ),
       ],
     );
@@ -449,6 +459,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget _buildGroupedCardList(
     BuildContext context,
     InventoryProvider provider,
+    StockProvider stock,
     NumberFormat money,
     List<InventoryItem> items,
     AppLocalizations l10n,
@@ -464,7 +475,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     // Wenn alle Items ohne Produkt-Verknüpfung sind UND keine Produkte im
     // Katalog existieren → flache Liste wie bisher (keine leere Gruppe-Wrapper).
     if (groups.length == 1 && groups.first.productId == null && catalogProducts.isEmpty) {
-      return _buildCardList(context, provider, money, items, isMasterDetail);
+      return _buildCardList(context, provider, stock, money, items, isMasterDetail);
     }
 
     return ListView.builder(
@@ -493,7 +504,7 @@ class _InventoryScreenState extends State<InventoryScreen>
               l10n: l10n,
               children: group.items.map((item) {
                 return _buildItemRow(
-                    context, provider, money, item, l10n, isMasterDetail);
+                    context, provider, stock, money, item, l10n, isMasterDetail);
               }).toList(),
             ),
           ),
@@ -506,6 +517,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget _buildItemRow(
     BuildContext context,
     InventoryProvider provider,
+    StockProvider stock,
     NumberFormat money,
     InventoryItem item,
     AppLocalizations l10n,
@@ -616,14 +628,14 @@ class _InventoryScreenState extends State<InventoryScreen>
                     icon: Icons.add_circle_outlined,
                     color: const Color(0xFF059669),
                     label: l10n.inventoryStockIn,
-                    onTap: () => _adjust(context, provider, item, true),
+                    onTap: () => _adjust(context, stock, item, true),
                   ),
                   _actionBtn(
                     context: context,
                     icon: Icons.remove_circle_outlined,
                     color: const Color(0xFFD97706),
                     label: l10n.inventoryStockOut,
-                    onTap: () => _adjust(context, provider, item, false),
+                    onTap: () => _adjust(context, stock, item, false),
                   ),
                   SizedBox(
                     width: 48,
@@ -664,7 +676,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                           isDestructive: true,
                         );
                         if (confirmed) {
-                          await provider.deleteInventoryItem(item.id);
+                          await stock.deleteInventoryItem(item.id);
                         }
                       },
                       icon: Icon(
@@ -718,6 +730,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget _buildGroupedTable(
     BuildContext context,
     InventoryProvider provider,
+    StockProvider stock,
     NumberFormat money,
     List<InventoryItem> items,
     AppLocalizations l10n,
@@ -731,7 +744,7 @@ class _InventoryScreenState extends State<InventoryScreen>
 
     // Keine Produkte → flache Tabelle wie bisher
     if (groups.length == 1 && groups.first.productId == null && catalogProducts.isEmpty) {
-      return _buildTable(context, provider, money, items);
+      return _buildTable(context, provider, stock, money, items);
     }
 
     return SingleChildScrollView(
@@ -747,6 +760,7 @@ class _InventoryScreenState extends State<InventoryScreen>
           return _buildTableGroup(
             context: context,
             provider: provider,
+            stock: stock,
             money: money,
             l10n: l10n,
             group: group,
@@ -760,6 +774,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget _buildTableGroup({
     required BuildContext context,
     required InventoryProvider provider,
+    required StockProvider stock,
     required NumberFormat money,
     required AppLocalizations l10n,
     required _StockGroup group,
@@ -801,7 +816,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                   DataColumn(label: Text(l10n.inventoryColActions)),
                 ],
                 rows: group.items
-                    .map((item) => _row(context, provider, item, money))
+                    .map((item) => _row(context, provider, stock, item, money))
                     .toList(),
               ),
             ),
@@ -933,8 +948,8 @@ class _InventoryScreenState extends State<InventoryScreen>
     final code =
         await BarcodeScannerSheet.show(context, title: l10n.inventoryScanBarcode);
     if (code == null || code.isEmpty || !context.mounted) return;
-    final provider = context.read<InventoryProvider>();
-    final hit = provider.inventoryItems.where((i) => i.ean == code).firstOrNull;
+    final stock = context.read<StockProvider>();
+    final hit = stock.inventoryItems.where((i) => i.ean == code).firstOrNull;
     if (hit != null) {
       setState(() => _search = code);
       AppFeedback.info(context, l10n.inventoryBarcodeFound(hit.name));
@@ -957,13 +972,13 @@ class _InventoryScreenState extends State<InventoryScreen>
     }
   }
 
-  Widget _buildHeader(BuildContext context, InventoryProvider provider, bool isNarrow, NumberFormat money, double width) {
+  Widget _buildHeader(BuildContext context, InventoryProvider provider, StockProvider stock, bool isNarrow, NumberFormat money, double width) {
     final l10n = AppLocalizations.of(context);
     final kpis = [
-      _kpi(l10n.inventoryKpiTotalItems, '${provider.inventoryItems.length}', Icons.category_outlined, const Color(0xFF2563EB)),
-      _kpi(l10n.inventoryKpiTotalStock, '${provider.totalStockQuantity}', Icons.inventory_2_outlined, const Color(0xFF059669)),
-      _kpi(l10n.inventoryKpiCriticalItems, '${provider.criticalStockCount}', Icons.warning_amber_rounded, const Color(0xFFDC2626)),
-      _kpi(l10n.inventoryKpiStockValue, money.format(provider.totalStockValue), Icons.euro_outlined, const Color(0xFFD97706)),
+      _kpi(l10n.inventoryKpiTotalItems, '${stock.inventoryItems.length}', Icons.category_outlined, const Color(0xFF2563EB)),
+      _kpi(l10n.inventoryKpiTotalStock, '${stock.totalStockQuantity}', Icons.inventory_2_outlined, const Color(0xFF059669)),
+      _kpi(l10n.inventoryKpiCriticalItems, '${stock.criticalStockCount}', Icons.warning_amber_rounded, const Color(0xFFDC2626)),
+      _kpi(l10n.inventoryKpiStockValue, money.format(stock.totalStockValue), Icons.euro_outlined, const Color(0xFFD97706)),
     ];
     final addButton = ElevatedButton.icon(
       onPressed: () => showDialog(
@@ -1041,13 +1056,14 @@ class _InventoryScreenState extends State<InventoryScreen>
   Widget _buildSoldHeader(
     BuildContext context,
     InventoryProvider provider,
+    StockProvider stock,
     bool isNarrow,
     NumberFormat money,
     double width,
   ) {
     final l10n = AppLocalizations.of(context);
     final soldItems =
-        provider.inventoryItems.where(_isSold).toList(growable: false);
+        stock.inventoryItems.where(_isSold).toList(growable: false);
     final dealsById = {for (final d in provider.deals) d.id: d};
 
     int totalQuantity = 0;
@@ -1198,7 +1214,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   }
 
   Widget _buildCardList(BuildContext context, InventoryProvider provider,
-      NumberFormat money, List<InventoryItem> items, bool isMasterDetail) {
+      StockProvider stock, NumberFormat money, List<InventoryItem> items, bool isMasterDetail) {
     return ListView.separated(
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
       // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
@@ -1300,13 +1316,13 @@ class _InventoryScreenState extends State<InventoryScreen>
                       final l10n = AppLocalizations.of(ctx);
                       return Row(children: [
                         TextButton.icon(
-                          onPressed: () => _adjust(context, provider, item, true),
+                          onPressed: () => _adjust(context, stock, item, true),
                           icon: const Icon(Icons.add_circle_outlined, size: 16, color: Color(0xFF059669)),
                           label: Text(l10n.inventoryStockIn, style: const TextStyle(color: Color(0xFF059669), fontSize: 12)),
                           style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
                         ),
                         TextButton.icon(
-                          onPressed: () => _adjust(context, provider, item, false),
+                          onPressed: () => _adjust(context, stock, item, false),
                           icon: const Icon(Icons.remove_circle_outlined, size: 16, color: Color(0xFFD97706)),
                           label: Text(l10n.inventoryStockOut, style: const TextStyle(color: Color(0xFFD97706), fontSize: 12)),
                           style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
@@ -1337,7 +1353,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                               isDestructive: true,
                             );
                             if (confirmed) {
-                              await provider.deleteInventoryItem(item.id);
+                              await stock.deleteInventoryItem(item.id);
                             }
                           },
                           icon: Icon(Icons.delete_outlined, size: 18, color: AppTheme.dangerTextOf(ctx)),
@@ -1373,7 +1389,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     );
   }
 
-  Widget _buildTable(BuildContext context, InventoryProvider provider, NumberFormat money, List<InventoryItem> items) {
+  Widget _buildTable(BuildContext context, InventoryProvider provider, StockProvider stock, NumberFormat money, List<InventoryItem> items) {
     final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
@@ -1398,7 +1414,7 @@ class _InventoryScreenState extends State<InventoryScreen>
               DataColumn(label: Text(l10n.inventoryColActions)),
             ],
             rows: items
-                .map((item) => _row(context, provider, item, money))
+                .map((item) => _row(context, provider, stock, item, money))
                 .toList(),
           ),
         ),
@@ -1406,7 +1422,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     );
   }
 
-  DataRow _row(BuildContext context, InventoryProvider provider, InventoryItem item, NumberFormat money) {
+  DataRow _row(BuildContext context, InventoryProvider provider, StockProvider stock, InventoryItem item, NumberFormat money) {
     final l10n = AppLocalizations.of(context);
     final date = DateFormat.yMd(
         Localizations.localeOf(context).toLanguageTag());
@@ -1451,12 +1467,12 @@ class _InventoryScreenState extends State<InventoryScreen>
           children: [
             IconButton(
               tooltip: l10n.inventoryStockInTooltip,
-              onPressed: () => _adjust(context, provider, item, true),
+              onPressed: () => _adjust(context, stock, item, true),
               icon: const Icon(Icons.add_circle_outlined, size: 18, color: Color(0xFF059669)),
             ),
             IconButton(
               tooltip: l10n.inventoryStockOutTooltip,
-              onPressed: () => _adjust(context, provider, item, false),
+              onPressed: () => _adjust(context, stock, item, false),
               icon: const Icon(Icons.remove_circle_outlined, size: 18, color: Color(0xFFD97706)),
             ),
             IconButton(
@@ -1483,7 +1499,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                   isDestructive: true,
                 );
                 if (confirmed) {
-                  await provider.deleteInventoryItem(item.id);
+                  await stock.deleteInventoryItem(item.id);
                   messenger
                     ..hideCurrentSnackBar()
                     ..showSnackBar(SnackBar(
@@ -1513,7 +1529,7 @@ class _InventoryScreenState extends State<InventoryScreen>
 
   Future<void> _adjust(
     BuildContext context,
-    InventoryProvider provider,
+    StockProvider stock,
     InventoryItem item,
     bool incoming,
   ) async {
@@ -1556,7 +1572,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     if (ok == true) {
       final qty = int.tryParse(ctrl.text) ?? 0;
       if (qty > 0) {
-        await provider.adjustStock(
+        await stock.adjustStock(
           item.id,
           incoming ? qty : -qty,
           reason.text,
@@ -1728,6 +1744,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<InventoryProvider>();
+    final stock = context.watch<StockProvider>();
     final catalogProvider = context.watch<CatalogProvider>();
     // Suppliers now live in PurchasingProvider; tickets/warehouses stay on Inv.
     final purchasingProvider = context.watch<PurchasingProvider>();
@@ -2029,7 +2046,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     onChanged: (v) => setState(() => _productId = v),
                   ),
                 // ── Lager-Zuweisung (optional, nur wenn Lager vorhanden) ──
-                if (provider.warehouses.isNotEmpty) ...[
+                if (stock.warehouses.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String?>(
                     key: const Key('warehouseDropdown'),
@@ -2045,7 +2062,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                         value: null,
                         child: Text(l10n.inventoryNoWarehouse),
                       ),
-                      ...provider.warehouses
+                      ...stock.warehouses
                           .where((w) => w.isActive)
                           .map(
                             (w) => DropdownMenuItem<String?>(
@@ -2116,7 +2133,7 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                   ElevatedButton(
                     onPressed: () async {
                       if (!_form.currentState!.validate()) return;
-                      final prov = context.read<InventoryProvider>();
+                      final prov = context.read<StockProvider>();
                       final item = InventoryItem(
                         id: widget.item?.id ?? '',
                         name: _name.text.trim(),

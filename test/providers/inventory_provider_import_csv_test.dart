@@ -5,9 +5,11 @@ import 'package:inventory_management/models/inventory_item.dart';
 import 'package:inventory_management/models/purchase_order.dart';
 import 'package:inventory_management/models/shop.dart';
 import 'package:inventory_management/models/supplier.dart';
+import 'package:inventory_management/models/warehouse.dart';
 import 'package:inventory_management/providers/catalog_provider.dart';
 import 'package:inventory_management/providers/inventory_provider.dart';
 import 'package:inventory_management/providers/purchasing_provider.dart';
+import 'package:inventory_management/providers/stock_provider.dart';
 import 'package:inventory_management/services/csv_service.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
@@ -19,8 +21,9 @@ import 'package:inventory_management/services/supabase_repository.dart';
 ///
 /// Verifiziert, dass `importCsvAll` (Orchestrator in [InventoryProvider]) die
 /// importierten Suppliers/POs über die public Write-Back-Hooks in den
-/// injizierten [PurchasingProvider] schreibt — und das 5-Tuple-Return-Format
-/// unverändert bleibt.
+/// injizierten [PurchasingProvider] schreibt, importierte Warehouses/Items
+/// in den [StockProvider] schreibt — und das 5-Tuple-Return-Format unverändert
+/// bleibt.
 class _FakeRepository extends SupabaseRepository {
   _FakeRepository() : super.forTesting();
 
@@ -70,6 +73,21 @@ class _FakeRepository extends SupabaseRepository {
     insertedPurchaseOrders.add(saved);
     return saved;
   }
+
+  @override
+  Future<Warehouse> insertWarehouse(Warehouse warehouse) async {
+    final now = DateTime.utc(2026, 6, 8, 10);
+    return Warehouse(
+      id: 'wh-${warehouse.name.toLowerCase().replaceAll(' ', '-')}',
+      workspaceId: activeWorkspaceId ?? 'ws-test',
+      userId: 'user-test',
+      name: warehouse.name,
+      isDefault: warehouse.isDefault,
+      isActive: warehouse.isActive,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
 }
 
 // ── Hilfsfunktionen ──────────────────────────────────────────────────────────
@@ -89,17 +107,27 @@ PurchaseOrder _makePo(String orderNumber, {DateTime? createdAt}) {
   );
 }
 
-({InventoryProvider inventory, PurchasingProvider purchasing}) _wire(
-  _FakeRepository repo,
-) {
+/// Wires all four providers sharing the same [repo].
+/// Returns a named record so callers can destructure only what they need.
+({
+  InventoryProvider inventory,
+  PurchasingProvider purchasing,
+  StockProvider stock,
+}) _wire(_FakeRepository repo) {
   final catalog = CatalogProvider(repository: repo);
   final purchasing = PurchasingProvider(repository: repo);
-  final inventory = InventoryProvider(
+  final stock = StockProvider(
     repository: repo,
     catalogProvider: catalog,
     purchasingProvider: purchasing,
   );
-  return (inventory: inventory, purchasing: purchasing);
+  final inventory = InventoryProvider(
+    repository: repo,
+    catalogProvider: catalog,
+    purchasingProvider: purchasing,
+    stockProvider: stock,
+  );
+  return (inventory: inventory, purchasing: purchasing, stock: stock);
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -109,7 +137,7 @@ void main() {
       'importCsvAll: 5-Tuple-Return unverändert (deals, shops, buyers, '
       'suppliers, items)', () async {
     final repo = _FakeRepository();
-    final (:inventory, :purchasing) = _wire(repo);
+    final wired = _wire(repo);
 
     final result = CsvImportResult(
       deals: const [],
@@ -119,7 +147,7 @@ void main() {
       inventoryItems: const [],
     );
 
-    final tuple = await inventory.importCsvAll(result);
+    final tuple = await wired.inventory.importCsvAll(result);
 
     // Tuple-Shape: genau 5 Felder, supplierCount = 2.
     expect(tuple.$1, equals(0)); // deals
@@ -133,7 +161,7 @@ void main() {
       'importCsvAll: importierte Suppliers landen im injizierten '
       'PurchasingProvider (Write-Back-Contract)', () async {
     final repo = _FakeRepository();
-    final (:inventory, :purchasing) = _wire(repo);
+    final wired = _wire(repo);
 
     final result = CsvImportResult(
       deals: const [],
@@ -143,13 +171,13 @@ void main() {
       inventoryItems: const [],
     );
 
-    await inventory.importCsvAll(result);
+    await wired.inventory.importCsvAll(result);
 
     // Suppliers wurden über die Hooks in den PurchasingProvider geschrieben …
-    expect(purchasing.suppliers, hasLength(2));
+    expect(wired.purchasing.suppliers, hasLength(2));
     // … und alphabetisch (case-insensitive) sortiert (sortSuppliers-Hook).
     expect(
-      purchasing.suppliers.map((s) => s.name).toList(),
+      wired.purchasing.suppliers.map((s) => s.name).toList(),
       equals(['alpha', 'Zeta']),
     );
   });
@@ -158,7 +186,7 @@ void main() {
       'importCsvAll: importierte POs landen im injizierten PurchasingProvider',
       () async {
     final repo = _FakeRepository();
-    final (:inventory, :purchasing) = _wire(repo);
+    final wired = _wire(repo);
 
     final result = CsvImportResult(
       deals: const [],
@@ -173,14 +201,14 @@ void main() {
       ],
     );
 
-    await inventory.importCsvAll(result);
+    await wired.inventory.importCsvAll(result);
 
-    expect(purchasing.purchaseOrders, hasLength(2));
+    expect(wired.purchasing.purchaseOrders, hasLength(2));
     expect(repo.insertedPurchaseOrders, hasLength(2));
     // PO-Insert-Hook + sortPurchaseOrders-Hook → newest-first nach createdAt
     // (geordnete Assertion, NICHT toSet — sonst bliebe der Sort ungetestet).
     expect(
-      purchasing.purchaseOrders.map((p) => p.orderNumber).toList(),
+      wired.purchasing.purchaseOrders.map((p) => p.orderNumber).toList(),
       equals(['PO-B', 'PO-A']),
     );
   });
@@ -189,10 +217,10 @@ void main() {
       'importCsvAll: dedup-seed liest aus PurchasingProvider — vorhandener '
       'Supplier wird übersprungen', () async {
     final repo = _FakeRepository();
-    final (:inventory, :purchasing) = _wire(repo);
+    final wired = _wire(repo);
 
     // Vorhandener Supplier im PurchasingProvider-Cache (via Hook).
-    purchasing.upsertSupplierFromImport(
+    wired.purchasing.upsertSupplierFromImport(
       Supplier(id: 'existing', name: 'Acme'),
     );
 
@@ -205,13 +233,80 @@ void main() {
       inventoryItems: const [],
     );
 
-    final tuple = await inventory.importCsvAll(result);
+    final tuple = await wired.inventory.importCsvAll(result);
 
     // Nur 'Newco' wurde neu eingefügt.
     expect(tuple.$4, equals(1));
     expect(repo.insertedSuppliers, hasLength(1));
     expect(repo.insertedSuppliers.first.name, equals('Newco'));
     // Cache: bestehender + neuer Supplier = 2.
-    expect(purchasing.suppliers, hasLength(2));
+    expect(wired.purchasing.suppliers, hasLength(2));
+  });
+
+  // ── Stock Write-Back Contract ─────────────────────────────────────────────
+  // Asserts that importCsvAll writes imported warehouses and inventory items
+  // into the injected StockProvider via its write-back hooks
+  // (upsertWarehouseFromImport / upsertInventoryItemFromImport +
+  // sortWarehouses / sortInventoryItems + notifyAfterCrossDomainWrite).
+  // Mirrors the PurchasingProvider write-back assertions above (plan §3).
+
+  test(
+      'importCsvAll: importierte Warehouses landen im injizierten StockProvider '
+      '(Write-Back-Contract)', () async {
+    final repo = _FakeRepository();
+    final wired = _wire(repo);
+
+    final wh = Warehouse(
+      id: '',
+      workspaceId: '',
+      userId: '',
+      name: 'Zentrallager',
+      isDefault: false,
+      isActive: true,
+      createdAt: DateTime.utc(2026, 6, 8),
+      updatedAt: DateTime.utc(2026, 6, 8),
+    );
+
+    final result = CsvImportResult(
+      deals: const [],
+      shops: const [],
+      buyers: const [],
+      suppliers: const [],
+      inventoryItems: const [],
+      warehouses: [wh],
+    );
+
+    await wired.inventory.importCsvAll(result);
+
+    // The warehouse was written into StockProvider via the hook.
+    expect(wired.stock.warehouses, hasLength(1));
+    expect(wired.stock.warehouses.first.name, equals('Zentrallager'));
+  });
+
+  test(
+      'importCsvAll: importierte InventoryItems landen im injizierten '
+      'StockProvider (Write-Back-Contract)', () async {
+    final repo = _FakeRepository();
+    final wired = _wire(repo);
+
+    final item = InventoryItem(
+      id: 'item-csv-1',
+      name: 'Importierter Artikel',
+      quantity: 5,
+    );
+
+    final result = CsvImportResult(
+      deals: const [],
+      shops: const [],
+      buyers: const [],
+      suppliers: const [],
+      inventoryItems: [item],
+    );
+
+    await wired.inventory.importCsvAll(result);
+
+    // The item was written into StockProvider via the hook.
+    expect(wired.stock.inventoryItems, hasLength(1));
+    expect(wired.stock.inventoryItems.first.name, equals('Importierter Artikel'));
   });
 }

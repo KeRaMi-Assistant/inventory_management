@@ -6,7 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/stocktake.dart';
 import '../models/warehouse.dart';
 import '../providers/active_workspace_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/stock_provider.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/app_screen_scaffold.dart';
 import 'stocktake_detail_screen.dart';
@@ -39,7 +39,7 @@ class StocktakeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer2<InventoryProvider, ActiveWorkspaceProvider>(
+    return Consumer2<StockProvider, ActiveWorkspaceProvider>(
       builder: (context, provider, wsProvider, _) {
         final canEdit = wsProvider.role?.canEdit ?? false;
         final stocktakes = provider.stocktakes
@@ -89,7 +89,7 @@ class StocktakeScreen extends StatelessWidget {
 
   Future<void> _openNewDialog(
     BuildContext context,
-    InventoryProvider provider,
+    StockProvider provider,
   ) async {
     final result = await showDialog<_NewStocktakeResult>(
       context: context,
