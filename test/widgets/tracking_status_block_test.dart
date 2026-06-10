@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management/l10n/app_localizations.dart';
@@ -612,6 +613,95 @@ void main() {
       final size = tester.getSize(btn);
       expect(size.width, greaterThanOrEqualTo(48));
       expect(size.height, greaterThanOrEqualTo(48));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Paket 1: ETA-Zeile + Copy-/Carrier-Link-CTAs im strong-State
+  // -------------------------------------------------------------------------
+  group('TrackingStatusBlock — ETA + Copy/Carrier-Link (Paket 1)', () {
+    final eta = DateTime(2026, 6, 11, 16);
+
+    testWidgets(
+        'strong + liveEta + carrierId=dhl → ETA-Zeile, Copy- und Verfolgen-CTA',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          TrackingStatusBlock(
+            trackingNumber: 'JJD0123456789012345',
+            confidence: TrackingConfidence.strong,
+            carrier: 'DHL',
+            carrierId: 'dhl',
+            liveStatus: LiveTrackingStatus.outForDelivery,
+            liveEta: eta,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('tracking-eta-row')), findsOneWidget);
+      expect(find.byKey(const Key('tracking-copy-cta')), findsOneWidget);
+      expect(
+          find.byKey(const Key('tracking-open-carrier-cta')), findsOneWidget);
+    });
+
+    testWidgets('delivered → ETA-Zeile wird ausgeblendet', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          TrackingStatusBlock(
+            trackingNumber: 'JJD0123456789012345',
+            confidence: TrackingConfidence.strong,
+            carrierId: 'dhl',
+            liveStatus: LiveTrackingStatus.delivered,
+            liveEta: eta,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('tracking-eta-row')), findsNothing);
+    });
+
+    testWidgets('ohne carrierId → kein Verfolgen-CTA, Copy bleibt',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const TrackingStatusBlock(
+            trackingNumber: 'JJD0123456789012345',
+            confidence: TrackingConfidence.strong,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('tracking-open-carrier-cta')), findsNothing);
+      expect(find.byKey(const Key('tracking-copy-cta')), findsOneWidget);
+    });
+
+    testWidgets('Copy-CTA zeigt Bestätigungs-SnackBar', (tester) async {
+      // Clipboard-Platform-Channel mocken — ohne Handler wirft
+      // Clipboard.setData im Test MissingPluginException.
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async => null,
+      );
+      addTearDown(() => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null));
+      await tester.pumpWidget(
+        _wrap(
+          const TrackingStatusBlock(
+            trackingNumber: 'JJD0123456789012345',
+            confidence: TrackingConfidence.strong,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('tracking-copy-cta')));
+      // Zwei Pumps: erst läuft der async Clipboard-Call durch, dann wird
+      // die SnackBar eingefügt.
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(SnackBar), findsOneWidget);
+      // SnackBar-Dismiss-Timer (2s) ablaufen lassen — sonst meckert das
+      // Test-Framework über pending Timers.
+      await tester.pump(const Duration(seconds: 3));
     });
   });
 }

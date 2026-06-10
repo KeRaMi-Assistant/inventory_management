@@ -12,9 +12,11 @@ import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../utils/validators.dart';
+import '../utils/carrier_links.dart';
 import 'attachment_gallery.dart';
 import 'deal_comments_section.dart';
 import 'tracking_status_block.dart';
+import 'tracking_timeline.dart';
 import 'unsaved_changes_guard.dart';
 
 class AddEditDealDialog extends StatefulWidget {
@@ -805,7 +807,9 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             key: const Key('deal-detail-tracking-status-block'),
                             trackingNumber: liveDeal.tracking,
                             confidence: liveDeal.trackingConfidence,
-                            carrier: null,
+                            carrier: carrierDisplayName(liveDeal.carrier),
+                            carrierId: liveDeal.carrier,
+                            liveEta: liveDeal.liveEta,
                             needsReview: liveDeal.trackingNeedsReview,
                             amazonShipmentIdHint: false,
                             liveStatus: liveDeal.liveStatus,
@@ -882,6 +886,23 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                   }
                                 : null,
                           );
+                          }),
+                          // Klarna-Style-Sendungsverlauf (Paket 1): lädt
+                          // tracking_events on-demand; refreshToken =
+                          // liveStatusUpdatedAt → Reload nach Retrack/Poll.
+                          Builder(builder: (_) {
+                            final liveDeal = provider.deals.firstWhere(
+                              (d) => d.id == widget.deal!.id,
+                              orElse: () => widget.deal!,
+                            );
+                            if (liveDeal.tracking == null ||
+                                liveDeal.tracking!.isEmpty) {
+                              return const SizedBox.shrink();
+                            }
+                            return TrackingTimelineSection(
+                              dealId: widget.deal!.id,
+                              refreshToken: liveDeal.liveStatusUpdatedAt,
+                            );
                           }),
                         ],
                         // Discord status hint

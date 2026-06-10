@@ -15,6 +15,7 @@ import '../models/shop.dart';
 import '../models/supplier.dart';
 import '../models/ticket.dart';
 import '../models/ticket_summary.dart';
+import '../models/tracking_event.dart';
 import '../models/warehouse.dart';
 import '../services/carrier_service.dart';
 import '../services/csv_service.dart';
@@ -1280,6 +1281,12 @@ class DealsProvider extends ChangeNotifier {
     }
     return result;
   }
+
+  /// Lädt die Tracking-Event-Timeline eines Deals (Paket 1, Klarna-Style).
+  /// Kein lokaler Cache — die Timeline wird on-demand im Deal-Detail geladen
+  /// und ist nach Retrack/Poll sofort frisch.
+  Future<List<TrackingEvent>> fetchTrackingEvents(int dealId) =>
+      _repository.fetchTrackingEvents(dealId);
 
   void _patchDeal(
     int dealId, {

@@ -20,6 +20,7 @@ import '../models/stocktake.dart';
 import '../models/stocktake_item.dart';
 import '../models/supplier.dart';
 import '../models/ticket.dart';
+import '../models/tracking_event.dart';
 import '../models/warehouse.dart';
 
 /// Snapshot of all data for the currently signed-in user, used to seed the
@@ -1663,6 +1664,22 @@ class SupabaseRepository {
     } on Exception {
       return RetrackResult.offline;
     }
+  }
+
+  /// Lädt die Tracking-Event-Timeline eines Deals (Paket 1, Klarna-Style).
+  /// Neueste Events zuerst. RLS scoped auf Workspace-Mitglieder; geschrieben
+  /// wird die Tabelle nur vom tracking-poll-Backend.
+  Future<List<TrackingEvent>> fetchTrackingEvents(int dealId) async {
+    final rows = await _client
+        .from('tracking_events')
+        .select()
+        .eq('deal_id', dealId)
+        .order('occurred_at', ascending: false)
+        .limit(100);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(TrackingEvent.fromSupabase)
+        .toList();
   }
 
   // ── Carrier-API-Credentials (Sprint 7) ───────────────────────────────────

@@ -3702,6 +3702,31 @@ class AppLocalizationsDe extends AppLocalizations {
       'Diese Eingabe sieht wie eine Umsatzsteuer-ID aus (2 Buchstaben + 9 Ziffern) und wird nicht als Sendungsnummer gespeichert.';
 
   @override
+  String get trackingTimelineTitle => 'Sendungsverlauf';
+
+  @override
+  String trackingTimelineShowAll(Object count) {
+    return 'Alle $count Ereignisse anzeigen';
+  }
+
+  @override
+  String get trackingTimelineShowLess => 'Weniger anzeigen';
+
+  @override
+  String trackingEtaLabel(Object date) {
+    return 'Voraussichtliche Zustellung: $date';
+  }
+
+  @override
+  String get trackingCopyTooltip => 'Sendungsnummer kopieren';
+
+  @override
+  String get trackingCopiedSnack => 'Sendungsnummer kopiert';
+
+  @override
+  String get trackingOpenCarrierPage => 'Sendung verfolgen';
+
+  @override
   String get inboxSectionOrder => 'Bestellung';
 
   @override
