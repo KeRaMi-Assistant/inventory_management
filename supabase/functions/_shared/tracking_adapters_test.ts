@@ -122,7 +122,9 @@ Deno.test('DHL adapter parses Parcel-DE in-transit', () => {
   }
   const parsed = dhlAdapter.parseResponse(payload)
   assertExists(parsed)
-  assertEquals(parsed!.status, 'in_transit')
+  // Paket 1: IZ ("In Zustellung") mappt jetzt präzise auf out_for_delivery
+  // (vorher pauschal in_transit) — der Klarna-Moment für den Status-Push.
+  assertEquals(parsed!.status, 'out_for_delivery')
   assertEquals(parsed!.deliveredAt, undefined)
   assertEquals(parsed!.lastEvent, 'In Zustellung')
 })
@@ -227,7 +229,8 @@ Deno.test('DHL adapter parses Parcel-DE XML — in_transit', () => {
 </data>`
   const parsed = dhlAdapter.parseResponse(xml)
   assertExists(parsed)
-  assertEquals(parsed!.status, 'in_transit')
+  // Paket 1: IZ → out_for_delivery (siehe JSON-Pendant oben).
+  assertEquals(parsed!.status, 'out_for_delivery')
   assertEquals(parsed!.deliveredAt, undefined)
 })
 
@@ -325,8 +328,16 @@ Deno.test('UPS adapter parses Delivered code D', () => {
   assertEquals(parsed!.lastEvent, 'Delivered')
 })
 
-Deno.test('UPS adapter maps in-transit codes', () => {
-  for (const code of ['I', 'M', 'O', 'P']) {
+Deno.test('UPS adapter maps transit/out-for-delivery/pending codes', () => {
+  // Paket 1: präzisere Status-Aufteilung — O=Out for Delivery,
+  // M=Order Processed (pending), I/P bleiben in_transit.
+  const expectations: Array<[string, string]> = [
+    ['I', 'in_transit'],
+    ['P', 'in_transit'],
+    ['O', 'out_for_delivery'],
+    ['M', 'pending'],
+  ]
+  for (const [code, expected] of expectations) {
     const parsed = upsAdapter.parseResponse({
       trackResponse: {
         shipment: [
@@ -341,7 +352,7 @@ Deno.test('UPS adapter maps in-transit codes', () => {
       },
     })
     assertExists(parsed)
-    assertEquals(parsed!.status, 'in_transit')
+    assertEquals(parsed!.status, expected)
   }
 })
 
@@ -398,4 +409,121 @@ Deno.test('detectAdapter: DE-Prefix ist KEINE DHL-Heuristik mehr → null', () =
 Deno.test('detectAdapter falls back to null on unknown', () => {
   assertEquals(detectAdapter('???'), null)
   assertEquals(detectAdapter(''), null)
+})
+
+// ── Paket 1: Event-Timeline + ETA ────────────────────────────────────────
+
+Deno.test('DHL Parcel-DE XML: events-Array mit Location + normalisierten Stati', () => {
+  const xml = `<data name="pieceshipmentlist" code="0">
+  <data name="pieceshipment"
+        piece-code="00340434161094012345"
+        delivery-event-flag="0"
+        status-timestamp="2026-06-10T08:15:00Z">
+    <data name="pieceeventlist">
+      <data name="pieceevent"
+            event-timestamp="2026-06-09T18:00:00Z"
+            standard-event-code="BA"
+            event-location="Hamburg"
+            event-text="Sendung im Paketzentrum bearbeitet"/>
+      <data name="pieceevent"
+            event-timestamp="2026-06-10T08:15:00Z"
+            standard-event-code="IZ"
+            event-location="Berlin"
+            event-text="In Zustellung"/>
+    </data>
+  </data>
+</data>`
+  const parsed = dhlAdapter.parseResponse(xml)
+  assertExists(parsed)
+  assertEquals(parsed!.status, 'out_for_delivery')
+  assertExists(parsed!.events)
+  assertEquals(parsed!.events!.length, 2)
+  const [ba, iz] = parsed!.events!
+  assertEquals(ba.status, 'in_transit')
+  assertEquals(ba.location, 'Hamburg')
+  assertEquals(ba.rawCode, 'BA')
+  assertEquals(ba.occurredAt, '2026-06-09T18:00:00.000Z')
+  assertEquals(iz.status, 'out_for_delivery')
+  assertEquals(iz.text, 'In Zustellung')
+})
+
+Deno.test('DHL Parcel-DE XML: ES-Code → pending', () => {
+  const xml = `<data name="pieceshipmentlist" code="0">
+  <data name="pieceshipment" piece-code="123" delivery-event-flag="0">
+    <data name="pieceeventlist">
+      <data name="pieceevent"
+            event-timestamp="2026-06-10T07:00:00Z"
+            standard-event-code="ES"
+            event-text="Die Sendung wurde elektronisch angekündigt"/>
+    </data>
+  </data>
+</data>`
+  const parsed = dhlAdapter.parseResponse(xml)
+  assertExists(parsed)
+  assertEquals(parsed!.status, 'pending')
+})
+
+Deno.test('DHL Unified: events + estimatedTimeOfDelivery (ETA)', () => {
+  const payload = {
+    shipments: [
+      {
+        id: 'JJD0123456789012345',
+        estimatedTimeOfDelivery: '2026-06-11T16:00:00Z',
+        status: {
+          statusCode: 'transit',
+          status: 'Unterwegs',
+          timestamp: '2026-06-10T08:00:00Z',
+        },
+        events: [
+          {
+            timestamp: '2026-06-09T20:00:00Z',
+            statusCode: 'transit',
+            status: 'Im Paketzentrum',
+            location: { address: { addressLocality: 'Köln' } },
+          },
+          {
+            timestamp: '2026-06-10T08:00:00Z',
+            statusCode: 'out-for-delivery',
+            status: 'In Zustellung',
+          },
+        ],
+      },
+    ],
+  }
+  const parsed = dhlAdapter.parseResponse(payload)
+  assertExists(parsed)
+  assertEquals(parsed!.etaDate, '2026-06-11T16:00:00.000Z')
+  assertExists(parsed!.events)
+  assertEquals(parsed!.events!.length, 2)
+  assertEquals(parsed!.events![0].location, 'Köln')
+  assertEquals(parsed!.events![0].status, 'in_transit')
+  assertEquals(parsed!.events![1].status, 'out_for_delivery')
+})
+
+Deno.test('DPD: statusInfo wird zur Event-Timeline, OUT_FOR_DELIVERY präzise', () => {
+  const payload = {
+    parcelLifeCycleData: {
+      statusInfo: [
+        {
+          status: 'ACCEPTED',
+          description: 'Paket angenommen',
+          date: '2026-06-09T10:00:00Z',
+          city: 'Aschaffenburg',
+        },
+        {
+          status: 'OUT_FOR_DELIVERY',
+          description: 'Im Zustellfahrzeug',
+          date: '2026-06-10T07:30:00Z',
+        },
+      ],
+    },
+  }
+  const parsed = dpdAdapter.parseResponse(payload)
+  assertExists(parsed)
+  assertEquals(parsed!.status, 'out_for_delivery')
+  assertExists(parsed!.events)
+  assertEquals(parsed!.events!.length, 2)
+  assertEquals(parsed!.events![0].status, 'in_transit')
+  assertEquals(parsed!.events![0].location, 'Aschaffenburg')
+  assertEquals(parsed!.events![1].status, 'out_for_delivery')
 })

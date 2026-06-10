@@ -16,10 +16,28 @@
 // Function darf null wertelos behandeln (= kein Update).
 
 export type TrackingDeliveryStatus =
+  | 'pending'
   | 'in_transit'
+  | 'out_for_delivery'
   | 'delivered'
   | 'exception'
   | 'unknown'
+
+/// Einzelner Carrier-Scan/Event aus der API-Response (Klarna-Style-Timeline,
+/// Paket 1). Wird vom tracking-poll in `tracking_events` persistiert.
+export interface ParsedTrackingEvent {
+  /// ISO-8601-Zeitpunkt des Events. Events ohne parsbaren Timestamp werden
+  /// vom Poller verworfen (kein sinnvoller Timeline-Eintrag möglich).
+  occurredAt?: string
+  /// Event-Text ("In Zustellung", "Sendung im Paketzentrum eingetroffen").
+  text?: string
+  /// Scan-Ort, soweit der Carrier ihn liefert (Stadt/Standort).
+  location?: string
+  /// Roher Carrier-Code (z.B. DHL standard-event-code "ZU").
+  rawCode?: string
+  /// Normalisierter Status zum Event-Zeitpunkt ('unknown' = nicht zuordenbar).
+  status: TrackingDeliveryStatus
+}
 
 export interface ParsedTracking {
   /// Carrier-übergreifend normalisierter Status. `delivered` ist der einzige
@@ -32,6 +50,18 @@ export interface ParsedTracking {
   lastEvent?: string
   /// Originaler Carrier-Statuscode für Debug-Zwecke (Logs).
   rawStatusCode?: string
+  /// ISO-8601-Zeitpunkt des letzten Carrier-Status-Events — anders als
+  /// `deliveredAt` für JEDEN Status gefüllt, sofern der Carrier einen
+  /// Timestamp liefert. Der Poller nutzt das als occurred_at für den
+  /// synthetischen Timeline-Event (Review-Fix: vorher bekamen
+  /// nicht-delivered-Events fälschlich die Poll-Zeit).
+  statusTimestamp?: string
+  /// Vollständige Event-Historie (chronologisch unsortiert, wie geliefert).
+  /// Leer/undefined, wenn der Carrier keine Events mitschickt.
+  events?: ParsedTrackingEvent[]
+  /// Geschätztes Zustelldatum (ISO-8601), falls der Carrier eines liefert
+  /// (DHL Unified `estimatedTimeOfDelivery` / `estimatedDeliveryTimeFrame`).
+  etaDate?: string
 }
 
 /// HTTP-Klassifikation eines Probe-Calls. Nutzt der Validation-Wrapper,
@@ -296,6 +326,45 @@ function parseDhlResponseUnion(payload: unknown): ParsedTracking | null {
   return null
 }
 
+/// Normalisiert einen DHL-Event (standard-event-code + Text-Fallback) auf
+/// unseren carrier-übergreifenden Status. Eine Quelle für XML- UND
+/// JSON-Parcel-DE-Pfad (vorher 2× dupliziert, Audit: "3-fach inkonsistent").
+///
+/// DHL-DE-Standard-Event-Codes (kuratierte Mappings):
+///   ZU  = Zugestellt                  → delivered
+///   AZ  = Ausgeliefert                → delivered (synonym)
+///   IZ  = In Zustellung               → out_for_delivery (Klarna-Moment!)
+///   ES  = Elektronisch angekündigt    → pending (noch nicht im Netz)
+///   AB  = Abgeholt / EE = Einlieferung→ in_transit
+///   BA  = Bearbeitung                 → in_transit
+///   RT  = Rücktransport               → exception
+///   ZF  = Zustellung fehlgeschlagen   → exception
+export function normalizeDhlEventCode(
+  code: string | undefined,
+  text: string | undefined,
+): TrackingDeliveryStatus {
+  const c = code?.toLowerCase()
+  if (c === 'zu' || c === 'az' || c === 'delivered') return 'delivered'
+  if (c === 'iz' || c === 'out-for-delivery') return 'out_for_delivery'
+  if (c === 'es' || c === 'pre-transit') return 'pending'
+  if (
+    c === 'ab' || c === 'ba' || c === 'ee' || c === 'pu' || c === 'transit'
+  ) {
+    return 'in_transit'
+  }
+  if (c === 'rt' || c === 'zf' || c === 'failure' || c === 'exception') {
+    return 'exception'
+  }
+  // Text-Fallback — Reihenfolge wichtig: "in zustellung" VOR "zustellung".
+  const t = (text ?? '').toLowerCase()
+  if (t.includes('zugestellt') || t.includes('delivered')) return 'delivered'
+  if (t.includes('in zustellung') || t.includes('out for delivery')) {
+    return 'out_for_delivery'
+  }
+  if (t.includes('zustellung') || t.includes('transit')) return 'in_transit'
+  return 'unknown'
+}
+
 /// Parser für die XML-Response der Parcel-DE-Tracking-API.
 ///
 /// Erwartetes Format (Public Query):
@@ -356,9 +425,7 @@ function parseDhlParcelDeXml(xml: string): ParsedTracking | null {
 
   // Status-Inference: Priorität wie im JSON-Parcel-DE-Parser
   //   1. `delivery-event-flag="1"` → delivered (sicherstes Signal)
-  //   2. `standard-event-code` (ZU/AZ = delivered, IZ/ES/AB/BA = transit,
-  //      RT/ZF = exception)
-  //   3. Text-Fallback in `event-text`/`status`
+  //   2. `standard-event-code` / Text-Fallback via normalizeDhlEventCode
   const deliveryFlag = shipmentAttrs['delivery-event-flag']
   const eventCode = (
     latestEvent?.['standard-event-code'] ?? latestEvent?.['event-status']
@@ -370,36 +437,8 @@ function parseDhlParcelDeXml(xml: string): ParsedTracking | null {
   const eventTs =
     latestEvent?.['event-timestamp'] ?? shipmentAttrs['status-timestamp']
 
-  let normalized: TrackingDeliveryStatus = 'unknown'
-  if (deliveryFlag === '1') {
-    normalized = 'delivered'
-  } else if (eventCode) {
-    if (eventCode === 'zu' || eventCode === 'az') normalized = 'delivered'
-    else if (
-      eventCode === 'iz' || eventCode === 'es' || eventCode === 'ab' ||
-      eventCode === 'ba' || eventCode === 'transit' ||
-      eventCode === 'pre-transit' || eventCode === 'out-for-delivery'
-    ) {
-      normalized = 'in_transit'
-    } else if (
-      eventCode === 'rt' || eventCode === 'zf' ||
-      eventCode === 'failure' || eventCode === 'exception'
-    ) {
-      normalized = 'exception'
-    } else {
-      const txt = (eventText ?? '').toLowerCase()
-      if (txt.includes('zugestellt') || txt.includes('delivered')) {
-        normalized = 'delivered'
-      }
-    }
-  } else if (eventText) {
-    const txt = eventText.toLowerCase()
-    if (txt.includes('zugestellt') || txt.includes('delivered')) {
-      normalized = 'delivered'
-    } else if (txt.includes('zustellung') || txt.includes('transit')) {
-      normalized = 'in_transit'
-    }
-  }
+  let normalized = normalizeDhlEventCode(eventCode, eventText)
+  if (deliveryFlag === '1') normalized = 'delivered'
 
   // Wenn weder Shipment noch Events erkannt wurden → kein Match.
   if (
@@ -409,11 +448,27 @@ function parseDhlParcelDeXml(xml: string): ParsedTracking | null {
     return null
   }
 
+  // Vollständige Event-Timeline (Paket 1): jeden pieceevent normalisieren.
+  // Events ohne Timestamp bleiben drin (occurredAt undefined) — der Poller
+  // entscheidet, ob er sie verwirft.
+  const parsedEvents: ParsedTrackingEvent[] = events.map((ev) => ({
+    occurredAt: toIso(ev['event-timestamp']),
+    text: ev['event-text'] ?? ev['event-status'],
+    location: ev['event-location'] || undefined,
+    rawCode: ev['standard-event-code'] || undefined,
+    status: normalizeDhlEventCode(
+      ev['standard-event-code'] ?? ev['event-status'],
+      ev['event-text'] ?? ev['event-status'],
+    ),
+  }))
+
   return {
     status: normalized,
     deliveredAt: normalized === 'delivered' ? toIso(eventTs) : undefined,
+    statusTimestamp: toIso(eventTs),
     lastEvent: eventText,
     rawStatusCode: eventCode,
+    events: parsedEvents.length > 0 ? parsedEvents : undefined,
   }
 }
 
@@ -459,11 +514,42 @@ function parseDhlUnified(
   const timestamp = pickString(status, 'timestamp')
 
   const normalized = normalizeDhlStatusCode(code)
+
+  // ETA (nur Unified liefert das): `estimatedTimeOfDelivery` (ISO-String)
+  // oder `estimatedDeliveryTimeFrame: { estimatedFrom, estimatedThrough }`.
+  const etaRaw =
+    pickString(shipment, 'estimatedTimeOfDelivery') ??
+    (isObject(shipment.estimatedDeliveryTimeFrame)
+      ? pickString(shipment.estimatedDeliveryTimeFrame, 'estimatedFrom')
+      : undefined)
+
+  // Event-Timeline: `events: [{ timestamp, statusCode, status, description,
+  // location: { address: { addressLocality } } }]`.
+  const rawEvents = Array.isArray(shipment.events)
+    ? shipment.events.filter(isObject)
+    : []
+  const parsedEvents: ParsedTrackingEvent[] = rawEvents.map((ev) => {
+    const loc = isObject(ev.location) && isObject(ev.location.address)
+      ? pickString(ev.location.address as Record<string, unknown>, 'addressLocality')
+      : undefined
+    const evCode = pickString(ev, 'statusCode', 'status')?.toLowerCase()
+    return {
+      occurredAt: toIso(pickString(ev, 'timestamp')),
+      text: pickString(ev, 'status', 'description'),
+      location: loc,
+      rawCode: evCode,
+      status: normalizeDhlStatusCode(evCode),
+    }
+  })
+
   return {
     status: normalized,
     deliveredAt: normalized === 'delivered' ? toIso(timestamp) : undefined,
+    statusTimestamp: toIso(timestamp),
     lastEvent: description,
     rawStatusCode: code,
+    events: parsedEvents.length > 0 ? parsedEvents : undefined,
+    etaDate: toIso(etaRaw),
   }
 }
 
@@ -525,52 +611,28 @@ function parseDhlParcelDe(
     pickString(latestEvent, 'event-timestamp') ??
     pickString(shipment, 'status-timestamp')
 
-  let normalized: TrackingDeliveryStatus = 'unknown'
-  if (deliveryFlag === '1') {
-    normalized = 'delivered'
-  } else if (eventCode) {
-    // DHL-DE-Standard-Event-Codes (kuratierte Mappings):
-    //   ZU  = Zugestellt           → delivered
-    //   AZ  = Ausgeliefert         → delivered (synonym)
-    //   IZ  = In Zustellung        → in_transit
-    //   ES  = Empfangen            → in_transit
-    //   AB  = Abgeholt             → in_transit
-    //   BA  = Bearbeitung          → in_transit
-    //   RT  = Rücktransport        → exception
-    //   ZF  = Zustellfehler        → exception
-    if (eventCode === 'zu' || eventCode === 'az') normalized = 'delivered'
-    else if (
-      eventCode === 'iz' || eventCode === 'es' || eventCode === 'ab' ||
-      eventCode === 'ba' || eventCode === 'transit' ||
-      eventCode === 'pre-transit' || eventCode === 'out-for-delivery'
-    ) {
-      normalized = 'in_transit'
-    } else if (
-      eventCode === 'rt' || eventCode === 'zf' ||
-      eventCode === 'failure' || eventCode === 'exception'
-    ) {
-      normalized = 'exception'
-    } else {
-      // Unbekannter Code → versuch's noch über den Text.
-      const txt = (eventText ?? '').toLowerCase()
-      if (txt.includes('zugestellt') || txt.includes('delivered')) {
-        normalized = 'delivered'
-      }
-    }
-  } else if (eventText) {
-    const txt = eventText.toLowerCase()
-    if (txt.includes('zugestellt') || txt.includes('delivered')) {
-      normalized = 'delivered'
-    } else if (txt.includes('zustellung') || txt.includes('transit')) {
-      normalized = 'in_transit'
-    }
-  }
+  let normalized = normalizeDhlEventCode(eventCode, eventText)
+  if (deliveryFlag === '1') normalized = 'delivered'
+
+  // Vollständige Event-Timeline (Paket 1), analog zum XML-Pfad.
+  const parsedEvents: ParsedTrackingEvent[] = events.map((ev) => ({
+    occurredAt: toIso(pickString(ev, 'event-timestamp')),
+    text: pickString(ev, 'event-text', 'event-status'),
+    location: pickString(ev, 'event-location'),
+    rawCode: pickString(ev, 'standard-event-code'),
+    status: normalizeDhlEventCode(
+      pickString(ev, 'standard-event-code', 'event-status'),
+      pickString(ev, 'event-text', 'event-status'),
+    ),
+  }))
 
   return {
     status: normalized,
     deliveredAt: normalized === 'delivered' ? toIso(eventTs) : undefined,
+    statusTimestamp: toIso(eventTs),
     lastEvent: eventText,
     rawStatusCode: eventCode,
+    events: parsedEvents.length > 0 ? parsedEvents : undefined,
   }
 }
 
@@ -579,12 +641,9 @@ function normalizeDhlStatusCode(
   code: string | undefined,
 ): TrackingDeliveryStatus {
   if (code === 'delivered') return 'delivered'
-  if (
-    code === 'transit' || code === 'pre-transit' ||
-    code === 'out-for-delivery'
-  ) {
-    return 'in_transit'
-  }
+  if (code === 'out-for-delivery') return 'out_for_delivery'
+  if (code === 'pre-transit') return 'pending'
+  if (code === 'transit') return 'in_transit'
   if (code === 'failure' || code === 'exception') return 'exception'
   return 'unknown'
 }
@@ -628,21 +687,41 @@ export const dpdAdapter: TrackingAdapter = {
     const description = pickString(latest, 'description', 'label')
     const date = pickString(latest, 'date', 'timestamp')
 
-    let normalized: TrackingDeliveryStatus = 'unknown'
-    if (code === 'DELIVERED') normalized = 'delivered'
-    else if (code === 'IN_TRANSIT' || code === 'OUT_FOR_DELIVERY' || code === 'ACCEPTED') {
-      normalized = 'in_transit'
-    } else if (code === 'EXCEPTION' || code === 'RETURNED') {
-      normalized = 'exception'
-    }
+    const normalized = normalizeDpdStatusCode(code)
+
+    // Event-Timeline: jeder statusInfo-Eintrag wird ein Event.
+    const parsedEvents: ParsedTrackingEvent[] = statusInfo
+      .filter(isObject)
+      .map((ev) => {
+        const evCode = pickString(ev, 'status', 'statusCode')?.toUpperCase()
+        return {
+          occurredAt: toIso(pickString(ev, 'date', 'timestamp')),
+          text: pickString(ev, 'description', 'label'),
+          location: pickString(ev, 'city', 'location'),
+          rawCode: evCode?.toLowerCase(),
+          status: normalizeDpdStatusCode(evCode),
+        }
+      })
 
     return {
       status: normalized,
       deliveredAt: normalized === 'delivered' ? toIso(date) : undefined,
+      statusTimestamp: toIso(date),
       lastEvent: description,
       rawStatusCode: code?.toLowerCase(),
+      events: parsedEvents.length > 0 ? parsedEvents : undefined,
     }
   },
+}
+
+function normalizeDpdStatusCode(
+  code: string | undefined,
+): TrackingDeliveryStatus {
+  if (code === 'DELIVERED') return 'delivered'
+  if (code === 'OUT_FOR_DELIVERY') return 'out_for_delivery'
+  if (code === 'IN_TRANSIT' || code === 'ACCEPTED') return 'in_transit'
+  if (code === 'EXCEPTION' || code === 'RETURNED') return 'exception'
+  return 'unknown'
 }
 
 // ── UPS ──────────────────────────────────────────────────────────────────
@@ -691,10 +770,11 @@ export const upsAdapter: TrackingAdapter = {
     // UPS-Statuscodes: D=Delivered, I=In-Transit, M=Order Processed,
     // O=Out for Delivery, X=Exception, P=Pickup, RS=Returned to Shipper.
     if (code === 'D' || code === 'DELIVERED') normalized = 'delivered'
-    else if (
-      code === 'I' || code === 'IN_TRANSIT' || code === 'M' ||
-      code === 'O' || code === 'P' || code === 'OUT_FOR_DELIVERY'
-    ) {
+    else if (code === 'O' || code === 'OUT_FOR_DELIVERY') {
+      normalized = 'out_for_delivery'
+    } else if (code === 'M') {
+      normalized = 'pending'
+    } else if (code === 'I' || code === 'IN_TRANSIT' || code === 'P') {
       normalized = 'in_transit'
     } else if (code === 'X' || code === 'RS' || code === 'EXCEPTION') {
       normalized = 'exception'

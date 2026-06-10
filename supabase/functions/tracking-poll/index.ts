@@ -25,11 +25,20 @@ import {
   type ParsedTracking,
   type TrackingAdapter,
 } from '../_shared/tracking_adapters.ts'
+import {
+  type FcmToken,
+  getGoogleAccessToken,
+  parseServiceAccount,
+  type PushPayload,
+  sendToTokens,
+} from '../_shared/fcm.ts'
 
 interface CredentialRow {
   workspace_id: string
   carrier_id: 'dhl' | 'dpd' | 'ups'
   enabled: boolean
+  daily_call_count: number | null
+  daily_call_date: string | null
 }
 
 interface DealRow {
@@ -47,17 +56,21 @@ interface DealRow {
   live_status: LiveStatus | null
   live_status_last_event: string | null
   live_status_updated_at: string | null
+  live_eta: string | null
+  last_polled_at: string | null
 }
 
 /// Carrier-übergreifender Live-Status, der dem Deal-Row beigeschrieben wird.
-/// Mappt 1:1 auf `ParsedTracking.status` (siehe tracking_adapters.ts).
-/// CHECK-Enum in `20260515000000_deals_live_status.sql`.
+/// Mappt auf `ParsedTracking.status` (siehe tracking_adapters.ts) plus
+/// `expired` (Reaper-Status, nur DB-seitig). CHECK-Enum in
+/// `20260515000000_deals_live_status.sql`; 'unknown' wird NIE persistiert.
 export type LiveStatus =
   | 'pending'
   | 'in_transit'
   | 'out_for_delivery'
   | 'delivered'
   | 'exception'
+  | 'expired'
   | 'unknown'
 
 interface PollStats {
@@ -65,9 +78,15 @@ interface PollStats {
   checked: number
   delivered: number
   errors: number
+  quota_skipped: number
 }
 
 const MAX_DEALS_PER_RUN = 200
+
+/// Tages-Quota-Cap pro Workspace×Carrier. DHL Parcel-DE erlaubt 1.000
+/// Queries/Tag (PR #115) — wir kappen bei 900, damit Event-Trigger-Polls und
+/// manuelle Retracks immer Luft haben.
+export const DAILY_QUOTA_CAP = 900
 
 /// DHL Parcel-DE-Tracking-API erlaubt max. 3 req/s pro API-Key (developer.dhl.com,
 /// "DHL Parcel DE Tracking"; zusätzlich 1.000 Queries/Tag). Wir drosseln die
@@ -166,7 +185,7 @@ Deno.serve(async (req) => {
     )
     const { data: dealRow, error: dealErr } = await adminLookup
       .from('deals')
-      .select('id, workspace_id, live_status_updated_at')
+      .select('id, workspace_id, live_status_updated_at, last_polled_at')
       .eq('id', onlyDealId)
       .maybeSingle()
     if (dealErr || !dealRow) {
@@ -185,10 +204,13 @@ Deno.serve(async (req) => {
       return jsonResp({ error: 'Forbidden' }, 403)
     }
 
-    // Per-Deal-Cooldown: 30s seit dem letzten live_status_updated_at.
-    const lastIso =
-      (dealRow as { live_status_updated_at: string | null })
-        .live_status_updated_at
+    // Per-Deal-Cooldown: 30s seit dem letzten erfolgreichen Poll. Fallback
+    // auf live_status_updated_at für Legacy-Rows ohne last_polled_at.
+    const cooldownRow = dealRow as {
+      live_status_updated_at: string | null
+      last_polled_at: string | null
+    }
+    const lastIso = cooldownRow.last_polled_at ?? cooldownRow.live_status_updated_at
     const retryAfterSec = computeRetrackCooldown(lastIso, Date.now())
     if (retryAfterSec !== null) {
       return new Response(
@@ -220,6 +242,13 @@ Deno.serve(async (req) => {
     return jsonResp({ ok: true, skipped: 'off-hour', berlin_hour: berlinHourNow() })
   }
 
+  // Quiet-Hours-Guard für den stündlichen adaptive-sweep (Paket 1.5):
+  // nachts (Berlin 22–05 Uhr) bewegt sich im Carrier-Netz fast nichts —
+  // Polls wären reine Quota-Verschwendung.
+  if (onlyDealId === undefined && !adaptiveSweepShouldRun(mode)) {
+    return jsonResp({ ok: true, skipped: 'quiet-hours', berlin_hour: berlinHourNow() })
+  }
+
   const admin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -227,7 +256,7 @@ Deno.serve(async (req) => {
 
   const credQuery = admin
     .from('workspace_carrier_credentials')
-    .select('workspace_id, carrier_id, enabled')
+    .select('workspace_id, carrier_id, enabled, daily_call_count, daily_call_date')
     .eq('enabled', true)
   const { data: credRows, error: credErr } = onlyWorkspace
     ? await credQuery.eq('workspace_id', onlyWorkspace)
@@ -237,8 +266,11 @@ Deno.serve(async (req) => {
     return jsonResp({ error: credErr.message }, 500)
   }
 
-  // Gruppiere Credentials pro Workspace.
+  // Gruppiere Credentials pro Workspace + Tages-Quota-Restbudget pro
+  // Workspace×Carrier (DHL: 1.000/Tag hart → Cap 900, Lesson PR #115).
+  const todayUtc = new Date().toISOString().slice(0, 10)
   const byWorkspace = new Map<string, Set<'dhl' | 'dpd' | 'ups'>>()
+  const quotaRemaining = new Map<string, number>()
   for (const row of (credRows ?? []) as CredentialRow[]) {
     let set = byWorkspace.get(row.workspace_id)
     if (!set) {
@@ -246,7 +278,15 @@ Deno.serve(async (req) => {
       byWorkspace.set(row.workspace_id, set)
     }
     set.add(row.carrier_id)
+    quotaRemaining.set(
+      `${row.workspace_id}:${row.carrier_id}`,
+      remainingDailyQuota(row.daily_call_count, row.daily_call_date, todayUtc),
+    )
   }
+
+  // FCM-Kontext für Status-Wechsel-Pushes — lazy: OAuth-Token wird erst
+  // geholt, wenn der erste Push tatsächlich ansteht.
+  const pushCtx = createPushContext()
 
   let totalBudget = MAX_DEALS_PER_RUN
   const stats: PollStats[] = []
@@ -258,6 +298,10 @@ Deno.serve(async (req) => {
       carriers,
       totalBudget,
       onlyDealId,
+      mode,
+      quotaRemaining,
+      todayUtc,
+      pushCtx,
     )
     stats.push(stat)
     totalBudget -= stat.checked
@@ -271,13 +315,18 @@ async function pollWorkspace(
   workspaceId: string,
   carriers: Set<'dhl' | 'dpd' | 'ups'>,
   budget: number,
-  onlyDealId?: number,
+  onlyDealId: number | undefined,
+  mode: string | undefined,
+  quotaRemaining: Map<string, number>,
+  todayUtc: string,
+  pushCtx: PushContext,
 ): Promise<PollStats> {
   const stat: PollStats = {
     workspace_id: workspaceId,
     checked: 0,
     delivered: 0,
     errors: 0,
+    quota_skipped: 0,
   }
 
   // Offene Deals: Status "Unterwegs", tracking gesetzt, kein Arrival.
@@ -286,7 +335,7 @@ async function pollWorkspace(
   let dealQuery = admin
     .from('deals')
     .select(
-      'id, workspace_id, user_id, product, tracking, carrier, tracking_confidence, tracking_needs_review, status, arrival_date, order_date, live_status, live_status_last_event, live_status_updated_at',
+      'id, workspace_id, user_id, product, tracking, carrier, tracking_confidence, tracking_needs_review, status, arrival_date, order_date, live_status, live_status_last_event, live_status_updated_at, live_eta, last_polled_at',
     )
     .eq('workspace_id', workspaceId)
     .eq('status', 'Unterwegs')
@@ -322,6 +371,15 @@ async function pollWorkspace(
     )
   }
 
+  // Adaptive Frequenz (Paket 1.5): beim stündlichen adaptive-sweep wird pro
+  // Deal anhand von live_status + last_polled_at entschieden, ob ein
+  // erneuter Carrier-Call fällig ist (out_for_delivery stündlich,
+  // in_transit ~4h, pending/exception 2×/Tag).
+  const nowMs = Date.now()
+  const dueDeals = mode === 'adaptive-sweep'
+    ? eligible.filter((d) => isDuePoll(d, nowMs))
+    : eligible
+
   // Cache decrypted API-Keys pro Carrier (max 3 Aufrufe pro Workspace).
   const keyCache = new Map<'dhl' | 'dpd' | 'ups', string | null>()
   const getKey = async (carrierId: 'dhl' | 'dpd' | 'ups') => {
@@ -340,13 +398,19 @@ async function pollWorkspace(
     return key
   }
 
+  // Quota-/Fehler-Tracking pro Carrier — wird NACH der Schleife in EINEM
+  // Write pro Carrier geflusht (statt wie früher ein Credential-Write pro
+  // Deal). last_error spiegelt das Ergebnis des letzten Calls.
+  const callsMade = new Map<'dhl' | 'dpd' | 'ups', number>()
+  const lastErrorByCarrier = new Map<'dhl' | 'dpd' | 'ups', string | null>()
+
   // Throttle-State: ≥350 ms zwischen echten Carrier-API-Calls (DHL 3 req/s).
   let madeApiCall = false
-  for (const deal of eligible) {
+  for (const deal of dueDeals) {
     if (!deal.tracking || deal.tracking.trim().length === 0) continue
     // Amazon = detection-only (keine öffentliche Status-API, Plan §3.4).
     // Defensiver Short-Circuit VOR der Adapter-Wahl: weder fetchStatus noch
-    // markCarrierError noch checked-Increment. Greift sowohl über den
+    // Error-Tracking noch checked-Increment. Greift sowohl über den
     // persistierten carrier ALS auch über das TBA-Pattern (Backfill-Lücke).
     if (
       deal.carrier === 'amazon' ||
@@ -365,6 +429,15 @@ async function pollWorkspace(
       detectAdapter(deal.tracking)
     if (!adapter) continue
     if (!carriers.has(adapter.id)) continue
+
+    // Tages-Quota-Guard: Cap erreicht → kein Call mehr für diesen Carrier
+    // heute (DHL sperrt bei >1.000/Tag mit 429, Lesson PR #115).
+    const quotaKey = `${workspaceId}:${adapter.id}`
+    if ((quotaRemaining.get(quotaKey) ?? DAILY_QUOTA_CAP) <= 0) {
+      stat.quota_skipped++
+      continue
+    }
+
     const apiKey = await getKey(adapter.id)
     if (!apiKey) continue
 
@@ -373,29 +446,48 @@ async function pollWorkspace(
     madeApiCall = true
 
     stat.checked++
+    quotaRemaining.set(quotaKey, (quotaRemaining.get(quotaKey) ?? DAILY_QUOTA_CAP) - 1)
+    callsMade.set(adapter.id, (callsMade.get(adapter.id) ?? 0) + 1)
+
     let parsed: ParsedTracking | null = null
     try {
       parsed = await adapter.fetchStatus(deal.tracking, apiKey)
+      lastErrorByCarrier.set(adapter.id, null)
     } catch (e) {
       console.warn('adapter.fetchStatus failed', adapter.id, deal.id, (e as Error).message)
       stat.errors++
-      await markCarrierError(admin, workspaceId, adapter.id, (e as Error).message)
+      lastErrorByCarrier.set(adapter.id, ((e as Error).message ?? 'fetch failed').slice(0, 500))
       continue
     }
     if (!parsed) continue
 
-    // Erfolgreicher Call → Fehler-Spalte zurücksetzen + last_polled_at touch.
-    await admin
-      .from('workspace_carrier_credentials')
-      .update({ last_polled_at: new Date().toISOString(), last_error: null })
-      .eq('workspace_id', workspaceId)
-      .eq('carrier_id', adapter.id)
-
     // Klarna-style Live-Visibility: bei JEDEM erfolgreichen Parse den
     // Live-Status persistieren — nicht nur bei 'delivered'. Duplikate (gleicher
     // Status wie zuletzt) werden geskippt (Spam-Schutz).
-    const ok = await persistLiveStatus(admin, deal, adapter, parsed)
+    const ok = await persistLiveStatus(admin, deal, adapter, parsed, pushCtx)
     if (ok && parsed.status === 'delivered') stat.delivered++
+  }
+
+  // Credential-Flush: EIN atomarer Bump pro Carrier (Review-Fix: ein
+  // absolutes daily_call_count-Write wäre ein Lost-Update-Race zwischen
+  // parallelem Sweep + Event-Trigger-Polls — der RPC inkrementiert
+  // server-seitig in einem Statement).
+  for (const [carrierId, calls] of callsMade.entries()) {
+    const { error: bumpErr } = await admin.rpc('bump_carrier_daily_calls', {
+      _workspace_id: workspaceId,
+      _carrier_id: carrierId,
+      _calls: calls,
+      _today: todayUtc,
+      _last_error: lastErrorByCarrier.get(carrierId) ?? null,
+    })
+    if (bumpErr) {
+      console.warn(
+        'bump_carrier_daily_calls failed',
+        workspaceId,
+        carrierId,
+        bumpErr.message,
+      )
+    }
   }
 
   return stat
@@ -406,13 +498,19 @@ async function persistLiveStatus(
   deal: DealRow,
   adapter: TrackingAdapter,
   parsed: ParsedTracking,
+  pushCtx: PushContext,
 ): Promise<boolean> {
   const nowIso = new Date().toISOString()
-  const update = buildLiveStatusUpdate(deal, parsed, nowIso)
-  if (!update) {
-    // Duplicate (live_status unverändert) → kein DB-Roundtrip, kein
-    // activity_log-Spam.
-    return false
+  const patch = buildLiveStatusUpdate(deal, parsed, nowIso)
+
+  // last_polled_at wird IMMER gestempelt — auch bei Duplicate-Status. Das
+  // steuert die adaptive Poll-Frequenz (isDuePoll) + den Retrack-Cooldown.
+  const update: Record<string, unknown> = patch ?? {}
+  update.last_polled_at = nowIso
+
+  // ETA: nur schreiben, wenn der Carrier eine liefert und sie sich ändert.
+  if (parsed.etaDate && parsed.etaDate !== (deal.live_eta ?? null)) {
+    update.live_eta = parsed.etaDate
   }
 
   // Race-Schutz für den Delivered-Pfad: nur wenn Deal noch im erwarteten
@@ -423,7 +521,7 @@ async function persistLiveStatus(
     .update(update)
     .eq('id', deal.id)
     .eq('workspace_id', deal.workspace_id)
-  if (parsed.status === 'delivered') {
+  if (patch && parsed.status === 'delivered') {
     query = query.eq('status', 'Unterwegs').is('arrival_date', null)
   }
   const { error: updErr } = await query
@@ -432,9 +530,43 @@ async function persistLiveStatus(
     return false
   }
 
-  // Activity-Log + Push: bisher nur bei 'delivered'. Intermediate-Status
-  // werden vorerst still in deals.live_status persistiert (UI zeigt sie an).
-  // TODO future: push on transition in_transit → out_for_delivery.
+  // Event-Timeline (Paket 1): kompletten Carrier-Event-Verlauf idempotent
+  // upserten. Der synthetische Fallback-Event (nur lastEvent, kein Array)
+  // wird NUR bei echtem Status-/Event-Wechsel eingefügt — sonst würde er
+  // mit frischem occurred_at jede Stunde ein Duplikat erzeugen.
+  const eventRows = buildTrackingEventRows(
+    deal,
+    adapter.id,
+    parsed,
+    nowIso,
+    patch !== null,
+  )
+  if (eventRows.length > 0) {
+    const { error: evErr } = await admin
+      .from('tracking_events')
+      .upsert(eventRows, {
+        onConflict: 'deal_id,tracking,occurred_at,description',
+        ignoreDuplicates: true,
+      })
+    if (evErr) {
+      console.warn('tracking_events upsert failed', deal.id, evErr.message)
+    }
+  }
+
+  if (!patch) {
+    // Duplicate (live_status unverändert) → kein Activity-Log, kein Push.
+    return false
+  }
+
+  // Status-Wechsel-Push (Klarna-Moment): bei jedem echten Übergang außer
+  // nach 'pending'. Dedup über notifications_sent (ref 'tracking_status',
+  // `${dealId}:${status}`) — pro Deal+Status maximal EIN Push, je Lauf
+  // race-safe über Claim-then-Send.
+  const newStatus = parsed.status !== 'unknown' ? (parsed.status as LiveStatus) : null
+  if (newStatus && newStatus !== deal.live_status && newStatus !== 'pending') {
+    await maybeSendStatusPush(admin, pushCtx, deal, newStatus, parsed)
+  }
+
   if (parsed.status === 'delivered') {
     const message = parsed.lastEvent
       ? `Sendung "${deal.product}" via ${adapter.label} angekommen: ${parsed.lastEvent}`
@@ -488,20 +620,230 @@ export function buildLiveStatusUpdate(
   return update
 }
 
-async function markCarrierError(
-  admin: ReturnType<typeof createClient>,
-  workspaceId: string,
-  carrierId: 'dhl' | 'dpd' | 'ups',
-  message: string,
-): Promise<void> {
-  await admin
-    .from('workspace_carrier_credentials')
-    .update({
-      last_polled_at: new Date().toISOString(),
-      last_error: message.slice(0, 500),
+// ─── Paket 1: Event-Timeline, adaptive Frequenz, Quota, Status-Push ───────
+
+/// Reine Funktion: mappt einen Parser-Output auf `tracking_events`-Rows.
+/// Events ohne parsbaren Timestamp werden verworfen. Liefert der Carrier
+/// keine Event-Liste, wird (nur bei `includeSynthetic`, d.h. echtem
+/// Status-Wechsel) ein synthetischer Event aus `lastEvent` gebaut, damit
+/// die Timeline nie leer bleibt. Exportiert für Unit-Tests.
+export function buildTrackingEventRows(
+  deal: Pick<DealRow, 'id' | 'workspace_id' | 'tracking'>,
+  carrierId: string,
+  parsed: ParsedTracking,
+  nowIso: string,
+  includeSynthetic: boolean,
+): Record<string, unknown>[] {
+  const tracking = (deal.tracking ?? '').trim()
+  if (!tracking) return []
+
+  const rows: Record<string, unknown>[] = []
+  for (const ev of parsed.events ?? []) {
+    if (!ev.occurredAt) continue
+    rows.push({
+      deal_id: deal.id,
+      workspace_id: deal.workspace_id,
+      tracking,
+      carrier: carrierId,
+      occurred_at: ev.occurredAt,
+      status: ev.status === 'unknown' ? null : ev.status,
+      raw_code: ev.rawCode ?? null,
+      description: (ev.text ?? '').slice(0, 500),
+      location: ev.location ? ev.location.slice(0, 200) : null,
+      source: 'poll',
     })
-    .eq('workspace_id', workspaceId)
-    .eq('carrier_id', carrierId)
+  }
+
+  if (rows.length === 0 && includeSynthetic && parsed.lastEvent) {
+    rows.push({
+      deal_id: deal.id,
+      workspace_id: deal.workspace_id,
+      tracking,
+      carrier: carrierId,
+      // Review-Fix: Carrier-Status-Timestamp bevorzugen — Poll-Zeit nur als
+      // letzter Fallback, sonst zeigt die Timeline falsche Event-Zeiten.
+      occurred_at: parsed.statusTimestamp ?? parsed.deliveredAt ?? nowIso,
+      status: parsed.status === 'unknown' ? null : parsed.status,
+      raw_code: parsed.rawStatusCode ?? null,
+      description: parsed.lastEvent.slice(0, 500),
+      location: null,
+      source: 'poll',
+    })
+  }
+
+  return rows
+}
+
+/// Reine Funktion: verbleibendes Tages-Quota-Budget für einen Carrier.
+/// Datum ≠ heute (UTC) → Zähler gilt als zurückgesetzt. Exportiert für Tests.
+export function remainingDailyQuota(
+  count: number | null | undefined,
+  dateStr: string | null | undefined,
+  todayUtc: string,
+  cap: number = DAILY_QUOTA_CAP,
+): number {
+  if (!dateStr || dateStr !== todayUtc) return cap
+  return Math.max(0, cap - (count ?? 0))
+}
+
+/// Reine Funktion: ist dieser Deal beim stündlichen adaptive-sweep fällig?
+///   out_for_delivery → jede Stunde (≥50 min)
+///   in_transit       → alle ~4 h (≥230 min)
+///   pending/exception/null → 2×/Tag (≥660 min)
+///   delivered/expired → nie
+/// Nie gepollte Deals (last_polled_at null) sind immer fällig.
+export function isDuePoll(
+  deal: Pick<DealRow, 'live_status' | 'last_polled_at'>,
+  nowMs: number,
+): boolean {
+  if (deal.live_status === 'delivered' || deal.live_status === 'expired') {
+    return false
+  }
+  if (!deal.last_polled_at) return true
+  const last = Date.parse(deal.last_polled_at)
+  if (!Number.isFinite(last)) return true
+  const elapsedMin = (nowMs - last) / 60_000
+  switch (deal.live_status) {
+    case 'out_for_delivery':
+      return elapsedMin >= 50
+    case 'in_transit':
+      return elapsedMin >= 230
+    default:
+      return elapsedMin >= 660
+  }
+}
+
+/// Quiet-Hours-Gate für den stündlichen adaptive-sweep: Berlin 22–05 Uhr
+/// wird geskippt (nachts keine Carrier-Scans → Quota-Verschwendung).
+/// Andere Modi (daily-sweep, single-deal, manual) laufen immer durch.
+export const ADAPTIVE_ACTIVE_FROM_HOUR = 6
+export const ADAPTIVE_ACTIVE_UNTIL_HOUR = 22 // exklusiv
+
+export function adaptiveSweepShouldRun(
+  mode: string | undefined,
+  nowMs: number = Date.now(),
+): boolean {
+  if (mode !== 'adaptive-sweep') return true
+  const h = berlinHourNow(nowMs)
+  return h >= ADAPTIVE_ACTIVE_FROM_HOUR && h < ADAPTIVE_ACTIVE_UNTIL_HOUR
+}
+
+/// Reine Funktion: Push-Payload für einen Status-Wechsel. PII-bewusst: nur
+/// Produktname (wie der bestehende delivery-Push) + Status — keine
+/// Tracking-Nummer, keine Adresse. data.route für künftiges Deep-Linking.
+export function buildStatusPushPayload(
+  deal: Pick<DealRow, 'id' | 'product'>,
+  status: LiveStatus,
+  parsed: Pick<ParsedTracking, 'lastEvent'>,
+): PushPayload {
+  const titles: Partial<Record<LiveStatus, string>> = {
+    in_transit: 'Paket unterwegs 📦',
+    out_for_delivery: 'Paket in Zustellung 🚚',
+    delivered: 'Paket zugestellt ✅',
+    exception: 'Problem mit deiner Sendung ⚠️',
+  }
+  const title = titles[status] ?? 'Sendungs-Update'
+  const body = parsed.lastEvent
+    ? `${deal.product}: ${parsed.lastEvent}`
+    : deal.product
+  return {
+    title,
+    body,
+    data: {
+      kind: 'tracking_status',
+      dealId: String(deal.id),
+      status,
+      route: `/deals?deal=${deal.id}`,
+    },
+  }
+}
+
+/// Lazy FCM-Kontext: OAuth-Token wird erst geholt, wenn der erste Push
+/// tatsächlich ansteht. Fehlende FCM-Env (lokaler Stack) → Pushes werden
+/// still übersprungen, der Poll-Lauf bleibt erfolgreich.
+export interface PushContext {
+  ensure(): Promise<{ projectId: string; accessToken: string } | null>
+}
+
+function createPushContext(): PushContext {
+  let resolved: { projectId: string; accessToken: string } | null | undefined
+  return {
+    async ensure() {
+      if (resolved !== undefined) return resolved
+      const sa = parseServiceAccount()
+      if (!sa) {
+        console.log('tracking-poll: FCM env fehlt — Status-Push übersprungen')
+        resolved = null
+        return null
+      }
+      try {
+        const accessToken = await getGoogleAccessToken(sa)
+        resolved = { projectId: sa.project_id, accessToken }
+      } catch (e) {
+        console.warn('tracking-poll: FCM OAuth failed', (e as Error).message)
+        resolved = null
+      }
+      return resolved
+    },
+  }
+}
+
+/// Status-Wechsel-Push mit Opt-out (notification_preferences.delivery_enabled,
+/// Default true wie in send-notifications) und race-safem Dedup: erst die
+/// notifications_sent-Row claimen (ignoreDuplicates + select), nur der
+/// Gewinner sendet. FCM-Fehler nach Claim = verlorener Push (benign).
+async function maybeSendStatusPush(
+  admin: ReturnType<typeof createClient>,
+  pushCtx: PushContext,
+  deal: DealRow,
+  status: LiveStatus,
+  parsed: ParsedTracking,
+): Promise<void> {
+  try {
+    const { data: pref } = await admin
+      .from('notification_preferences')
+      .select('delivery_enabled')
+      .eq('user_id', deal.user_id)
+      .maybeSingle()
+    if (pref && (pref as { delivery_enabled: boolean }).delivery_enabled === false) {
+      return
+    }
+
+    const refId = `${deal.id}:${status}`
+    const { data: claimed, error: claimErr } = await admin
+      .from('notifications_sent')
+      .upsert(
+        {
+          user_id: deal.user_id,
+          ref_kind: 'tracking_status',
+          ref_id: refId,
+          workspace_id: deal.workspace_id,
+        },
+        { onConflict: 'user_id,ref_kind,ref_id', ignoreDuplicates: true },
+      )
+      .select('ref_id')
+    if (claimErr || !claimed || claimed.length === 0) return // schon gesendet
+
+    const fcm = await pushCtx.ensure()
+    if (!fcm) return
+
+    const { data: tokenRows } = await admin
+      .from('fcm_tokens')
+      .select('token, platform')
+      .eq('user_id', deal.user_id)
+    const tokens = (tokenRows ?? []) as FcmToken[]
+    if (tokens.length === 0) return
+
+    await sendToTokens(
+      fcm.projectId,
+      fcm.accessToken,
+      tokens,
+      buildStatusPushPayload(deal, status, parsed),
+    )
+  } catch (e) {
+    // Push ist Best-Effort — nie den Poll-Lauf reißen.
+    console.warn('tracking-poll: status push failed', deal.id, (e as Error).message)
+  }
 }
 
 function jsonResp(body: unknown, status = 200): Response {
