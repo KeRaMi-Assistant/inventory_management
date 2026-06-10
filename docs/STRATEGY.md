@@ -390,7 +390,7 @@ Diese Punkte sind keine Features, müssen aber **vor oder parallel** zu den
 neuen Features adressiert werden.
 
 - **Tests**: kein einziger Unit-Test in `test/` außer `carrier_service_test.dart`. Vor jedem neuen Service mindestens Happy-Path + 2 Edge-Cases. Ziel: 30% Coverage in Sprint 5, 60% in Sprint 9.
-- **`inventory_provider.dart` (~1000 LOC)**: aufsplitten in `DealRepository` / `InventoryRepository` / `SupplierRepository`. Sprint 7 ist der natürliche Punkt — der Tickets-Refactor sowieso fasst Provider an.
+- **`inventory_provider.dart`-Decomposition [ERLEDIGT 2026-06, PR #120/#128/#129/#131]**: zerlegt in vier domänenkohärente Provider `CatalogProvider` / `PurchasingProvider` / `StockProvider` / `DealsProvider` (azyklischer DAG, ProxyProvider4). Cross-Domain via Write-Back-Hooks. Siehe `docs/handbook/05-architecture.md`.
 - **`freezed` + `json_serializable`**: drei Mapper pro Modell (`toJson`, `toSupabaseInsert`, `fromSupabase`) sind ein Drift-Risiko. Migration zu Code-Gen vor dem Postfach-Sprint, weil Adapter-Output sonst chaotisch wird.
 - **CI/CD**: GitHub Actions mit `flutter analyze` + Tests + Build pro Plattform. Aktuell rein lokal — bei jedem PR ein Risiko.
 - **Sentry / GlitchTip**: Crash-Reporting fehlt komplett. Wird mit dem Bot-Service essentiell, weil Bugs dort silent fehlschlagen.

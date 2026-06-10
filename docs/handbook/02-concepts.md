@@ -26,7 +26,7 @@ Spalte. Die [RLS-Policies](10-glossary.md#rls) prüfen über die Helper
 [Migration `20260504000300_workspace_rls_fix.sql`](../../supabase/migrations/20260504000300_workspace_rls_fix.sql).
 
 > Praktischer Effekt: Wenn du in der App in einen anderen Workspace
-> wechselst, lädt der `InventoryProvider` alle Daten neu — siehe
+> wechselst, laden die vier Domänen-Provider (`CatalogProvider`, `PurchasingProvider`, `StockProvider`, `DealsProvider`) alle Daten neu — siehe
 > `lib/providers/active_workspace_provider.dart`.
 
 **Wann ein Workspace?** Jeder, der eigene Daten verwaltet, hat einen.
@@ -266,7 +266,7 @@ Ruhe, und der Rest des Codes erschließt sich von selbst.
 
 - [`lib/models/`](../../lib/models/) — Domain-Modelle (`deal.dart`, `buyer.dart`, `shop.dart`, `supplier.dart`, `ticket.dart`, `workspace.dart`, `inventory_item.dart`, `inventory_batch.dart`, `inbox_message.dart`, `pricing_plan.dart`)
 - [`lib/providers/active_workspace_provider.dart`](../../lib/providers/active_workspace_provider.dart) — Workspace-State
-- [`lib/providers/inventory_provider.dart`](../../lib/providers/inventory_provider.dart) — der größte Provider, hält Deals + Items
+- [`lib/providers/deals_provider.dart`](../../lib/providers/deals_provider.dart) — Deals/Tickets/Buyers/Shops (Decomposition: + `catalog_/purchasing_/stock_provider.dart`, siehe 05-architecture)
 - [`lib/services/supabase_repository.dart`](../../lib/services/supabase_repository.dart) — typisierte CRUD-API
 - [`supabase/migrations/20260430000000_initial_schema.sql`](../../supabase/migrations/20260430000000_initial_schema.sql) — Basis-Schema
 - [`supabase/migrations/20260504000200_workspaces.sql`](../../supabase/migrations/20260504000200_workspaces.sql) — Workspace-Layer
