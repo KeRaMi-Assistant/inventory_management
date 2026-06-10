@@ -22,7 +22,7 @@ import 'providers/catalog_provider.dart';
 import 'providers/filter_provider.dart';
 import 'providers/purchasing_provider.dart';
 import 'providers/inbox_provider.dart';
-import 'providers/inventory_provider.dart';
+import 'providers/deals_provider.dart';
 import 'providers/invites_provider.dart';
 import 'providers/onboarding_provider.dart';
 import 'providers/statistics_filter_provider.dart';
@@ -163,7 +163,7 @@ class InventoryApp extends StatelessWidget {
               previous ?? CatalogProvider(repository: repository),
         ),
         // PurchasingProvider MUST be registered BEFORE StockProvider +
-        // InventoryProvider — both depend on it (registration order =
+        // DealsProvider — both depend on it (registration order =
         // dependency order; Gotcha #5/#9).
         ChangeNotifierProxyProvider<SupabaseRepository, PurchasingProvider>(
           create: (ctx) => PurchasingProvider(
@@ -173,7 +173,7 @@ class InventoryApp extends StatelessWidget {
               previous ?? PurchasingProvider(repository: repository),
         ),
         // StockProvider MUST be registered AFTER Catalog + Purchasing and
-        // BEFORE InventoryProvider. The provider graph is a strict DAG:
+        // BEFORE DealsProvider. The provider graph is a strict DAG:
         // Stock → {Catalog, Purchasing}, Inventory → {Catalog, Purchasing, Stock}.
         ChangeNotifierProxyProvider3<SupabaseRepository, CatalogProvider,
             PurchasingProvider, StockProvider>(
@@ -199,8 +199,8 @@ class InventoryApp extends StatelessWidget {
           },
         ),
         ChangeNotifierProxyProvider4<SupabaseRepository, CatalogProvider,
-            PurchasingProvider, StockProvider, InventoryProvider>(
-          create: (ctx) => InventoryProvider(
+            PurchasingProvider, StockProvider, DealsProvider>(
+          create: (ctx) => DealsProvider(
             repository: ctx.read<SupabaseRepository>(),
             catalogProvider: ctx.read<CatalogProvider>(),
             purchasingProvider: ctx.read<PurchasingProvider>(),
@@ -216,7 +216,7 @@ class InventoryApp extends StatelessWidget {
               previous.updateStockProvider(stock);
               return previous;
             }
-            return InventoryProvider(
+            return DealsProvider(
               repository: repository,
               catalogProvider: catalog,
               purchasingProvider: purchasing,
@@ -298,7 +298,7 @@ class InventoryApp extends StatelessWidget {
 
 /// Top-level redirect: shows the splash → login → main flow based on the
 /// current Supabase session. We track the user id so a sign-out (or a switch
-/// between accounts) reliably triggers a reload of [InventoryProvider].
+/// between accounts) reliably triggers a reload of [DealsProvider].
 class _AuthGate extends StatefulWidget {
   const _AuthGate();
 
@@ -337,7 +337,7 @@ class _AuthGateState extends State<_AuthGate> {
           context.read<CatalogProvider>().clearLocalState();
           context.read<PurchasingProvider>().clearLocalState();
           context.read<StockProvider>().clearLocalState();
-          context.read<InventoryProvider>().clearLocalState();
+          context.read<DealsProvider>().clearLocalState();
           context.read<InboxProvider>().clear();
           context.read<CarrierCredentialsProvider>().clear();
           context.read<ActiveWorkspaceProvider>().clear();
@@ -373,7 +373,7 @@ class _AuthGateState extends State<_AuthGate> {
   }
 
   Future<void> _hydrate(String userId) async {
-    final inventory = context.read<InventoryProvider>();
+    final inventory = context.read<DealsProvider>();
     final catalog = context.read<CatalogProvider>();
     final purchasing = context.read<PurchasingProvider>();
     final stock = context.read<StockProvider>();
@@ -434,7 +434,7 @@ class _AuthGateState extends State<_AuthGate> {
     context.read<CatalogProvider>().setActiveWorkspace(newId);
     context.read<PurchasingProvider>().setActiveWorkspace(newId);
     context.read<StockProvider>().setActiveWorkspace(newId);
-    context.read<InventoryProvider>().setActiveWorkspace(newId);
+    context.read<DealsProvider>().setActiveWorkspace(newId);
     // Carrier-Keys sind workspace-scoped — neu laden statt Stale-Cache zeigen.
     context.read<CarrierCredentialsProvider>().refresh();
   }

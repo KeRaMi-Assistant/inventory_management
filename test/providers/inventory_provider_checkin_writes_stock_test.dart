@@ -6,7 +6,7 @@ import 'package:inventory_management/models/product.dart';
 import 'package:inventory_management/models/product_stock.dart';
 import 'package:inventory_management/models/warehouse.dart';
 import 'package:inventory_management/providers/catalog_provider.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/deals_provider.dart';
 import 'package:inventory_management/providers/purchasing_provider.dart';
 import 'package:inventory_management/providers/stock_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
@@ -17,7 +17,7 @@ import 'package:inventory_management/services/supabase_repository.dart';
 
 /// Fake-Repository für den `checkInDeal`-Cross-Domain-Write-Contract (Split #3).
 ///
-/// `checkInDeal` bleibt Orchestrator auf [InventoryProvider] (Deals-Domäne),
+/// `checkInDeal` bleibt Orchestrator auf [DealsProvider] (Deals-Domäne),
 /// schreibt aber Item + Movement über die public Write-Back-Hooks
 /// (`upsertInventoryItemFromImport` / `insertMovementFromCheckIn`) in den
 /// injizierten [StockProvider] — Plan §3 Option A (kein Stock→Inventory-Edge,
@@ -108,7 +108,7 @@ Warehouse _makeWarehouse() {
 }
 
 ({
-  InventoryProvider inventory,
+  DealsProvider inventory,
   StockProvider stock,
   CatalogProvider catalog,
 }) _wire(_FakeRepository repo) {
@@ -119,7 +119,7 @@ Warehouse _makeWarehouse() {
     catalogProvider: catalog,
     purchasingProvider: purchasing,
   );
-  final inventory = InventoryProvider(
+  final inventory = DealsProvider(
     repository: repo,
     catalogProvider: catalog,
     purchasingProvider: purchasing,

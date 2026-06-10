@@ -7,7 +7,7 @@ import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../models/shop.dart';
 import '../providers/filter_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../services/carrier_service.dart';
 import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
@@ -116,7 +116,7 @@ class _DealTableState extends State<DealTable> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<InventoryProvider, FilterProvider>(
+    return Consumer2<DealsProvider, FilterProvider>(
       builder: (context, provider, filters, _) {
         final deals = filters.apply(provider.deals);
         final dateFmt = DateFormat('dd.MM.yyyy');
@@ -255,7 +255,7 @@ class _DealTableState extends State<DealTable> {
 }
 
 class _FilterBar extends StatelessWidget {
-  final InventoryProvider provider;
+  final DealsProvider provider;
   final FilterProvider filters;
   final int needsReviewCount;
   const _FilterBar({
@@ -298,8 +298,8 @@ class _FilterBar extends StatelessWidget {
               width: 150,
               label: l10n.dealStatus,
               value: filters.status,
-              values: InventoryProvider.statusOptions,
-              labels: InventoryProvider.statusOptions
+              values: DealsProvider.statusOptions,
+              labels: DealsProvider.statusOptions
                   .map((s) => localizeDealStatus(context, s))
                   .toList(),
               onChanged: filters.setStatus,
@@ -457,7 +457,7 @@ class _FilterBar extends StatelessWidget {
 }
 
 class _BulkActionBar extends StatelessWidget {
-  final InventoryProvider provider;
+  final DealsProvider provider;
   final FilterProvider filters;
   const _BulkActionBar({required this.provider, required this.filters});
 
@@ -486,7 +486,7 @@ class _BulkActionBar extends StatelessWidget {
               await provider.updateDealsStatus(ids, status);
               filters.clearSelection();
             },
-            itemBuilder: (_) => InventoryProvider.statusOptions
+            itemBuilder: (_) => DealsProvider.statusOptions
                 .map((s) => PopupMenuItem(
                     value: s,
                     child: Text(localizeDealStatus(context, s))))
@@ -605,7 +605,7 @@ class _HeaderCell extends StatelessWidget {
 class _DealRow extends StatefulWidget {
   final Deal deal;
   final bool isEven;
-  final InventoryProvider provider;
+  final DealsProvider provider;
   final FilterProvider filters;
   final DateFormat dateFmt;
   final NumberFormat numFmt;
@@ -812,7 +812,7 @@ class _DealRowState extends State<_DealRow> {
         if (widget.onOpenTicket != null) {
           widget.onOpenTicket!(deal.ticketNumber!);
         } else if (deal.ticketUrl != null) {
-          final prov = context.read<InventoryProvider>();
+          final prov = context.read<DealsProvider>();
           final buyer = prov.buyers.where((b) => b.name == deal.buyer).firstOrNull;
           final serverIds = buyer?.discordServerIds ?? [];
           openUrlWithFallback(context, resolveDiscordUrl(deal.ticketUrl!, serverIds: serverIds));
@@ -972,7 +972,7 @@ class _DealRowState extends State<_DealRow> {
   }
 
   Future<void> _editArrivalDate(BuildContext context,
-      InventoryProvider provider, Deal deal) async {
+      DealsProvider provider, Deal deal) async {
     final l10n = AppLocalizations.of(context);
     final picked = await showDatePicker(
       context: context,
@@ -1008,7 +1008,7 @@ class _DealRowState extends State<_DealRow> {
 
   Future<void> _editStatus(
     BuildContext context,
-    InventoryProvider provider,
+    DealsProvider provider,
     Deal deal,
     Offset position,
   ) async {
@@ -1016,7 +1016,7 @@ class _DealRowState extends State<_DealRow> {
       context: context,
       position: RelativeRect.fromLTRB(
           position.dx, position.dy, position.dx, position.dy),
-      items: InventoryProvider.statusOptions
+      items: DealsProvider.statusOptions
           .map((s) => PopupMenuItem(
               value: s, child: Text(localizeDealStatus(context, s))))
           .toList(),
@@ -1027,7 +1027,7 @@ class _DealRowState extends State<_DealRow> {
   }
 
   Future<void> _confirmDelete(
-      BuildContext context, InventoryProvider provider, Deal deal) async {
+      BuildContext context, DealsProvider provider, Deal deal) async {
     final l10n = AppLocalizations.of(context);
     // Capture messenger + theme-dependent values BEFORE the async gap so
     // they remain valid even if the widget rebuilds during the dialog.

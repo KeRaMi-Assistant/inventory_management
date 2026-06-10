@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/activity_entry.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -53,7 +53,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     metaFor(String type) => _metaFor(l10n, type);
-    return Consumer<InventoryProvider>(
+    return Consumer<DealsProvider>(
       builder: (context, provider, _) {
         final all = provider.activities;
         final filtered = _filter(all);

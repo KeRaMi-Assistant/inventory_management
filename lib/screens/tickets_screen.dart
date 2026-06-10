@@ -6,7 +6,7 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/shop.dart';
 import '../models/ticket_summary.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../services/carrier_service.dart';
 import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
@@ -60,7 +60,7 @@ class _TicketsScreenState extends State<TicketsScreen>
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final money = NumberFormat.currency(locale: localeTag, symbol: '€');
     final l10n = AppLocalizations.of(context);
-    return Consumer<InventoryProvider>(
+    return Consumer<DealsProvider>(
       builder: (context, provider, _) {
         final activeTickets = _filteredActive(provider.ticketSummaries);
         final selected =
@@ -139,7 +139,7 @@ class _ActiveTicketsView extends StatelessWidget {
   final List<TicketSummary> tickets;
   final TicketSummary? selected;
   final NumberFormat money;
-  final InventoryProvider provider;
+  final DealsProvider provider;
   final String search;
   final String? buyer;
   final String? status;
@@ -569,7 +569,7 @@ class _ArchivedTicketCard extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     final rootContext = context;
-    final provider = context.read<InventoryProvider>();
+    final provider = context.read<DealsProvider>();
     try {
       await provider.reopenTicket(ticketId);
       if (!rootContext.mounted) return;
@@ -595,7 +595,7 @@ class _TicketsMobileLayout extends StatefulWidget {
   final TicketSummary? selected;
   final NumberFormat money;
   final ValueChanged<String> onSelectTicket;
-  final InventoryProvider provider;
+  final DealsProvider provider;
   final String search;
   final String? buyer;
   final String? status;
@@ -730,7 +730,7 @@ class _TicketsMobileLayoutState extends State<_TicketsMobileLayout>
 }
 
 class _TicketFilters extends StatelessWidget {
-  final InventoryProvider provider;
+  final DealsProvider provider;
   final String search;
   final String? buyer;
   final String? status;
@@ -784,8 +784,8 @@ class _TicketFilters extends StatelessWidget {
                         context,
                         l10n.dealStatus,
                         status,
-                        InventoryProvider.statusOptions,
-                        InventoryProvider.statusOptions
+                        DealsProvider.statusOptions,
+                        DealsProvider.statusOptions
                             .map((s) => localizeDealStatus(context, s))
                             .toList(),
                         onStatus)),
@@ -868,7 +868,7 @@ class _TicketCard extends StatelessWidget {
                     tooltip: AppLocalizations.of(context).ticketsOpenTooltip,
                     icon: const Icon(Icons.open_in_new, size: 16),
                     onPressed: () {
-                      final prov = context.read<InventoryProvider>();
+                      final prov = context.read<DealsProvider>();
                       final buyer = prov.buyers.where((b) => b.name == ticket.buyer).firstOrNull;
                       final serverIds = buyer?.discordServerIds ?? [];
                       openUrlWithFallback(context, resolveDiscordUrl(ticket.url!, serverIds: serverIds));
@@ -944,7 +944,7 @@ class _TicketDetail extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final date = DateFormat.yMd(localeTag);
-    return Consumer<InventoryProvider>(
+    return Consumer<DealsProvider>(
       builder: (context, provider, _) {
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -1018,7 +1018,7 @@ class _TicketDetail extends StatelessWidget {
                           DropdownButton<String>(
                             value: deal.status,
                             underline: const SizedBox.shrink(),
-                            items: InventoryProvider.statusOptions
+                            items: DealsProvider.statusOptions
                                 .map((s) => DropdownMenuItem(
                                     value: s,
                                     child: Text(localizeDealStatus(
@@ -1091,7 +1091,7 @@ class _TicketDetail extends StatelessWidget {
 
   Future<void> _editTicket(
     BuildContext context,
-    InventoryProvider provider,
+    DealsProvider provider,
     TicketSummary ticket,
   ) async {
     final numberCtrl = TextEditingController(text: ticket.ticketNumber);
@@ -1154,7 +1154,7 @@ class _TicketDetail extends StatelessWidget {
                       child:
                           Text(AppLocalizations.of(context).commonAll),
                     ),
-                    ...InventoryProvider.statusOptions.map(
+                    ...DealsProvider.statusOptions.map(
                       (s) => DropdownMenuItem<String?>(
                         value: s,
                         child: Text(localizeDealStatus(context, s)),

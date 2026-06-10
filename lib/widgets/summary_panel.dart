@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../utils/status_l10n.dart';
 
 class SummaryPanel extends StatelessWidget {
@@ -14,7 +14,7 @@ class SummaryPanel extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final fmt = NumberFormat.currency(locale: localeTag, symbol: '€');
-    return Consumer<InventoryProvider>(
+    return Consumer<DealsProvider>(
       builder: (context, provider, _) {
         final deals = provider.deals;
         final buyers = provider.buyers.where((b) => b.active).toList();
@@ -42,7 +42,7 @@ class SummaryPanel extends StatelessWidget {
         };
 
         final statusStats = {
-          for (final s in InventoryProvider.statusOptions)
+          for (final s in DealsProvider.statusOptions)
             s: _Stat(
               count: deals.where((d) => d.status == s).length,
               profit: deals

@@ -32,15 +32,15 @@ import 'stock_provider.dart';
 /// [CatalogProvider], the purchasing domain (suppliers + purchase orders) into
 /// [PurchasingProvider] and the stock domain (inventory items + movements +
 /// warehouses + stocktakes + product-stock) into [StockProvider].
-/// InventoryProvider receives references via [updateCatalogProvider] /
+/// DealsProvider receives references via [updateCatalogProvider] /
 /// [updatePurchasingProvider] / [updateStockProvider] (called from `main.dart`
 /// via [ChangeNotifierProxyProvider4]) and delegates the corresponding reads
 /// to them. Two cross-domain orchestrators stay here — `importCsvAll` and
 /// `checkInDeal` — and write into purchasing/stock state through the public
 /// write-back hooks on [PurchasingProvider] / [StockProvider]. `bookGoodsReceipt`
 /// has moved to [StockProvider] (it is purely a stock + PO-header write).
-class InventoryProvider extends ChangeNotifier {
-  InventoryProvider({
+class DealsProvider extends ChangeNotifier {
+  DealsProvider({
     required SupabaseRepository repository,
     CatalogProvider? catalogProvider,
     PurchasingProvider? purchasingProvider,
@@ -63,7 +63,7 @@ class InventoryProvider extends ChangeNotifier {
   void updateCatalogProvider(CatalogProvider? catalog) {
     _catalogProvider = catalog;
     // No notifyListeners() here — callers that depend on products read via
-    // the CatalogProvider directly; InventoryProvider only uses the reference
+    // the CatalogProvider directly; DealsProvider only uses the reference
     // for internal cross-domain reads (criticalStockCount, importCsvAll, etc.).
   }
 
@@ -75,7 +75,7 @@ class InventoryProvider extends ChangeNotifier {
   void updatePurchasingProvider(PurchasingProvider? purchasing) {
     _purchasingProvider = purchasing;
     // No notifyListeners() here — callers that depend on suppliers/POs read via
-    // the PurchasingProvider directly; InventoryProvider only uses the
+    // the PurchasingProvider directly; DealsProvider only uses the
     // reference for cross-domain writes (importCsvAll).
   }
 
@@ -87,7 +87,7 @@ class InventoryProvider extends ChangeNotifier {
   void updateStockProvider(StockProvider? stock) {
     _stockProvider = stock;
     // No notifyListeners() here — callers that depend on inventory items /
-    // warehouses read via the StockProvider directly; InventoryProvider only
+    // warehouses read via the StockProvider directly; DealsProvider only
     // uses the reference for cross-domain reads (_summariesByArchive) and
     // writes (importCsvAll, checkInDeal).
   }
@@ -345,7 +345,7 @@ class InventoryProvider extends ChangeNotifier {
       _hydrateFrom(snapshot);
     } catch (e) {
       _lastError = e;
-      if (kDebugMode) debugPrint('InventoryProvider.loadData failed: $e');
+      if (kDebugMode) debugPrint('DealsProvider.loadData failed: $e');
     } finally {
       _loading = false;
       _initialLoadAttempted = true;
@@ -405,7 +405,7 @@ class InventoryProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _lastError = e;
-      if (kDebugMode) debugPrint('InventoryProvider.loadTickets failed: $e');
+      if (kDebugMode) debugPrint('DealsProvider.loadTickets failed: $e');
       rethrow;
     }
   }

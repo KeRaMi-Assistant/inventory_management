@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import 'add_edit_buyer_dialog.dart';
 
 class BuyerLegend extends StatelessWidget {
@@ -11,7 +11,7 @@ class BuyerLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer<InventoryProvider>(
+    return Consumer<DealsProvider>(
       builder: (context, provider, _) {
         final buyers = provider.buyers.where((b) => b.active).toList();
         return Card(

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../widgets/app_screen_scaffold.dart';
 
 /// Hilfe-/Onboarding-Seite. Zeigt eine durchsuchbare Sammlung an
@@ -1174,7 +1174,7 @@ class _DiscordSectionContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final buyers = context.watch<InventoryProvider>().buyers;
+    final buyers = context.watch<DealsProvider>().buyers;
     final dark = theme.brightness == Brightness.dark;
 
     return Column(

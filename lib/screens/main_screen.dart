@@ -10,7 +10,7 @@ import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
 import '../providers/filter_provider.dart';
 import '../providers/catalog_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../providers/purchasing_provider.dart';
 import '../providers/stock_provider.dart';
 import '../services/csv_service.dart';
@@ -87,12 +87,12 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _export(
     BuildContext context,
-    InventoryProvider provider,
+    DealsProvider provider,
     CatalogProvider catalog,
   ) async {
     final l10n = AppLocalizations.of(context);
     // Suppliers + purchase orders now live in PurchasingProvider; deals, shops,
-    // buyers stay on InventoryProvider; inventory items and warehouses on StockProvider.
+    // buyers stay on DealsProvider; inventory items and warehouses on StockProvider.
     final purchasing = context.read<PurchasingProvider>();
     final stock = context.read<StockProvider>();
     final (path, err) = await CsvService.exportAll(
@@ -118,7 +118,7 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  Future<void> _import(BuildContext context, InventoryProvider provider) async {
+  Future<void> _import(BuildContext context, DealsProvider provider) async {
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -203,7 +203,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _openSearch() {
-    final inventoryProvider = context.read<InventoryProvider>();
+    final inventoryProvider = context.read<DealsProvider>();
     final catalogProvider = context.read<CatalogProvider>();
     final prefs = context.read<AppPreferencesProvider>();
     GlobalSearchDialog.show(
@@ -239,7 +239,7 @@ class _MainScreenState extends State<MainScreen> {
   // rootContext ist der Context des Consumer2-Builders — bleibt nach
   // Navigator.pop(sheetContext) noch mounted.
   void _showLagerQuickActions(
-      BuildContext rootContext, InventoryProvider provider) {
+      BuildContext rootContext, DealsProvider provider) {
     final l10n = AppLocalizations.of(rootContext);
     showModalBottomSheet<void>(
       context: rootContext,
@@ -454,7 +454,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer2<InventoryProvider, BillingProvider>(
+    return Consumer2<DealsProvider, BillingProvider>(
       builder: (context, provider, billing, _) {
         // T3.2/T3.3: Der Shell-Switch (narrow/extended via Breakpoints) +
         // das Layout-Gerüst (Phone-Scaffold mit AppBar+BottomNav,

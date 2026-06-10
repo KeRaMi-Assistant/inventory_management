@@ -6,7 +6,7 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/buyer.dart';
 import '../models/deal.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../services/supabase_repository.dart';
 import '../utils/responsive.dart';
 import '../utils/status_l10n.dart';
@@ -312,7 +312,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       duration: const Duration(seconds: 2),
     ));
     final result = await ctx
-        .read<InventoryProvider>()
+        .read<DealsProvider>()
         .retrackDeal(widget.deal!.id);
     if (!mounted) return;
     setState(() => _retracking = false);
@@ -351,7 +351,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     setState(() => _saving = true);
 
     if (!mounted) return;
-    final provider = context.read<InventoryProvider>();
+    final provider = context.read<DealsProvider>();
 
     final price = double.tryParse(_priceCtrl.text.replaceAll(',', '.'));
     final taxPct =
@@ -435,7 +435,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final provider = context.watch<InventoryProvider>();
+    final provider = context.watch<DealsProvider>();
     // Shop-Picker: Amazon-Block oben, Trennlinie, sonstige alphabetisch.
     final activeShops = provider.shops.where((s) => s.active).toList();
     final amazonShops = activeShops
@@ -721,7 +721,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             initialValue: _status,
                             decoration: InputDecoration(
                                 labelText: l10n.dealStatus),
-                            items: InventoryProvider.statusOptions
+                            items: DealsProvider.statusOptions
                                 .map((s) => DropdownMenuItem(
                                     value: s,
                                     child: Text(
@@ -851,7 +851,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                               if (!ctx.mounted) return;
                               try {
                                 await ctx
-                                    .read<InventoryProvider>()
+                                    .read<DealsProvider>()
                                     .updateDealTrackingManually(
                                         widget.deal!.id, newValue);
                               } catch (_) {
@@ -864,7 +864,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                     ? () async {
                                         try {
                                           await ctx
-                                              .read<InventoryProvider>()
+                                              .read<DealsProvider>()
                                               .acceptDealTrackingAsManual(
                                                   widget.deal!.id);
                                         } catch (_) {}
@@ -875,7 +875,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                 ? () async {
                                     try {
                                       await ctx
-                                          .read<InventoryProvider>()
+                                          .read<DealsProvider>()
                                           .discardDealTracking(widget.deal!.id);
                                       setState(() => _trackingCtrl.text = '');
                                     } catch (_) {}

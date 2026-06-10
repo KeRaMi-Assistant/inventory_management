@@ -3,7 +3,7 @@ import 'package:inventory_management/models/deal.dart';
 import 'package:inventory_management/models/inventory_item.dart';
 import 'package:inventory_management/models/product.dart';
 import 'package:inventory_management/providers/catalog_provider.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/deals_provider.dart';
 import 'package:inventory_management/providers/stock_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
@@ -319,21 +319,21 @@ void main() {
     });
   });
 
-  // ── checkInDeal — bleibt auf InventoryProvider ────────────────────────────
+  // ── checkInDeal — bleibt auf DealsProvider ────────────────────────────
   // checkInDeal ist ein Cross-Domain-Orchestrator (Plan §3 Option A) der auf
-  // InventoryProvider verbleibt und Stock über Write-Back-Hooks beschreibt.
+  // DealsProvider verbleibt und Stock über Write-Back-Hooks beschreibt.
 
   group('checkInDeal — movementType', () {
     late _FakeRepository invRepo;
     late CatalogProvider catalog;
     late StockProvider stockProv;
-    late InventoryProvider inventory;
+    late DealsProvider inventory;
 
     setUp(() {
       invRepo = _FakeRepository();
       catalog = CatalogProvider(repository: invRepo);
       stockProv = StockProvider(repository: invRepo, catalogProvider: catalog);
-      inventory = InventoryProvider(
+      inventory = DealsProvider(
         repository: invRepo,
         catalogProvider: catalog,
         stockProvider: stockProv,
@@ -386,13 +386,13 @@ void main() {
     late _FakeRepository invRepo;
     late CatalogProvider catalog;
     late StockProvider stockProv;
-    late InventoryProvider inventory;
+    late DealsProvider inventory;
 
     setUp(() {
       invRepo = _FakeRepository();
       catalog = CatalogProvider(repository: invRepo);
       stockProv = StockProvider(repository: invRepo, catalogProvider: catalog);
-      inventory = InventoryProvider(
+      inventory = DealsProvider(
         repository: invRepo,
         catalogProvider: catalog,
         stockProvider: stockProv,
@@ -405,7 +405,7 @@ void main() {
       catalog.dispose();
     });
 
-    /// Lädt einen Seed-Produkt-State in CatalogProvider + InventoryProvider.
+    /// Lädt einen Seed-Produkt-State in CatalogProvider + DealsProvider.
     Future<void> seedWithProducts(List<Product> products) async {
       invRepo.seedProducts = products;
       await Future.wait([catalog.loadData(), inventory.loadData()]);

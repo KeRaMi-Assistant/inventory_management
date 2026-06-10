@@ -7,7 +7,7 @@ import 'package:inventory_management/models/shop.dart';
 import 'package:inventory_management/models/supplier.dart';
 import 'package:inventory_management/models/warehouse.dart';
 import 'package:inventory_management/providers/catalog_provider.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/deals_provider.dart';
 import 'package:inventory_management/providers/purchasing_provider.dart';
 import 'package:inventory_management/providers/stock_provider.dart';
 import 'package:inventory_management/services/csv_service.dart';
@@ -19,7 +19,7 @@ import 'package:inventory_management/services/supabase_repository.dart';
 
 /// Fake-Repository für den importCsvAll-Write-Back-Contract-Test.
 ///
-/// Verifiziert, dass `importCsvAll` (Orchestrator in [InventoryProvider]) die
+/// Verifiziert, dass `importCsvAll` (Orchestrator in [DealsProvider]) die
 /// importierten Suppliers/POs über die public Write-Back-Hooks in den
 /// injizierten [PurchasingProvider] schreibt, importierte Warehouses/Items
 /// in den [StockProvider] schreibt — und das 5-Tuple-Return-Format unverändert
@@ -110,7 +110,7 @@ PurchaseOrder _makePo(String orderNumber, {DateTime? createdAt}) {
 /// Wires all four providers sharing the same [repo].
 /// Returns a named record so callers can destructure only what they need.
 ({
-  InventoryProvider inventory,
+  DealsProvider inventory,
   PurchasingProvider purchasing,
   StockProvider stock,
 }) _wire(_FakeRepository repo) {
@@ -121,7 +121,7 @@ PurchaseOrder _makePo(String orderNumber, {DateTime? createdAt}) {
     catalogProvider: catalog,
     purchasingProvider: purchasing,
   );
-  final inventory = InventoryProvider(
+  final inventory = DealsProvider(
     repository: repo,
     catalogProvider: catalog,
     purchasingProvider: purchasing,

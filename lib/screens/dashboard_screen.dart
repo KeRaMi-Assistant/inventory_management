@@ -6,7 +6,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/active_workspace_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../providers/stock_provider.dart';
 import '../utils/responsive.dart';
@@ -37,7 +37,7 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final fmt = NumberFormat.currency(locale: localeTag, symbol: '€');
-    return Consumer2<StockProvider, InventoryProvider>(
+    return Consumer2<StockProvider, DealsProvider>(
       builder: (context, stock, provider, _) {
         final hasData = provider.deals.isNotEmpty ||
             stock.inventoryItems.isNotEmpty ||
@@ -236,7 +236,7 @@ class _EmptyStateCardState extends State<_EmptyStateCard> {
     final l10n = AppLocalizations.of(context);
     final ob = context.read<OnboardingProvider>();
     final activeWs = context.read<ActiveWorkspaceProvider>();
-    final inv = context.read<InventoryProvider>();
+    final inv = context.read<DealsProvider>();
     final wsId = activeWs.active?.id;
     if (wsId == null) {
       // Workspace nicht vorhanden — synchron, context ist garantiert gültig.
@@ -291,7 +291,7 @@ class _EmptyStateCardState extends State<_EmptyStateCard> {
 // ─── Responsive KPI Grid ───────────────────────────────────────────────────────
 
 class _KpiGrid extends StatelessWidget {
-  final InventoryProvider provider;
+  final DealsProvider provider;
   final StockProvider stock;
   final NumberFormat fmt;
   const _KpiGrid({required this.provider, required this.stock, required this.fmt});
@@ -347,7 +347,7 @@ class _ActivityFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final fmt = DateFormat('dd.MM. HH:mm');
-    return Consumer<InventoryProvider>(
+    return Consumer<DealsProvider>(
       builder: (context, provider, _) {
         final activities = provider.activities.take(10).toList();
         return _Panel(
@@ -421,7 +421,7 @@ class _BuyerOverview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer<InventoryProvider>(
+    return Consumer<DealsProvider>(
       builder: (context, provider, _) {
         final rows = provider.buyers.map((buyer) {
           final deals = provider.deals.where((d) => d.buyer == buyer.name).toList();

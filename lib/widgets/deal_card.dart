@@ -8,7 +8,7 @@ import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../models/shop.dart';
 import '../providers/filter_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../services/carrier_service.dart';
 import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
@@ -17,7 +17,7 @@ import 'tracking_chip.dart';
 
 class DealCard extends StatelessWidget {
   final Deal deal;
-  final InventoryProvider provider;
+  final DealsProvider provider;
   final FilterProvider filters;
   final ValueChanged<String>? onOpenTicket;
 
@@ -220,7 +220,7 @@ class DealCard extends StatelessWidget {
                         if (onOpenTicket != null) {
                           onOpenTicket!(deal.ticketNumber!);
                         } else if (deal.ticketUrl != null) {
-                          final prov = context.read<InventoryProvider>();
+                          final prov = context.read<DealsProvider>();
                           final b = prov.buyers
                               .where((x) => x.name == deal.buyer)
                               .firstOrNull;

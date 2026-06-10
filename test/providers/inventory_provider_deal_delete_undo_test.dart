@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inventory_management/models/deal.dart';
 import 'package:inventory_management/models/inventory_item.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/deals_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
 // ignore_for_file: avoid_redundant_argument_values
@@ -77,11 +77,11 @@ Deal _makeDeal({required int id, String product = 'Test-Deal'}) {
 
 void main() {
   late _FakeRepository repo;
-  late InventoryProvider provider;
+  late DealsProvider provider;
 
   setUp(() {
     repo = _FakeRepository();
-    provider = InventoryProvider(repository: repo);
+    provider = DealsProvider(repository: repo);
   });
 
   tearDown(() => provider.dispose());

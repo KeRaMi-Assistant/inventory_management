@@ -7,7 +7,7 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/inventory_batch.dart';
 import '../providers/app_preferences_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../providers/purchasing_provider.dart';
 import '../providers/stock_provider.dart';
 import '../providers/statistics_filter_provider.dart';
@@ -131,7 +131,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     return FutureBuilder<List<InventoryBatch>>(
       future: _batchFuture,
       builder: (context, snap) {
-        return Consumer3<InventoryProvider, StatisticsFilterProvider,
+        return Consumer3<DealsProvider, StatisticsFilterProvider,
             AppPreferencesProvider>(
           builder: (context, inv, filter, prefs, _) {
             if (inv.isLoading) {

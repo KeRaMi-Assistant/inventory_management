@@ -20,7 +20,7 @@ import '../providers/auth_provider.dart';
 import '../providers/billing_provider.dart';
 import '../providers/carrier_credentials_provider.dart';
 import '../providers/inbox_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../providers/stock_provider.dart';
 import '../services/push_service.dart';
@@ -134,7 +134,7 @@ class _BuyersTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer<InventoryProvider>(
+    return Consumer<DealsProvider>(
       builder: (context, provider, _) {
         final buyers = provider.buyers;
         return Stack(
@@ -269,7 +269,7 @@ class _BuyersTab extends StatelessWidget {
   }
 
   Future<void> _confirmDeleteBuyer(BuildContext context,
-      InventoryProvider provider, String id, String name) async {
+      DealsProvider provider, String id, String name) async {
     final l10n = AppLocalizations.of(context);
     // Capture before async gap (Dialog-Context-Pattern).
     final messenger = ScaffoldMessenger.of(context);
@@ -313,7 +313,7 @@ class _ShopsTab extends StatelessWidget {
 
   Future<void> _seedAmazon(
     BuildContext context,
-    InventoryProvider provider,
+    DealsProvider provider,
   ) async {
     final l10n = AppLocalizations.of(context);
     try {
@@ -338,7 +338,7 @@ class _ShopsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer<InventoryProvider>(
+    return Consumer<DealsProvider>(
       builder: (context, provider, _) {
         final shops = provider.shops;
         final amazonShops = shops.where(_isAmazon).toList()
@@ -458,7 +458,7 @@ class _ShopsTab extends StatelessWidget {
   }
 
   Future<void> _confirmDeleteShop(BuildContext context,
-      InventoryProvider provider, String id, String name) async {
+      DealsProvider provider, String id, String name) async {
     final l10n = AppLocalizations.of(context);
     // Capture before async gap (Dialog-Context-Pattern).
     final messenger = ScaffoldMessenger.of(context);
@@ -647,7 +647,7 @@ class _GeneralTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer<InventoryProvider>(
+    return Consumer<DealsProvider>(
       builder: (context, provider, _) {
         final stock = context.watch<StockProvider>();
         return ListView(
@@ -828,7 +828,7 @@ class _DemoReloadCardState extends State<_DemoReloadCard> {
     final l10n = AppLocalizations.of(context);
     // Capture messenger before async gap (Dialog-Context-Pattern).
     final messenger = ScaffoldMessenger.of(context);
-    final inventory = context.read<InventoryProvider>();
+    final inventory = context.read<DealsProvider>();
     final confirmed = await showConfirmDialog(
       context: context,
       title: l10n.settingsDemoReloadConfirmTitle,
@@ -978,7 +978,7 @@ class _DemoWipeSectionState extends State<_DemoWipeSection> {
     final messenger = ScaffoldMessenger.of(context);
     final ob = context.read<OnboardingProvider>();
     final activeWs = context.read<ActiveWorkspaceProvider>();
-    final inv = context.read<InventoryProvider>();
+    final inv = context.read<DealsProvider>();
     final wsId = activeWs.active?.id;
     if (wsId == null) return;
     final confirmed = await showConfirmDialog(
@@ -3407,7 +3407,7 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
     final l10n = AppLocalizations.of(context);
     return Container(
       color: AppTheme.bgAppOf(context),
-      child: Consumer2<ActiveWorkspaceProvider, InventoryProvider>(
+      child: Consumer2<ActiveWorkspaceProvider, DealsProvider>(
         builder: (context, wsProv, inv, _) {
           final stock = context.watch<StockProvider>();
           final ws = wsProv.active;

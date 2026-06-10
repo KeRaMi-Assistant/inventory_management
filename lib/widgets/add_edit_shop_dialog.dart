@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/shop.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/deals_provider.dart';
 import '../services/carrier_service.dart';
 import '../utils/validators.dart';
 import 'unsaved_changes_guard.dart';
@@ -125,7 +125,7 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
-    final provider = context.read<InventoryProvider>();
+    final provider = context.read<DealsProvider>();
     final rawUrl = _urlCtrl.text.trim();
     String? url = rawUrl.isEmpty ? null : rawUrl;
     // Auto-prepend https:// if missing
