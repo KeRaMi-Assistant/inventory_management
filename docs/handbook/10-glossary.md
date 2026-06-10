@@ -188,7 +188,7 @@ EmptyState-Widget gezeigt, obwohl die Daten noch unterwegs sind. Gelöst
 durch den `shouldShowSkeleton`-Predicate in
 [`lib/widgets/skeletons/list_skeleton.dart`](../../lib/widgets/skeletons/list_skeleton.dart):
 Skeleton erscheint bei `!initialLoadAttempted && !hasData`. Betrifft
-`InventoryProvider` und `InboxProvider` (PR #109). Verwandte Begriffe:
+`DealsProvider` und `InboxProvider` (PR #109). Verwandte Begriffe:
 [ListSkeleton](#listskeleton), [shouldShowSkeleton-Predicate](#shouldshowskeleton-predicate).
 Siehe [05 — Architektur](05-architecture.md#listSkeleton--shouldshowskeleton).
 
@@ -223,7 +223,7 @@ Optimistic-UX-Muster für destruktive Aktionen (Löschen, Verwerfen): Die
 UI blendet das Element sofort aus (optimistisch), der tatsächliche DB-Call
 wird erst nach einem Timer-Ablauf (Default 4 Sekunden) ausgeführt. Der User
 kann innerhalb dieser Frist „Rückgängig" tippen — dann wird der Timer
-gecancelt, kein DB-Call. Implementiert in `InventoryProvider.deleteDealWithUndo`
+gecancelt, kein DB-Call. Implementiert in `DealsProvider.deleteDealWithUndo`
 (`_pendingDeleteIds` + `_pendingDeleteTimers`) und
 `InboxProvider.rejectSuggestionWithUndo` (`_pendingRejectIds` +
 `_pendingRejectTimers`). `AppFeedback.success(context, msg, onUndo: …)`

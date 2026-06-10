@@ -187,14 +187,14 @@ Sehr dünn — die eigentliche Liste rendert
 Pro Deal mit Strong-Tracking zeigt
 [`tracking_status_block.dart`](../../lib/widgets/tracking_status_block.dart)
 einen **Re-Track-Button** (Refresh-Icon, 48dp Touch-Target). Tap →
-`InventoryProvider.retrackDeal(dealId)` → Edge-Function
+`DealsProvider.retrackDeal(dealId)` → Edge-Function
 `tracking-poll` mit `body.deal_id`. 30s-Cooldown pro Deal (siehe
 [07 — Edge Functions](07-edge-functions.md#tracking-poll)). SnackBars
 für success / 429 / failed / offline. Cron-Polls (alle 4h) sind davon
 unberührt.
 
 Inline-Aktionen (Status ändern, Buyer ändern, Tracking eintragen) gehen
-über [`InventoryProvider`](../../lib/providers/inventory_provider.dart) und
+über [`DealsProvider`](../../lib/providers/deals_provider.dart) und
 landen via
 [`SupabaseRepository`](../../lib/services/supabase_repository.dart) im
 Backend. Die Provider-Methoden sind **optimistic** — UI rendert sofort, und

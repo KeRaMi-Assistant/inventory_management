@@ -56,12 +56,21 @@ graph TD
   end
 
   subgraph ProxyProviders [ChangeNotifierProxyProvider]
-    IP[InventoryProvider] --> SR
+    CAT[CatalogProvider] --> SR
+    PUR[PurchasingProvider] --> SR
+    STK[StockProvider] --> SR
+    DLP[DealsProvider] --> SR
     INB[InboxProvider] --> SR
     CCP[CarrierCredentialsProvider] --> SR
     AWP[ActiveWorkspaceProvider] --> WS
     INV[InvitesProvider] --> WS
     BP[BillingProvider] --> BS
+    %% Provider-Decomposition-DAG (Cross-Domain-Abhängigkeiten):
+    STK --> CAT
+    STK --> PUR
+    DLP --> CAT
+    DLP --> PUR
+    DLP --> STK
   end
 
   subgraph FreeProviders [Free]
@@ -82,7 +91,10 @@ graph TD
   MP --> APP
   MP --> SM
   SM --> AP
-  MP --> IP
+  MP --> CAT
+  MP --> PUR
+  MP --> STK
+  MP --> DLP
   MP --> INB
   MP --> CCP
   MP --> AWP
@@ -100,7 +112,13 @@ Erklärung:
   `StatisticsFilterProvider`, `AppPreferencesProvider` (Theme + Sprache).
 - **Proxy-Provider** sind die Brücke: sie nehmen einen Service als Input
   und liefern einen ChangeNotifier-Provider raus, der den Service
-  intern kapselt. Beispiel: `InventoryProvider(repository: ctx.read<SupabaseRepository>())`.
+  intern kapselt. Beispiel: `CatalogProvider(repository: ctx.read<SupabaseRepository>())`.
+- **Provider-Decomposition (PR #120/#128/#129/#131):** Der frühere Monolith
+  `InventoryProvider` wurde in **vier domänenkohärente Provider** zerlegt —
+  `CatalogProvider`, `PurchasingProvider`, `StockProvider`, `DealsProvider` —
+  die einen **azyklischen DAG** bilden: `Catalog & Purchasing → Stock → Deals`
+  (Stock liest Catalog+Purchasing, Deals liest alle drei, via
+  `ChangeNotifierProxyProvider4`). Details siehe `### Provider-Domänen` unten.
 - **`SessionManager`** ist `lazy: false` und wird sofort gestartet — er
   registriert sich auf Pointer-Events und resetet einen Idle-Timer.
 
@@ -120,7 +138,7 @@ Erklärung:
        │  _hydratedFor != user.id?                   │
        │  → SplashScreen + _hydrate(user.id)         │
        │      • workspaces.loadForCurrentUser()      │
-       │      • inventory.setActiveWorkspace()       │
+       │      • catalog/purchasing/stock/deals.setActiveWorkspace()       │
        │      • invites.refresh() + startPolling()   │
        │      • billing.load()                       │
        │      • applyPlanQuota → InboxProvider       │
@@ -169,47 +187,51 @@ Hält den **aktuell ausgewählten Workspace**. Methoden:
 
 Listener im `_AuthGate` triggern bei Wechsel:
 
-- `InventoryProvider.setActiveWorkspace(newId)`
+- `CatalogProvider.setActiveWorkspace(newId)` · `PurchasingProvider.…` ·
+  `StockProvider.…` · `DealsProvider.…` (alle vier Domänen-Provider)
 - `CarrierCredentialsProvider.refresh()`
 
-### `InventoryProvider`
+> **Workspace-Fallstrick (PR #128):** Jedes `setActiveWorkspace` MUSS
+> `_repository.setActiveWorkspace(workspaceId)` aufrufen **bevor** `loadData()`
+> läuft — sonst liest `loadAll()` einen null-Workspace und liefert still einen
+> leeren Snapshot (die vier Provider laden parallel via `Future.wait` in
+> `_hydrate`, ein fehlendes Pre-Set verliert das Race).
 
-Datei: [`inventory_provider.dart`](../../lib/providers/inventory_provider.dart)
+### Provider-Domänen (Decomposition PR #120/#128/#129/#131)
 
-Der mit Abstand größte Provider (seit Epic Warenwirtschaft-Feature-Parity
-deutlich über 880 LoC). Hält jetzt den gesamten Warenwirtschafts-State:
+Der frühere Monolith `InventoryProvider` (deutlich über 2000 LoC) wurde in
+**vier domänenkohärente Provider** zerlegt. Jeder hängt hinter demselben
+`SupabaseRepository`, hält seine eigene `loadAll()`-Snapshot-Scheibe pro
+Workspace und nutzt Optimistic-Update-CRUD. Sie bilden einen **azyklischen
+DAG** (Registrierungsreihenfolge = Topo-Order):
 
-**Bestehende Listen (unverändert):**
-`deals`, `buyers`, `shops`, `suppliers`, `inventoryItems`,
-`inventoryMovements`, `activities`, `tickets`.
+| Provider | Datei | Domäne | Deps |
+|---|---|---|---|
+| `CatalogProvider` | [`catalog_provider.dart`](../../lib/providers/catalog_provider.dart) | `products` (Artikelstamm), `productCategories` (Warengruppen) | — |
+| `PurchasingProvider` | [`purchasing_provider.dart`](../../lib/providers/purchasing_provider.dart) | `suppliers`, `purchaseOrders` (+ lazy `purchaseOrderItems`) | — |
+| `StockProvider` | [`stock_provider.dart`](../../lib/providers/stock_provider.dart) | `inventoryItems`, `movements`, `warehouses`, `stocktakes`, `productStock`-View, `criticalStockCount` + `bookGoodsReceipt` | Catalog, Purchasing |
+| `DealsProvider` | [`deals_provider.dart`](../../lib/providers/deals_provider.dart) | `deals`, `tickets`, `buyers`, `shops`, comments, tracking, `activities` | Catalog, Purchasing, Stock |
 
-**Neu (Warenwirtschaft-Feature-Parity, Epic A–E):**
-- `productCategories` — Warengruppen (`product_categories`)
-- `products` — Artikelstamm (`products`)
-- `productStock` — Aggregierter Bestand (`product_stock`-View)
-- `purchaseOrders` + `purchaseOrderItems` — Bestellungen
-- `warehouses` — Lagerorte
-- `stocktakes` + `stocktake_items` — Inventur-Sessions
+**Cross-Domain-Pattern:** Cross-Provider-*Reads* laufen null-safe
+(`other?.foo ?? const []`). Zwei **deal-initiierte Orchestratoren** bleiben auf
+`DealsProvider` und *schreiben* in andere Domänen über **public Write-Back-Hooks**
+statt private Listen anzufassen:
+- `importCsvAll` — schreibt Suppliers/POs → Purchasing, Warehouses/Items → Stock
+  (FK-Remap-Tabellen bleiben lokal im Orchestrator), 5-Tuple-Return unverändert.
+- `checkInDeal` — schreibt Item+Movement → Stock via Hooks.
+`bookGoodsReceipt` lebt auf `StockProvider` (schreibt Stock-State) und refresht
+den PO-Header über `PurchasingProvider.replacePurchaseOrderHeader`. Die Hooks
+heißen `upsert*FromImport` / `insertMovementFromCheckIn` / `replace*Header` /
+`notifyAfterCrossDomainWrite`; alle async-Continuations sind `_disposed`-guarded.
 
-**Neue CRUD-Methoden (Auswahl):**
-- Kategorien: `addProductCategory`, `updateProductCategory`,
-  `deleteProductCategory`
-- Produkte: `addProduct`, `updateProduct`, `deleteProduct`
-- Bestellungen: `addPurchaseOrder`, `updatePurchaseOrder`,
-  `bookGoodsReceipt(orderId, items)` — ruft RPC
-  `increment_po_item_received` auf
-- Lager: `addWarehouse`, `updateWarehouse`, `deleteWarehouse`
-- Inventur: `addStocktake`, `updateStocktake`, `closeStocktake`,
-  `updateStocktakeItem`
+Verdrahtung in `main.dart`: `StockProvider` als
+`ChangeNotifierProxyProvider3<Repo, Catalog, Purchasing, StockProvider>`,
+`DealsProvider` als `ChangeNotifierProxyProvider4<Repo, Catalog, Purchasing,
+Stock, DealsProvider>`; die `update`-Callbacks re-injizieren bei jedem Rebuild
+alle Upstream-Refs (`updateCatalogProvider`/`updatePurchasingProvider`/
+`updateStockProvider`).
 
-**KPI-Erweiterungen:**
-`totalProductCount`, `lowStockProductCount` (über `product_stock`-View),
-`totalWarehouseCount`.
-
-Caches `loadAll()`-Snapshot pro Workspace. Optimistic-Update-Methoden
-für jede CRUD-Aktion. CSV-Import/Export-Glue (`importCsvAll`).
-
-**Delayed-Commit-Pattern / Undo-Delete (PR #109):**
+**Delayed-Commit-Pattern / Undo-Delete (PR #109, auf `DealsProvider`):**
 
 `deleteDealWithUndo(int id, {Duration delay})` ersetzt direktes
 `deleteDeal`. Ablauf:
@@ -251,7 +273,7 @@ Hält Inbox-State (≈730 LoC):
 **Delayed-Reject / Optimistic-Undo (PR #109):**
 
 `rejectSuggestionWithUndo(String suggestionId, {Duration delay})` implementiert
-dasselbe Delayed-Commit-Pattern wie `InventoryProvider.deleteDealWithUndo`:
+dasselbe Delayed-Commit-Pattern wie `DealsProvider.deleteDealWithUndo`:
 
 1. ID wird in `_pendingRejectIds` eingetragen — der `pendingSuggestions`-Getter
    filtert sie sofort aus der UI (optimistisches Ausblenden).
@@ -264,7 +286,7 @@ dasselbe Delayed-Commit-Pattern wie `InventoryProvider.deleteDealWithUndo`:
 
 **`initialLoadAttempted`-Flag (Cold-Start-Skeleton-Race-Fix, PR #109):**
 
-Identisch zum `InventoryProvider`-Flag: gesetzt nach dem ersten Rückkehren
+Identisch zum `DealsProvider`-Flag: gesetzt nach dem ersten Rückkehren
 von `refresh()` (auch bei Fehler), wird bei `clear()` zurückgesetzt.
 Ermöglicht `shouldShowSkeleton()` die Race-Condition zwischen Cold-Start
 und leerem Ergebnis zu unterscheiden.

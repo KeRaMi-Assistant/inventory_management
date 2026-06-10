@@ -17,6 +17,7 @@ pubspec.lock
 
 # --- Pläne + CI ---
 plans
+docs
 .github
 CLAUDE.md
 
