@@ -8,8 +8,8 @@ import '../models/purchase_order_item.dart';
 import '../models/product.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/catalog_provider.dart';
-import '../providers/inventory_provider.dart';
 import '../providers/purchasing_provider.dart';
+import '../providers/stock_provider.dart';
 import '../services/purchase_order_pdf_service.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/barcode_scanner_sheet.dart';
@@ -94,11 +94,11 @@ class _PurchaseOrderDetailScreenState
 
   Future<void> _bookGoodsReceipt() async {
     final l10n = AppLocalizations.of(context);
-    // Dual-provider: bookGoodsReceipt is a cross-domain orchestrator that stays
-    // on InventoryProvider (writes inventory state). The refreshed PO header is
-    // read back from PurchasingProvider, whose cache InventoryProvider updates
-    // via replacePurchaseOrderHeader during the booking.
-    final provider = Provider.of<InventoryProvider>(context, listen: false);
+    // Dual-provider: bookGoodsReceipt lives on StockProvider (writes stock
+    // state). The refreshed PO header is read back from PurchasingProvider,
+    // whose cache StockProvider updates via replacePurchaseOrderHeader during
+    // the booking.
+    final provider = Provider.of<StockProvider>(context, listen: false);
     final purchasing = Provider.of<PurchasingProvider>(context, listen: false);
     final items = _items;
     if (items == null || items.isEmpty) return;

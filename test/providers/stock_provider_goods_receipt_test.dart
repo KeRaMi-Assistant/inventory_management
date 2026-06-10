@@ -4,8 +4,8 @@ import 'package:inventory_management/models/product.dart';
 import 'package:inventory_management/models/purchase_order.dart';
 import 'package:inventory_management/models/purchase_order_item.dart';
 import 'package:inventory_management/providers/catalog_provider.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
 import 'package:inventory_management/providers/purchasing_provider.dart';
+import 'package:inventory_management/providers/stock_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
 // ignore_for_file: avoid_redundant_argument_values
@@ -183,19 +183,19 @@ class _FakeRepository extends SupabaseRepository {
 // ── Hilfsfunktionen ──────────────────────────────────────────────────────────
 
 /// The [PurchasingProvider] injected into the most recently created
-/// [InventoryProvider] via [_makeProvider]. After the split, the PO-header
+/// [StockProvider] via [_makeProvider]. After the split, the PO-header
 /// cache lives in [PurchasingProvider]; `bookGoodsReceipt` refreshes it via
 /// [PurchasingProvider.replacePurchaseOrderHeader]. Tests read PO state from
 /// here. Each [_makeProvider] call resets it (tests are single-provider).
 late PurchasingProvider _purchasing;
 
-/// Creates an [InventoryProvider] wired to a [CatalogProvider] AND a
+/// Creates a [StockProvider] wired to a [CatalogProvider] AND a
 /// [PurchasingProvider] that all share the same [repo]. Use [_loadBoth] to
 /// populate all three providers from the repo.
-InventoryProvider _makeProvider(_FakeRepository repo) {
+StockProvider _makeProvider(_FakeRepository repo) {
   final catalog = CatalogProvider(repository: repo);
   _purchasing = PurchasingProvider(repository: repo);
-  return InventoryProvider(
+  return StockProvider(
     repository: repo,
     catalogProvider: catalog,
     purchasingProvider: _purchasing,
@@ -203,12 +203,12 @@ InventoryProvider _makeProvider(_FakeRepository repo) {
 }
 
 /// Loads the [CatalogProvider] (products), the injected [PurchasingProvider]
-/// (POs/suppliers) and [InventoryProvider] from the same repo. Because
-/// [InventoryProvider] reads products via the injected [CatalogProvider] and
+/// (POs/suppliers) and [StockProvider] from the same repo. Because
+/// [StockProvider] reads products via the injected [CatalogProvider] and
 /// writes PO-header refreshes into the injected [PurchasingProvider], both
 /// upstream providers must be loaded so the seeded data is visible during
 /// [bookGoodsReceipt].
-Future<void> _loadBoth(InventoryProvider provider, _FakeRepository repo) =>
+Future<void> _loadBoth(StockProvider provider, _FakeRepository repo) =>
     Future.wait([
       CatalogProvider(repository: repo).loadData().then((_) {
         // Re-inject a freshly loaded catalog so the provider's cross-domain

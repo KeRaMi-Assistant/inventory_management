@@ -9,7 +9,7 @@ import '../models/stocktake.dart';
 import '../models/stocktake_item.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/catalog_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/stock_provider.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/barcode_scanner_sheet.dart';
 import '../widgets/confirm_dialog.dart';
@@ -95,7 +95,7 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
       _itemsError = null;
     });
     try {
-      final provider = Provider.of<InventoryProvider>(context, listen: false);
+      final provider = Provider.of<StockProvider>(context, listen: false);
       final items = await provider.loadStocktakeItems(stocktakeId);
       if (mounted) {
         setState(() {
@@ -133,7 +133,7 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
     });
 
     try {
-      final provider = Provider.of<InventoryProvider>(context, listen: false);
+      final provider = Provider.of<StockProvider>(context, listen: false);
       final saved = await provider.countStocktakeItem(item, countedQty);
       if (mounted) {
         setState(() {
@@ -235,7 +235,7 @@ class _StocktakeDetailScreenState extends State<StocktakeDetailScreen> {
     final l10n = AppLocalizations.of(context);
     // Capture messenger before async gap (Dialog-Context-Pattern).
     final messenger = ScaffoldMessenger.of(context);
-    final provider = Provider.of<InventoryProvider>(context, listen: false);
+    final provider = Provider.of<StockProvider>(context, listen: false);
     final items = _items;
     if (items == null) return;
 

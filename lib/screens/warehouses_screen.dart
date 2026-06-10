@@ -6,7 +6,7 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/warehouse.dart';
 import '../providers/active_workspace_provider.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/stock_provider.dart';
 import '../utils/validators.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/app_screen_scaffold.dart';
@@ -41,7 +41,7 @@ class WarehousesScreen extends StatelessWidget {
 
   Future<void> _confirmDelete(
     BuildContext context,
-    InventoryProvider provider,
+    StockProvider provider,
     Warehouse warehouse,
   ) async {
     final l10n = AppLocalizations.of(context);
@@ -76,7 +76,7 @@ class WarehousesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Consumer2<InventoryProvider, ActiveWorkspaceProvider>(
+    return Consumer2<StockProvider, ActiveWorkspaceProvider>(
       builder: (context, provider, wsProvider, _) {
         final canEdit = wsProvider.role?.canEdit ?? false;
         final warehouses = provider.warehouses;
@@ -502,7 +502,7 @@ class _AddEditWarehouseDialogState extends State<_AddEditWarehouseDialog> {
 
     setState(() => _saving = true);
 
-    final provider = context.read<InventoryProvider>();
+    final provider = context.read<StockProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final l10n = AppLocalizations.of(context);

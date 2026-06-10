@@ -12,6 +12,7 @@ import '../providers/filter_provider.dart';
 import '../providers/catalog_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/purchasing_provider.dart';
+import '../providers/stock_provider.dart';
 import '../services/csv_service.dart';
 import '../widgets/adaptive_nav_scaffold.dart';
 import '../widgets/add_edit_deal_dialog.dart';
@@ -91,17 +92,18 @@ class _MainScreenState extends State<MainScreen> {
   ) async {
     final l10n = AppLocalizations.of(context);
     // Suppliers + purchase orders now live in PurchasingProvider; deals, shops,
-    // buyers, inventory items and warehouses stay on InventoryProvider.
+    // buyers stay on InventoryProvider; inventory items and warehouses on StockProvider.
     final purchasing = context.read<PurchasingProvider>();
+    final stock = context.read<StockProvider>();
     final (path, err) = await CsvService.exportAll(
       List.from(provider.deals),
       List.from(provider.shops),
       List.from(provider.buyers),
-      List.from(provider.inventoryItems),
+      List.from(stock.inventoryItems),
       suppliers: List.from(purchasing.suppliers),
       categories: List.from(catalog.productCategories),
       products: List.from(catalog.products),
-      warehouses: List.from(provider.warehouses),
+      warehouses: List.from(stock.warehouses),
       purchaseOrders: List.from(purchasing.purchaseOrders),
       // PO items are not held in the global cache (lazy-loaded per detail
       // screen), so we export an empty list for now. A future task can wire

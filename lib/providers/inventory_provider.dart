@@ -8,15 +8,10 @@ import '../models/buyer.dart';
 import '../models/deal.dart';
 import '../models/tracking_confidence.dart';
 import '../models/deal_comment.dart';
-import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
 import '../models/product.dart';
-import '../models/product_stock.dart';
 import '../models/purchase_order.dart';
-import '../models/purchase_order_item.dart';
 import '../models/shop.dart';
-import '../models/stocktake.dart';
-import '../models/stocktake_item.dart';
 import '../models/supplier.dart';
 import '../models/ticket.dart';
 import '../models/ticket_summary.dart';
@@ -27,33 +22,40 @@ import '../services/supabase_repository.dart';
 import '../utils/error_messages.dart';
 import 'catalog_provider.dart';
 import 'purchasing_provider.dart';
+import 'stock_provider.dart';
 
 /// Holds the full working set of cloud data for the signed-in user and routes
 /// every mutation through [SupabaseRepository]. Local lists are caches kept in
 /// sync with the server so the rest of the UI can stay synchronous.
 ///
 /// The catalog domain (products + categories) has been extracted into
-/// [CatalogProvider] and the purchasing domain (suppliers + purchase orders)
-/// into [PurchasingProvider]. InventoryProvider receives references via
-/// [updateCatalogProvider] / [updatePurchasingProvider] (called from `main.dart`
-/// via [ChangeNotifierProxyProvider3]) and delegates the corresponding reads
+/// [CatalogProvider], the purchasing domain (suppliers + purchase orders) into
+/// [PurchasingProvider] and the stock domain (inventory items + movements +
+/// warehouses + stocktakes + product-stock) into [StockProvider].
+/// InventoryProvider receives references via [updateCatalogProvider] /
+/// [updatePurchasingProvider] / [updateStockProvider] (called from `main.dart`
+/// via [ChangeNotifierProxyProvider4]) and delegates the corresponding reads
 /// to them. Two cross-domain orchestrators stay here — `importCsvAll` and
-/// `bookGoodsReceipt` — and write into purchasing state through the public
-/// write-back hooks on [PurchasingProvider].
+/// `checkInDeal` — and write into purchasing/stock state through the public
+/// write-back hooks on [PurchasingProvider] / [StockProvider]. `bookGoodsReceipt`
+/// has moved to [StockProvider] (it is purely a stock + PO-header write).
 class InventoryProvider extends ChangeNotifier {
   InventoryProvider({
     required SupabaseRepository repository,
     CatalogProvider? catalogProvider,
     PurchasingProvider? purchasingProvider,
+    StockProvider? stockProvider,
   })  : _repository = repository,
         _catalogProvider = catalogProvider,
-        _purchasingProvider = purchasingProvider;
+        _purchasingProvider = purchasingProvider,
+        _stockProvider = stockProvider;
 
   final SupabaseRepository _repository;
   final _uuid = const Uuid();
 
   CatalogProvider? _catalogProvider;
   PurchasingProvider? _purchasingProvider;
+  StockProvider? _stockProvider;
 
   /// Called by [ChangeNotifierProxyProvider3] in `main.dart` whenever the
   /// upstream [CatalogProvider] instance is replaced. Safe to call repeatedly
@@ -74,7 +76,20 @@ class InventoryProvider extends ChangeNotifier {
     _purchasingProvider = purchasing;
     // No notifyListeners() here — callers that depend on suppliers/POs read via
     // the PurchasingProvider directly; InventoryProvider only uses the
-    // reference for cross-domain writes (importCsvAll, bookGoodsReceipt).
+    // reference for cross-domain writes (importCsvAll).
+  }
+
+  /// Called by [ChangeNotifierProxyProvider4] in `main.dart` whenever the
+  /// upstream [StockProvider] instance is replaced. Safe to call repeatedly
+  /// with the same instance. MUST be re-injected on every rebuild (Gotcha #4) —
+  /// otherwise importCsvAll/checkInDeal silently no-op against a stale/null
+  /// reference, losing imported warehouses/items + the check-in stock row.
+  void updateStockProvider(StockProvider? stock) {
+    _stockProvider = stock;
+    // No notifyListeners() here — callers that depend on inventory items /
+    // warehouses read via the StockProvider directly; InventoryProvider only
+    // uses the reference for cross-domain reads (_summariesByArchive) and
+    // writes (importCsvAll, checkInDeal).
   }
 
   /// Convenience read — returns the product list from [CatalogProvider] if
@@ -93,6 +108,18 @@ class InventoryProvider extends ChangeNotifier {
   List<PurchaseOrder> get _purchPurchaseOrders =>
       _purchasingProvider?.purchaseOrdersRaw ?? const [];
 
+  /// Null-safe raw inventory-item list from [StockProvider]. Used by
+  /// [_summariesByArchive] (Inventory→Stock read) and as the dedup-seed source
+  /// in [importCsvAll]. The `?? const []` masks an early-init null reference —
+  /// see the kDebugMode assert in [importCsvAll].
+  List<InventoryItem> get _stockInventoryItems =>
+      _stockProvider?.inventoryItemsRaw ?? const [];
+
+  /// Null-safe raw warehouse list from [StockProvider]. Dedup-seed source for
+  /// the warehouse loop in [importCsvAll].
+  List<Warehouse> get _stockWarehouses =>
+      _stockProvider?.warehousesRaw ?? const [];
+
   List<Deal> _deals = [];
 
   /// IDs von Deals, für die ein verzögertes Löschen (Delayed-Commit) aussteht.
@@ -108,25 +135,8 @@ class InventoryProvider extends ChangeNotifier {
 
   List<Buyer> _buyers = [];
   List<Shop> _shops = [];
-  List<InventoryItem> _inventoryItems = [];
-  List<InventoryMovement> _movements = [];
   List<ActivityEntry> _activities = [];
   List<Ticket> _tickets = [];
-
-  /// Lager (Epic D — Mehrlager). Klein und workspace-weit relevant, daher
-  /// global gehalten (Committee-Empfehlung 1, analog `_productCategories`).
-  List<Warehouse> _warehouses = [];
-
-  /// Inventur-Sessions (Epic E). Klein und workspace-weit relevant, daher
-  /// global gehalten. `stocktake_items` werden lazy pro Detail-Screen geladen
-  /// (Pattern wie `_purchaseOrders`/`loadPurchaseOrderItems`).
-  List<Stocktake> _stocktakes = [];
-
-  /// Aggregierter Lagerbestand aus dem DB-View `product_stock` (Epic A-full,
-  /// read-only). Jede Row = Bestand eines Produkts pro Lager. Wird in
-  /// [loadData] nach [loadAll] geladen — der View ist klein (workspace-weit)
-  /// und wird für KPI-Aggregation in [criticalStockCount] benötigt.
-  List<ProductStock> _productStock = [];
 
   bool _loading = false;
   bool _initialLoadAttempted = false;
@@ -163,27 +173,12 @@ class InventoryProvider extends ChangeNotifier {
         );
   List<Buyer> get buyers => List.unmodifiable(_buyers);
   List<Shop> get shops => List.unmodifiable(_shops);
-  List<InventoryItem> get inventoryItems => List.unmodifiable(_inventoryItems);
-  List<InventoryMovement> get movements => List.unmodifiable(_movements);
   List<ActivityEntry> get activities => List.unmodifiable(_activities);
   List<Ticket> get tickets => List.unmodifiable(_tickets);
 
-  /// Lager des aktiven Workspaces, alphabetisch nach Name sortiert.
-  /// Das Default-Lager (falls vorhanden) ist via `w.isDefault` erkennbar.
-  List<Warehouse> get warehouses => List.unmodifiable(_warehouses);
-
-  /// Gibt das Default-Lager zurück, oder `null` falls keins vorhanden.
-  Warehouse? get defaultWarehouse =>
-      _warehouses.where((w) => w.isDefault).firstOrNull;
-
-  /// Inventur-Sessions des aktiven Workspaces, absteigend nach Erstellungsdatum.
-  List<Stocktake> get stocktakes => List.unmodifiable(_stocktakes);
-
-  /// Aggregierter Lagerbestand pro Produkt/Lager aus dem View `product_stock`.
-  /// Nur Rows mit `product_id IS NOT NULL` — nicht-verknüpfte Items fehlen
-  /// hier bewusst (sie fallen nicht in den View). Für KPI-Nutzung in
-  /// [criticalStockCount] und später im Produkt-Detail-Screen (AF12).
-  List<ProductStock> get productStock => List.unmodifiable(_productStock);
+  // NOTE: inventoryItems / movements / warehouses / defaultWarehouse /
+  // stocktakes / productStock have moved to [StockProvider]. Consumers read
+  // them from there now (see plan §1/§7).
 
   static const List<String> statusOptions = [
     'Bestellt',
@@ -230,87 +225,12 @@ class InventoryProvider extends ChangeNotifier {
     }).length;
   }
 
-  /// Anzahl der Artikel/Produkte, deren Gesamtbestand unter dem Mindestbestand
-  /// liegt (Kritisch-Bewertung).
-  ///
-  /// **Aggregations-Logik (Epic A-full / Committee-Finding 9):**
-  /// - Produkt-verknüpfte Items (`product_id != null`) werden pro Produkt
-  ///   aggregiert: Gesamtbestand = Summe aller `product_stock.qty_in_warehouse`
-  ///   über alle Lager eines Produkts. Verglichen wird gegen
-  ///   `products.min_stock`. Ein Produkt zählt genau einmal — auch wenn es
-  ///   mehrere `inventory_items`-Rows hat (z. B. unterschiedliche Lager/Chargen).
-  ///   Dies verhindert überhöhte KPI-Werte (Regressions-Schutz Committee-Bug #9).
-  /// - Nicht-verknüpfte Items (`product_id == null`) behalten die Item-Level-
-  ///   Logik: `item.isCritical` (`quantity < minStock`) — jede Row für sich,
-  ///   da kein Produkt-Mindestbestand vorhanden ist.
-  /// - Gesamtwert = (kritische Produkte) + (kritische nicht-verknüpfte Items).
-  ///
-  /// Solange `_productStock` leer ist (View noch nicht geladen oder kein aktiver
-  /// Workspace), fällt die Logik für alle Items auf Item-Level zurück (Safe
-  /// Fallback).
-  int get criticalStockCount {
-    // 1. Aggregierten Bestand pro Produkt aus product_stock aufbauen.
-    //    productId → Gesamtbestand über alle Lager/Rows.
-    final Map<String, int> totalByProduct = {};
-    for (final stock in _productStock) {
-      totalByProduct.update(
-        stock.productId,
-        (existing) => existing + stock.qtyInWarehouse,
-        ifAbsent: () => stock.qtyInWarehouse,
-      );
-    }
-
-    // 2. Produkte mit aggregiertem Bestand < min_stock zählen.
-    //    Nur Produkte, für die auch mindestens eine product_stock-Row existiert,
-    //    werden hier berücksichtigt — Produkte ohne jegliche Bestands-Rows haben
-    //    implizit qty = 0, aber der View gibt sie nicht zurück (sie fehlen im
-    //    View, da alle Bestands-Rows deleted_at haben oder keine existieren).
-    //    Das ist akzeptabel: 0 Bestand bei 0 Mindestbestand = nicht kritisch;
-    //    und Produkte mit echter min_stock-Anforderung aber ohne Bestands-Rows
-    //    werden in D4 (Low-Stock-Alerts) separat behandelt.
-    final products = _catalogProducts;
-    final productIds = products.map((p) => p.id).toSet();
-    final productMinStock = <String, int>{
-      for (final p in products) p.id: p.minStock,
-    };
-
-    int criticalProductCount = 0;
-    final countedProductIds = <String>{};
-    for (final productId in totalByProduct.keys) {
-      // Nur zählen wenn das Produkt noch im lokalen Cache ist (nicht gelöscht).
-      if (!productIds.contains(productId)) continue;
-      if (countedProductIds.contains(productId)) continue;
-      countedProductIds.add(productId);
-
-      final totalQty = totalByProduct[productId] ?? 0;
-      final minStock = productMinStock[productId] ?? 0;
-      if (totalQty < minStock) {
-        criticalProductCount++;
-      }
-    }
-
-    // 3. Nicht-verknüpfte Items (product_id == null) → Item-Level-Logik.
-    //    isCritical ist für diese Items die korrekte Wahrheit.
-    final criticalUnlinkedCount = _inventoryItems
-        .where((item) => item.productId == null && item.isCritical)
-        .length;
-
-    return criticalProductCount + criticalUnlinkedCount;
-  }
+  // NOTE: criticalStockCount / totalStockQuantity / totalStockValue have moved
+  // to [StockProvider] (they aggregate inventory items + product_stock). Read
+  // them from there now.
 
   int get missingInvoiceCount =>
       _deals.where((d) => !d.hasReceipt && d.status != 'Done').length;
-
-  /// Gesamtmenge aller Lagerartikel (Summe aller `inventory_items.quantity`).
-  ///
-  /// `quantity` ist die physische Wahrheit pro Bestands-Row — die Summierung
-  /// hier ist korrekt. Nur die *kritisch*-Bewertung muss aggregieren (per
-  /// Produkt), die Gesamtmenge nicht. Enthält auch nicht-verknüpfte Rows.
-  int get totalStockQuantity =>
-      _inventoryItems.fold(0, (sum, item) => sum + item.quantity);
-
-  double get totalStockValue =>
-      _inventoryItems.fold(0, (sum, item) => sum + item.stockValue);
 
   /// Kept for UI callers that historically asked for an id ahead of save.
   /// With BIGSERIAL the id is server-assigned — this is a hint only.
@@ -363,7 +283,9 @@ class InventoryProvider extends ChangeNotifier {
       // immer aktiv. Auf der Archiv-Seite wird es entsprechend ausgeblendet.
       if (archived && !isArchived) continue;
       if (!archived && isArchived) continue;
-      final items = _inventoryItems
+      // Inventory items live in [StockProvider] now (Inventory→Stock read via
+      // the null-safe [_stockInventoryItems] hook).
+      final items = _stockInventoryItems
           .where((item) =>
               item.ticketNumber == entry.key ||
               entry.value.any((deal) => deal.inventoryItemIds.contains(item.id)))
@@ -416,57 +338,11 @@ class InventoryProvider extends ChangeNotifier {
     _lastError = null;
     notifyListeners();
     try {
-      // Workspace-ID aus dem Repository holen (der Single Source of Truth für
-      // den aktiven Workspace): `_repository.activeWorkspaceId` ist auch für
-      // Test-Fakes korrekt befüllt, während `_activeWorkspaceId` bei direkten
-      // `loadData()`-Aufrufen (ohne vorangehendes `setActiveWorkspace`) null
-      // sein kann.
-      final wsId = _repository.activeWorkspaceId ?? _activeWorkspaceId;
-
-      // Hauptdaten laden.
+      // Hauptdaten laden. Stock-Listen (inventory items, movements, warehouses,
+      // stocktakes, product_stock) + Default-Lager-Bootstrap leben jetzt in
+      // [StockProvider] und werden dort parallel geladen (main._hydrate).
       final snapshot = await _repository.loadAll();
       _hydrateFrom(snapshot);
-
-      // Default-Lager-Bootstrap: Wenn der Workspace noch kein Lager hat,
-      // wird automatisch ein "Hauptlager" angelegt. Runs defensiv — ein
-      // Fehler (z. B. Race zwischen zwei Clients oder fehlende DB-Tabelle
-      // vor D1-Migration) bricht den Load nicht ab.
-      // Name: "Hauptlager" ist ein fester String (kein l10n), da der
-      // Provider keinen BuildContext hat und l10n hier nicht nutzbar ist.
-      // Der Name ist umbenenbar; er dient nur als sinnvoller Startwert.
-      // Dokumentierte Entscheidung: Provider-seitig kein BuildContext
-      // verfügbar → statischer Bootstrap-Name. (Plan D3, §Bootstrap)
-      if (_warehouses.isEmpty && wsId != null) {
-        try {
-          await _bootstrapDefaultWarehouse();
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint(
-              'InventoryProvider: Default-Lager-Bootstrap fehlgeschlagen '
-              '(non-fatal): $e',
-            );
-          }
-        }
-      }
-
-      // product_stock separat laden — read-only View, kann defensiv fehlschlagen.
-      // Fehler (z. B. fehlende Implementierung in Test-Fakes oder Netzwerkfehler)
-      // fallen auf einen leeren Cache zurück; die App bleibt nutzbar, nur die
-      // Produkt-aggregierten KPIs (criticalStockCount für verknüpfte Produkte)
-      // zeigen 0 statt korrekter Werte.
-      if (wsId != null) {
-        try {
-          _productStock = await _repository.loadProductStock(wsId);
-        } catch (e) {
-          _productStock = [];
-          if (kDebugMode) {
-            debugPrint('InventoryProvider: product_stock konnte nicht geladen '
-                'werden (non-fatal): $e');
-          }
-        }
-      } else {
-        _productStock = [];
-      }
     } catch (e) {
       _lastError = e;
       if (kDebugMode) debugPrint('InventoryProvider.loadData failed: $e');
@@ -483,13 +359,8 @@ class InventoryProvider extends ChangeNotifier {
     _deals = [];
     _buyers = [];
     _shops = [];
-    _inventoryItems = [];
-    _movements = [];
     _activities = [];
     _tickets = [];
-    _warehouses = [];
-    _stocktakes = [];
-    _productStock = [];
     _lastError = null;
     _initialLoadAttempted = false;
     _activeWorkspaceId = null;
@@ -502,73 +373,9 @@ class InventoryProvider extends ChangeNotifier {
     _buyers = List.of(snapshot.buyers)
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     _shops = List.of(snapshot.shops);
-    _inventoryItems = List.of(snapshot.inventoryItems)
-      ..sort((a, b) => a.name.compareTo(b.name));
-    _movements = List.of(snapshot.movements)
-      ..sort((a, b) => b.date.compareTo(a.date));
     _activities = List.of(snapshot.activities)
       ..sort((a, b) => b.date.compareTo(a.date));
     _tickets = List.of(snapshot.tickets);
-    _warehouses = List.of(snapshot.warehouses)
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    _stocktakes = List.of(snapshot.stocktakes)
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-  }
-
-  /// Legt beim ersten Workspace-Touch ein Default-Lager an, falls noch keins
-  /// existiert. Wird defensiv aufgerufen — Fehler werden geloggt, nicht
-  /// geworfen.
-  ///
-  /// **Name:** "Hauptlager" ist ein fester Bootstrap-String ohne l10n, da
-  /// der Provider keinen `BuildContext` hat und `AppLocalizations` hier nicht
-  /// nutzbar ist. Der Plan (D3) erlaubt das explizit und dokumentiert die
-  /// Entscheidung: der User kann den Namen nach dem Anlegen umbenennen.
-  /// Das DB-Partial-UNIQUE-Constraint garantiert, dass auch bei einem Race
-  /// zwischen zwei Clients maximal ein Default-Lager entsteht — ein zweiter
-  /// Insert würde mit 23505 fehlschlagen und wird hier silently ignoriert.
-  Future<void> _bootstrapDefaultWarehouse() async {
-    // Doppelter Guard: nur wenn die lokale Liste wirklich leer ist.
-    if (_warehouses.isNotEmpty) return;
-    final ws = _repository.activeWorkspaceId;
-    if (ws == null) return;
-
-    final defaultWarehouse = Warehouse(
-      id: _uuid.v4(),
-      workspaceId: ws,
-      userId: '', // wird im Repository durch _userId ersetzt
-      name: 'Hauptlager',
-      isDefault: true,
-      isActive: true,
-      createdAt: DateTime.now().toUtc(),
-      updatedAt: DateTime.now().toUtc(),
-    );
-    try {
-      final saved = await _repository.insertWarehouse(defaultWarehouse);
-      _warehouses.add(saved);
-      _warehouses
-          .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      _log('Standard-Lager angelegt: ${saved.name}', 'warehouse');
-      notifyListeners();
-    } catch (e) {
-      // Race (23505 Unique-Violation auf is_default) oder fehlende Tabelle
-      // (vor D1-Migration) — beide Fälle sind nicht-fatal.
-      if (kDebugMode) {
-        debugPrint(
-          'InventoryProvider._bootstrapDefaultWarehouse: $e',
-        );
-      }
-      // Versuch, das bereits existierende Lager zu laden (falls Race).
-      try {
-        final existing = await _repository.loadWarehouses(ws);
-        _warehouses = existing;
-        _warehouses.sort(
-            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-        notifyListeners();
-      } catch (_) {
-        // Auch der Fallback-Load schlägt fehl (z. B. Tabelle existiert
-        // noch nicht) — ignorieren, App bleibt ohne Lager nutzbar.
-      }
-    }
   }
 
   // ── TICKETS ───────────────────────────────────────────────────────────────
@@ -844,17 +651,23 @@ class InventoryProvider extends ChangeNotifier {
   ///
   /// Returns counts in order: (deals, shops, buyers, suppliers, items).
   Future<(int, int, int, int, int)> importCsvAll(CsvImportResult result) async {
-    // Risk §7.3: suppliers/POs are written into PurchasingProvider via the
-    // public write-back hooks. If the reference was never injected (early-init
-    // race / mis-wired ProxyProvider), those writes silently no-op and CSV
-    // supplier/PO rows would be lost. The `?? const []` getters mask the null,
-    // so surface it loudly in debug builds. Release builds tolerate it (the
-    // rest of the import — deals/shops/buyers/items/products — still runs).
+    // Risk §7.3: suppliers/POs are written into PurchasingProvider and
+    // warehouses/items into StockProvider via their public write-back hooks. If
+    // a reference was never injected (early-init race / mis-wired ProxyProvider),
+    // those writes silently no-op and CSV rows would be lost. The `?? const []`
+    // getters mask the null, so surface it loudly in debug builds. Release
+    // builds tolerate it (deals/shops/buyers/products still run).
     assert(
       _purchasingProvider != null,
       'importCsvAll: _purchasingProvider is null — supplier/PO write-back would '
-      'silently no-op. Check the ChangeNotifierProxyProvider3 wiring in '
+      'silently no-op. Check the ChangeNotifierProxyProvider4 wiring in '
       'main.dart (updatePurchasingProvider must be called on rebuild).',
+    );
+    assert(
+      _stockProvider != null,
+      'importCsvAll: _stockProvider is null — warehouse/item write-back would '
+      'silently no-op. Check the ChangeNotifierProxyProvider4 wiring in '
+      'main.dart (updateStockProvider must be called on rebuild).',
     );
 
     // Deals
@@ -919,9 +732,15 @@ class InventoryProvider extends ChangeNotifier {
       if (canonical != null) importSupplierIdRemap[s.id] = canonical;
     }
 
-    // Inventory items – skip names that already exist; skip items that fail to insert
+    // Inventory items – skip names that already exist; skip items that fail to
+    // insert. Items live in StockProvider now: dedup-seed reads the raw list
+    // via [_stockInventoryItems]; saved rows are written back through the
+    // public import hooks ([StockProvider.upsertInventoryItemFromImport] +
+    // [StockProvider.sortInventoryItems]). itemCount stays local to this
+    // orchestrator (drives the 5-tuple return + toast).
     int itemCount = 0;
-    final existingItemNames = _inventoryItems.map((i) => i.name.toLowerCase()).toSet();
+    final existingItemNames =
+        _stockInventoryItems.map((i) => i.name.toLowerCase()).toSet();
     for (final item in result.inventoryItems) {
       if (existingItemNames.contains(item.name.toLowerCase())) continue;
       final remappedSupplier = item.supplierId == null
@@ -933,14 +752,14 @@ class InventoryProvider extends ChangeNotifier {
       );
       try {
         final saved = await _repository.insertInventoryItem(withId);
-        _inventoryItems.add(saved);
+        _stockProvider?.upsertInventoryItemFromImport(saved);
         existingItemNames.add(saved.name.toLowerCase());
         itemCount++;
       } catch (e) {
         if (kDebugMode) debugPrint('importCsvAll: item "${item.name}" skipped – $e');
       }
     }
-    _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
+    _stockProvider?.sortInventoryItems();
 
     // ── New sections (Epic F) ────────────────────────────────────────────────
     // FK-dependency order: categories + warehouses → products → POs → PO items.
@@ -977,16 +796,20 @@ class InventoryProvider extends ChangeNotifier {
       }
     }
 
-    // 2. Warehouses – skip by name; no FK deps
+    // 2. Warehouses – skip by name; no FK deps. Warehouses live in
+    //    StockProvider now: dedup-seed reads the raw list via [_stockWarehouses];
+    //    saved rows are written back through the public import hooks
+    //    ([StockProvider.upsertWarehouseFromImport] +
+    //    [StockProvider.sortWarehouses]).
     final existingWarehouseByName = <String, String>{
-      for (final w in _warehouses) w.name.toLowerCase(): w.id,
+      for (final w in _stockWarehouses) w.name.toLowerCase(): w.id,
     };
     for (final warehouse in result.warehouses) {
       final key = warehouse.name.toLowerCase();
       if (existingWarehouseByName.containsKey(key)) continue;
       try {
         final saved = await _repository.insertWarehouse(warehouse);
-        _warehouses.add(saved);
+        _stockProvider?.upsertWarehouseFromImport(saved);
         existingWarehouseByName[key] = saved.id;
       } catch (e) {
         if (kDebugMode) {
@@ -995,8 +818,7 @@ class InventoryProvider extends ChangeNotifier {
         }
       }
     }
-    _warehouses.sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _stockProvider?.sortWarehouses();
 
     // 3. Products – delegated via direct repository calls (same rationale as
     //    categories above). CatalogProvider is resynced via loadData() after
@@ -1120,6 +942,13 @@ class InventoryProvider extends ChangeNotifier {
       _purchasingProvider?.notifyAfterCrossDomainWrite();
     }
 
+    // Notify StockProvider listeners once after the warehouses/items were
+    // written back through its hooks above (same notify-storm avoidance).
+    if (result.warehouses.isNotEmpty ||
+        result.inventoryItems.isNotEmpty) {
+      _stockProvider?.notifyAfterCrossDomainWrite();
+    }
+
     if (dealCount > 0 ||
         shopCount > 0 ||
         buyerCount > 0 ||
@@ -1217,586 +1046,14 @@ class InventoryProvider extends ChangeNotifier {
     return (added: added, skipped: skipped);
   }
 
-  // ── SUPPLIERS + PURCHASE ORDERS moved to PurchasingProvider ──────────────
-  // addSupplier/updateSupplier/deleteSupplier/seedCarrierSuppliers and the full
-  // PO-header + PO-item CRUD now live in lib/providers/purchasing_provider.dart.
-  // bookGoodsReceipt below stays here (cross-domain: writes inventory state,
-  // refreshes the PO header in PurchasingProvider via replacePurchaseOrderHeader).
-
-  // ── WARENEINGANG BUCHEN (C4) ──────────────────────────────────────────────
-
-  /// Bucht einen Wareneingang gegen eine Bestellposition.
-  ///
-  /// Pro Aufruf:
-  ///
-  /// 1. **Atomares Increment** von `purchase_order_items.quantity_received`
-  ///    via SECURITY-DEFINER-RPC `increment_po_item_received` —
-  ///    kein Read-modify-write (Committee-Finding 12, Risiko 7).
-  ///    Der DB-Status-Trigger (`purchase_order_items_status_trg`) pflegt
-  ///    `purchase_orders.status` automatisch; die App setzt den Status
-  ///    NICHT manuell.
-  ///
-  /// 2. **`goods_in`-Movement** für das verknüpfte `product_id` der
-  ///    Bestellposition, mit `unitCost` aus `unit_price` der Position.
-  ///
-  /// 3. **Bestandserhöhung**: Sucht eine aktive `inventory_items`-Row für
-  ///    das Produkt in `_inventoryItems` (lokaler Cache). Findet sie:
-  ///    erhöht via `updateInventoryItem`. Findet sie nicht: legt eine
-  ///    schlanke neue Row an (`insertInventoryItem`). Das Anlegen einer
-  ///    vollständigen Lager-Row (inkl. Lager/Warehouse) ist Epic D —
-  ///    für C4 genügt eine schlanke Row mit `productId`, `quantity` und
-  ///    `status = 'Im Lager'`.
-  ///
-  /// Wirft, wenn `item.productId == null` (PO-Position ohne verknüpftes
-  /// Produkt), wenn `receivedQty <= 0`, oder wenn die RPC fehlschlägt.
-  Future<PurchaseOrderItem> bookGoodsReceipt({
-    required PurchaseOrderItem item,
-    required int receivedQty,
-  }) async {
-    if (receivedQty <= 0) {
-      throw ArgumentError.value(
-          receivedQty, 'receivedQty', 'Menge muss > 0 sein.');
-    }
-    final productId = item.productId;
-    if (productId == null) {
-      throw ArgumentError(
-          'bookGoodsReceipt: PurchaseOrderItem hat keine product_id — '
-          'Wareneingang ohne Produkt-Verknüpfung nicht möglich.');
-    }
-
-    // Reihenfolge (Konsistenz-Begründung):
-    //   A. inventory_items-Row auflösen ODER neu anlegen → liefert gültige
-    //      inventory_items.id für den FK in inventory_movements.item_id.
-    //   B. goods_in-Movement mit der gültigen inventory_items.id schreiben.
-    //   C. Atomares Increment von purchase_order_items.quantity_received via RPC.
-    //
-    // Begründung der Reihenfolge A→B→C:
-    //   - inventory_movements.item_id REFERENCES public.inventory_items(id) NOT NULL.
-    //     Das Movement darf ERST nach der existierenden/neu angelegten Row
-    //     geschrieben werden — sonst FK-Verletzung (HTTP 409).
-    //   - Fällt C (RPC) nach B aus, existiert das Movement, aber quantity_received
-    //     ist nicht erhöht. Das ist ein Partial-Failure, aber kein Datenverlust:
-    //     quantity_received kann retrograd korrigiert werden; ein Movement ohne
-    //     Bestandszeile wäre schwerer zu reparieren.
-    //   - Fällt B (Movement) aus, ist nur die Bestands-Row angelegt. Benigne —
-    //     kein FK-Schaden, Bestand ist korrekt, Movement fehlt (Audit-Lücke,
-    //     aber kein Datenfehler).
-    //   - Ein echter Transaktions-Wrapper über alle 3 Schritte ist clientseitig
-    //     nicht möglich; die Reihenfolge minimiert den worst-case-Schaden.
-    //
-    // _inventoryItems enthält nur aktive Items (deleted_at IS NULL ist beim
-    // Load bereits gefiltert).
-
-    // ── A. inventory_items-Row auflösen oder anlegen ─────────────────────────
-    final existingItemForProduct = _inventoryItems
-        .where((i) => i.productId == productId)
-        .firstOrNull;
-
-    final InventoryItem savedInventory;
-    if (existingItemForProduct != null) {
-      // Bestehende Row: Bestand jetzt erhöhen, ID ist bereits gültig.
-      final updatedInventoryItem = existingItemForProduct.copyWith(
-        quantity: existingItemForProduct.quantity + receivedQty,
-      );
-      savedInventory = await _repository.updateInventoryItem(updatedInventoryItem);
-      final idx = _inventoryItems.indexWhere((i) => i.id == savedInventory.id);
-      if (idx != -1) {
-        _inventoryItems[idx] = savedInventory;
-      }
-    } else {
-      // Keine existierende Bestands-Row für dieses Produkt →
-      // schlanke neue Row anlegen. Lager-Zuordnung (warehouse_id) ist
-      // Epic D — hier genügt eine Row mit productId + quantity.
-      // Produktname aus dem Catalog-Cache auflösen.
-      final product = _catalogProducts.where((p) => p.id == productId).firstOrNull;
-      final newItem = InventoryItem(
-        id: _uuid.v4(),
-        name: product?.name ?? productId,
-        sku: product?.sku,
-        quantity: receivedQty,
-        minStock: product?.minStock ?? 0,
-        costPrice: item.unitPrice,
-        arrivalDate: DateTime.now(),
-        status: 'Im Lager',
-        productId: productId,
-      );
-      savedInventory = await _repository.insertInventoryItem(newItem);
-      _inventoryItems.add(savedInventory);
-      _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
-    }
-
-    // ── B. goods_in-Movement mit der GÜLTIGEN inventory_items.id schreiben ───
-    //    savedInventory.id ist immer eine gültige inventory_items-ID —
-    //    entweder die bestehende Row oder die soeben angelegte neue Row.
-    //    NIEMALS item.id (= purchase_order_items-ID) verwenden, da
-    //    inventory_movements.item_id → inventory_items(id) referenziert.
-    final movement = InventoryMovement(
-      id: _uuid.v4(),
-      itemId: savedInventory.id,
-      date: DateTime.now(),
-      quantityChange: receivedQty,
-      reason: 'Wareneingang gegen Bestellung',
-      movementType: InventoryMovementType.goodsIn,
-      unitCost: item.unitPrice,
-      productId: productId,
-    );
-    final savedMovement = await _repository.insertMovement(movement);
-    _movements.insert(0, savedMovement);
-
-    // ── C. Atomares Increment auf der Datenbank-Seite (purchase_order_items) ─
-    final updatedItem =
-        await _repository.incrementPoItemReceived(item.id, receivedQty);
-
-    // ── D. PO-Header-Refresh (Best-Effort) ──────────────────────────────────
-    // Der DB-Trigger `purchase_order_items_status_trg` aktualisiert serverseitig
-    // `purchase_orders.status` (z. B. `ordered` → `partially_received` →
-    // `received`). Da der PO-Header-Cache jetzt in [PurchasingProvider] liegt,
-    // spiegelt dessen lokaler State den neuen Status erst nach einem App-Reload
-    // wider — ohne diesen Re-Fetch.
-    //
-    // Strategie: den betroffenen PO-Header-Eintrag gezielt neu laden und im
-    // PurchasingProvider-Cache ersetzen ([replacePurchaseOrderHeader]) +
-    // dort notifizieren ([notifyAfterCrossDomainWrite]). Schlägt der Re-Fetch
-    // fehl (Netzwerk, PO zwischenzeitlich gelöscht), bleibt der bereits gebuchte
-    // Wareneingang bestehen — kein Fehler, kein Rollback. Der UI-State korrigiert
-    // sich beim nächsten regulären Load.
-    final poId = item.purchaseOrderId;
-    final wsId = _repository.activeWorkspaceId;
-    if (poId != null && wsId != null) {
-      try {
-        final freshPo = await _repository.loadPurchaseOrderById(wsId, poId);
-        if (freshPo != null) {
-          _purchasingProvider?.replacePurchaseOrderHeader(freshPo);
-          _purchasingProvider?.notifyAfterCrossDomainWrite();
-        }
-      } catch (_) {
-        // Best-Effort: Re-Fetch-Fehler still schlucken.
-        // Der Buchungs-Erfolg ist bereits abgeschlossen.
-      }
-    }
-
-    _log(
-      'Wareneingang gebucht: +$receivedQty für Produkt $productId',
-      'purchase_order',
-    );
-    notifyListeners();
-    return updatedItem;
-  }
-
-  // ── WAREHOUSES ────────────────────────────────────────────────────────────
-
-  Future<void> addWarehouse(Warehouse warehouse) async {
-    final saved = await _repository.insertWarehouse(warehouse);
-    _warehouses.add(saved);
-    _warehouses
-        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    _log('Lager hinzugefügt: ${saved.name}', 'warehouse');
-    notifyListeners();
-  }
-
-  Future<void> updateWarehouse(Warehouse warehouse) async {
-    final saved = await _repository.updateWarehouse(warehouse);
-    final idx = _warehouses.indexWhere((w) => w.id == saved.id);
-    if (idx == -1) return;
-    _warehouses[idx] = saved;
-    _warehouses
-        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    _log('Lager aktualisiert: ${saved.name}', 'warehouse');
-    notifyListeners();
-  }
-
-  Future<void> deleteWarehouse(String id) async {
-    final warehouse = _warehouses.where((w) => w.id == id).firstOrNull;
-    await _repository.deleteWarehouse(id);
-    _warehouses.removeWhere((w) => w.id == id);
-    if (warehouse != null) {
-      _log('Lager gelöscht: ${warehouse.name}', 'warehouse');
-    }
-    notifyListeners();
-  }
-
-  // ── STOCKTAKES (Inventur — Epic E) ───────────────────────────────────────
-
-  /// Legt eine neue Inventur-Session an und erzeugt sofort den Soll-Snapshot
-  /// als `stocktake_items`-Rows.
-  ///
-  /// Der Soll-Snapshot aggregiert den aktuellen Bestand pro Produkt aus
-  /// `_productStock`. Ist `warehouseId` gesetzt, werden nur Produkte
-  /// berücksichtigt, die in diesem Lager Bestand haben. Andernfalls werden
-  /// alle Produkte mit Bestand > 0 eingeschlossen.
-  ///
-  /// Jede `stocktake_items`-Row erhält `counted_qty = null` (noch nicht gezählt).
-  ///
-  /// Gibt die gespeicherte [Stocktake] zurück (mit server-seitig vergebenem
-  /// BIGSERIAL-`id`). Die zugehörigen [StocktakeItem]s werden **nicht** im
-  /// globalen Provider-State gehalten — sie werden lazy im Detail-Screen
-  /// verwaltet.
-  Future<Stocktake> startInventory({
-    String? warehouseId,
-    String? title,
-  }) async {
-    final ws = _repository.activeWorkspaceId;
-    if (ws == null) {
-      throw StateError(
-          'startInventory: kein aktiver Workspace gesetzt.');
-    }
-
-    final now = DateTime.now().toUtc();
-
-    // 1. Stocktake-Kopf anlegen.
-    final stocktake = Stocktake(
-      workspaceId: ws,
-      userId: '', // wird im Repository durch _userId ersetzt
-      warehouseId: warehouseId,
-      status: StocktakeStatus.counting,
-      title: title,
-      startedAt: now,
-      createdAt: now,
-      updatedAt: now,
-    );
-    final savedStocktake = await _repository.insertStocktake(stocktake);
-    _stocktakes.insert(0, savedStocktake);
-    _stocktakes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    notifyListeners();
-
-    // 2. Soll-Snapshot als stocktake_items erzeugen.
-    //    Bestand pro Produkt aggregieren (Summe aller productStock-Rows mit
-    //    gleicher productId, optional gefiltert nach warehouseId).
-    final stockByProduct = <String, int>{};
-    for (final stock in _productStock) {
-      if (warehouseId != null && stock.warehouseId != warehouseId) continue;
-      stockByProduct.update(
-        stock.productId,
-        (existing) => existing + stock.qtyInWarehouse,
-        ifAbsent: () => stock.qtyInWarehouse,
-      );
-    }
-
-    // Nur Produkte mit Bestand > 0 einschließen.
-    final stocktakeId = savedStocktake.id;
-    if (stocktakeId != null) {
-      for (final entry in stockByProduct.entries) {
-        if (entry.value <= 0) continue;
-        final item = StocktakeItem(
-          id: _uuid.v4(),
-          workspaceId: ws,
-          stocktakeId: stocktakeId,
-          productId: entry.key,
-          expectedQty: entry.value,
-          countedQty: null,
-          createdAt: now,
-          updatedAt: now,
-        );
-        // Fehler beim Anlegen eines einzelnen Items sind nicht fatal —
-        // der Benutzer kann fehlende Items manuell ergänzen.
-        try {
-          await _repository.insertStocktakeItem(item);
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint(
-                'startInventory: StocktakeItem für Produkt ${entry.key} '
-                'konnte nicht angelegt werden: $e');
-          }
-        }
-      }
-    }
-
-    _log('Inventur gestartet: ${savedStocktake.title ?? savedStocktake.id}',
-        'stocktake');
-    return savedStocktake;
-  }
-
-  /// Setzt `counted_qty` einer Inventur-Position und persistiert sofort
-  /// (inkrementelles Speichern — kein Verbindungsabbruch verliert Daten).
-  ///
-  /// Bei einem Netzwerkfehler bleibt der lokale Wert in [item] erhalten
-  /// (der Caller hält das aktualisierte Objekt); der Fehler wird sauber
-  /// als Exception nach oben weitergegeben, damit der UI-Layer ihn anzeigen
-  /// kann. Die App crasht nicht.
-  ///
-  /// Gibt das server-seitig gespeicherte [StocktakeItem] zurück, oder
-  /// wirft bei einem dauerhaften Fehler.
-  Future<StocktakeItem> countStocktakeItem(
-    StocktakeItem item,
-    int countedQty,
-  ) async {
-    final updated = item.copyWith(countedQty: countedQty);
-    final saved = await _repository.updateStocktakeItem(updated);
-    _log('Inventur-Zählung: Produkt ${item.productId} → $countedQty', 'stocktake');
-    return saved;
-  }
-
-  /// Schließt eine Inventur-Session ab.
-  ///
-  /// Pro Position mit einer Differenz (`counted_qty != expected_qty`) wird
-  /// eine `inventory_movements`-Row mit `movement_type = stocktake`
-  /// geschrieben (append-only — nur INSERT). Die Differenzmenge ist
-  /// `counted_qty - expected_qty`.
-  ///
-  /// Außerdem wird der tatsächliche Bestand der betroffenen
-  /// `inventory_items`-Rows angeglichen: Die erste Bestands-Row des Produkts
-  /// (aus `_inventoryItems`) wird auf den gezählten Wert korrigiert.
-  ///
-  /// Positions ohne gezählte Menge (`counted_qty == null`) werden
-  /// übersprungen (noch nicht gezählt → keine Buchung).
-  ///
-  /// Setzt abschließend `stocktakes.status = 'closed'` und `closed_at`.
-  Future<Stocktake> closeStocktake(
-    Stocktake stocktake,
-    List<StocktakeItem> items,
-  ) async {
-    final stocktakeId = stocktake.id;
-    if (stocktakeId == null) {
-      throw ArgumentError('closeStocktake: Stocktake hat keine id.');
-    }
-    final ws = _repository.activeWorkspaceId;
-    if (ws == null) {
-      throw StateError('closeStocktake: kein aktiver Workspace gesetzt.');
-    }
-
-    // Idempotenz-Guard: bereits abgeschlossene Inventuren nicht nochmals buchen.
-    // Verhindert Doppel-Buchung bei Doppel-Tap oder Retry.
-    if (stocktake.status == StocktakeStatus.closed) {
-      return stocktake;
-    }
-
-    final now = DateTime.now().toUtc();
-
-    // 1. Pro gezählte Position mit Differenz: Differenz-Movement schreiben.
-    for (final item in items) {
-      final counted = item.countedQty;
-      if (counted == null) continue; // noch nicht gezählt — überspringen
-
-      final diff = counted - item.expectedQty;
-      if (diff == 0) continue; // keine Differenz — keine Buchung nötig
-
-      // inventory_movements ist append-only (kein UPDATE/DELETE).
-      // Differenz-Movement mit movement_type='stocktake'.
-      // itemId: erste passende Bestands-Row des Produkts, oder Fallback-UUID.
-      final inventoryItemForProduct = _inventoryItems
-          .where((i) => i.productId == item.productId)
-          .firstOrNull;
-      final itemId = inventoryItemForProduct?.id ?? _uuid.v4();
-
-      final movement = InventoryMovement(
-        id: _uuid.v4(),
-        itemId: itemId,
-        date: now,
-        quantityChange: diff,
-        reason: 'Inventur-Abschluss',
-        movementType: InventoryMovementType.stocktake,
-        productId: item.productId,
-      );
-      try {
-        final savedMovement = await _repository.insertMovement(movement);
-        _movements.insert(0, savedMovement);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint(
-              'closeStocktake: Movement für Produkt ${item.productId} '
-              'konnte nicht geschrieben werden: $e');
-        }
-        // Fehler beim Movement blockieren nicht den Abschluss —
-        // der Bestandsangleich läuft trotzdem durch.
-      }
-
-      // 2. Bestand angeleichen: inventory_item auf den gezählten Wert setzen.
-      if (inventoryItemForProduct != null) {
-        final corrected =
-            inventoryItemForProduct.copyWith(quantity: counted);
-        try {
-          final savedItem = await _repository.updateInventoryItem(corrected);
-          final idx =
-              _inventoryItems.indexWhere((i) => i.id == savedItem.id);
-          if (idx != -1) {
-            _inventoryItems[idx] = savedItem;
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint(
-                'closeStocktake: Bestandsangleich für Produkt '
-                '${item.productId} fehlgeschlagen: $e');
-          }
-        }
-      }
-    }
-
-    // 3. Stocktake auf 'closed' setzen.
-    final closed = stocktake.copyWith(
-      status: StocktakeStatus.closed,
-      closedAt: now,
-    );
-    final savedStocktake = await _repository.updateStocktake(closed);
-    final idx = _stocktakes.indexWhere((s) => s.id == savedStocktake.id);
-    if (idx != -1) {
-      _stocktakes[idx] = savedStocktake;
-    }
-
-    _log(
-      'Inventur abgeschlossen: ${savedStocktake.title ?? savedStocktake.id}',
-      'stocktake',
-    );
-    notifyListeners();
-    return savedStocktake;
-  }
-
-  /// Lädt alle Zähl-Positionen einer Inventur-Session on-demand.
-  /// Pattern analog `loadPurchaseOrderItems`: kein globaler State, der
-  /// Detail-Screen hält den State selbst.
-  Future<List<StocktakeItem>> loadStocktakeItems(int stocktakeId) {
-    final wsId = _repository.activeWorkspaceId;
-    if (wsId == null) return Future.value(const []);
-    return _repository.loadStocktakeItems(wsId, stocktakeId);
-  }
-
-  /// CRUD: neue Inventur-Session hinzufügen (direkter Weg ohne Soll-Snapshot).
-  /// Für einfache Tests / manuelle Sessions ohne Produkt-Aggregation.
-  Future<Stocktake> addStocktake(Stocktake stocktake) async {
-    final saved = await _repository.insertStocktake(stocktake);
-    _stocktakes.insert(0, saved);
-    _stocktakes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    _log('Inventur hinzugefügt: ${saved.title ?? saved.id}', 'stocktake');
-    notifyListeners();
-    return saved;
-  }
-
-  Future<void> updateStocktake(Stocktake stocktake) async {
-    final saved = await _repository.updateStocktake(stocktake);
-    final idx = _stocktakes.indexWhere((s) => s.id == saved.id);
-    if (idx == -1) return;
-    _stocktakes[idx] = saved;
-    _stocktakes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    _log('Inventur aktualisiert: ${saved.title ?? saved.id}', 'stocktake');
-    notifyListeners();
-  }
-
-  /// Soft-Delete. Entfernt die Inventur aus dem lokalen Cache.
-  /// `stocktake_items` werden DB-seitig durch `ON DELETE CASCADE` entfernt.
-  Future<void> deleteStocktake(int id) async {
-    final st = _stocktakes.where((s) => s.id == id).firstOrNull;
-    await _repository.deleteStocktake(id);
-    _stocktakes.removeWhere((s) => s.id == id);
-    if (st != null) {
-      _log('Inventur gelöscht: ${st.title ?? st.id}', 'stocktake');
-    }
-    notifyListeners();
-  }
-
-  // ── INVENTORY ITEMS ───────────────────────────────────────────────────────
-
-  Future<void> addInventoryItem(InventoryItem item) async {
-    final withId = item.id.isEmpty ? item.copyWith(id: _uuid.v4()) : item;
-    final saved = await _repository.insertInventoryItem(withId);
-    _inventoryItems.add(saved);
-    _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
-
-    if (saved.quantity > 0) {
-      final movement = InventoryMovement(
-        id: _uuid.v4(),
-        itemId: saved.id,
-        date: DateTime.now(),
-        quantityChange: saved.quantity,
-        reason: 'Einbuchung',
-        movementType: InventoryMovementType.goodsIn,
-        unitCost: saved.costPrice,
-        dealId: saved.dealId,
-        ticketNumber: saved.ticketNumber,
-        productId: saved.productId,
-      );
-      final savedMovement = await _repository.insertMovement(movement);
-      _movements.insert(0, savedMovement);
-    }
-
-    _log('Artikel eingebucht: ${saved.name}', 'stock');
-    notifyListeners();
-  }
-
-  Future<void> updateInventoryItem(InventoryItem item) async {
-    final old = _inventoryItems.firstWhere(
-      (i) => i.id == item.id,
-      orElse: () => item,
-    );
-    final saved = await _repository.updateInventoryItem(item);
-    final idx = _inventoryItems.indexWhere((i) => i.id == saved.id);
-    if (idx == -1) return;
-    _inventoryItems[idx] = saved;
-    _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
-
-    final delta = saved.quantity - old.quantity;
-    if (delta != 0) {
-      final isIncoming = delta > 0;
-      final movement = InventoryMovement(
-        id: _uuid.v4(),
-        itemId: saved.id,
-        date: DateTime.now(),
-        quantityChange: delta,
-        reason: isIncoming ? 'Einbuchung' : 'Ausbuchung',
-        movementType: isIncoming
-            ? InventoryMovementType.goodsIn
-            : InventoryMovementType.goodsOut,
-        unitCost: isIncoming ? saved.costPrice : null,
-        dealId: saved.dealId,
-        ticketNumber: saved.ticketNumber,
-        productId: saved.productId,
-      );
-      final savedMovement = await _repository.insertMovement(movement);
-      _movements.insert(0, savedMovement);
-    }
-
-    _log('Lagerartikel aktualisiert: ${saved.name}', 'stock');
-    notifyListeners();
-  }
-
-  Future<void> deleteInventoryItem(String id) async {
-    final item = _inventoryItems.where((i) => i.id == id).firstOrNull;
-    await _repository.deleteInventoryItem(id);
-    _inventoryItems.removeWhere((i) => i.id == id);
-    // ON DELETE CASCADE removes movements server-side; mirror that locally.
-    _movements.removeWhere((m) => m.itemId == id);
-    if (item != null) _log('Lagerartikel gelöscht: ${item.name}', 'stock');
-    notifyListeners();
-  }
-
-  Future<void> adjustStock(
-    String id,
-    int delta,
-    String reason, {
-    InventoryMovementType movementType = InventoryMovementType.correction,
-    int? dealId,
-    String? ticketNumber,
-  }) async {
-    final idx = _inventoryItems.indexWhere((i) => i.id == id);
-    if (idx == -1 || delta == 0) return;
-    final current = _inventoryItems[idx];
-    final updated = current.copyWith(
-      quantity: (current.quantity + delta).clamp(0, 1 << 31).toInt(),
-      dealId: dealId ?? current.dealId,
-      ticketNumber: ticketNumber ?? current.ticketNumber,
-    );
-    final saved = await _repository.updateInventoryItem(updated);
-    _inventoryItems[idx] = saved;
-
-    final movement = InventoryMovement(
-      id: _uuid.v4(),
-      itemId: id,
-      date: DateTime.now(),
-      quantityChange: delta,
-      reason: reason,
-      movementType: movementType,
-      unitCost: movementType == InventoryMovementType.goodsIn
-          ? current.costPrice
-          : null,
-      dealId: dealId,
-      ticketNumber: ticketNumber,
-      productId: current.productId,
-    );
-    final savedMovement = await _repository.insertMovement(movement);
-    _movements.insert(0, savedMovement);
-
-    _log('Lagerbewegung: ${current.name} ${delta > 0 ? '+' : ''}$delta',
-        'stock');
-    notifyListeners();
-  }
+  // ── STOCK DOMAIN moved to StockProvider ──────────────────────────────────
+  // bookGoodsReceipt, warehouse CRUD, stocktake CRUD, inventory-item CRUD
+  // (add/update/delete), adjustStock and the batch helpers now live in
+  // lib/providers/stock_provider.dart. checkInDeal below stays here
+  // (cross-domain: matches/creates a catalog product, then writes the inventory
+  // item + movement into StockProvider via its write-back hooks while keeping
+  // the deal `inventoryItemIds` link local to the deals domain — plan §3
+  // Option A, avoids a Stock→Inventory dependency edge).
 
   Future<void> checkInDeal(
     Deal deal, {
@@ -1830,8 +1087,11 @@ class InventoryProvider extends ChangeNotifier {
     );
 
     final savedItem = await _repository.insertInventoryItem(item);
-    _inventoryItems.add(savedItem);
-    _inventoryItems.sort((a, b) => a.name.compareTo(b.name));
+    // Stock state lives in StockProvider now — write the item + movement via
+    // its cross-domain hooks (plan §3 Option A: keep checkInDeal on the deals
+    // domain, write INTO stock to avoid a Stock→Inventory edge/cycle).
+    _stockProvider?.upsertInventoryItemFromImport(savedItem);
+    _stockProvider?.sortInventoryItems();
 
     final movement = InventoryMovement(
       id: _uuid.v4(),
@@ -1846,8 +1106,10 @@ class InventoryProvider extends ChangeNotifier {
       productId: savedItem.productId,
     );
     final savedMovement = await _repository.insertMovement(movement);
-    _movements.insert(0, savedMovement);
+    _stockProvider?.insertMovementFromCheckIn(savedMovement);
+    _stockProvider?.notifyAfterCrossDomainWrite();
 
+    // Deal ↔ inventory-item link stays local to the deals domain.
     final dealIdx = _deals.indexWhere((d) => d.id == deal.id);
     if (dealIdx != -1) {
       _deals[dealIdx] = _deals[dealIdx].copyWith(
@@ -1955,33 +1217,8 @@ class InventoryProvider extends ChangeNotifier {
   Future<void> deleteComment(String id) =>
       _repository.deleteComment(id);
 
-  // ── BATCHES ───────────────────────────────────────────────────────────────
-
-  Future<List<InventoryBatch>> loadBatchesForItem(String itemId) =>
-      _repository.loadBatchesForItem(itemId);
-
-  /// Lädt alle Chargen über alle Items. Für die Statistik-Tabs (Lager-KPIs).
-  /// Wird gecached im StatisticsService.
-  Future<List<InventoryBatch>> loadAllBatches() =>
-      _repository.loadAllBatches();
-
-  Future<InventoryBatch> addBatch(InventoryBatch batch) async {
-    final saved = await _repository.insertBatch(batch);
-    _log('Charge hinzugefügt: ${saved.batchNumber}', 'batch');
-    notifyListeners();
-    return saved;
-  }
-
-  Future<InventoryBatch> updateBatch(InventoryBatch batch) async {
-    final saved = await _repository.updateBatch(batch);
-    notifyListeners();
-    return saved;
-  }
-
-  Future<void> deleteBatch(String id) async {
-    await _repository.deleteBatch(id);
-    notifyListeners();
-  }
+  // NOTE: the batch helpers (loadBatchesForItem / loadAllBatches / addBatch /
+  // updateBatch / deleteBatch) have moved to [StockProvider].
 
   // ── Tracking-Confidence-Updates ──────────────────────────────────────────
 

@@ -14,6 +14,7 @@ import '../providers/app_preferences_provider.dart';
 import '../providers/filter_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/purchasing_provider.dart';
+import '../providers/stock_provider.dart';
 import '../screens/main_tab.dart';
 
 /// Command-palette-style global search across deals, items, tickets, buyers,
@@ -109,10 +110,11 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<InventoryProvider>();
+    final stock = context.watch<StockProvider>();
     // Suppliers now live in PurchasingProvider; deals/items/tickets/buyers
-    // stay on InventoryProvider.
+    // stay on InventoryProvider; inventoryItems on StockProvider.
     final purchasing = context.watch<PurchasingProvider>();
-    final results = _buildResults(provider, purchasing);
+    final results = _buildResults(provider, stock, purchasing);
     final flat = results.expand((g) => g.items).toList();
     if (_highlight >= flat.length) _highlight = flat.length - 1;
     if (_highlight < 0) _highlight = 0;
@@ -370,13 +372,14 @@ class _GlobalSearchDialogState extends State<GlobalSearchDialog> {
 
   List<_ResultGroup> _buildResults(
     InventoryProvider provider,
+    StockProvider stock,
     PurchasingProvider purchasing,
   ) {
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return const [];
 
     final dealHits = provider.deals.where((d) => _dealMatches(d, q)).take(_maxPerGroup).toList();
-    final itemHits = provider.inventoryItems.where((i) => _itemMatches(i, q)).take(_maxPerGroup).toList();
+    final itemHits = stock.inventoryItems.where((i) => _itemMatches(i, q)).take(_maxPerGroup).toList();
     final ticketHits = provider.ticketSummaries
         .where((t) => t.hasTicket && t.ticketNumber.toLowerCase().contains(q))
         .take(_maxPerGroup)

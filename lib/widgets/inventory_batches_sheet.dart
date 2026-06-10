@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/inventory_batch.dart';
 import '../models/inventory_item.dart';
-import '../providers/inventory_provider.dart';
+import '../providers/stock_provider.dart';
 
 /// BottomSheet zur Verwaltung von Chargen (Batches/MHD/Seriennummer)
 /// für einen einzelnen [InventoryItem].
@@ -35,7 +35,7 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
   }
 
   void _reload() {
-    final provider = context.read<InventoryProvider>();
+    final provider = context.read<StockProvider>();
     _future = provider.loadBatchesForItem(widget.item.id);
   }
 
@@ -45,7 +45,7 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
       builder: (_) => _BatchFormDialog(itemId: widget.item.id),
     );
     if (result != null && mounted) {
-      final provider = context.read<InventoryProvider>();
+      final provider = context.read<StockProvider>();
       await provider.addBatch(result);
       if (!mounted) return;
       setState(_reload);
@@ -74,7 +74,7 @@ class _InventoryBatchesSheetState extends State<InventoryBatchesSheet> {
       ),
     );
     if (ok == true && mounted) {
-      await context.read<InventoryProvider>().deleteBatch(b.id);
+      await context.read<StockProvider>().deleteBatch(b.id);
       if (!mounted) return;
       setState(_reload);
     }

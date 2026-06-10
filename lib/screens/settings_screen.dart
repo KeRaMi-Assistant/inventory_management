@@ -22,6 +22,7 @@ import '../providers/carrier_credentials_provider.dart';
 import '../providers/inbox_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/onboarding_provider.dart';
+import '../providers/stock_provider.dart';
 import '../services/push_service.dart';
 import '../services/workspace_service.dart';
 import '../utils/error_messages.dart';
@@ -648,6 +649,7 @@ class _GeneralTab extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Consumer<InventoryProvider>(
       builder: (context, provider, _) {
+        final stock = context.watch<StockProvider>();
         return ListView(
           padding: const EdgeInsets.all(20),
           children: [
@@ -681,10 +683,10 @@ class _GeneralTab extends StatelessWidget {
                 provider.deals.length,
                 provider.buyers.length,
                 provider.shops.length,
-                provider.inventoryItems.length,
+                stock.inventoryItems.length,
               ),
               trailing: Text(l10n.commonItems(
-                  provider.deals.length + provider.inventoryItems.length)),
+                  provider.deals.length + stock.inventoryItems.length)),
             ),
             const SizedBox(height: 24),
             _SectionHeader(title: l10n.settingsThemeSection),
@@ -3407,6 +3409,7 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
       color: AppTheme.bgAppOf(context),
       child: Consumer2<ActiveWorkspaceProvider, InventoryProvider>(
         builder: (context, wsProv, inv, _) {
+          final stock = context.watch<StockProvider>();
           final ws = wsProv.active;
           if (ws == null) {
             return Center(
@@ -3418,7 +3421,7 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
             );
           }
           final publicUrl = _publicUrl(ws);
-          final eligibleItems = inv.inventoryItems
+          final eligibleItems = stock.inventoryItems
               .where((i) => i.status == 'Im Lager' && i.quantity > 0)
               .toList();
           eligibleItems.sort((a, b) => a.name.compareTo(b.name));
@@ -3555,7 +3558,7 @@ class _PublicProfileTabState extends State<_PublicProfileTab> {
                           item: item,
                           onChanged: (next) async {
                             try {
-                              await inv.updateInventoryItem(
+                              await stock.updateInventoryItem(
                                 item.copyWith(isPublic: next),
                               );
                             } catch (_) {

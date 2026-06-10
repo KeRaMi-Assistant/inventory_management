@@ -3,7 +3,7 @@ import 'package:inventory_management/models/inventory_item.dart';
 import 'package:inventory_management/models/product.dart';
 import 'package:inventory_management/models/product_stock.dart';
 import 'package:inventory_management/providers/catalog_provider.dart';
-import 'package:inventory_management/providers/inventory_provider.dart';
+import 'package:inventory_management/providers/stock_provider.dart';
 import 'package:inventory_management/services/supabase_repository.dart';
 
 // ignore_for_file: avoid_redundant_argument_values
@@ -139,12 +139,15 @@ ProductStock _makeStock({
 void main() {
   late _FakeRepository repo;
   late CatalogProvider catalog;
-  late InventoryProvider provider;
+  late StockProvider provider;
 
   setUp(() {
     repo = _FakeRepository();
     catalog = CatalogProvider(repository: repo);
-    provider = InventoryProvider(repository: repo, catalogProvider: catalog);
+    provider = StockProvider(
+      repository: repo,
+      catalogProvider: catalog,
+    );
   });
 
   tearDown(() {
@@ -435,7 +438,7 @@ void main() {
 
   // ── B0 — initialLoadAttempted API ────────────────────────────────────────────
 
-  group('InventoryProvider.initialLoadAttempted (B0)', () {
+  group('StockProvider.initialLoadAttempted (B0)', () {
     test('initialLoadAttempted is false before any loadData call', () {
       expect(provider.initialLoadAttempted, isFalse);
     });
@@ -449,7 +452,7 @@ void main() {
         () async {
       // Override to throw on loadAll.
       final failingRepo = _FailingRepository();
-      final failingProvider = InventoryProvider(repository: failingRepo);
+      final failingProvider = StockProvider(repository: failingRepo);
       addTearDown(failingProvider.dispose);
 
       expect(failingProvider.initialLoadAttempted, isFalse);

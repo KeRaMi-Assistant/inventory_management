@@ -26,6 +26,7 @@ import 'providers/inventory_provider.dart';
 import 'providers/invites_provider.dart';
 import 'providers/onboarding_provider.dart';
 import 'providers/statistics_filter_provider.dart';
+import 'providers/stock_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/splash_screen.dart';
@@ -161,9 +162,9 @@ class InventoryApp extends StatelessWidget {
           update: (_, repository, previous) =>
               previous ?? CatalogProvider(repository: repository),
         ),
-        // PurchasingProvider MUST be registered BEFORE InventoryProvider — the
-        // latter depends on it via the ChangeNotifierProxyProvider3 below
-        // (registration order = dependency order; Gotcha #5/#9).
+        // PurchasingProvider MUST be registered BEFORE StockProvider +
+        // InventoryProvider — both depend on it (registration order =
+        // dependency order; Gotcha #5/#9).
         ChangeNotifierProxyProvider<SupabaseRepository, PurchasingProvider>(
           create: (ctx) => PurchasingProvider(
             repository: ctx.read<SupabaseRepository>(),
@@ -171,9 +172,12 @@ class InventoryApp extends StatelessWidget {
           update: (_, repository, previous) =>
               previous ?? PurchasingProvider(repository: repository),
         ),
+        // StockProvider MUST be registered AFTER Catalog + Purchasing and
+        // BEFORE InventoryProvider. The provider graph is a strict DAG:
+        // Stock → {Catalog, Purchasing}, Inventory → {Catalog, Purchasing, Stock}.
         ChangeNotifierProxyProvider3<SupabaseRepository, CatalogProvider,
-            PurchasingProvider, InventoryProvider>(
-          create: (ctx) => InventoryProvider(
+            PurchasingProvider, StockProvider>(
+          create: (ctx) => StockProvider(
             repository: ctx.read<SupabaseRepository>(),
             catalogProvider: ctx.read<CatalogProvider>(),
             purchasingProvider: ctx.read<PurchasingProvider>(),
@@ -181,16 +185,42 @@ class InventoryApp extends StatelessWidget {
           update: (_, repository, catalog, purchasing, previous) {
             if (previous != null) {
               // Both upstream refs MUST be re-injected on every rebuild
-              // (Gotcha #4) — otherwise importCsvAll/bookGoodsReceipt would
-              // write against a stale/null reference and silently no-op.
+              // (Gotcha #4) — otherwise criticalStockCount/bookGoodsReceipt
+              // would read/write against a stale/null reference.
               previous.updateCatalogProvider(catalog);
               previous.updatePurchasingProvider(purchasing);
+              return previous;
+            }
+            return StockProvider(
+              repository: repository,
+              catalogProvider: catalog,
+              purchasingProvider: purchasing,
+            );
+          },
+        ),
+        ChangeNotifierProxyProvider4<SupabaseRepository, CatalogProvider,
+            PurchasingProvider, StockProvider, InventoryProvider>(
+          create: (ctx) => InventoryProvider(
+            repository: ctx.read<SupabaseRepository>(),
+            catalogProvider: ctx.read<CatalogProvider>(),
+            purchasingProvider: ctx.read<PurchasingProvider>(),
+            stockProvider: ctx.read<StockProvider>(),
+          ),
+          update: (_, repository, catalog, purchasing, stock, previous) {
+            if (previous != null) {
+              // All upstream refs MUST be re-injected on every rebuild
+              // (Gotcha #4) — otherwise importCsvAll/checkInDeal would write
+              // against a stale/null reference and silently no-op.
+              previous.updateCatalogProvider(catalog);
+              previous.updatePurchasingProvider(purchasing);
+              previous.updateStockProvider(stock);
               return previous;
             }
             return InventoryProvider(
               repository: repository,
               catalogProvider: catalog,
               purchasingProvider: purchasing,
+              stockProvider: stock,
             );
           },
         ),
@@ -306,6 +336,7 @@ class _AuthGateState extends State<_AuthGate> {
           if (!mounted) return;
           context.read<CatalogProvider>().clearLocalState();
           context.read<PurchasingProvider>().clearLocalState();
+          context.read<StockProvider>().clearLocalState();
           context.read<InventoryProvider>().clearLocalState();
           context.read<InboxProvider>().clear();
           context.read<CarrierCredentialsProvider>().clear();
@@ -345,6 +376,7 @@ class _AuthGateState extends State<_AuthGate> {
     final inventory = context.read<InventoryProvider>();
     final catalog = context.read<CatalogProvider>();
     final purchasing = context.read<PurchasingProvider>();
+    final stock = context.read<StockProvider>();
     final push = context.read<PushService>();
     final workspaces = context.read<ActiveWorkspaceProvider>();
     final invites = context.read<InvitesProvider>();
@@ -355,12 +387,13 @@ class _AuthGateState extends State<_AuthGate> {
     await workspaces.loadForCurrentUser(userId);
     final activeId = workspaces.active?.id;
     _lastWsId = activeId;
-    // CatalogProvider, PurchasingProvider and InventoryProvider all need the
-    // active workspace. Catalog + Purchasing load alongside Inventory so the
-    // latter's cross-domain reads/writes see up-to-date products/suppliers/POs.
+    // Catalog, Purchasing, Stock and Inventory all need the active workspace.
+    // They load in parallel so the cross-domain reads/writes (Inventory→Stock,
+    // Stock→{Catalog,Purchasing}) see up-to-date products/suppliers/POs/items.
     await Future.wait([
       catalog.setActiveWorkspace(activeId),
       purchasing.setActiveWorkspace(activeId),
+      stock.setActiveWorkspace(activeId),
       inventory.setActiveWorkspace(activeId),
       invites.refresh(),
       billing.load(),
@@ -397,9 +430,10 @@ class _AuthGateState extends State<_AuthGate> {
     final newId = ws.active?.id;
     if (newId == _lastWsId) return;
     _lastWsId = newId;
-    // Reload Catalog + Purchasing + Inventory gegen neuen Workspace.
+    // Reload Catalog + Purchasing + Stock + Inventory gegen neuen Workspace.
     context.read<CatalogProvider>().setActiveWorkspace(newId);
     context.read<PurchasingProvider>().setActiveWorkspace(newId);
+    context.read<StockProvider>().setActiveWorkspace(newId);
     context.read<InventoryProvider>().setActiveWorkspace(newId);
     // Carrier-Keys sind workspace-scoped — neu laden statt Stale-Cache zeigen.
     context.read<CarrierCredentialsProvider>().refresh();
