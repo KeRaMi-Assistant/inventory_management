@@ -367,6 +367,18 @@ async function applyUpdateToDeal(
       // Flags des alten (unsicheren) Werts mitkorrigieren.
       update.tracking_confidence = 'strong'
       update.tracking_needs_review = false
+      // Review-Fix (Workflow 2026-06-11): Live-Status-Felder des ALTEN
+      // Trackings sind nach dem Replace bedeutungslos (anderer Carrier /
+      // andere Sendung) → nullen, damit die UI keinen stale Status zeigt
+      // und der adaptive Poller (last_polled_at=null → sofort fällig) die
+      // neue Nummer beim nächsten Tick frisch bewertet. tracking_events
+      // bleiben erhalten — die Timeline ist per Dedup-Key an die
+      // Tracking-Nummer gebunden und filtert sich selbst.
+      update.live_status = null
+      update.live_status_last_event = null
+      update.live_status_updated_at = null
+      update.live_eta = null
+      update.last_polled_at = null
       changes.push(
         `Tracking korrigiert ${before.tracking} → ${parsed.tracking}`,
       )
