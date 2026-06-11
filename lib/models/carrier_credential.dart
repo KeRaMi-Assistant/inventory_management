@@ -41,12 +41,14 @@ class CarrierCredential {
 /// Spiegelt die `CHECK`-Constraint der Migration wider.
 const supportedCarrierIds = <String>{'dhl', 'dpd', 'ups'};
 
-/// Carrier-IDs, die in der UI aktuell konfigurierbar sind. DPD und UPS
-/// bleiben backend-seitig unterstützt (siehe `supportedCarrierIds` und die
+/// Carrier-IDs, die in der UI aktuell konfigurierbar sind. UPS bleibt
+/// backend-seitig unterstützt (siehe `supportedCarrierIds` und die
 /// CHECK-Constraint in `workspace_carrier_credentials.carrier_id`),
-/// werden im Settings-Screen aber als „Bald verfügbar" gerendert, bis
-/// die produktive Anbindung steht. Reaktivierung = Eintrag hier ergänzen.
-const enabledCarrierIds = <String>{'dhl'};
+/// wird im Settings-Screen aber als „Bald verfügbar" gerendert, bis ein
+/// OAuth-Key-Flow existiert. DPD ist seit Paket 2 freigeschaltet (der
+/// Poll-Adapter existiert; User braucht nur einen DPD-API-Key).
+/// Kanonische Registry: supabase/functions/_shared/carriers.ts.
+const enabledCarrierIds = <String>{'dhl', 'dpd'};
 
 /// Anzeigelabel pro Carrier-ID. Wird in den Settings-Screens genutzt.
 String labelForCarrierId(String id) => switch (id) {

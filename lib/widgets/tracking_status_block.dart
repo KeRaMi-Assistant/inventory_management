@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../l10n/app_localizations.dart';
 
 import '../app_theme.dart';
 import '../models/live_tracking_status.dart';
 import '../models/tracking_confidence.dart';
+import '../utils/carrier_links.dart';
 import '../utils/relative_time.dart';
 import '../utils/responsive.dart';
+import '../utils/url_helper.dart';
 
 /// Interne Enum für die 5 Display-States des Widgets.
 enum TrackingDisplayState {
@@ -83,6 +86,14 @@ class TrackingStatusBlock extends StatelessWidget {
   /// ein eigener Badge-State gerendert statt „Wird vorbereitet".
   final bool isAmazonCarrier;
 
+  /// Rohe Carrier-Id (`'dhl'`, `'dpd'`, …) für Deep-Link + Copy-CTAs
+  /// (Paket 1). Unabhängig vom Anzeige-Label [carrier].
+  final String? carrierId;
+
+  /// Geschätztes Zustelldatum vom Carrier/Mail (Paket 1). Wird nur bei
+  /// nicht-zugestellten Sendungen angezeigt.
+  final DateTime? liveEta;
+
   const TrackingStatusBlock({
     super.key,
     this.trackingNumber,
@@ -99,6 +110,8 @@ class TrackingStatusBlock extends StatelessWidget {
     this.onRetrack,
     this.retrackInProgress = false,
     this.isAmazonCarrier = false,
+    this.carrierId,
+    this.liveEta,
   });
 
   TrackingDisplayState _resolveState() {
@@ -162,6 +175,15 @@ class TrackingStatusBlock extends StatelessWidget {
     TrackingDisplayState state,
     AppLocalizations l10n,
   ) {
+    // ETA nur anzeigen, solange die Sendung nicht zugestellt ist (Paket 1).
+    String? etaText;
+    if (liveEta != null && liveStatus != LiveTrackingStatus.delivered) {
+      final localeTag = Localizations.localeOf(context).toLanguageTag();
+      etaText = l10n.trackingEtaLabel(
+        DateFormat.MMMEd(localeTag).format(liveEta!.toLocal()),
+      );
+    }
+
     switch (state) {
       case TrackingDisplayState.strong:
         return _StrongState(
@@ -177,6 +199,11 @@ class TrackingStatusBlock extends StatelessWidget {
           onRetrack: onRetrack,
           retrackInProgress: retrackInProgress,
           retrackLabel: l10n.trackingRetrackCta,
+          etaText: etaText,
+          carrierUrl: carrierTrackingUrl(carrierId, trackingNumber),
+          copyTooltip: l10n.trackingCopyTooltip,
+          copiedSnack: l10n.trackingCopiedSnack,
+          openCarrierLabel: l10n.trackingOpenCarrierPage,
         );
       case TrackingDisplayState.manual:
         return _ManualState(
@@ -244,6 +271,11 @@ class _StrongState extends StatelessWidget {
     this.onRetrack,
     this.retrackInProgress = false,
     this.retrackLabel,
+    this.etaText,
+    this.carrierUrl,
+    this.copyTooltip,
+    this.copiedSnack,
+    this.openCarrierLabel,
   });
 
   final String trackingNumber;
@@ -258,6 +290,15 @@ class _StrongState extends StatelessWidget {
   final VoidCallback? onRetrack;
   final bool retrackInProgress;
   final String? retrackLabel;
+
+  /// Fertig formatierter ETA-Text ("Voraussichtliche Zustellung: Mi., 11.6.").
+  final String? etaText;
+
+  /// Öffentliche Carrier-Tracking-URL (null → kein "Verfolgen"-Button).
+  final String? carrierUrl;
+  final String? copyTooltip;
+  final String? copiedSnack;
+  final String? openCarrierLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -330,6 +371,66 @@ class _StrongState extends StatelessWidget {
                       liveStatusUpdatedAt: liveStatusUpdatedAt,
                     ),
                   ],
+                  // ── ETA-Zeile (Paket 1) ──────────────────────────────
+                  if (etaText != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      key: const Key('tracking-eta-row'),
+                      children: [
+                        Icon(
+                          Icons.schedule_rounded,
+                          size: 14,
+                          color: AppTheme.accentTextOf(context),
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            etaText!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.accentTextOf(context),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  // ── Copy + Carrier-Link-CTAs (Paket 1) ───────────────
+                  Wrap(
+                    spacing: 4,
+                    children: [
+                      if (copyTooltip != null)
+                        _CtaButton(
+                          key: const Key('tracking-copy-cta'),
+                          label: copyTooltip!,
+                          icon: Icons.copy_rounded,
+                          isPrimary: false,
+                          onTap: () async {
+                            await copyToClipboard(trackingNumber);
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(copiedSnack ?? ''),
+                                behavior: SnackBarBehavior.floating,
+                                margin: const EdgeInsets.all(16),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                        ),
+                      if (carrierUrl != null && openCarrierLabel != null)
+                        _CtaButton(
+                          key: const Key('tracking-open-carrier-cta'),
+                          label: openCarrierLabel!,
+                          icon: Icons.open_in_new_rounded,
+                          isPrimary: true,
+                          onTap: () => openUrlWithFallback(context, carrierUrl!),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),

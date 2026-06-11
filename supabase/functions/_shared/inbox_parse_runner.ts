@@ -65,6 +65,8 @@ interface DealRow {
   tracking: string | null
   arrival_date: string | null
   carrier?: string | null
+  tracking_confidence?: 'strong' | 'manual' | 'none' | null
+  tracking_needs_review?: boolean | null
 }
 
 // Plan 2026-06-03 §3.4 / §2.8 Amazon-Seed: Amazon Logistics hat keine
@@ -269,10 +271,31 @@ export async function processOne(
 /// Der DB-CHECK erlaubt nur `('dhl','amazon','dpd')` (lowercase) — ein
 /// uppercase-Write würde `check_violation` werfen und den Deal-Write
 /// komplett rollbacken (Plan §2.8 Casing-Fix). Unbekannte Werte → null.
+/// Re-Parse-Korrektur (Paket 2, Audit-Roadmap-Rest): darf ein strictly-
+/// stronger Kandidat ein bestehendes falsches Tracking ERSETZEN? Bedingungen:
+///   * neue Detection ist 'strong' (validiert),
+///   * alter Wert ist NICHT manual (User-Eingabe nie überschreiben),
+///   * alter Wert ist needs_review ODER nicht-strong (none/null/Legacy).
+/// Ein strong→strong-Konflikt bleibt unangetastet (kein Ping-Pong zwischen
+/// zwei validierten Werten — das wäre Cross-Mail-Mehrdeutigkeit).
+/// Reine Funktion, exportiert für Unit-Tests.
+export function shouldReplaceTracking(
+  before: Pick<DealRow, 'tracking' | 'tracking_confidence' | 'tracking_needs_review'>,
+  parsed: Pick<ParsedOrder, 'tracking' | 'trackingConfidence'>,
+): boolean {
+  const newIsStrong = (parsed.trackingConfidence ?? 'none') === 'strong'
+  const oldIsManual = before.tracking_confidence === 'manual'
+  const oldIsWeak = before.tracking_needs_review === true ||
+    (before.tracking_confidence ?? 'none') !== 'strong'
+  return !!parsed.tracking && !!before.tracking &&
+    parsed.tracking !== before.tracking &&
+    newIsStrong && !oldIsManual && oldIsWeak
+}
+
 function normalizeCarrierForDeal(carrier?: string | null): string | null {
   if (!carrier || typeof carrier !== 'string') return null
   const c = carrier.trim().toLowerCase()
-  if (c === 'dhl' || c === 'amazon' || c === 'dpd') return c
+  if (c === 'dhl' || c === 'amazon' || c === 'dpd' || c === 'gls') return c
   return null
 }
 
@@ -318,7 +341,9 @@ async function applyUpdateToDeal(
 ): Promise<void> {
   const { data: dealData, error: readErr } = await admin
     .from('deals')
-    .select('status, tracking, arrival_date, note, carrier')
+    .select(
+      'status, tracking, arrival_date, note, carrier, tracking_confidence, tracking_needs_review',
+    )
     .eq('id', dealId)
     .maybeSingle()
   if (readErr || !dealData) {
@@ -333,12 +358,37 @@ async function applyUpdateToDeal(
   // dem Tracking schreiben. Ohne expliziten carrier-Write landet der Deal mit
   // carrier=NULL → Poller fällt auf detectAdapter zurück → DPD→DHL-Fehlrouting.
   const carrierLc = normalizeCarrierForDeal(parsed.carrier)
-  if (parsed.tracking && !before.tracking) {
+
+  const canReplaceTracking = shouldReplaceTracking(before, parsed)
+
+  if (parsed.tracking && (!before.tracking || canReplaceTracking)) {
     update.tracking = parsed.tracking
-    changes.push(`Tracking ${parsed.tracking}`)
-    // Carrier nur setzen, wenn wir frisch ein Tracking zuweisen und der Deal
-    // noch keinen Carrier trägt (kein manuell gesetzter Carrier überschreiben).
-    if (carrierLc && !before.carrier) {
+    if (canReplaceTracking) {
+      // Flags des alten (unsicheren) Werts mitkorrigieren.
+      update.tracking_confidence = 'strong'
+      update.tracking_needs_review = false
+      // Review-Fix (Workflow 2026-06-11): Live-Status-Felder des ALTEN
+      // Trackings sind nach dem Replace bedeutungslos (anderer Carrier /
+      // andere Sendung) → nullen, damit die UI keinen stale Status zeigt
+      // und der adaptive Poller (last_polled_at=null → sofort fällig) die
+      // neue Nummer beim nächsten Tick frisch bewertet. tracking_events
+      // bleiben erhalten — die Timeline ist per Dedup-Key an die
+      // Tracking-Nummer gebunden und filtert sich selbst.
+      update.live_status = null
+      update.live_status_last_event = null
+      update.live_status_updated_at = null
+      update.live_eta = null
+      update.last_polled_at = null
+      changes.push(
+        `Tracking korrigiert ${before.tracking} → ${parsed.tracking}`,
+      )
+    } else {
+      changes.push(`Tracking ${parsed.tracking}`)
+    }
+    // Carrier setzen, wenn frisch zugewiesen und Deal noch keinen Carrier
+    // trägt — ODER wenn wir gerade das Tracking ersetzen (alter Carrier
+    // gehörte zum alten, falschen Wert).
+    if (carrierLc && (!before.carrier || canReplaceTracking)) {
       update.carrier = carrierLc
       changes.push(`Carrier ${carrierLc}`)
       // Amazon-Seed (§3.4): Amazon Logistics wird nie gepollt → Live-Status

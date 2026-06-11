@@ -1428,6 +1428,18 @@
   "trackingManualVatRejected": "This looks like a VAT registration number (2 letters + 9 digits) and will not be saved as a tracking number.",
   "@trackingManualVatRejected": { "description": "Inline hint in the manual tracking dialog when the value matches the VAT pattern." },
 
+  "trackingTimelineTitle": "Shipment history",
+  "@trackingTimelineTitle": { "description": "Heading of the Klarna-style event timeline in the deal detail (package 1)." },
+  "trackingTimelineShowAll": "Show all {count} events",
+  "@trackingTimelineShowAll": { "placeholders": { "count": {} } },
+  "trackingTimelineShowLess": "Show less",
+  "trackingEtaLabel": "Estimated delivery: {date}",
+  "@trackingEtaLabel": { "description": "ETA line in the tracking block, date is formatted locale-aware.", "placeholders": { "date": {} } },
+  "trackingCopyTooltip": "Copy tracking number",
+  "trackingCopiedSnack": "Tracking number copied",
+  "trackingOpenCarrierPage": "Track shipment",
+  "@trackingOpenCarrierPage": { "description": "Button opens the carrier's public tracking page in the browser." },
+
   "inboxSectionOrder": "Order",
   "inboxSectionShipping": "Shipping",
   "inboxSectionLinkedTo": "Linked to",

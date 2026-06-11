@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
+import '../models/live_tracking_status.dart';
 import '../services/carrier_service.dart';
 import '../utils/url_helper.dart';
 
@@ -21,6 +22,7 @@ class TrackingChip extends StatelessWidget {
     this.compact = false,
     this.shopAmazonCountry,
     this.dealCarrier,
+    this.liveStatus,
   });
 
   final String tracking;
@@ -36,11 +38,16 @@ class TrackingChip extends StatelessWidget {
   /// Country-Accounts — der Long-Press-Country-Picker wird übersprungen.
   final String? shopAmazonCountry;
 
-  /// Carrier aus `deal.carrier` (lowercase 'dhl'|'amazon'|'dpd'). Wenn
-  /// gesetzt, wird dieser Wert direkt auf [Carrier] gemappt statt
+  /// Carrier aus `deal.carrier` (lowercase 'dhl'|'amazon'|'dpd'|'gls'|'ups').
+  /// Wenn gesetzt, wird dieser Wert direkt auf [Carrier] gemappt statt
   /// `CarrierService.detect` client-seitig neu zu rechnen. Fallback auf
   /// detect nur wenn `null`.
   final String? dealCarrier;
+
+  /// Live-Status des Deals (Paket 3): rendert einen farbcodierten Status-Dot
+  /// vor der Carrier-Pille (grün=zugestellt, orange=in Zustellung,
+  /// blau=unterwegs, rot=Problem). `null` = kein Dot (wie bisher).
+  final LiveTrackingStatus? liveStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +70,7 @@ class TrackingChip extends StatelessWidget {
       detected: detected,
       compact: compact,
       shopAmazonCountry: shopAmazonCountry,
+      liveStatus: liveStatus,
     );
   }
 
@@ -72,6 +80,9 @@ class TrackingChip extends StatelessWidget {
         'dhl' => Carrier.dhl,
         'amazon' => Carrier.amazon,
         'dpd' => Carrier.dpd,
+        'gls' => Carrier.gls,
+        'ups' => Carrier.ups,
+        'hermes' => Carrier.hermes,
         _ => Carrier.unknown,
       };
 }
@@ -82,12 +93,27 @@ class _ChipBody extends StatelessWidget {
     required this.detected,
     required this.compact,
     required this.shopAmazonCountry,
+    this.liveStatus,
   });
 
   final String tracking;
   final Carrier detected;
   final bool compact;
   final String? shopAmazonCountry;
+  final LiveTrackingStatus? liveStatus;
+
+  /// Status-Dot-Farbe (Paket 3) — gleiche Farb-Semantik wie der
+  /// `_LiveStatusSlot` im TrackingStatusBlock.
+  static Color? _statusColor(BuildContext context, LiveTrackingStatus? s) =>
+      switch (s) {
+        null => null,
+        LiveTrackingStatus.pending => AppTheme.textMutedOf(context),
+        LiveTrackingStatus.inTransit => AppTheme.accentTextOf(context),
+        LiveTrackingStatus.outForDelivery => AppTheme.warningTextOf(context),
+        LiveTrackingStatus.delivered => AppTheme.successTextOf(context),
+        LiveTrackingStatus.exception => AppTheme.dangerTextOf(context),
+        LiveTrackingStatus.expired => AppTheme.textMutedOf(context),
+      };
 
   Future<void> _openWith(
     BuildContext context,
@@ -271,9 +297,20 @@ class _ChipBody extends StatelessWidget {
     // Tracking-Nummer in compact-Mode hart auf 160px — der Chip wird so
     // breit wie sein Inhalt und passt in DataCells, deal_table-SizedBox-
     // Wrappern und freie Karten gleichermaßen.
+    final dotColor = _statusColor(context, liveStatus);
+
     final inner = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (dotColor != null) ...[
+          Container(
+            key: const Key('tracking-chip-status-dot'),
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: dotColor),
+          ),
+          const SizedBox(width: 5),
+        ],
         _CarrierPill(carrier: detected),
         if (urlCountry != null) ...[
           const SizedBox(width: 4),

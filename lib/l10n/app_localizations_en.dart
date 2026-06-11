@@ -3693,6 +3693,31 @@ class AppLocalizationsEn extends AppLocalizations {
       'This looks like a VAT registration number (2 letters + 9 digits) and will not be saved as a tracking number.';
 
   @override
+  String get trackingTimelineTitle => 'Shipment history';
+
+  @override
+  String trackingTimelineShowAll(Object count) {
+    return 'Show all $count events';
+  }
+
+  @override
+  String get trackingTimelineShowLess => 'Show less';
+
+  @override
+  String trackingEtaLabel(Object date) {
+    return 'Estimated delivery: $date';
+  }
+
+  @override
+  String get trackingCopyTooltip => 'Copy tracking number';
+
+  @override
+  String get trackingCopiedSnack => 'Tracking number copied';
+
+  @override
+  String get trackingOpenCarrierPage => 'Track shipment';
+
+  @override
   String get inboxSectionOrder => 'Order';
 
   @override

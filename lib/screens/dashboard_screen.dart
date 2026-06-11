@@ -7,12 +7,14 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/active_workspace_provider.dart';
 import '../providers/deals_provider.dart';
+import '../providers/navigation_intents_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../providers/stock_provider.dart';
 import '../utils/responsive.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/statistics/kpi_card.dart';
+import 'main_tab.dart';
 import 'purchase_orders_screen.dart';
 
 /// Maximale Inhaltsbreite des Dashboards auf großen Viewports (Desktop,
@@ -299,14 +301,16 @@ class _KpiGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // Drilldown-Ziele (Paket 3): KPI-Tap springt zum passenden Tab via
+    // NavigationIntentsProvider (MainScreen konsumiert den Intent).
     final kpis = [
-      (Icons.shopping_cart_outlined, l10n.dashboardKpiOpenOrders, '${provider.openOrdersCount}', AppTheme.accent),
-      (Icons.local_shipping_outlined, l10n.dashboardKpiShipping, '${provider.openDeliveriesCount}', AppTheme.warning),
-      (Icons.today_outlined, l10n.dashboardKpiArrivedToday, '${provider.arrivedTodayCount}', AppTheme.info),
-      (Icons.trending_up_rounded, l10n.dashboardKpiTotalProfit, fmt.format(provider.totalProfit), AppTheme.success),
-      (Icons.account_balance_wallet_outlined, l10n.dashboardKpiOpenAmount, fmt.format(provider.openAmount), AppTheme.warning),
-      (Icons.warning_amber_rounded, l10n.dashboardKpiCriticalStock, '${stock.criticalStockCount}', AppTheme.danger),
-      (Icons.receipt_long_outlined, l10n.dashboardKpiMissingInvoice, '${provider.missingInvoiceCount}', AppTheme.purple),
+      (Icons.shopping_cart_outlined, l10n.dashboardKpiOpenOrders, '${provider.openOrdersCount}', AppTheme.accent, MainTab.deals),
+      (Icons.local_shipping_outlined, l10n.dashboardKpiShipping, '${provider.openDeliveriesCount}', AppTheme.warning, MainTab.deals),
+      (Icons.today_outlined, l10n.dashboardKpiArrivedToday, '${provider.arrivedTodayCount}', AppTheme.info, MainTab.deals),
+      (Icons.trending_up_rounded, l10n.dashboardKpiTotalProfit, fmt.format(provider.totalProfit), AppTheme.success, MainTab.stats),
+      (Icons.account_balance_wallet_outlined, l10n.dashboardKpiOpenAmount, fmt.format(provider.openAmount), AppTheme.warning, MainTab.stats),
+      (Icons.warning_amber_rounded, l10n.dashboardKpiCriticalStock, '${stock.criticalStockCount}', AppTheme.danger, MainTab.warehouse),
+      (Icons.receipt_long_outlined, l10n.dashboardKpiMissingInvoice, '${provider.missingInvoiceCount}', AppTheme.purple, MainTab.deals),
     ];
 
     return LayoutBuilder(
@@ -329,7 +333,15 @@ class _KpiGrid extends StatelessWidget {
             final itemWidth = (width - (cols - 1) * 12) / cols;
             return SizedBox(
               width: itemWidth,
-              child: KpiCard(icon: k.$1, label: k.$2, value: k.$3, accent: k.$4),
+              child: KpiCard(
+                icon: k.$1,
+                label: k.$2,
+                value: k.$3,
+                accent: k.$4,
+                onTap: () => context
+                    .read<NavigationIntentsProvider>()
+                    .requestTab(k.$5),
+              ),
             );
           }).toList(),
         );

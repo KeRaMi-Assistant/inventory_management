@@ -11,6 +11,7 @@ import '../providers/billing_provider.dart';
 import '../providers/filter_provider.dart';
 import '../providers/catalog_provider.dart';
 import '../providers/deals_provider.dart';
+import '../providers/navigation_intents_provider.dart';
 import '../providers/purchasing_provider.dart';
 import '../providers/stock_provider.dart';
 import '../services/csv_service.dart';
@@ -451,9 +452,34 @@ class _MainScreenState extends State<MainScreen> {
     };
   }
 
+  /// Konsumiert pendende Navigations-Intents (Paket 3): Push-Tap oder
+  /// KPI-Drilldown → Tab-Wechsel + optional Deal-Dialog. Läuft post-frame,
+  /// damit kein setState-während-build entsteht; consume() davor verhindert
+  /// Mehrfach-Verarbeitung bei schnellen Rebuilds.
+  void _consumeNavigationIntent(NavigationIntentsProvider intents) {
+    final tab = intents.pendingTab;
+    if (tab == null) return;
+    final dealId = intents.pendingDealId;
+    intents.consume();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _selectedIndex = tab);
+      if (dealId == null) return;
+      final deals = context.read<DealsProvider>().deals;
+      final idx = deals.indexWhere((d) => d.id == dealId);
+      if (idx == -1) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AddEditDealDialog(deal: deals[idx]),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    _consumeNavigationIntent(context.watch<NavigationIntentsProvider>());
     return Consumer2<DealsProvider, BillingProvider>(
       builder: (context, provider, billing, _) {
         // T3.2/T3.3: Der Shell-Switch (narrow/extended via Breakpoints) +

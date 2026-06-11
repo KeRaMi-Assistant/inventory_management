@@ -152,17 +152,23 @@ class _DealTableState extends State<DealTable> {
                   Expanded(
                     child: deals.isEmpty
                         ? const _EmptyState()
-                        : ListView.separated(
-                            padding:
-                                const EdgeInsets.fromLTRB(12, 8, 12, 100),
-                            itemCount: deals.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, i) => DealCard(
-                              deal: deals[i],
-                              provider: provider,
-                              filters: filters,
-                              onOpenTicket: widget.onOpenTicket,
+                        // Pull-to-Refresh (Paket 3): Mobile-Standard zum
+                        // Resync — Desktop-Tabelle bleibt ohne (kein
+                        // Pull-Gesten-Idiom mit Maus).
+                        : RefreshIndicator(
+                            onRefresh: provider.loadData,
+                            child: ListView.separated(
+                              padding:
+                                  const EdgeInsets.fromLTRB(12, 8, 12, 100),
+                              itemCount: deals.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (context, i) => DealCard(
+                                deal: deals[i],
+                                provider: provider,
+                                filters: filters,
+                                onOpenTicket: widget.onOpenTicket,
+                              ),
                             ),
                           ),
                   )
@@ -740,6 +746,8 @@ class _DealRowState extends State<_DealRow> {
                           child: TrackingChip(
                             tracking: deal.tracking!,
                             compact: true,
+                            dealCarrier: deal.carrier,
+                            liveStatus: deal.liveStatus,
                             shopAmazonCountry: amazonCountryFromShop(
                               shopName: shop?.name,
                               region: shop?.region,

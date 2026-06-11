@@ -1428,6 +1428,18 @@
   "trackingManualVatRejected": "Diese Eingabe sieht wie eine Umsatzsteuer-ID aus (2 Buchstaben + 9 Ziffern) und wird nicht als Sendungsnummer gespeichert.",
   "@trackingManualVatRejected": { "description": "Inline-Hinweis im manuellen Tracking-Dialog wenn der Wert dem VAT-Muster entspricht." },
 
+  "trackingTimelineTitle": "Sendungsverlauf",
+  "@trackingTimelineTitle": { "description": "Überschrift der Klarna-Style-Event-Timeline im Deal-Detail (Paket 1)." },
+  "trackingTimelineShowAll": "Alle {count} Ereignisse anzeigen",
+  "@trackingTimelineShowAll": { "placeholders": { "count": {} } },
+  "trackingTimelineShowLess": "Weniger anzeigen",
+  "trackingEtaLabel": "Voraussichtliche Zustellung: {date}",
+  "@trackingEtaLabel": { "description": "ETA-Zeile im Tracking-Block, date ist lokalisiert formatiert.", "placeholders": { "date": {} } },
+  "trackingCopyTooltip": "Sendungsnummer kopieren",
+  "trackingCopiedSnack": "Sendungsnummer kopiert",
+  "trackingOpenCarrierPage": "Sendung verfolgen",
+  "@trackingOpenCarrierPage": { "description": "Button öffnet die öffentliche Tracking-Seite des Carriers im Browser." },
+
   "inboxSectionOrder": "Bestellung",
   "inboxSectionShipping": "Versand",
   "inboxSectionLinkedTo": "Verknüpft mit",

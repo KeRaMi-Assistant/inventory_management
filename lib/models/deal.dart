@@ -51,6 +51,12 @@ class Deal {
   /// `null` wenn noch nie gepollt.
   final DateTime? liveStatusUpdatedAt;
 
+  /// Geschätztes Zustelldatum (Carrier-API oder Versand-Mail).
+  /// `null` = keine Prognose bekannt. Wird NUR vom Backend geschrieben
+  /// (tracking-poll) — bewusst nicht Teil von [toSupabaseInsert], damit
+  /// Client-Saves den Poll-Wert nie mit Stale-Daten überschreiben.
+  final DateTime? liveEta;
+
   const Deal({
     required this.id,
     required this.product,
@@ -81,6 +87,7 @@ class Deal {
     this.liveStatus,
     this.liveStatusLastEvent,
     this.liveStatusUpdatedAt,
+    this.liveEta,
   });
 
   /// Sentinel id used for deals not yet persisted (server assigns BIGSERIAL).
@@ -141,6 +148,7 @@ class Deal {
         'liveStatus': liveStatus?.toJson(),
         'liveStatusLastEvent': liveStatusLastEvent,
         'liveStatusUpdatedAt': liveStatusUpdatedAt?.toIso8601String(),
+        'liveEta': liveEta?.toIso8601String(),
       };
 
   factory Deal.fromJson(Map<String, dynamic> json) => Deal(
@@ -186,6 +194,9 @@ class Deal {
         liveStatusLastEvent: json['liveStatusLastEvent'] as String?,
         liveStatusUpdatedAt: json['liveStatusUpdatedAt'] != null
             ? DateTime.parse(json['liveStatusUpdatedAt'] as String)
+            : null,
+        liveEta: json['liveEta'] != null
+            ? DateTime.parse(json['liveEta'] as String)
             : null,
       );
 
@@ -266,6 +277,9 @@ class Deal {
       liveStatusUpdatedAt: row['live_status_updated_at'] != null
           ? DateTime.parse(row['live_status_updated_at'] as String)
           : null,
+      liveEta: row['live_eta'] != null
+          ? DateTime.parse(row['live_eta'] as String)
+          : null,
     );
   }
 
@@ -314,6 +328,7 @@ class Deal {
     Object? liveStatus = _sentinel,
     Object? liveStatusLastEvent = _sentinel,
     Object? liveStatusUpdatedAt = _sentinel,
+    Object? liveEta = _sentinel,
   }) =>
       Deal(
         id: id ?? this.id,
@@ -361,6 +376,7 @@ class Deal {
         liveStatusUpdatedAt: liveStatusUpdatedAt == _sentinel
             ? this.liveStatusUpdatedAt
             : liveStatusUpdatedAt as DateTime?,
+        liveEta: liveEta == _sentinel ? this.liveEta : liveEta as DateTime?,
       );
 }
 

@@ -24,6 +24,7 @@ import 'providers/purchasing_provider.dart';
 import 'providers/inbox_provider.dart';
 import 'providers/deals_provider.dart';
 import 'providers/invites_provider.dart';
+import 'providers/navigation_intents_provider.dart';
 import 'providers/onboarding_provider.dart';
 import 'providers/statistics_filter_provider.dart';
 import 'providers/stock_provider.dart';
@@ -72,12 +73,19 @@ Future<void> main() async {
   await prefs.load();
 
   final pushService = PushService(Supabase.instance.client);
+  // Deep-Links (Paket 3): Notification-Taps landen als Intent im
+  // NavigationIntentsProvider; MainScreen springt zum Ziel-Tab/Deal.
+  // VOR init() verdrahten, damit auch der Cold-Start-Pfad
+  // (getInitialMessage) den Hook schon hat.
+  final navigationIntents = NavigationIntentsProvider();
+  pushService.onNotificationTap = navigationIntents.handlePushData;
   // Best-effort: läuft auch ohne Firebase-Config still durch.
   await pushService.init();
 
   runApp(InventoryApp(
     preferences: prefs,
     pushService: pushService,
+    navigationIntents: navigationIntents,
     publicProfileHandle: publicHandle,
   ));
 }
@@ -105,11 +113,13 @@ final GlobalKey<NavigatorState> _rootNavigator =
 class InventoryApp extends StatelessWidget {
   final AppPreferencesProvider preferences;
   final PushService pushService;
+  final NavigationIntentsProvider navigationIntents;
   final String? publicProfileHandle;
   const InventoryApp({
     super.key,
     required this.preferences,
     required this.pushService,
+    required this.navigationIntents,
     this.publicProfileHandle,
   });
 
@@ -134,6 +144,9 @@ class InventoryApp extends StatelessWidget {
           create: (_) => DemoDataService(supabase),
         ),
         Provider<PushService>.value(value: pushService),
+        ChangeNotifierProvider<NavigationIntentsProvider>.value(
+          value: navigationIntents,
+        ),
         Provider<NotificationPreferencesService>(
           create: (_) => NotificationPreferencesService(supabase),
         ),

@@ -6662,6 +6662,48 @@ abstract class AppLocalizations {
   /// **'Diese Eingabe sieht wie eine Umsatzsteuer-ID aus (2 Buchstaben + 9 Ziffern) und wird nicht als Sendungsnummer gespeichert.'**
   String get trackingManualVatRejected;
 
+  /// Überschrift der Klarna-Style-Event-Timeline im Deal-Detail (Paket 1).
+  ///
+  /// In de, this message translates to:
+  /// **'Sendungsverlauf'**
+  String get trackingTimelineTitle;
+
+  /// No description provided for @trackingTimelineShowAll.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle {count} Ereignisse anzeigen'**
+  String trackingTimelineShowAll(Object count);
+
+  /// No description provided for @trackingTimelineShowLess.
+  ///
+  /// In de, this message translates to:
+  /// **'Weniger anzeigen'**
+  String get trackingTimelineShowLess;
+
+  /// ETA-Zeile im Tracking-Block, date ist lokalisiert formatiert.
+  ///
+  /// In de, this message translates to:
+  /// **'Voraussichtliche Zustellung: {date}'**
+  String trackingEtaLabel(Object date);
+
+  /// No description provided for @trackingCopyTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Sendungsnummer kopieren'**
+  String get trackingCopyTooltip;
+
+  /// No description provided for @trackingCopiedSnack.
+  ///
+  /// In de, this message translates to:
+  /// **'Sendungsnummer kopiert'**
+  String get trackingCopiedSnack;
+
+  /// Button öffnet die öffentliche Tracking-Seite des Carriers im Browser.
+  ///
+  /// In de, this message translates to:
+  /// **'Sendung verfolgen'**
+  String get trackingOpenCarrierPage;
+
   /// No description provided for @inboxSectionOrder.
   ///
   /// In de, this message translates to:

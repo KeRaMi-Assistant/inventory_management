@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' show Platform;
 
 import 'package:firebase_core/firebase_core.dart';
@@ -24,6 +25,13 @@ class PushService {
   String? _registeredToken;
   StreamSubscription<String>? _tokenRefreshSub;
   StreamSubscription<RemoteMessage>? _foregroundSub;
+  StreamSubscription<RemoteMessage>? _openedAppSub;
+
+  /// Deep-Link-Hook (Paket 3): wird mit dem FCM-`data`-Payload aufgerufen,
+  /// wenn der User eine Notification antippt (Background-Tap, Cold-Start
+  /// und Foreground-Local-Notification-Tap). main.dart verdrahtet das mit
+  /// dem NavigationIntentsProvider.
+  void Function(Map<String, dynamic> data)? onNotificationTap;
 
   static const _androidChannel = AndroidNotificationChannel(
     'inventoryos_default',
@@ -59,6 +67,19 @@ class PushService {
         FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
     _tokenRefreshSub =
         FirebaseMessaging.instance.onTokenRefresh.listen(_persistToken);
+
+    // Deep-Links (Paket 3): Tap auf eine System-Notification, während die
+    // App im Background lief …
+    _openedAppSub = FirebaseMessaging.onMessageOpenedApp.listen(
+      (message) => onNotificationTap?.call(message.data),
+    );
+    // … oder Cold-Start aus einer Notification heraus.
+    try {
+      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      if (initial != null) onNotificationTap?.call(initial.data);
+    } catch (e) {
+      if (kDebugMode) debugPrint('getInitialMessage failed: $e');
+    }
   }
 
   Future<void> _setupLocalNotifications() async {
@@ -75,7 +96,21 @@ class PushService {
         requestSoundPermission: false,
       ),
     );
-    await _localNotifications.initialize(initSettings);
+    await _localNotifications.initialize(
+      initSettings,
+      // Tap auf eine Foreground-Local-Notification → gleicher Deep-Link-Pfad
+      // wie System-Notification-Taps. Payload = JSON-encodete FCM-data.
+      onDidReceiveNotificationResponse: (response) {
+        final payload = response.payload;
+        if (payload == null || payload.isEmpty) return;
+        try {
+          final data = jsonDecode(payload);
+          if (data is Map<String, dynamic>) onNotificationTap?.call(data);
+        } catch (_) {
+          // defekter Payload → kein Sprung, kein Crash
+        }
+      },
+    );
     await _localNotifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
@@ -161,6 +196,7 @@ class PushService {
         ),
         iOS: const DarwinNotificationDetails(presentAlert: true, presentSound: true),
       ),
+      payload: message.data.isEmpty ? null : jsonEncode(message.data),
     );
   }
 
@@ -177,6 +213,7 @@ class PushService {
   Future<void> dispose() async {
     await _tokenRefreshSub?.cancel();
     await _foregroundSub?.cancel();
+    await _openedAppSub?.cancel();
   }
 }
 
