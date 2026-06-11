@@ -10,6 +10,7 @@ import {
   buildAckXml,
   DPD_STATUS_MAP,
   dpdPushToParsed,
+  isStatusRegression,
   parseDpdStatusDate,
 } from './index.ts'
 
@@ -127,4 +128,31 @@ Deno.test('dpdPushToParsed: fehlendes statusdate → Event ohne occurredAt', () 
   assert(r)
   assertEquals(r!.parsed.statusTimestamp, undefined)
   assertEquals(r!.parsed.events![0].occurredAt, undefined)
+})
+
+// ── Monotonie-Guard (Out-of-Order-Pushes) ────────────────────────────────
+
+Deno.test('isStatusRegression: verspäteter Scan dreht Fortschritt nicht zurück', () => {
+  assertEquals(isStatusRegression('out_for_delivery', 'in_transit'), true)
+  assertEquals(isStatusRegression('out_for_delivery', 'pending'), true)
+  assertEquals(isStatusRegression('in_transit', 'pending'), true)
+})
+
+Deno.test('isStatusRegression: delivered ist terminal', () => {
+  assertEquals(isStatusRegression('delivered', 'in_transit'), true)
+  assertEquals(isStatusRegression('delivered', 'exception'), true)
+  assertEquals(isStatusRegression('delivered', 'delivered'), false)
+})
+
+Deno.test('isStatusRegression: exception überschreibt + wird überschrieben', () => {
+  assertEquals(isStatusRegression('out_for_delivery', 'exception'), false)
+  assertEquals(isStatusRegression('exception', 'in_transit'), false)
+  assertEquals(isStatusRegression('exception', 'delivered'), false)
+})
+
+Deno.test('isStatusRegression: Fortschritt + Erst-Status erlaubt', () => {
+  assertEquals(isStatusRegression(null, 'pending'), false)
+  assertEquals(isStatusRegression('pending', 'in_transit'), false)
+  assertEquals(isStatusRegression('in_transit', 'out_for_delivery'), false)
+  assertEquals(isStatusRegression('in_transit', 'in_transit'), false)
 })

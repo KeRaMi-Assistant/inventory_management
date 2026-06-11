@@ -106,6 +106,34 @@ export function buildAckXml(pushid: string): string {
   return `<push><pushid>${safe}</pushid><status>OK</status></push>`
 }
 
+/// Monotonie-Guard für den PUSH-Kanal (Out-of-Order-Schutz): DPD liefert
+/// Scans einzeln in ~15-min-Batches — ein verspäteter `pickup_depot` darf
+/// einen bereits gesetzten `out_for_delivery`/`delivered` NICHT zurückdrehen.
+/// (Der Poll-Kanal braucht das nicht: Polls holen immer den Gesamtzustand.)
+/// Regeln:
+///   * delivered ist terminal — nichts überschreibt es (auch exception nicht).
+///   * exception überschreibt jeden Nicht-delivered-Status (echtes Problem).
+///   * echter Fortschritt überschreibt exception (Problem gelöst).
+///   * sonst: nur ranggleich/aufwärts (pending<in_transit<out_for_delivery<delivered).
+/// Events werden davon NICHT betroffen — die Timeline bekommt jeden Scan.
+const STATUS_RANK: Readonly<Record<string, number>> = {
+  pending: 0,
+  in_transit: 1,
+  out_for_delivery: 2,
+  delivered: 3,
+}
+
+export function isStatusRegression(
+  current: LiveStatus | null,
+  incoming: LiveStatus,
+): boolean {
+  if (!current || current === 'unknown' || current === 'expired') return false
+  if (current === 'delivered') return incoming !== 'delivered'
+  if (incoming === 'exception') return false
+  if (current === 'exception') return false
+  return (STATUS_RANK[incoming] ?? 0) < (STATUS_RANK[current] ?? 0)
+}
+
 /// PII-armes Redaction-Pattern (identisch zu tracking_detection.ts).
 function redact(value: string): string {
   if (!value) return '∅'
@@ -219,7 +247,14 @@ Deno.serve(async (req) => {
   const pushCtx = createPushContext('dpd-push')
   const nowIso = new Date().toISOString()
   for (const deal of deals) {
-    const patch = buildLiveStatusUpdate(deal, converted.parsed, nowIso)
+    // Out-of-Order-Schutz: regressive Status-Pushes patchen den Deal nicht
+    // (Timeline-Event unten wird trotzdem geschrieben).
+    const incoming = converted.parsed.status as LiveStatus
+    const regression = incoming !== 'unknown' &&
+      isStatusRegression(deal.live_status, incoming)
+    const patch = regression
+      ? null
+      : buildLiveStatusUpdate(deal, converted.parsed, nowIso)
     const update: Record<string, unknown> = patch ?? {}
     update.last_polled_at = nowIso
     // Carrier ggf. nachziehen: ein Push beweist, dass es DPD ist.
