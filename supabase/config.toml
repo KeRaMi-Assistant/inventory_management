@@ -26,6 +26,14 @@ project_id = "inventory_management"
 [functions.tracking-poll]
 verify_jwt = false
 
+# ── dpd-push: JWT-Verifikation AUS (DPD Tracking Push Webhook) ────────────
+# DPDs Push-Server kann kein Supabase-JWT senden. Auth läuft stattdessen
+# über das PFLICHT-Query-Token `token=<DPD_PUSH_TOKEN>` (Secret via
+# `supabase secrets set`, fail-closed 403/503 in der Function) + Soft-Check
+# der dokumentierten DPD-Absender-IP. Gleiches Muster wie tracking-poll.
+[functions.dpd-push]
+verify_jwt = false
+
 # ── inbox-poll: JWT-Verifikation AUS (Fix 2026-06-03) ─────────────────────
 # Befund via net._http_response: der pg_cron-Job `inbox-poll-5min` rief die
 # Function mit `Authorization: Bearer <CRON_SECRET>` (KEIN JWT). Bei
