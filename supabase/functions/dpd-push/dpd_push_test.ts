@@ -156,3 +156,11 @@ Deno.test('isStatusRegression: Fortschritt + Erst-Status erlaubt', () => {
   assertEquals(isStatusRegression('in_transit', 'out_for_delivery'), false)
   assertEquals(isStatusRegression('in_transit', 'in_transit'), false)
 })
+
+Deno.test('parseDpdStatusDate: Date.UTC-Overflow wird verworfen (31.02.)', () => {
+  // Review-Fix: 31.02.2026 würde sonst still zum 03.03. überrollen.
+  assertEquals(parseDpdStatusDate('31022026120000'), undefined)
+  assertEquals(parseDpdStatusDate('30022026120000'), undefined)
+  // Gültiger Schalttag bleibt gültig (2028 ist Schaltjahr).
+  assertEquals(parseDpdStatusDate('29022028120000'), '2028-02-29T12:00:00.000Z')
+})

@@ -96,6 +96,14 @@ export function parseDpdStatusDate(raw: string | null | undefined): string | und
   }
   const d = new Date(Date.UTC(yyyy, mm - 1, dd, hh, mi, ss))
   if (Number.isNaN(d.getTime())) return undefined
+  // Round-Trip-Check (Review-Fix): Date.UTC rollt ungültige Tage über
+  // (31.02. → 03.03.) — solche Stempel verwerfen statt falsch übernehmen.
+  if (
+    d.getUTCFullYear() !== yyyy || d.getUTCMonth() !== mm - 1 ||
+    d.getUTCDate() !== dd
+  ) {
+    return undefined
+  }
   return d.toISOString()
 }
 
@@ -198,7 +206,10 @@ Deno.serve(async (req) => {
     console.log(JSON.stringify({ event: 'dpd_push_ip_mismatch' }))
   }
 
-  // DPD-Spec: ohne pushid KEIN Antwort-XML.
+  // DPD-Spec: ohne pushid KEIN Antwort-XML. Der 400 ist UNKRITISCH fürs
+  // Retry-Verhalten: DPDs eigenes System sendet pushid immer mit — hierher
+  // kommt ohne pushid nur Nicht-DPD-Traffic, und der scheitert ohnehin
+  // schon an der Token-Wand darüber. (Review-Triage: kein Retry-Storm-Pfad.)
   const pushid = params.get('pushid')
   if (!pushid || !/^\d{1,20}$/.test(pushid)) {
     return new Response('missing pushid', { status: 400, headers: corsHeaders })
@@ -217,6 +228,13 @@ Deno.serve(async (req) => {
     console.log(JSON.stringify({ event: 'dpd_push_unparsable', status: params.get('status') ?? null }))
     return ack()
   }
+
+  // Enumeration-Hinweis (Review-Triage): matched und unmatched pnr liefern
+  // die IDENTISCHE ACK-Response — ein Token-Inhaber bekommt also kein
+  // Response-Oracle, ob eine pnr im System existiert. Schreibzugriff auf
+  // Status setzt eine exakt passende pnr voraus; das Token (≥16 Zeichen,
+  // nur DPD + Stakeholder bekannt) bleibt die Wand. Unmatched-Volumen ist
+  // via dpd_push_no_deal-Telemetrie beobachtbar.
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -246,6 +264,12 @@ Deno.serve(async (req) => {
 
   const pushCtx = createPushContext('dpd-push')
   const nowIso = new Date().toISOString()
+  // Write-Fehler-Tracking (Review-Fix): scheitert irgendein persistenter
+  // Write, antworten wir am Ende 500 statt ACK → DPD puffert den Datensatz
+  // und retried stündlich (max. 48h). Alle Pfade sind idempotent (Deal-
+  // Update duplicate-safe, Events dedup-UNIQUE, Push claim-then-send,
+  // Activity-Log delivered-Guard) — der Retry heilt, ohne zu duplizieren.
+  let hadWriteError = false
   for (const deal of deals) {
     // Out-of-Order-Schutz: regressive Status-Pushes patchen den Deal nicht
     // (Timeline-Event unten wird trotzdem geschrieben).
@@ -271,6 +295,7 @@ Deno.serve(async (req) => {
     const { error: updErr } = await query
     if (updErr) {
       console.warn('dpd-push: deal update failed', deal.id, updErr.message)
+      hadWriteError = true
       continue
     }
 
@@ -288,7 +313,13 @@ Deno.serve(async (req) => {
           onConflict: 'deal_id,tracking,occurred_at,description',
           ignoreDuplicates: true,
         })
-      if (evErr) console.warn('dpd-push: tracking_events upsert failed', deal.id, evErr.message)
+      if (evErr) {
+        console.warn('dpd-push: tracking_events upsert failed', deal.id, evErr.message)
+        // Kein continue: live_status ist bereits persistiert — den Push
+        // dafür noch zu unterdrücken wäre schlechter. Der 500 am Ende
+        // holt den Event über DPDs Retry idempotent nach.
+        hadWriteError = true
+      }
     }
 
     const newStatus = converted.parsed.status !== 'unknown'
@@ -298,7 +329,14 @@ Deno.serve(async (req) => {
       await maybeSendStatusPush(admin, pushCtx, deal, newStatus, converted.parsed)
     }
 
-    if (patch && converted.parsed.status === 'delivered') {
+    // Delivered-Guard (Review-Fix): nur beim ECHTEN Übergang loggen —
+    // buildLiveStatusUpdate liefert bei delivered immer ein Patch, ein
+    // wiederholter delivered-Push (oder DPD-Retry) würde sonst einen
+    // doppelten Activity-Log-Eintrag erzeugen.
+    if (
+      patch && converted.parsed.status === 'delivered' &&
+      deal.live_status !== 'delivered'
+    ) {
       await admin.from('activity_log').insert({
         workspace_id: deal.workspace_id,
         user_id: deal.user_id,
@@ -309,5 +347,8 @@ Deno.serve(async (req) => {
     }
   }
 
+  if (hadWriteError) {
+    return new Response('partial write failure', { status: 500, headers: corsHeaders })
+  }
   return ack()
 })
