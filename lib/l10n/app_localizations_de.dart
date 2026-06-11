@@ -5194,16 +5194,13 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get settingsMailboxPlanStarter => '1 Postfach · 7 Tage';
+  String get settingsMailboxPlanTeam => '1 Postfach · 14 Tage Verlauf';
 
   @override
-  String get settingsMailboxPlanPro => '3 Postfächer · 14 Tage';
+  String get settingsMailboxPlanBusiness => '5 Postfächer · 30 Tage Verlauf';
 
   @override
-  String get settingsMailboxPlanBusiness => '10 Postfächer · 30 Tage';
-
-  @override
-  String get settingsMailboxPlanUltimate => '15 Postfächer · 90 Tage';
+  String get settingsMailboxPlanEnterprise => '15 Postfächer · 30 Tage Verlauf';
 
   @override
   String settingsShopsAmazonAlreadyPresent(int skipped) {

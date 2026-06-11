@@ -2322,17 +2322,14 @@
     "placeholders": { "plan": { "type": "String" } }
   },
 
-  "settingsMailboxPlanStarter": "1 mailbox · 7 days",
-  "@settingsMailboxPlanStarter": { "description": "Plan comparison row Starter in the mailbox tab." },
+  "settingsMailboxPlanTeam": "1 mailbox · 14-day history",
+  "@settingsMailboxPlanTeam": { "description": "Plan comparison row Team in the mailbox tab (values = pricing_plan.dart)." },
 
-  "settingsMailboxPlanPro": "3 mailboxes · 14 days",
-  "@settingsMailboxPlanPro": { "description": "Plan comparison row Pro in the mailbox tab." },
+  "settingsMailboxPlanBusiness": "5 mailboxes · 30-day history",
+  "@settingsMailboxPlanBusiness": { "description": "Plan comparison row Business in the mailbox tab (values = pricing_plan.dart)." },
 
-  "settingsMailboxPlanBusiness": "10 mailboxes · 30 days",
-  "@settingsMailboxPlanBusiness": { "description": "Plan comparison row Business in the mailbox tab." },
-
-  "settingsMailboxPlanUltimate": "15 mailboxes · 90 days",
-  "@settingsMailboxPlanUltimate": { "description": "Plan comparison row Ultimate in the mailbox tab." },
+  "settingsMailboxPlanEnterprise": "15 mailboxes · 30-day history",
+  "@settingsMailboxPlanEnterprise": { "description": "Plan comparison row Enterprise in the mailbox tab (values = pricing_plan.dart)." },
 
   "settingsShopsAmazonAlreadyPresent": "Amazon shops already present ({skipped} skipped).",
   "@settingsShopsAmazonAlreadyPresent": {

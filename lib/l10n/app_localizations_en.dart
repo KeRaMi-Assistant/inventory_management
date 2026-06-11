@@ -5163,16 +5163,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsMailboxPlanStarter => '1 mailbox · 7 days';
+  String get settingsMailboxPlanTeam => '1 mailbox · 14-day history';
 
   @override
-  String get settingsMailboxPlanPro => '3 mailboxes · 14 days';
+  String get settingsMailboxPlanBusiness => '5 mailboxes · 30-day history';
 
   @override
-  String get settingsMailboxPlanBusiness => '10 mailboxes · 30 days';
-
-  @override
-  String get settingsMailboxPlanUltimate => '15 mailboxes · 90 days';
+  String get settingsMailboxPlanEnterprise => '15 mailboxes · 30-day history';
 
   @override
   String settingsShopsAmazonAlreadyPresent(int skipped) {

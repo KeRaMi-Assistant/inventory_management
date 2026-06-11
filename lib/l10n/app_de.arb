@@ -2322,17 +2322,14 @@
     "placeholders": { "plan": { "type": "String" } }
   },
 
-  "settingsMailboxPlanStarter": "1 Postfach · 7 Tage",
-  "@settingsMailboxPlanStarter": { "description": "Plan-Vergleichszeile Starter im Postfach-Tab." },
+  "settingsMailboxPlanTeam": "1 Postfach · 14 Tage Verlauf",
+  "@settingsMailboxPlanTeam": { "description": "Plan-Vergleichszeile Team im Postfach-Tab (Werte = pricing_plan.dart)." },
 
-  "settingsMailboxPlanPro": "3 Postfächer · 14 Tage",
-  "@settingsMailboxPlanPro": { "description": "Plan-Vergleichszeile Pro im Postfach-Tab." },
+  "settingsMailboxPlanBusiness": "5 Postfächer · 30 Tage Verlauf",
+  "@settingsMailboxPlanBusiness": { "description": "Plan-Vergleichszeile Business im Postfach-Tab (Werte = pricing_plan.dart)." },
 
-  "settingsMailboxPlanBusiness": "10 Postfächer · 30 Tage",
-  "@settingsMailboxPlanBusiness": { "description": "Plan-Vergleichszeile Business im Postfach-Tab." },
-
-  "settingsMailboxPlanUltimate": "15 Postfächer · 90 Tage",
-  "@settingsMailboxPlanUltimate": { "description": "Plan-Vergleichszeile Ultimate im Postfach-Tab." },
+  "settingsMailboxPlanEnterprise": "15 Postfächer · 30 Tage Verlauf",
+  "@settingsMailboxPlanEnterprise": { "description": "Plan-Vergleichszeile Enterprise im Postfach-Tab (Werte = pricing_plan.dart)." },
 
   "settingsShopsAmazonAlreadyPresent": "Amazon-Shops sind bereits vorhanden ({skipped} übersprungen).",
   "@settingsShopsAmazonAlreadyPresent": {

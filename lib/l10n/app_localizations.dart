@@ -9221,29 +9221,23 @@ abstract class AppLocalizations {
   /// **'Dein aktueller Plan: {plan}. Die automatische Erkennung von Bestell- und Versand-Mails ist ab dem Starter-Plan verfügbar — höhere Pläne erlauben mehr Postfächer und längeren Inbox-Verlauf.'**
   String settingsMailboxFreePlanDesc(String plan);
 
-  /// Plan-Vergleichszeile Starter im Postfach-Tab.
+  /// Plan-Vergleichszeile Team im Postfach-Tab (Werte = pricing_plan.dart).
   ///
   /// In de, this message translates to:
-  /// **'1 Postfach · 7 Tage'**
-  String get settingsMailboxPlanStarter;
+  /// **'1 Postfach · 14 Tage Verlauf'**
+  String get settingsMailboxPlanTeam;
 
-  /// Plan-Vergleichszeile Pro im Postfach-Tab.
+  /// Plan-Vergleichszeile Business im Postfach-Tab (Werte = pricing_plan.dart).
   ///
   /// In de, this message translates to:
-  /// **'3 Postfächer · 14 Tage'**
-  String get settingsMailboxPlanPro;
-
-  /// Plan-Vergleichszeile Business im Postfach-Tab.
-  ///
-  /// In de, this message translates to:
-  /// **'10 Postfächer · 30 Tage'**
+  /// **'5 Postfächer · 30 Tage Verlauf'**
   String get settingsMailboxPlanBusiness;
 
-  /// Plan-Vergleichszeile Ultimate im Postfach-Tab.
+  /// Plan-Vergleichszeile Enterprise im Postfach-Tab (Werte = pricing_plan.dart).
   ///
   /// In de, this message translates to:
-  /// **'15 Postfächer · 90 Tage'**
-  String get settingsMailboxPlanUltimate;
+  /// **'15 Postfächer · 30 Tage Verlauf'**
+  String get settingsMailboxPlanEnterprise;
 
   /// SnackBar wenn keine neuen Amazon-Shops hinzugefügt wurden.
   ///
