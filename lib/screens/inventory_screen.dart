@@ -177,14 +177,17 @@ class _InventoryScreenState extends State<InventoryScreen>
         final query = _search.trim().toLowerCase();
         List<InventoryItem> applySearch(List<InventoryItem> src) =>
             query.isEmpty
-                ? src
-                : src
-                    .where((i) =>
+            ? src
+            : src
+                  .where(
+                    (i) =>
                         i.name.toLowerCase().contains(query) ||
-                        (i.sku?.toLowerCase().contains(query) ?? false))
-                    .toList();
-        final allStock =
-            stock.inventoryItems.where((i) => !_isSold(i)).toList();
+                        (i.sku?.toLowerCase().contains(query) ?? false),
+                  )
+                  .toList();
+        final allStock = stock.inventoryItems
+            .where((i) => !_isSold(i))
+            .toList();
         final allSold = stock.inventoryItems.where(_isSold).toList();
         final stockItems = applySearch(allStock);
         final soldItems = applySearch(allSold);
@@ -267,9 +270,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     final selectedId = _selectedItemId;
     final InventoryItem? selectedItem = selectedId == null
         ? null
-        : stock.inventoryItems
-            .where((i) => i.id == selectedId)
-            .firstOrNull;
+        : stock.inventoryItems.where((i) => i.id == selectedId).firstOrNull;
 
     final dividerColor = AppTheme.borderOf(context);
     final bg = AppTheme.bgSubtleOf(context);
@@ -317,16 +318,19 @@ class _InventoryScreenState extends State<InventoryScreen>
     for (final item in items) {
       grouped.putIfAbsent(item.productId, () => []).add(item);
     }
-    final withProduct = grouped.entries
-        .where((e) => e.key != null)
-        .map((e) => _StockGroup(
-              productId: e.key,
-              groupName: productMap[e.key!]?.name ?? e.key!,
-              sku: productMap[e.key!]?.sku,
-              items: e.value,
-            ))
-        .toList()
-      ..sort((a, b) => a.groupName.compareTo(b.groupName));
+    final withProduct =
+        grouped.entries
+            .where((e) => e.key != null)
+            .map(
+              (e) => _StockGroup(
+                productId: e.key,
+                groupName: productMap[e.key!]?.name ?? e.key!,
+                sku: productMap[e.key!]?.sku,
+                items: e.value,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => a.groupName.compareTo(b.groupName));
     final withoutProduct = grouped[null];
     return [
       ...withProduct,
@@ -388,7 +392,14 @@ class _InventoryScreenState extends State<InventoryScreen>
     } else {
       listContent = isNarrow
           ? _buildGroupedCardList(
-              context, provider, stock, money, items, l10n, isMasterDetail)
+              context,
+              provider,
+              stock,
+              money,
+              items,
+              l10n,
+              isMasterDetail,
+            )
           : _buildGroupedTable(context, provider, stock, money, items, l10n);
     }
 
@@ -401,10 +412,7 @@ class _InventoryScreenState extends State<InventoryScreen>
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             child: showSkeleton
-                ? const ListSkeleton(
-                    key: ValueKey('skeleton'),
-                    itemCount: 6,
-                  )
+                ? const ListSkeleton(key: ValueKey('skeleton'), itemCount: 6)
                 : KeyedSubtree(
                     key: const ValueKey('content'),
                     child: listContent,
@@ -433,22 +441,28 @@ class _InventoryScreenState extends State<InventoryScreen>
         Expanded(
           child: items.isEmpty
               ? allSoldEmpty
-                  ? EmptyState(
-                      icon: Icons.sell_outlined,
-                      title: l10n.inventorySoldEmpty,
-                      subtitle: l10n.inventorySoldEmptyHint,
-                      keySlug: 'inventorySoldEmpty',
-                    )
-                  : EmptyState(
-                      icon: Icons.search_off_outlined,
-                      title: l10n.dealsEmpty,
-                      subtitle: l10n.dealsEmptyHint,
-                      keySlug: 'inventorySoldFilterEmpty',
-                    )
+                    ? EmptyState(
+                        icon: Icons.sell_outlined,
+                        title: l10n.inventorySoldEmpty,
+                        subtitle: l10n.inventorySoldEmptyHint,
+                        keySlug: 'inventorySoldEmpty',
+                      )
+                    : EmptyState(
+                        icon: Icons.search_off_outlined,
+                        title: l10n.dealsEmpty,
+                        subtitle: l10n.dealsEmptyHint,
+                        keySlug: 'inventorySoldFilterEmpty',
+                      )
               : isNarrow
-                  ? _buildCardList(
-                      context, provider, stock, money, items, isMasterDetail)
-                  : _buildTable(context, provider, stock, money, items),
+              ? _buildCardList(
+                  context,
+                  provider,
+                  stock,
+                  money,
+                  items,
+                  isMasterDetail,
+                )
+              : _buildTable(context, provider, stock, money, items),
         ),
       ],
     );
@@ -474,42 +488,70 @@ class _InventoryScreenState extends State<InventoryScreen>
 
     // Wenn alle Items ohne Produkt-Verknüpfung sind UND keine Produkte im
     // Katalog existieren → flache Liste wie bisher (keine leere Gruppe-Wrapper).
-    if (groups.length == 1 && groups.first.productId == null && catalogProducts.isEmpty) {
-      return _buildCardList(context, provider, stock, money, items, isMasterDetail);
+    if (groups.length == 1 &&
+        groups.first.productId == null &&
+        catalogProducts.isEmpty) {
+      // Pull-to-Refresh (Paket 3): Bestand + Bewegungen resyncen.
+      return RefreshIndicator(
+        onRefresh: stock.loadData,
+        child: _buildCardList(
+          context,
+          provider,
+          stock,
+          money,
+          items,
+          isMasterDetail,
+        ),
+      );
     }
 
-    return ListView.builder(
-      // T3.3a: PageStorageKey damit Scroll-Position einen Resize
-      // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
-      key: const PageStorageKey<String>('inventoryStockGroupedList'),
-      padding: const EdgeInsets.fromLTRB(AppTheme.space12, AppTheme.space4, AppTheme.space12, AppTheme.space16),
-      itemCount: groups.length,
-      itemBuilder: (context, gi) {
-        final group = groups[gi];
-        final totalQty = group.items.fold<int>(0, (s, i) => s + i.quantity);
-        final hasCritical = group.items.any((i) => i.isCritical);
+    return RefreshIndicator(
+      onRefresh: stock.loadData,
+      child: ListView.builder(
+        // T3.3a: PageStorageKey damit Scroll-Position einen Resize
+        // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
+        key: const PageStorageKey<String>('inventoryStockGroupedList'),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space12,
+          AppTheme.space4,
+          AppTheme.space12,
+          AppTheme.space16,
+        ),
+        itemCount: groups.length,
+        itemBuilder: (context, gi) {
+          final group = groups[gi];
+          final totalQty = group.items.fold<int>(0, (s, i) => s + i.quantity);
+          final hasCritical = group.items.any((i) => i.isCritical);
 
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppTheme.space8),
-          child: Card(
-            margin: EdgeInsets.zero,
-            clipBehavior: Clip.antiAlias,
-            child: _StockGroupTile(
-              groupName: group.groupName,
-              sku: group.sku,
-              totalQty: totalQty,
-              hasCritical: hasCritical,
-              itemCount: group.items.length,
-              isOrphaned: group.productId == null,
-              l10n: l10n,
-              children: group.items.map((item) {
-                return _buildItemRow(
-                    context, provider, stock, money, item, l10n, isMasterDetail);
-              }).toList(),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppTheme.space8),
+            child: Card(
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
+              child: _StockGroupTile(
+                groupName: group.groupName,
+                sku: group.sku,
+                totalQty: totalQty,
+                hasCritical: hasCritical,
+                itemCount: group.items.length,
+                isOrphaned: group.productId == null,
+                l10n: l10n,
+                children: group.items.map((item) {
+                  return _buildItemRow(
+                    context,
+                    provider,
+                    stock,
+                    money,
+                    item,
+                    l10n,
+                    isMasterDetail,
+                  );
+                }).toList(),
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -526,8 +568,8 @@ class _InventoryScreenState extends State<InventoryScreen>
     final color = item.quantity < item.minStock
         ? const Color(0xFFDC2626)
         : item.quantity == item.minStock
-            ? const Color(0xFFD97706)
-            : const Color(0xFF059669);
+        ? const Color(0xFFD97706)
+        : const Color(0xFF059669);
     final isSelected = isMasterDetail && _selectedItemId == item.id;
 
     // F4: Hero-Animation nur auf Phone + kein Master-Detail.
@@ -543,17 +585,19 @@ class _InventoryScreenState extends State<InventoryScreen>
         if (!isMasterDetail) {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => ProductDetailScreen(
-                item: item,
-                heroTag: heroTag,
-              ),
+              builder: (_) => ProductDetailScreen(item: item, heroTag: heroTag),
             ),
           );
         }
       },
       child: Container(
         color: isSelected ? AppTheme.accentLightOf(context) : null,
-        padding: const EdgeInsets.fromLTRB(AppTheme.space16, AppTheme.space10, AppTheme.space8, AppTheme.space10),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space16,
+          AppTheme.space10,
+          AppTheme.space8,
+          AppTheme.space10,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -578,9 +622,14 @@ class _InventoryScreenState extends State<InventoryScreen>
                       color: Color(0xFF5865F2),
                     ),
                     onPressed: () => openUrlWithFallback(
-                        context, resolveDiscordUrl(item.ticketUrl!)),
+                      context,
+                      resolveDiscordUrl(item.ticketUrl!),
+                    ),
                     padding: const EdgeInsets.all(AppTheme.space4),
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
                   ),
               ],
             ),
@@ -592,7 +641,9 @@ class _InventoryScreenState extends State<InventoryScreen>
                 color: AppTheme.textMutedOf(context),
               ),
             ),
-            const SizedBox(height: 6), // off-grid: tight visual separator between list-item rows
+            const SizedBox(
+              height: 6,
+            ), // off-grid: tight visual separator between list-item rows
             Row(
               children: [
                 Icon(Icons.circle, size: 9, color: color),
@@ -617,7 +668,9 @@ class _InventoryScreenState extends State<InventoryScreen>
                 _statusChip(context, item.status),
               ],
             ),
-            const SizedBox(height: 6), // off-grid: tight visual separator between list-item rows
+            const SizedBox(
+              height: 6,
+            ), // off-grid: tight visual separator between list-item rows
             // Action-Buttons — 48dp touch targets via SizedBox
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -709,12 +762,11 @@ class _InventoryScreenState extends State<InventoryScreen>
     return TextButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 15, color: color),
-      label: Text(
-        label,
-        style: TextStyle(color: color, fontSize: 12),
-      ),
+      label: Text(label, style: TextStyle(color: color, fontSize: 12)),
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 6), // off-grid: compact inline action button; 8 is too wide here
+        padding: const EdgeInsets.symmetric(
+          horizontal: 6,
+        ), // off-grid: compact inline action button; 8 is too wide here
         minimumSize: const Size(0, 48),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
@@ -743,7 +795,9 @@ class _InventoryScreenState extends State<InventoryScreen>
     );
 
     // Keine Produkte → flache Tabelle wie bisher
-    if (groups.length == 1 && groups.first.productId == null && catalogProducts.isEmpty) {
+    if (groups.length == 1 &&
+        groups.first.productId == null &&
+        catalogProducts.isEmpty) {
       return _buildTable(context, provider, stock, money, items);
     }
 
@@ -751,12 +805,16 @@ class _InventoryScreenState extends State<InventoryScreen>
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
       // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
       key: const PageStorageKey<String>('inventoryStockGroupedTable'),
-      padding: const EdgeInsets.fromLTRB(AppTheme.space16, 0, AppTheme.space16, AppTheme.space16),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space16,
+        0,
+        AppTheme.space16,
+        AppTheme.space16,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: groups.map((group) {
-          final totalQty =
-              group.items.fold<int>(0, (s, i) => s + i.quantity);
+          final totalQty = group.items.fold<int>(0, (s, i) => s + i.quantity);
           return _buildTableGroup(
             context: context,
             provider: provider,
@@ -837,7 +895,10 @@ class _InventoryScreenState extends State<InventoryScreen>
     required bool isOrphaned,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space16, vertical: AppTheme.space10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space16,
+        vertical: AppTheme.space10,
+      ),
       decoration: BoxDecoration(
         color: isOrphaned
             ? AppTheme.bgSubtleOf(context)
@@ -846,9 +907,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       child: Row(
         children: [
           Icon(
-            isOrphaned
-                ? Icons.help_outlined
-                : Icons.inventory_2_outlined,
+            isOrphaned ? Icons.help_outlined : Icons.inventory_2_outlined,
             size: 16,
             color: isOrphaned
                 ? AppTheme.textMutedOf(context)
@@ -889,7 +948,10 @@ class _InventoryScreenState extends State<InventoryScreen>
           ),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space8, vertical: AppTheme.space2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.space8,
+              vertical: AppTheme.space2,
+            ),
             decoration: BoxDecoration(
               color: hasCritical
                   ? AppTheme.dangerBgOf(context)
@@ -913,40 +975,50 @@ class _InventoryScreenState extends State<InventoryScreen>
   }
 
   Widget _buildSearchBar() {
-    return Builder(builder: (context) {
-      final l10n = AppLocalizations.of(context);
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(AppTheme.space16, 0, AppTheme.space16, AppTheme.space8),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search, size: 18),
-                  hintText: l10n.inventorySearchHint,
-                  isDense: true,
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: AppTheme.space10),
+    return Builder(
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.space16,
+            0,
+            AppTheme.space16,
+            AppTheme.space8,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search, size: 18),
+                    hintText: l10n.inventorySearchHint,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: AppTheme.space10,
+                    ),
+                  ),
+                  onChanged: (v) => setState(() => _search = v),
                 ),
-                onChanged: (v) => setState(() => _search = v),
               ),
-            ),
-            const SizedBox(width: 8),
-            IconButton.outlined(
-              tooltip: l10n.inventoryScanBarcode,
-              icon: const Icon(Icons.qr_code_scanner, size: 18),
-              onPressed: () => _scanAndLookup(context),
-            ),
-          ],
-        ),
-      );
-    });
+              const SizedBox(width: 8),
+              IconButton.outlined(
+                tooltip: l10n.inventoryScanBarcode,
+                icon: const Icon(Icons.qr_code_scanner, size: 18),
+                onPressed: () => _scanAndLookup(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _scanAndLookup(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
-    final code =
-        await BarcodeScannerSheet.show(context, title: l10n.inventoryScanBarcode);
+    final code = await BarcodeScannerSheet.show(
+      context,
+      title: l10n.inventoryScanBarcode,
+    );
     if (code == null || code.isEmpty || !context.mounted) return;
     final stock = context.read<StockProvider>();
     final hit = stock.inventoryItems.where((i) => i.ean == code).firstOrNull;
@@ -972,13 +1044,40 @@ class _InventoryScreenState extends State<InventoryScreen>
     }
   }
 
-  Widget _buildHeader(BuildContext context, DealsProvider provider, StockProvider stock, bool isNarrow, NumberFormat money, double width) {
+  Widget _buildHeader(
+    BuildContext context,
+    DealsProvider provider,
+    StockProvider stock,
+    bool isNarrow,
+    NumberFormat money,
+    double width,
+  ) {
     final l10n = AppLocalizations.of(context);
     final kpis = [
-      _kpi(l10n.inventoryKpiTotalItems, '${stock.inventoryItems.length}', Icons.category_outlined, const Color(0xFF2563EB)),
-      _kpi(l10n.inventoryKpiTotalStock, '${stock.totalStockQuantity}', Icons.inventory_2_outlined, const Color(0xFF059669)),
-      _kpi(l10n.inventoryKpiCriticalItems, '${stock.criticalStockCount}', Icons.warning_amber_rounded, const Color(0xFFDC2626)),
-      _kpi(l10n.inventoryKpiStockValue, money.format(stock.totalStockValue), Icons.euro_outlined, const Color(0xFFD97706)),
+      _kpi(
+        l10n.inventoryKpiTotalItems,
+        '${stock.inventoryItems.length}',
+        Icons.category_outlined,
+        const Color(0xFF2563EB),
+      ),
+      _kpi(
+        l10n.inventoryKpiTotalStock,
+        '${stock.totalStockQuantity}',
+        Icons.inventory_2_outlined,
+        const Color(0xFF059669),
+      ),
+      _kpi(
+        l10n.inventoryKpiCriticalItems,
+        '${stock.criticalStockCount}',
+        Icons.warning_amber_rounded,
+        const Color(0xFFDC2626),
+      ),
+      _kpi(
+        l10n.inventoryKpiStockValue,
+        money.format(stock.totalStockValue),
+        Icons.euro_outlined,
+        const Color(0xFFD97706),
+      ),
     ];
     final addButton = ElevatedButton.icon(
       onPressed: () => showDialog(
@@ -992,14 +1091,21 @@ class _InventoryScreenState extends State<InventoryScreen>
     if (isNarrow) {
       final cardWidth = (width - 32) / 2;
       return Padding(
-        padding: const EdgeInsets.fromLTRB(AppTheme.space12, AppTheme.space12, AppTheme.space12, 0),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.space12,
+          AppTheme.space12,
+          AppTheme.space12,
+          0,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: kpis.map((k) => SizedBox(width: cardWidth, child: k)).toList(),
+              children: kpis
+                  .map((k) => SizedBox(width: cardWidth, child: k))
+                  .toList(),
             ),
             const SizedBox(height: 8),
             addButton,
@@ -1021,36 +1127,44 @@ class _InventoryScreenState extends State<InventoryScreen>
   }
 
   Widget _kpi(String label, String value, IconData icon, Color color) {
-    return Builder(builder: (ctx) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.space14),
-          child: Row(
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(width: AppTheme.space10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label,
+    return Builder(
+      builder: (ctx) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppTheme.space14),
+            child: Row(
+              children: [
+                Icon(icon, color: color),
+                const SizedBox(width: AppTheme.space10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
                         style: TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.textMutedOf(ctx),
-                            fontWeight: FontWeight.w700)),
-                    Text(value,
+                          fontSize: 11,
+                          color: AppTheme.textMutedOf(ctx),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        value,
                         style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.textPrimaryOf(ctx))),
-                  ],
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.textPrimaryOf(ctx),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 
   Widget _buildSoldHeader(
@@ -1062,8 +1176,9 @@ class _InventoryScreenState extends State<InventoryScreen>
     double width,
   ) {
     final l10n = AppLocalizations.of(context);
-    final soldItems =
-        stock.inventoryItems.where(_isSold).toList(growable: false);
+    final soldItems = stock.inventoryItems
+        .where(_isSold)
+        .toList(growable: false);
     final dealsById = {for (final d in provider.deals) d.id: d};
 
     int totalQuantity = 0;
@@ -1080,8 +1195,11 @@ class _InventoryScreenState extends State<InventoryScreen>
         }
         final buyer = deal.buyer?.trim();
         if (buyer != null && buyer.isNotEmpty) {
-          buyerCounts.update(buyer, (v) => v + item.quantity,
-              ifAbsent: () => item.quantity);
+          buyerCounts.update(
+            buyer,
+            (v) => v + item.quantity,
+            ifAbsent: () => item.quantity,
+          );
         }
       }
     }
@@ -1100,9 +1218,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       l10n.inventorySoldKpiProfit,
       money.format(totalProfit),
       Icons.trending_up,
-      totalProfit >= 0
-          ? const Color(0xFF059669)
-          : const Color(0xFFDC2626),
+      totalProfit >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
     );
     final buyersCard = _topBuyersCard(context, top3, l10n);
 
@@ -1124,7 +1240,12 @@ class _InventoryScreenState extends State<InventoryScreen>
       );
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppTheme.space16, AppTheme.space16, AppTheme.space16, 0),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space16,
+        AppTheme.space16,
+        AppTheme.space16,
+        0,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1152,8 +1273,11 @@ class _InventoryScreenState extends State<InventoryScreen>
           children: [
             Row(
               children: [
-                const Icon(Icons.emoji_events_outlined,
-                    color: Color(0xFFD97706), size: 18),
+                const Icon(
+                  Icons.emoji_events_outlined,
+                  color: Color(0xFFD97706),
+                  size: 18,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1167,7 +1291,9 @@ class _InventoryScreenState extends State<InventoryScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 6), // off-grid: tight visual separator between list-item rows
+            const SizedBox(
+              height: 6,
+            ), // off-grid: tight visual separator between list-item rows
             if (top.isEmpty)
               Text(
                 l10n.inventorySoldNoBuyer,
@@ -1213,13 +1339,24 @@ class _InventoryScreenState extends State<InventoryScreen>
     );
   }
 
-  Widget _buildCardList(BuildContext context, DealsProvider provider,
-      StockProvider stock, NumberFormat money, List<InventoryItem> items, bool isMasterDetail) {
+  Widget _buildCardList(
+    BuildContext context,
+    DealsProvider provider,
+    StockProvider stock,
+    NumberFormat money,
+    List<InventoryItem> items,
+    bool isMasterDetail,
+  ) {
     return ListView.separated(
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
       // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
       key: const PageStorageKey<String>('inventoryCardList'),
-      padding: const EdgeInsets.fromLTRB(AppTheme.space12, AppTheme.space4, AppTheme.space12, AppTheme.space16),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space12,
+        AppTheme.space4,
+        AppTheme.space12,
+        AppTheme.space16,
+      ),
       itemCount: items.length,
       separatorBuilder: (context, index) => const SizedBox(height: 8),
       itemBuilder: (context, i) {
@@ -1227,8 +1364,8 @@ class _InventoryScreenState extends State<InventoryScreen>
         final color = item.quantity < item.minStock
             ? const Color(0xFFDC2626)
             : item.quantity == item.minStock
-                ? const Color(0xFFD97706)
-                : const Color(0xFF059669);
+            ? const Color(0xFFD97706)
+            : const Color(0xFF059669);
         final isSelected = isMasterDetail && _selectedItemId == item.id;
 
         // F4: Hero-Animation für Phone-Push → ProductDetailScreen.
@@ -1239,8 +1376,7 @@ class _InventoryScreenState extends State<InventoryScreen>
         final heroTag = 'product-hero-${item.id}';
 
         final card = Card(
-          color:
-              isSelected ? AppTheme.accentLightOf(context) : null,
+          color: isSelected ? AppTheme.accentLightOf(context) : null,
           child: InkWell(
             borderRadius: BorderRadius.circular(AppTheme.radiusMd),
             onTap: () {
@@ -1251,120 +1387,195 @@ class _InventoryScreenState extends State<InventoryScreen>
               if (!isMasterDetail) {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => ProductDetailScreen(
-                      item: item,
-                      heroTag: heroTag,
-                    ),
+                    builder: (_) =>
+                        ProductDetailScreen(item: item, heroTag: heroTag),
                   ),
                 );
               }
             },
             child: Padding(
-            padding: const EdgeInsets.all(AppTheme.space12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                    ),
-                    if (item.ticketUrl != null)
-                      IconButton(
-                        tooltip: AppLocalizations.of(context).inventoryDiscordTooltip,
-                        icon: const Icon(Icons.open_in_new, size: 18, color: Color(0xFF5865F2)),
-                        onPressed: () => openUrlWithFallback(context, resolveDiscordUrl(item.ticketUrl!)),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${item.sku ?? "-"} · ${item.location ?? "Kein Lagerort"}',
-                  style: TextStyle(
-                      fontSize: 12, color: AppTheme.textMutedOf(context)),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.circle, size: 10, color: color),
-                    const SizedBox(width: 4),
-                    Text(AppLocalizations.of(context).inventoryPiecesCount(item.quantity), style: TextStyle(fontWeight: FontWeight.w800, color: color)),
-                    const Spacer(),
-                    Text(item.costPrice != null ? money.format(item.costPrice) : '-', style: const TextStyle(fontSize: 13)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item.ticketNumber != null ? 'Ticket: ${item.ticketNumber}' : '-',
-                        style: TextStyle(
-                            fontSize: 12, color: AppTheme.textMutedOf(context)),
-                      ),
-                    ),
-                    _statusChip(context, item.status),
-                  ],
-                ),
-                const Divider(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Builder(builder: (ctx) {
-                      final l10n = AppLocalizations.of(ctx);
-                      return Row(children: [
-                        TextButton.icon(
-                          onPressed: () => _adjust(context, stock, item, true),
-                          icon: const Icon(Icons.add_circle_outlined, size: 16, color: Color(0xFF059669)),
-                          label: Text(l10n.inventoryStockIn, style: const TextStyle(color: Color(0xFF059669), fontSize: 12)),
-                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
-                        ),
-                        TextButton.icon(
-                          onPressed: () => _adjust(context, stock, item, false),
-                          icon: const Icon(Icons.remove_circle_outlined, size: 16, color: Color(0xFFD97706)),
-                          label: Text(l10n.inventoryStockOut, style: const TextStyle(color: Color(0xFFD97706), fontSize: 12)),
-                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6)),
-                        ),
-                        IconButton(
-                          tooltip: l10n.inventoryAddBatch,
-                          onPressed: () =>
-                              InventoryBatchesSheet.show(context, item),
-                          icon: const Icon(Icons.layers_outlined, size: 18),
-                        ),
-                        IconButton(
-                          tooltip: l10n.actionEdit,
-                          onPressed: () => showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (_) => _InventoryDialog(item: item),
+              padding: const EdgeInsets.all(AppTheme.space12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
                           ),
-                          icon: const Icon(Icons.edit_outlined, size: 18),
                         ),
+                      ),
+                      if (item.ticketUrl != null)
                         IconButton(
-                          tooltip: l10n.actionDelete,
-                          onPressed: () async {
-                            final confirmed = await showConfirmDialog(
-                              context: ctx,
-                              title: l10n.inventoryDeleteTitle,
-                              message: l10n.inventoryDeleteConfirm(item.name),
-                              confirmLabel: l10n.actionDelete,
-                              isDestructive: true,
-                            );
-                            if (confirmed) {
-                              await stock.deleteInventoryItem(item.id);
-                            }
-                          },
-                          icon: Icon(Icons.delete_outlined, size: 18, color: AppTheme.dangerTextOf(ctx)),
+                          tooltip: AppLocalizations.of(
+                            context,
+                          ).inventoryDiscordTooltip,
+                          icon: const Icon(
+                            Icons.open_in_new,
+                            size: 18,
+                            color: Color(0xFF5865F2),
+                          ),
+                          onPressed: () => openUrlWithFallback(
+                            context,
+                            resolveDiscordUrl(item.ticketUrl!),
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                         ),
-                      ]);
-                    }),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${item.sku ?? "-"} · ${item.location ?? "Kein Lagerort"}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textMutedOf(context),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.circle, size: 10, color: color),
+                      const SizedBox(width: 4),
+                      Text(
+                        AppLocalizations.of(
+                          context,
+                        ).inventoryPiecesCount(item.quantity),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: color,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        item.costPrice != null
+                            ? money.format(item.costPrice)
+                            : '-',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.ticketNumber != null
+                              ? 'Ticket: ${item.ticketNumber}'
+                              : '-',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textMutedOf(context),
+                          ),
+                        ),
+                      ),
+                      _statusChip(context, item.status),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Builder(
+                        builder: (ctx) {
+                          final l10n = AppLocalizations.of(ctx);
+                          return Row(
+                            children: [
+                              TextButton.icon(
+                                onPressed: () =>
+                                    _adjust(context, stock, item, true),
+                                icon: const Icon(
+                                  Icons.add_circle_outlined,
+                                  size: 16,
+                                  color: Color(0xFF059669),
+                                ),
+                                label: Text(
+                                  l10n.inventoryStockIn,
+                                  style: const TextStyle(
+                                    color: Color(0xFF059669),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                  ),
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () =>
+                                    _adjust(context, stock, item, false),
+                                icon: const Icon(
+                                  Icons.remove_circle_outlined,
+                                  size: 16,
+                                  color: Color(0xFFD97706),
+                                ),
+                                label: Text(
+                                  l10n.inventoryStockOut,
+                                  style: const TextStyle(
+                                    color: Color(0xFFD97706),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: l10n.inventoryAddBatch,
+                                onPressed: () =>
+                                    InventoryBatchesSheet.show(context, item),
+                                icon: const Icon(
+                                  Icons.layers_outlined,
+                                  size: 18,
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: l10n.actionEdit,
+                                onPressed: () => showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => _InventoryDialog(item: item),
+                                ),
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                              ),
+                              IconButton(
+                                tooltip: l10n.actionDelete,
+                                onPressed: () async {
+                                  final confirmed = await showConfirmDialog(
+                                    context: ctx,
+                                    title: l10n.inventoryDeleteTitle,
+                                    message: l10n.inventoryDeleteConfirm(
+                                      item.name,
+                                    ),
+                                    confirmLabel: l10n.actionDelete,
+                                    isDestructive: true,
+                                  );
+                                  if (confirmed) {
+                                    await stock.deleteInventoryItem(item.id);
+                                  }
+                                },
+                                icon: Icon(
+                                  Icons.delete_outlined,
+                                  size: 18,
+                                  color: AppTheme.dangerTextOf(ctx),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
           ),
         );
 
@@ -1376,26 +1587,43 @@ class _InventoryScreenState extends State<InventoryScreen>
 
   Widget _statusChip(BuildContext context, String status) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space8, vertical: AppTheme.space2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space8,
+        vertical: AppTheme.space2,
+      ),
       decoration: BoxDecoration(
         color: AppTheme.accentLightOf(context),
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
       ),
-      child: Text(localizeInventoryStatus(context, status),
-          style: TextStyle(
-              fontSize: 11,
-              color: AppTheme.accentTextOf(context),
-              fontWeight: FontWeight.w700)),
+      child: Text(
+        localizeInventoryStatus(context, status),
+        style: TextStyle(
+          fontSize: 11,
+          color: AppTheme.accentTextOf(context),
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 
-  Widget _buildTable(BuildContext context, DealsProvider provider, StockProvider stock, NumberFormat money, List<InventoryItem> items) {
+  Widget _buildTable(
+    BuildContext context,
+    DealsProvider provider,
+    StockProvider stock,
+    NumberFormat money,
+    List<InventoryItem> items,
+  ) {
     final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
       // T3.3a: PageStorageKey damit Scroll-Position einen Resize
       // Phone↔Desktop überlebt (Plan §5.5 State-Erhalt).
       key: const PageStorageKey<String>('inventoryTable'),
-      padding: const EdgeInsets.fromLTRB(AppTheme.space16, 0, AppTheme.space16, AppTheme.space16),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space16,
+        0,
+        AppTheme.space16,
+        AppTheme.space16,
+      ),
       child: Card(
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -1422,107 +1650,165 @@ class _InventoryScreenState extends State<InventoryScreen>
     );
   }
 
-  DataRow _row(BuildContext context, DealsProvider provider, StockProvider stock, InventoryItem item, NumberFormat money) {
+  DataRow _row(
+    BuildContext context,
+    DealsProvider provider,
+    StockProvider stock,
+    InventoryItem item,
+    NumberFormat money,
+  ) {
     final l10n = AppLocalizations.of(context);
     final date = DateFormat.yMd(
-        Localizations.localeOf(context).toLanguageTag());
+      Localizations.localeOf(context).toLanguageTag(),
+    );
     final color = item.quantity < item.minStock
         ? const Color(0xFFDC2626)
         : item.quantity == item.minStock
-            ? const Color(0xFFD97706)
-            : const Color(0xFF059669);
+        ? const Color(0xFFD97706)
+        : const Color(0xFF059669);
     return DataRow(
       cells: [
         DataCell(Text(item.sku ?? '-')),
         DataCell(Text(item.name)),
         DataCell(Text(item.location ?? '-')),
-        DataCell(Row(children: [
-          Icon(Icons.circle, size: 10, color: color),
-          const SizedBox(width: 6),
-          Text('${item.quantity}', style: TextStyle(fontWeight: FontWeight.w800, color: color)),
-        ])),
+        DataCell(
+          Row(
+            children: [
+              Icon(Icons.circle, size: 10, color: color),
+              const SizedBox(width: 6),
+              Text(
+                '${item.quantity}',
+                style: TextStyle(fontWeight: FontWeight.w800, color: color),
+              ),
+            ],
+          ),
+        ),
         DataCell(Text('${item.minStock}')),
-        DataCell(Text(item.costPrice != null ? money.format(item.costPrice) : '-')),
-        DataCell(Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text('${item.dealId != null ? "Deal #${item.dealId}" : "-"}${item.ticketNumber != null ? " · ${item.ticketNumber}" : ""}'),
-            ),
-            if (item.ticketUrl != null) ...[
-              const SizedBox(width: 4),
-              Tooltip(
-                message: l10n.dealDiscordTicketOpen,
-                child: InkWell(
-                  onTap: () => openUrlWithFallback(context, resolveDiscordUrl(item.ticketUrl!)),
-                  child: const Icon(Icons.open_in_new, size: 14, color: Color(0xFF5865F2)),
+        DataCell(
+          Text(item.costPrice != null ? money.format(item.costPrice) : '-'),
+        ),
+        DataCell(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  '${item.dealId != null ? "Deal #${item.dealId}" : "-"}${item.ticketNumber != null ? " · ${item.ticketNumber}" : ""}',
+                ),
+              ),
+              if (item.ticketUrl != null) ...[
+                const SizedBox(width: 4),
+                Tooltip(
+                  message: l10n.dealDiscordTicketOpen,
+                  child: InkWell(
+                    onTap: () => openUrlWithFallback(
+                      context,
+                      resolveDiscordUrl(item.ticketUrl!),
+                    ),
+                    child: const Icon(
+                      Icons.open_in_new,
+                      size: 14,
+                      color: Color(0xFF5865F2),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        DataCell(
+          Text(item.arrivalDate != null ? date.format(item.arrivalDate!) : '-'),
+        ),
+        DataCell(Text(localizeInventoryStatus(context, item.status))),
+        DataCell(
+          Row(
+            children: [
+              IconButton(
+                tooltip: l10n.inventoryStockInTooltip,
+                onPressed: () => _adjust(context, stock, item, true),
+                icon: const Icon(
+                  Icons.add_circle_outlined,
+                  size: 18,
+                  color: Color(0xFF059669),
+                ),
+              ),
+              IconButton(
+                tooltip: l10n.inventoryStockOutTooltip,
+                onPressed: () => _adjust(context, stock, item, false),
+                icon: const Icon(
+                  Icons.remove_circle_outlined,
+                  size: 18,
+                  color: Color(0xFFD97706),
+                ),
+              ),
+              IconButton(
+                tooltip: l10n.actionEdit,
+                onPressed: () => showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => _InventoryDialog(item: item),
+                ),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+              ),
+              IconButton(
+                tooltip: l10n.actionDelete,
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final successMsg = l10n.appFeedbackSuccessDefault;
+                  final bgColor = AppTheme.successBgOf(context);
+                  final textColor = AppTheme.successTextOf(context);
+                  final confirmed = await showConfirmDialog(
+                    context: context,
+                    title: l10n.inventoryDeleteTitle,
+                    message: l10n.inventoryDeleteConfirm(item.name),
+                    confirmLabel: l10n.actionDelete,
+                    isDestructive: true,
+                  );
+                  if (confirmed) {
+                    await stock.deleteInventoryItem(item.id);
+                    messenger
+                      ..hideCurrentSnackBar()
+                      ..showSnackBar(
+                        SnackBar(
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: bgColor,
+                          margin: const EdgeInsets.fromLTRB(
+                            AppTheme.space16,
+                            0,
+                            AppTheme.space16,
+                            AppTheme.space16,
+                          ),
+                          content: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle_outline_rounded,
+                                color: textColor,
+                                size: 20,
+                              ),
+                              const SizedBox(width: AppTheme.space10),
+                              Text(
+                                successMsg,
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                  }
+                },
+                icon: Icon(
+                  Icons.delete_outlined,
+                  size: 18,
+                  color: AppTheme.dangerTextOf(context),
                 ),
               ),
             ],
-          ],
-        )),
-        DataCell(Text(item.arrivalDate != null ? date.format(item.arrivalDate!) : '-')),
-        DataCell(Text(localizeInventoryStatus(context, item.status))),
-        DataCell(Row(
-          children: [
-            IconButton(
-              tooltip: l10n.inventoryStockInTooltip,
-              onPressed: () => _adjust(context, stock, item, true),
-              icon: const Icon(Icons.add_circle_outlined, size: 18, color: Color(0xFF059669)),
-            ),
-            IconButton(
-              tooltip: l10n.inventoryStockOutTooltip,
-              onPressed: () => _adjust(context, stock, item, false),
-              icon: const Icon(Icons.remove_circle_outlined, size: 18, color: Color(0xFFD97706)),
-            ),
-            IconButton(
-              tooltip: l10n.actionEdit,
-              onPressed: () => showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => _InventoryDialog(item: item),
-              ),
-              icon: const Icon(Icons.edit_outlined, size: 18),
-            ),
-            IconButton(
-              tooltip: l10n.actionDelete,
-              onPressed: () async {
-                final messenger = ScaffoldMessenger.of(context);
-                final successMsg = l10n.appFeedbackSuccessDefault;
-                final bgColor = AppTheme.successBgOf(context);
-                final textColor = AppTheme.successTextOf(context);
-                final confirmed = await showConfirmDialog(
-                  context: context,
-                  title: l10n.inventoryDeleteTitle,
-                  message: l10n.inventoryDeleteConfirm(item.name),
-                  confirmLabel: l10n.actionDelete,
-                  isDestructive: true,
-                );
-                if (confirmed) {
-                  await stock.deleteInventoryItem(item.id);
-                  messenger
-                    ..hideCurrentSnackBar()
-                    ..showSnackBar(SnackBar(
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: bgColor,
-                      margin: const EdgeInsets.fromLTRB(AppTheme.space16, 0, AppTheme.space16, AppTheme.space16),
-                      content: Row(children: [
-                        Icon(Icons.check_circle_outline_rounded,
-                            color: textColor, size: 20),
-                        const SizedBox(width: AppTheme.space10),
-                        Text(successMsg,
-                            style: TextStyle(
-                                color: textColor,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500)),
-                      ]),
-                    ));
-                }
-              },
-              icon: Icon(Icons.delete_outlined, size: 18, color: AppTheme.dangerTextOf(context)),
-            ),
-          ],
-        )),
+          ),
+        ),
       ],
     );
   }
@@ -1536,36 +1822,38 @@ class _InventoryScreenState extends State<InventoryScreen>
     final l10n = AppLocalizations.of(context);
     final ctrl = TextEditingController(text: '1');
     final reason = TextEditingController(
-        text: incoming
-            ? l10n.inventoryReasonStockIn
-            : l10n.inventoryReasonSale);
+      text: incoming ? l10n.inventoryReasonStockIn : l10n.inventoryReasonSale,
+    );
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(incoming
-            ? l10n.inventoryStockInTitle
-            : l10n.inventoryStockOutTitle),
+        title: Text(
+          incoming ? l10n.inventoryStockInTitle : l10n.inventoryStockOutTitle,
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-                controller: ctrl,
-                decoration: InputDecoration(labelText: l10n.inventoryQuantity),
-                keyboardType: TextInputType.number),
+              controller: ctrl,
+              decoration: InputDecoration(labelText: l10n.inventoryQuantity),
+              keyboardType: TextInputType.number,
+            ),
             const SizedBox(height: AppTheme.space10),
             TextField(
-                controller: reason,
-                decoration:
-                    InputDecoration(labelText: l10n.inventoryReason)),
+              controller: reason,
+              decoration: InputDecoration(labelText: l10n.inventoryReason),
+            ),
           ],
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.actionCancel)),
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.actionCancel),
+          ),
           ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.actionSave)),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.actionSave),
+          ),
         ],
       ),
     );
@@ -1657,10 +1945,10 @@ class _InventoryDialogState extends State<_InventoryDialog> {
   Widget _buildProductField(DealsProvider provider) {
     final ticketDeals = _selectedTicketNumber.isNotEmpty
         ? (provider.ticketSummaries
-                .where((t) => t.ticketNumber == _selectedTicketNumber)
-                .firstOrNull
-                ?.deals ??
-            [])
+                  .where((t) => t.ticketNumber == _selectedTicketNumber)
+                  .firstOrNull
+                  ?.deals ??
+              [])
         : <Deal>[];
 
     if (ticketDeals.isNotEmpty) {
@@ -1693,9 +1981,12 @@ class _InventoryDialogState extends State<_InventoryDialog> {
             decoration: InputDecoration(
               labelText: 'Produkt *',
               suffixIcon: const Icon(Icons.arrow_drop_down, size: 20),
-              helperText: AppLocalizations.of(context).inventoryProductHelperText,
+              helperText: AppLocalizations.of(
+                context,
+              ).inventoryProductHelperText,
             ),
-            validator: (v) => v == null || v.trim().isEmpty ? 'Pflichtfeld' : null,
+            validator: (v) =>
+                v == null || v.trim().isEmpty ? 'Pflichtfeld' : null,
             onChanged: (v) => _name.text = v,
           );
         },
@@ -1706,7 +1997,10 @@ class _InventoryDialogState extends State<_InventoryDialog> {
               elevation: 4,
               borderRadius: BorderRadius.circular(AppTheme.radiusMd),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 240, maxWidth: 420),
+                constraints: const BoxConstraints(
+                  maxHeight: 240,
+                  maxWidth: 420,
+                ),
                 child: ListView.builder(
                   padding: EdgeInsets.zero,
                   shrinkWrap: true,
@@ -1734,7 +2028,8 @@ class _InventoryDialogState extends State<_InventoryDialog> {
     return TextFormField(
       controller: _name,
       decoration: InputDecoration(
-          labelText: '${AppLocalizations.of(context).dealProduct} *'),
+        labelText: '${AppLocalizations.of(context).dealProduct} *',
+      ),
       maxLength: Validators.maxProductName,
       validator: Validators.validateProductName,
     );
@@ -1754,8 +2049,10 @@ class _InventoryDialogState extends State<_InventoryDialog> {
         .toList();
 
     return Dialog(
-      insetPadding:
-          const EdgeInsets.symmetric(horizontal: AppTheme.space16, vertical: AppTheme.space24),
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.space16,
+        vertical: AppTheme.space24,
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
         child: Column(
@@ -1764,10 +2061,16 @@ class _InventoryDialogState extends State<_InventoryDialog> {
           children: [
             // ── Header ────────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.fromLTRB(AppTheme.space20, AppTheme.space16, AppTheme.space12, AppTheme.space16),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space20,
+                AppTheme.space16,
+                AppTheme.space12,
+                AppTheme.space16,
+              ),
               decoration: BoxDecoration(
                 border: Border(
-                    bottom: BorderSide(color: AppTheme.borderOf(context))),
+                  bottom: BorderSide(color: AppTheme.borderOf(context)),
+                ),
               ),
               child: Row(
                 children: [
@@ -1777,8 +2080,11 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                       color: AppTheme.accentLightOf(context),
                       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                     ),
-                    child: Icon(Icons.inventory_2_outlined,
-                        color: AppTheme.accentTextOf(context), size: 20),
+                    child: Icon(
+                      Icons.inventory_2_outlined,
+                      color: AppTheme.accentTextOf(context),
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1794,8 +2100,11 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close,
-                        size: 20, color: AppTheme.textMutedOf(context)),
+                    icon: Icon(
+                      Icons.close,
+                      size: 20,
+                      color: AppTheme.textMutedOf(context),
+                    ),
                     onPressed: () => Navigator.pop(context),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -1806,321 +2115,384 @@ class _InventoryDialogState extends State<_InventoryDialog> {
             // ── Form (scrollable) ─────────────────────────────────────
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(AppTheme.space20, AppTheme.space16, AppTheme.space20, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.space20,
+                  AppTheme.space16,
+                  AppTheme.space20,
+                  0,
+                ),
                 child: Form(
                   key: _form,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                _sectionLabel(l10n.inventorySectionGeneral),
-                const SizedBox(height: 12),
-                // ── 1. Ticket first so product dropdown can populate ──────────
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Autocomplete<String>(
-                        initialValue: TextEditingValue(text: _selectedTicketNumber),
-                        optionsBuilder: (TextEditingValue value) {
-                          if (value.text.isEmpty) return ticketNumbers;
-                          final q = value.text.toLowerCase();
-                          return ticketNumbers.where((t) => t.toLowerCase().contains(q));
-                        },
-                        onSelected: (String selection) {
-                          setState(() {
-                            _selectedTicketNumber = selection;
-                            // Clear product name so the new dropdown is unambiguous
-                            _name.text = '';
-                            if (_ticketUrl.text.isEmpty) {
-                              final match = provider.ticketSummaries
-                                  .where((t) => t.ticketNumber == selection)
-                                  .firstOrNull;
-                              if (match?.url != null) _ticketUrl.text = match!.url!;
-                            }
-                          });
-                        },
-                        fieldViewBuilder: (ctx, controller, focusNode, onSubmitted) {
-                          return TextFormField(
-                            controller: controller,
-                            focusNode: focusNode,
-                            decoration: InputDecoration(
-                              labelText: AppLocalizations.of(ctx).dealColTicket,
-                              suffixIcon: const Icon(Icons.arrow_drop_down,
-                                  size: 20),
-                            ),
-                            onChanged: (v) => setState(() {
-                              _selectedTicketNumber = v;
-                            }),
-                          );
-                        },
-                        optionsViewBuilder: (ctx, onSelected, options) {
-                          return Align(
-                            alignment: Alignment.topLeft,
-                            child: Material(
-                              elevation: 4,
-                              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxHeight: 200, maxWidth: 280),
-                                child: ListView.builder(
-                                  padding: EdgeInsets.zero,
-                                  shrinkWrap: true,
-                                  itemCount: options.length,
-                                  itemBuilder: (_, index) {
-                                    final option = options.elementAt(index);
-                                    return ListTile(
-                                      dense: true,
-                                      title: Text(option),
-                                      onTap: () => onSelected(option),
+                      _sectionLabel(l10n.inventorySectionGeneral),
+                      const SizedBox(height: 12),
+                      // ── 1. Ticket first so product dropdown can populate ──────────
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Autocomplete<String>(
+                              initialValue: TextEditingValue(
+                                text: _selectedTicketNumber,
+                              ),
+                              optionsBuilder: (TextEditingValue value) {
+                                if (value.text.isEmpty) return ticketNumbers;
+                                final q = value.text.toLowerCase();
+                                return ticketNumbers.where(
+                                  (t) => t.toLowerCase().contains(q),
+                                );
+                              },
+                              onSelected: (String selection) {
+                                setState(() {
+                                  _selectedTicketNumber = selection;
+                                  // Clear product name so the new dropdown is unambiguous
+                                  _name.text = '';
+                                  if (_ticketUrl.text.isEmpty) {
+                                    final match = provider.ticketSummaries
+                                        .where(
+                                          (t) => t.ticketNumber == selection,
+                                        )
+                                        .firstOrNull;
+                                    if (match?.url != null) {
+                                      _ticketUrl.text = match!.url!;
+                                    }
+                                  }
+                                });
+                              },
+                              fieldViewBuilder:
+                                  (ctx, controller, focusNode, onSubmitted) {
+                                    return TextFormField(
+                                      controller: controller,
+                                      focusNode: focusNode,
+                                      decoration: InputDecoration(
+                                        labelText: AppLocalizations.of(
+                                          ctx,
+                                        ).dealColTicket,
+                                        suffixIcon: const Icon(
+                                          Icons.arrow_drop_down,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      onChanged: (v) => setState(() {
+                                        _selectedTicketNumber = v;
+                                      }),
                                     );
+                                  },
+                              optionsViewBuilder: (ctx, onSelected, options) {
+                                return Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Material(
+                                    elevation: 4,
+                                    borderRadius: BorderRadius.circular(
+                                      AppTheme.radiusMd,
+                                    ),
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxHeight: 200,
+                                        maxWidth: 280,
+                                      ),
+                                      child: ListView.builder(
+                                        padding: EdgeInsets.zero,
+                                        shrinkWrap: true,
+                                        itemCount: options.length,
+                                        itemBuilder: (_, index) {
+                                          final option = options.elementAt(
+                                            index,
+                                          );
+                                          return ListTile(
+                                            dense: true,
+                                            title: Text(option),
+                                            onTap: () => onSelected(option),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: AppTheme.space10),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _status,
+                              decoration: InputDecoration(
+                                labelText: l10n.dealStatus,
+                              ),
+                              items: DealsProvider.inventoryStatusOptions
+                                  .map(
+                                    (s) => DropdownMenuItem(
+                                      value: s,
+                                      child: Text(
+                                        localizeInventoryStatus(context, s),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) => setState(() => _status = v!),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildProductField(provider),
+                      const SizedBox(height: AppTheme.space20),
+                      _sectionLabel(l10n.inventoryColStock),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _quantity,
+                              decoration: InputDecoration(
+                                labelText: l10n.inventoryColQuantity,
+                              ),
+                              keyboardType: TextInputType.number,
+                              validator: (v) =>
+                                  Validators.validateNonNegativeInt(v),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _min,
+                              decoration: InputDecoration(
+                                labelText: l10n.inventoryColMin,
+                              ),
+                              keyboardType: TextInputType.number,
+                              validator: (v) =>
+                                  Validators.validateNonNegativeInt(v),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _cost,
+                              decoration: InputDecoration(
+                                labelText: l10n.inventoryColCost,
+                                prefixText: '€ ',
+                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              validator: (v) => Validators.validateMoney(v),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _location,
+                              decoration: InputDecoration(
+                                labelText: l10n.inventoryColLocationLong,
+                                prefixIcon: const Icon(
+                                  Icons.place_outlined,
+                                  size: 18,
+                                ),
+                              ),
+                              maxLength: 100,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppTheme.space20),
+                      _sectionLabel(l10n.inventorySectionId),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _sku,
+                              decoration: const InputDecoration(
+                                labelText: 'SKU',
+                              ),
+                              maxLength: Validators.maxSku,
+                              validator: (v) => Validators.validateSku(v),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _ean,
+                              decoration: InputDecoration(
+                                labelText: 'EAN / GTIN',
+                                prefixIcon: const Icon(
+                                  Icons.qr_code_2,
+                                  size: 18,
+                                ),
+                                suffixIcon: IconButton(
+                                  tooltip: l10n.inventoryScanBarcode,
+                                  icon: const Icon(
+                                    Icons.qr_code_scanner,
+                                    size: 18,
+                                  ),
+                                  onPressed: () async {
+                                    final code = await BarcodeScannerSheet.show(
+                                      context,
+                                      title: l10n.inventoryScanBarcode,
+                                    );
+                                    if (code != null && code.isNotEmpty) {
+                                      setState(() => _ean.text = code);
+                                    }
                                   },
                                 ),
                               ),
+                              keyboardType: TextInputType.number,
+                              maxLength: 14,
+                              validator: (v) => Validators.validateGtin(v),
                             ),
-                          );
-                        },
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: AppTheme.space10),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _status,
-                        decoration:
-                            InputDecoration(labelText: l10n.dealStatus),
-                        items: DealsProvider.inventoryStatusOptions
-                            .map((s) => DropdownMenuItem(
-                                value: s,
-                                child: Text(localizeInventoryStatus(
-                                    context, s))))
-                            .toList(),
-                        onChanged: (v) => setState(() => _status = v!),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildProductField(provider),
-                const SizedBox(height: AppTheme.space20),
-                _sectionLabel(l10n.inventoryColStock),
-                const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _quantity,
-                      decoration: InputDecoration(
-                          labelText: l10n.inventoryColQuantity),
-                      keyboardType: TextInputType.number,
-                      validator: (v) =>
-                          Validators.validateNonNegativeInt(v),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _min,
-                      decoration:
-                          InputDecoration(labelText: l10n.inventoryColMin),
-                      keyboardType: TextInputType.number,
-                      validator: (v) =>
-                          Validators.validateNonNegativeInt(v),
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _cost,
-                      decoration: InputDecoration(
-                        labelText: l10n.inventoryColCost,
-                        prefixText: '€ ',
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      validator: (v) => Validators.validateMoney(v),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _location,
-                      decoration: InputDecoration(
-                        labelText: l10n.inventoryColLocationLong,
-                        prefixIcon:
-                            const Icon(Icons.place_outlined, size: 18),
-                      ),
-                      maxLength: 100,
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: AppTheme.space20),
-                _sectionLabel(l10n.inventorySectionId),
-                const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _sku,
-                      decoration: const InputDecoration(labelText: 'SKU'),
-                      maxLength: Validators.maxSku,
-                      validator: (v) => Validators.validateSku(v),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _ean,
-                      decoration: InputDecoration(
-                        labelText: 'EAN / GTIN',
-                        prefixIcon: const Icon(Icons.qr_code_2, size: 18),
-                        suffixIcon: IconButton(
-                          tooltip: l10n.inventoryScanBarcode,
-                          icon: const Icon(Icons.qr_code_scanner, size: 18),
-                          onPressed: () async {
-                            final code = await BarcodeScannerSheet.show(
-                              context,
-                              title: l10n.inventoryScanBarcode,
-                            );
-                            if (code != null && code.isNotEmpty) {
-                              setState(() => _ean.text = code);
-                            }
-                          },
-                        ),
-                      ),
-                      keyboardType: TextInputType.number,
-                      maxLength: 14,
-                      validator: (v) => Validators.validateGtin(v),
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String?>(
-                  initialValue: _supplierId,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: l10n.inventoryColSupplier,
-                    prefixIcon:
-                        const Icon(Icons.local_shipping_outlined, size: 18),
-                  ),
-                  items: [
-                    DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text(l10n.inventoryNoSupplier),
-                    ),
-                    ...purchasingProvider.activeSuppliers.map(
-                      (s) => DropdownMenuItem<String?>(
-                        value: s.id,
-                        child:
-                            Text(s.name, overflow: TextOverflow.ellipsis),
-                      ),
-                    ),
-                  ],
-                  onChanged: (v) => setState(() => _supplierId = v),
-                ),
-                const SizedBox(height: 12),
-                // ── Stammartikel-Verknüpfung (optional) ─────────────────
-                if (catalogProvider.products.isNotEmpty)
-                  DropdownButtonFormField<String?>(
-                    initialValue: _productId,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.productLinkLabel,
-                      prefixIcon:
-                          const Icon(Icons.inventory_2_outlined, size: 18),
-                      helperText: l10n.productNoLink,
-                    ),
-                    items: [
-                      DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text(l10n.productNoLink),
-                      ),
-                      ...catalogProvider.products.map(
-                        (p) => DropdownMenuItem<String?>(
-                          value: p.id,
-                          child: Text(
-                            p.name,
-                            overflow: TextOverflow.ellipsis,
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String?>(
+                        initialValue: _supplierId,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: l10n.inventoryColSupplier,
+                          prefixIcon: const Icon(
+                            Icons.local_shipping_outlined,
+                            size: 18,
                           ),
                         ),
-                      ),
-                    ],
-                    onChanged: (v) => setState(() => _productId = v),
-                  ),
-                // ── Lager-Zuweisung (optional, nur wenn Lager vorhanden) ──
-                if (stock.warehouses.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String?>(
-                    key: const Key('warehouseDropdown'),
-                    initialValue: _warehouseId,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.inventoryWarehouseLabel,
-                      prefixIcon:
-                          const Icon(Icons.warehouse_outlined, size: 18),
-                    ),
-                    items: [
-                      DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text(l10n.inventoryNoWarehouse),
-                      ),
-                      ...stock.warehouses
-                          .where((w) => w.isActive)
-                          .map(
-                            (w) => DropdownMenuItem<String?>(
-                              value: w.id,
+                        items: [
+                          DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text(l10n.inventoryNoSupplier),
+                          ),
+                          ...purchasingProvider.activeSuppliers.map(
+                            (s) => DropdownMenuItem<String?>(
+                              value: s.id,
                               child: Text(
-                                w.name,
+                                s.name,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
+                        ],
+                        onChanged: (v) => setState(() => _supplierId = v),
+                      ),
+                      const SizedBox(height: 12),
+                      // ── Stammartikel-Verknüpfung (optional) ─────────────────
+                      if (catalogProvider.products.isNotEmpty)
+                        DropdownButtonFormField<String?>(
+                          initialValue: _productId,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: l10n.productLinkLabel,
+                            prefixIcon: const Icon(
+                              Icons.inventory_2_outlined,
+                              size: 18,
+                            ),
+                            helperText: l10n.productNoLink,
+                          ),
+                          items: [
+                            DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text(l10n.productNoLink),
+                            ),
+                            ...catalogProvider.products.map(
+                              (p) => DropdownMenuItem<String?>(
+                                value: p.id,
+                                child: Text(
+                                  p.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
+                          onChanged: (v) => setState(() => _productId = v),
+                        ),
+                      // ── Lager-Zuweisung (optional, nur wenn Lager vorhanden) ──
+                      if (stock.warehouses.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String?>(
+                          key: const Key('warehouseDropdown'),
+                          initialValue: _warehouseId,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: l10n.inventoryWarehouseLabel,
+                            prefixIcon: const Icon(
+                              Icons.warehouse_outlined,
+                              size: 18,
+                            ),
+                          ),
+                          items: [
+                            DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text(l10n.inventoryNoWarehouse),
+                            ),
+                            ...stock.warehouses
+                                .where((w) => w.isActive)
+                                .map(
+                                  (w) => DropdownMenuItem<String?>(
+                                    value: w.id,
+                                    child: Text(
+                                      w.name,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                          ],
+                          onChanged: (v) => setState(() => _warehouseId = v),
+                        ),
+                      ],
+                      const SizedBox(height: AppTheme.space20),
+                      _sectionLabel(l10n.inventorySectionAttachments),
+                      const SizedBox(height: 12),
+                      AttachmentGallery(
+                        paths: _attachmentPaths,
+                        entityKind: 'item',
+                        entityId: widget.item?.id ?? '',
+                        onChanged: (next) =>
+                            setState(() => _attachmentPaths = next),
+                      ),
+                      const SizedBox(height: AppTheme.space20),
+                      _sectionLabel(l10n.dealNote),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _ticketUrl,
+                        decoration: InputDecoration(
+                          labelText: l10n.dealTicketUrl,
+                          hintText: 'https://discord.com/...',
+                          prefixIcon: const Icon(Icons.link, size: 18),
+                        ),
+                        keyboardType: TextInputType.url,
+                        validator: (v) => Validators.validateUrl(v),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _note,
+                        decoration: InputDecoration(labelText: l10n.dealNote),
+                        maxLines: 2,
+                        maxLength: Validators.maxNote,
+                        validator: Validators.validateNote,
+                      ),
+                      const SizedBox(height: 8),
                     ],
-                    onChanged: (v) => setState(() => _warehouseId = v),
                   ),
-                ],
-                const SizedBox(height: AppTheme.space20),
-                _sectionLabel(l10n.inventorySectionAttachments),
-                const SizedBox(height: 12),
-                AttachmentGallery(
-                  paths: _attachmentPaths,
-                  entityKind: 'item',
-                  entityId: widget.item?.id ?? '',
-                  onChanged: (next) =>
-                      setState(() => _attachmentPaths = next),
                 ),
-                const SizedBox(height: AppTheme.space20),
-                _sectionLabel(l10n.dealNote),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _ticketUrl,
-                  decoration: InputDecoration(
-                    labelText: l10n.dealTicketUrl,
-                    hintText: 'https://discord.com/...',
-                    prefixIcon: const Icon(Icons.link, size: 18),
-                  ),
-                  keyboardType: TextInputType.url,
-                  validator: (v) => Validators.validateUrl(v),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _note,
-                  decoration:
-                      InputDecoration(labelText: l10n.dealNote),
-                  maxLines: 2,
-                  maxLength: Validators.maxNote,
-                  validator: Validators.validateNote,
-                ),
-                const SizedBox(height: 8),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
             // ── Actions ────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.fromLTRB(AppTheme.space20, AppTheme.space12, AppTheme.space20, AppTheme.space16),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.space20,
+                AppTheme.space12,
+                AppTheme.space20,
+                AppTheme.space16,
+              ),
               decoration: BoxDecoration(
                 border: Border(
-                    top: BorderSide(color: AppTheme.borderOf(context))),
+                  top: BorderSide(color: AppTheme.borderOf(context)),
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -2137,21 +2509,17 @@ class _InventoryDialogState extends State<_InventoryDialog> {
                       final item = InventoryItem(
                         id: widget.item?.id ?? '',
                         name: _name.text.trim(),
-                        sku: _sku.text.trim().isEmpty
-                            ? null
-                            : _sku.text.trim(),
-                        ean: _ean.text.trim().isEmpty
-                            ? null
-                            : _ean.text.trim(),
+                        sku: _sku.text.trim().isEmpty ? null : _sku.text.trim(),
+                        ean: _ean.text.trim().isEmpty ? null : _ean.text.trim(),
                         quantity: int.tryParse(_quantity.text) ?? 0,
                         minStock: int.tryParse(_min.text) ?? 0,
                         location: _location.text.trim().isEmpty
                             ? null
                             : _location.text.trim(),
                         costPrice: double.tryParse(
-                            _cost.text.replaceAll(',', '.')),
-                        arrivalDate:
-                            widget.item?.arrivalDate ?? DateTime.now(),
+                          _cost.text.replaceAll(',', '.'),
+                        ),
+                        arrivalDate: widget.item?.arrivalDate ?? DateTime.now(),
                         dealId: widget.item?.dealId,
                         supplierId: _supplierId,
                         ticketNumber: _selectedTicketNumber.trim().isEmpty
@@ -2187,25 +2555,25 @@ class _InventoryDialogState extends State<_InventoryDialog> {
   }
 
   Widget _sectionLabel(String text) {
-    return Builder(builder: (ctx) {
-      return Row(
-        children: [
-          Text(
-            text.toUpperCase(),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textMutedOf(ctx),
-              letterSpacing: 0.7,
+    return Builder(
+      builder: (ctx) {
+        return Row(
+          children: [
+            Text(
+              text.toUpperCase(),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textMutedOf(ctx),
+                letterSpacing: 0.7,
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Divider(height: 1, color: AppTheme.borderOf(ctx)),
-          ),
-        ],
-      );
-    });
+            const SizedBox(width: 8),
+            Expanded(child: Divider(height: 1, color: AppTheme.borderOf(ctx))),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -2287,14 +2655,15 @@ class _StockGroupTileState extends State<_StockGroupTile> {
         InkWell(
           onTap: () => setState(() => _expanded = !_expanded),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppTheme.space14, vertical: AppTheme.space10),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.space14,
+              vertical: AppTheme.space10,
+            ),
             decoration: BoxDecoration(color: headerBg),
             child: Row(
               children: [
                 Icon(
-                  isOrphaned
-                      ? Icons.help_outlined
-                      : Icons.inventory_2_outlined,
+                  isOrphaned ? Icons.help_outlined : Icons.inventory_2_outlined,
                   size: 16,
                   color: iconColor,
                 ),
@@ -2326,8 +2695,10 @@ class _StockGroupTileState extends State<_StockGroupTile> {
                 const SizedBox(width: 8),
                 // Summen-Chip
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: AppTheme.space8, vertical: AppTheme.space2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.space8,
+                    vertical: AppTheme.space2,
+                  ),
                   decoration: BoxDecoration(
                     color: hasCritical
                         ? AppTheme.dangerBgOf(context)
@@ -2396,7 +2767,6 @@ class _LowStockBanner extends StatefulWidget {
   State<_LowStockBanner> createState() => _LowStockBannerState();
 }
 
-
 class _LowStockBannerState extends State<_LowStockBanner> {
   bool _dismissed = false;
 
@@ -2411,19 +2781,24 @@ class _LowStockBannerState extends State<_LowStockBanner> {
     if (_dismissed) return const SizedBox.shrink();
     return MaterialBanner(
       backgroundColor: AppTheme.dangerBgOf(context),
-      leading: Icon(Icons.warning_amber_rounded,
-          color: AppTheme.dangerTextOf(context)),
+      leading: Icon(
+        Icons.warning_amber_rounded,
+        color: AppTheme.dangerTextOf(context),
+      ),
       content: Text(
         '${widget.count} Artikel ${widget.count == 1 ? "hat" : "haben"} Bestand unter dem Mindestbestand!',
         style: TextStyle(
-            color: AppTheme.dangerTextOf(context),
-            fontWeight: FontWeight.w700),
+          color: AppTheme.dangerTextOf(context),
+          fontWeight: FontWeight.w700,
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => setState(() => _dismissed = true),
-          child: Text(AppLocalizations.of(context).actionClose,
-              style: TextStyle(color: AppTheme.dangerTextOf(context))),
+          child: Text(
+            AppLocalizations.of(context).actionClose,
+            style: TextStyle(color: AppTheme.dangerTextOf(context)),
+          ),
         ),
       ],
     );

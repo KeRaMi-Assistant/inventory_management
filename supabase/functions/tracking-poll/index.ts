@@ -32,6 +32,7 @@ import {
   type PushPayload,
   sendToTokens,
 } from '../_shared/fcm.ts'
+import { DETECTION_ONLY_CARRIERS } from '../_shared/carriers.ts'
 
 interface CredentialRow {
   workspace_id: string
@@ -47,7 +48,7 @@ interface DealRow {
   user_id: string
   product: string
   tracking: string | null
-  carrier: 'dhl' | 'amazon' | 'dpd' | null
+  carrier: 'dhl' | 'amazon' | 'dpd' | 'gls' | 'ups' | null
   tracking_confidence: 'strong' | 'manual' | 'none' | null
   tracking_needs_review: boolean | null
   status: string
@@ -408,12 +409,15 @@ async function pollWorkspace(
   let madeApiCall = false
   for (const deal of dueDeals) {
     if (!deal.tracking || deal.tracking.trim().length === 0) continue
-    // Amazon = detection-only (keine öffentliche Status-API, Plan §3.4).
-    // Defensiver Short-Circuit VOR der Adapter-Wahl: weder fetchStatus noch
-    // Error-Tracking noch checked-Increment. Greift sowohl über den
-    // persistierten carrier ALS auch über das TBA-Pattern (Backfill-Lücke).
+    // Detection-only-Carrier (amazon, gls — siehe carriers.ts): keine
+    // öffentliche Status-API. Defensiver Short-Circuit VOR der Adapter-Wahl:
+    // weder fetchStatus noch Error-Tracking noch checked-Increment. Greift
+    // sowohl über den persistierten carrier ALS auch über das TBA-Pattern
+    // (Backfill-Lücke). WICHTIG: ohne diesen Guard fiele z.B. ein
+    // 12–14-stelliges GLS-Tracking via detectAdapter-Fallback auf DHL und
+    // würde dort sinnlos (und quota-fressend) gepollt.
     if (
-      deal.carrier === 'amazon' ||
+      (deal.carrier && DETECTION_ONLY_CARRIERS.has(deal.carrier)) ||
       /^TB[ACM]\d{12}$/i.test((deal.tracking ?? '').trim())
     ) {
       continue

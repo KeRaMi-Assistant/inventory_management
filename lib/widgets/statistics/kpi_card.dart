@@ -22,6 +22,10 @@ class KpiCard extends StatelessWidget {
   final String? deltaLabel;
   final bool deltaInverted; // bei Forderungen ist "höher" schlechter
 
+  /// Drilldown (Paket 3): macht die Karte tappbar (Dashboard-KPI → Ziel-Tab).
+  /// `null` = statische Karte wie bisher.
+  final VoidCallback? onTap;
+
   const KpiCard({
     super.key,
     required this.label,
@@ -31,6 +35,7 @@ class KpiCard extends StatelessWidget {
     this.deltaPct,
     this.deltaLabel,
     this.deltaInverted = false,
+    this.onTap,
   });
 
   /// Baut das Semantics-Label für Screen-Reader.
@@ -66,10 +71,7 @@ class KpiCard extends StatelessWidget {
             ? Icons.arrow_downward
             : Icons.remove;
 
-    return Semantics(
-      label: _semanticsLabel(),
-      excludeSemantics: true,
-      child: Container(
+    final card = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.bgSurfaceOf(context),
@@ -152,8 +154,20 @@ class KpiCard extends StatelessWidget {
             const SizedBox(height: 12),
         ],
       ),
-    ), // Container
-    ); // Semantics
+    );
+
+    return Semantics(
+      label: _semanticsLabel(),
+      excludeSemantics: true,
+      button: onTap != null,
+      child: onTap == null
+          ? card
+          : InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
+              child: card,
+            ),
+    );
   }
 }
 
