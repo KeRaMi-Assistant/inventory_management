@@ -47,7 +47,11 @@ export const CARRIERS: ReadonlyArray<CarrierInfo> = [
     requiresApiKey: true,
     uiEnabled: true,
     publicTrackingPage: true,
-    note: 'Beta-API (Bearer-Key). UI seit Paket 2 freigeschaltet.',
+    note:
+      'Pull-API (Bearer-Key) UND Push: DPDs öffentliche Endpoints blocken ' +
+      'serverseitige Requests auf TLS-Ebene (verifiziert 2026-06-11) — der ' +
+      'verlässliche Kanal ist der offizielle Tracking Push Service ' +
+      '(Geschäftskunden-Antrag) → Webhook supabase/functions/dpd-push.',
   },
   {
     id: 'ups',

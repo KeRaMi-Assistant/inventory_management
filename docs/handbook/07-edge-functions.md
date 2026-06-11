@@ -15,6 +15,7 @@ Trigger, Auth, Inputs, Outputs, Secrets und das Deploy-Kommando.
 | [`inbox-poll`](#inbox-poll) | pg_cron alle 5min + UI-Button | Cron / User-JWT / service_role | IMAP holen + parsed_messages befüllen |
 | [`inbox-parse`](#inbox-parse) | inline aus inbox-poll + UI | Cron / service_role | Pending-Mails klassifizieren |
 | [`tracking-poll`](#tracking-poll) | pg_cron stündlich (`tracking-poll-adaptive`, Minute :07) + UI-Retrack | Cron / User-JWT | Carrier-API für offene Deals (adaptive Frequenz) |
+| [`dpd-push`](#dpd-push) | DPD Tracking Push Service (extern, ~15 min) | DPD-Server (`token=`-Wand) | Webhook: DPD-Scans → live_status + tracking_events |
 | [`send-notifications`](#send-notifications) | pg_cron / manuell | Cron | Push via FCM HTTP v1 |
 | [`seed-demo-workspace`](#seed-demo-workspace) | manuell aus App | User-JWT (`test@test.com` only!) | Demo-Daten in Test-Workspace |
 | [`delete-account`](#delete-account) | manuell aus App | User-JWT | Account + alle Workspace-Daten löschen |
@@ -31,6 +32,9 @@ Shared-Code in [`supabase/functions/_shared/`](../../supabase/functions/_shared/
   Carrier + ihre Fähigkeiten).
 - `fcm.ts` — FCM-HTTP-v1-Helpers (aus `send-notifications` extrahiert, von
   `tracking-poll` für Status-Wechsel-Pushes mitgenutzt).
+- `live_status.ts` — Status-Persistenz-Helfer (`buildLiveStatusUpdate`,
+  `buildTrackingEventRows`, `maybeSendStatusPush`, …) — EINE Quelle für
+  alle Kanäle, die Carrier-Status schreiben (`tracking-poll` + `dpd-push`).
 - Tests: `*_test.ts` (Deno-Test-Pattern).
 
 ## inbox-poll
@@ -276,6 +280,32 @@ Für die Status-Wechsel-Pushes braucht die Function dasselbe
 ```bash
 supabase functions deploy tracking-poll --no-verify-jwt
 ```
+
+## dpd-push
+
+Datei: [`supabase/functions/dpd-push/index.ts`](../../supabase/functions/dpd-push/index.ts)
+
+Webhook für den offiziellen **DPD Tracking Push Service** (DPD-Geschäfts-
+kunden-Feature, Antragsformular bei DPD). Hintergrund: DPDs öffentliche
+Tracking-Endpoints blocken serverseitige Requests auf TLS-Ebene
+(Bot-Schutz, verifiziert 2026-06-11) — Pull-Polling à la DHL ist für DPD
+nicht zuverlässig möglich. Stattdessen sendet DPD pro Scan-Ereignis einen
+GET-Request (~15 min Latenz) an diese Function.
+
+- **Auth:** `verify_jwt=false` + PFLICHT-Query-Token `token=<DPD_PUSH_TOKEN>`
+  (`supabase secrets set DPD_PUSH_TOKEN=…`, fail-closed: 503 ohne Secret,
+  403 bei Mismatch). DPD-Absender-IP (213.95.42.108) wird soft geprüft.
+- **Ablauf:** `pnr` normalisieren → Deal via `deals.tracking` matchen →
+  Status-Map (`delivery_carload`→`out_for_delivery`, `delivery_customer`→
+  `delivered`, …) → `live_status` + `tracking_events` via
+  `_shared/live_status.ts` → Status-Wechsel-Push (FCM) → XML-ACK
+  `<push><pushid>…</pushid><status>OK</status></push>`.
+- **Unmatched pnr / unbekannter Status:** trotzdem ACK (sonst retried DPD
+  48 h und mailt Fehler) — nur Telemetrie-Log (pnr redacted).
+- **PII:** `receiver=`/`pod=` werden weder persistiert noch geloggt.
+- **Formular-Werte für den DPD-Antrag:** Push-URL =
+  `https://<ref>.functions.supabase.co/dpd-push?token=<DPD_PUSH_TOKEN>`,
+  Antwort = XML wie oben, Verzögerung 500 ms, max. Antwortzeit 5000 ms.
 
 ## send-notifications
 
