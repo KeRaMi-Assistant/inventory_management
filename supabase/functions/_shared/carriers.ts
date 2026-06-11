@@ -45,13 +45,14 @@ export const CARRIERS: ReadonlyArray<CarrierInfo> = [
     detection: true,
     pollAdapter: true,
     requiresApiKey: true,
-    uiEnabled: true,
+    uiEnabled: false,
     publicTrackingPage: true,
     note:
-      'Pull-API (Bearer-Key) UND Push: DPDs öffentliche Endpoints blocken ' +
-      'serverseitige Requests auf TLS-Ebene (verifiziert 2026-06-11) — der ' +
-      'verlässliche Kanal ist der offizielle Tracking Push Service ' +
-      '(Geschäftskunden-Antrag) → Webhook supabase/functions/dpd-push.',
+      'COMING FEATURE (2026-06-11): öffentliche Endpoints blocken Server-' +
+      'Requests auf TLS-Ebene → Pull unmöglich; der offizielle Tracking ' +
+      'Push Service braucht ein DPD-Geschäftskonto (Stakeholder hat keins). ' +
+      'Webhook supabase/functions/dpd-push liegt fertig + fail-closed ' +
+      'deployt bereit. Bis dahin: Detection + Deep-Link, UI „Bald verfügbar".',
   },
   {
     id: 'ups',
