@@ -93,6 +93,15 @@ die `matches`, `looksLikeOrder` und `parse` zur Verfügung stellt. Pro
 Tracking-Carrier ein Adapter in `tracking_adapters.ts`. Siehe
 [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#adapter-registry).
 
+### Adaptive-Sweep
+
+Der stündliche `tracking-poll-adaptive`-Cron-Lauf (`mode='adaptive-sweep'`,
+Minute :07). Statt fixer 4h-Frequenz entscheidet die Edge-Function pro Deal
+anhand `live_status` + `last_polled_at`, ob ein erneuter Carrier-Call
+fällig ist (`out_for_delivery` stündlich, `in_transit` ~4h, `pending`
+2×/Tag). Plus [Quiet-Hours](#quiet-hours) und Tages-Quota-Guard (Cap 900).
+Siehe [07 — Edge Functions](07-edge-functions.md#tracking-poll).
+
 ### Activity-Log
 
 Tabelle `activity_log`, eine UI-Heatmap der letzten User-Aktionen. Pro
@@ -169,9 +178,23 @@ Siehe [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#inbox-poll--imap-holzham
 
 ### Carrier
 
-Versanddienstleister (DHL, DPD, UPS). Pro Workspace API-Keys in
-`workspace_carrier_credentials`. Wird vom [Tracking-Poll](#tracking-poll)
-abgefragt. Siehe [02 — Konzepte](02-concepts.md#carrier-credentials).
+Versanddienstleister (DHL, DPD, UPS, GLS, Amazon Logistics). Pro Workspace
+API-Keys in `workspace_carrier_credentials`. Poll-fähige Carrier (DHL, DPD,
+UPS) werden vom [Tracking-Poll](#tracking-poll) abgefragt;
+[detection-only-Carrier](#detection-only-carrier) (Amazon, GLS) bleiben
+mail-getrieben. Siehe [02 — Konzepte](02-concepts.md#carrier-credentials)
+und die [Carrier-Registry](#carrier-registry).
+
+### Carrier-Registry
+
+Kanonische Liste aller Carrier + ihrer Fähigkeiten in
+[`carriers.ts`](../../supabase/functions/_shared/carriers.ts) (Paket 2,
+Audit-Fix „Carrier 3-fach inkonsistent"). Eine Quelle der Wahrheit für
+Detection, Poll-Adapter, UI-Freischaltung und Deep-Links; die Dart-Spiegel
+(`carrier_credential.dart`, `carrier_links.dart`) werden per
+`carriers_test.ts` dagegen geprüft, und `deals.carrier`-CHECK ist die
+Obermenge der Ids. Siehe
+[04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#carrier-registry-detection-only-carrier).
 
 ### ChangeNotifier
 
@@ -236,6 +259,16 @@ liefert den SnackBar-Undo-Slot. Siehe
 [`seed-demo-workspace`](07-edge-functions.md#seed-demo-workspace)
 generierte Datensätze, nur für `test@test.com`-Account. Siehe
 [02 — Konzepte](02-concepts.md#demo-daten).
+
+### Detection-only-Carrier
+
+Carrier, der in Mails erkannt wird (`detection: true`) und `deals.carrier`
+setzt, aber **keinen** Live-Status-Poll-Adapter hat (`pollAdapter: false`)
+— aktuell Amazon Logistics und GLS. Der [Tracking-Poll](#tracking-poll)
+short-circuited diese Carrier (`DETECTION_ONLY_CARRIERS`); ihr Status
+bleibt mail-getrieben, die UI bietet nur den Deep-Link. Siehe
+[Carrier-Registry](#carrier-registry) und
+[04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#carrier-registry-detection-only-carrier).
 
 ### Drain (Headless)
 
@@ -416,6 +449,19 @@ einem Tree bereitstellt. Konfiguriert in
 [`main.dart`](../../lib/main.dart). Siehe
 [05 — Architektur](05-architecture.md#provider-di-tree).
 
+## N
+
+### NavigationIntentsProvider
+
+`ChangeNotifier` (Paket 3,
+[`navigation_intents_provider.dart`](../../lib/providers/navigation_intents_provider.dart)),
+der einen pending Navigations-Intent (`MainTab` + optional `dealId`) hält.
+Entkoppelt Push-Deep-Links (`PushService.onNotificationTap` →
+`handlePushData`) und KPI-Drilldowns (`requestTab`) von der
+MainScreen-Tab-Logik; `MainScreen` konsumiert den Intent und ruft
+`consume()`. Siehe
+[05 — Architektur](05-architecture.md#navigationintentsprovider).
+
 ## O
 
 ### Onboarding
@@ -469,6 +515,16 @@ Zwei Bedeutungen — bitte trennen:
 In dieser App lebt jede stateful Provider-Klasse in
 [`lib/providers/`](../../lib/providers/), jeder Service in
 [`lib/services/`](../../lib/services/).
+
+## Q
+
+### Quiet-Hours
+
+Zeitfenster **22–05 Uhr Berlin**, in dem der stündliche
+[Adaptive-Sweep](#adaptive-sweep) komplett geskippt wird — nachts bewegt
+sich im Carrier-Netz fast nichts, Polls wären reine Quota-Verschwendung.
+Andere Modi (Single-Deal-Retrack, manueller Lauf) laufen immer durch.
+Siehe [07 — Edge Functions](07-edge-functions.md#tracking-poll).
 
 ## R
 
@@ -624,6 +680,17 @@ trägt den Deals-Filter „Prüfen ({count})". Wird vom Re-Parse-Mode
 `reparse_low_confidence` und vom `tracking-poll`-Skip ausgewertet.
 Siehe [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#strict-tracking-extraction-confidence-modell).
 
+### tracking_events
+
+Tabelle `tracking_events` (Migration
+[`20260610090000`](../../supabase/migrations/20260610090000_tracking_events.sql)):
+Carrier-Event-Historie pro Deal — die Datenquelle für den Klarna-Style-
+[Sendungsverlauf](03-screens-walkthrough.md#deals). Wird ausschließlich
+vom [Tracking-Poll](#tracking-poll) (Service-Role) geschrieben, idempotent
+per Dedup-UNIQUE `(deal_id, tracking, occurred_at, description)`; Clients
+lesen workspace-scoped via RLS. Siehe
+[06 — Datenbank](06-database.md#tracking_events).
+
 ### TrackingCandidate
 
 TypeScript-Interface in
@@ -639,11 +706,14 @@ Persistenz-Feldern, der Rest bleibt in
 
 ### Tracking-Poll
 
-Edge-Function `tracking-poll`, die alle 4h offene Deals beim
-[Carrier](#carrier) abfragt und bei `delivered` den Deal auf
-"Angekommen" setzt. Zusätzlich Single-Deal-Mode via `body.deal_id` +
-User-JWT für den Refresh-Button im UI (30s-Cooldown via
-[Live-Status](#live-status-deal)). Siehe
+Edge-Function `tracking-poll`, die offene Deals beim [Carrier](#carrier)
+abfragt, den Event-Verlauf in [tracking_events](#tracking_events)
+persistiert und bei `delivered` den Deal auf "Angekommen" setzt. Seit
+Paket 1.5 stündlicher [Adaptive-Sweep](#adaptive-sweep) (In-Function-
+Frequenz-Gating + [Quiet-Hours](#quiet-hours) + Tages-Quota-Cap 900) statt
+fixer 4h. Status-Wechsel lösen einen sofortigen FCM-Push aus. Zusätzlich
+Single-Deal-Mode via `body.deal_id` + User-JWT für den Refresh-Button im UI
+(30s-Cooldown via [Live-Status](#live-status-deal)). Siehe
 [07 — Edge Functions](07-edge-functions.md#tracking-poll).
 
 ## V

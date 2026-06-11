@@ -191,7 +191,15 @@ Validierung (Länge + Charset + Checksum, soweit möglich), und
 3. **Whitespace-Normalisierung** vor jedem Pattern-Match
    (`candidate.replace(/[\s ]+/g, '')`) — sonst killt der Strict-Mode
    legitime UPS-Trackings wie `1Z 999 AA1 0123456784`.
-4. **Pattern-Match** auf den normalisierten Token.
+4. **Pattern-Match** auf den normalisierten Token. Die numerischen Pattern
+   (DHL-20/-12, DPD-14, GLS) sind seit Paket 2 **Leerzeichen-tolerant**:
+   sie erlauben EINZELNE Spaces/NBSPs zwischen den Ziffern
+   (`DE 5455 2798 39`, gruppierte PDF-Trackings) und kapseln den Match per
+   Lookaround-Guards (`(?<!\d[  ])…(?![  ]?\d)`), damit keine
+   längeren Zahlenketten angeschnitten werden. Ein **globaler**
+   Whitespace-Strip des Bodies bleibt verboten — die Validatoren
+   (mod-10-Checksums, exakte Längen, Name-Anchors) laufen weiterhin auf dem
+   normalisierten Token, ein zufälliger Zahlen-Mix fällt dort durch.
 5. **Reject-Filter** (`REJECT_PATTERNS`, läuft NUR gegen den 3–30-Zeichen-
    Token): Amazon-Order-IDs (`123-1234567-1234567`), IBAN-Prefixe, Tele-
    fonnummern, PLZ. Reject-Hits werden in
@@ -270,6 +278,69 @@ aus `mailbox_accounts.last_reparse_at`.
 `tracking_needs_review = TRUE` UND `tracking_confidence = 'none'` —
 sonst würden API-Calls gegen leere Trackings laufen.
 
+## Carrier-Registry, Detection-only-Carrier
+
+Die kanonische Liste aller Carrier lebt seit Paket 2 in
+[`supabase/functions/_shared/carriers.ts`](../../supabase/functions/_shared/carriers.ts)
+— eine **Quelle der Wahrheit** statt drei driftender Definitionen. Pro
+Carrier: `detection` (von der Mail-Detection erkannt?), `pollAdapter`
+(hat einen Live-Status-Poll?), `requiresApiKey`, `uiEnabled`
+(in Settings → Versand freigeschaltet) und `publicTrackingPage`
+(Deep-Link verfügbar). Aus `detection && !pollAdapter` wird das
+`DETECTION_ONLY_CARRIERS`-Set abgeleitet; die Dart-Spiegel
+([`carrier_credential.dart`](../../lib/models/carrier_credential.dart),
+[`carrier_links.dart`](../../lib/utils/carrier_links.dart)) werden per
+`carriers_test.ts` gegen die Registry geprüft.
+
+| Carrier | detection | pollAdapter | UI | Notiz |
+|---|---|---|---|---|
+| `dhl` | ✓ | ✓ | ✓ | Parcel-DE-API, Cap 900/Tag |
+| `dpd` | ✓ | ✓ | ✓ | seit Paket 2 in Settings freigeschaltet |
+| `ups` | ✗ | ✓ | ✗ | Adapter vorhanden, `1Z` bewusst nicht geroutet, UI gesperrt bis OAuth-Flow |
+| `amazon` | ✓ | ✗ | ✗ | **detection-only** — keine öffentliche API, kein Deep-Link |
+| `gls` | ✓ | ✗ | ✗ | **detection-only** (neu Paket 2) — Deep-Link, Status mail-getrieben |
+
+**Detection-only-Carrier** (`amazon`, `gls`) werden zwar in Mails erkannt
+und setzen `deals.carrier`, aber **nie** von `tracking-poll` abgefragt
+(`DETECTION_ONLY_CARRIERS`-Short-Circuit). Ihr Live-Status bleibt
+mail-getrieben; die UI bietet nur den Deep-Link zur Carrier-Paketverfolgung.
+
+### GLS-Detection (Doppel-Gate)
+
+GLS (neu in Paket 2 — PcComponentes & Co. versenden via GLS) hat **keine
+öffentliche Checksum**. Die numerischen GLS-Pattern (`gls-num`, 11–20
+Ziffern, inkl. GLS-Spain-20-Format) sind deshalb wie DPD doppelt
+gegated: ein Tracking-**Anchor** ist Pflicht (`requiresAnchor`) UND das
+Wort „GLS" muss explizit im 80-Zeichen-Fenster vor dem Match stehen
+(`glsNameInWindow`) — sonst Drop. HTML-`href`-Treffer auf GLS-
+Paketverfolgungs-Links (`gls-group.eu`/`gls-pakete.de`/nationale Ableger,
+Param `match=`/`txtRefNo=`) gelten direkt als `strong`.
+
+### Re-Parse-Korrektur (strictly-stronger Replace)
+
+Bis Paket 2 schrieb der Re-Parse ein Tracking nur, wenn der Deal noch
+**keins** hatte (forward-only). Jetzt darf ein neu erkanntes, validiertes
+Tracking ein bestehendes **falsches** ersetzen — geregelt von der reinen
+Funktion `shouldReplaceTracking` in
+[`inbox_parse_runner.ts`](../../supabase/functions/_shared/inbox_parse_runner.ts).
+Bedingungen (alle nötig):
+
+- die neue Detection ist `'strong'` (validiert),
+- der alte Wert ist **nicht** `'manual'` (User-Eingabe wird nie
+  überschrieben),
+- der alte Wert trägt `tracking_needs_review = TRUE` ODER ist nicht-strong
+  (`none`/`null`/Legacy).
+
+Ein `strong → strong`-Konflikt bleibt unangetastet (kein Ping-Pong
+zwischen zwei validierten Werten — das wäre Cross-Mail-Mehrdeutigkeit).
+Beim Replace werden die Flags korrigiert (`tracking_confidence='strong'`,
+`tracking_needs_review=false`) und die Live-Status-Felder des alten
+Trackings genullt (`live_status`/`live_eta`/`last_polled_at` = NULL), damit
+die UI keinen stale Status zeigt und der adaptive Poller die neue Nummer
+sofort frisch bewertet. Die `tracking_events`-Timeline bleibt erhalten —
+sie ist per Dedup-Key an die Tracking-Nummer gebunden und filtert sich
+selbst.
+
 ## inbox-parse — Klassifizierung & Match
 
 Datei:
@@ -318,19 +389,25 @@ Wird:
 Datei:
 [`supabase/functions/tracking-poll/index.ts`](../../supabase/functions/tracking-poll/index.ts)
 
-Wird **alle 4h** per pg_cron getriggert. Ablauf:
+Wird seit Paket 1.5 **stündlich** per pg_cron getriggert
+(`tracking-poll-adaptive`, `mode='adaptive-sweep'`), mit adaptiver
+In-Function-Frequenz, Quiet-Hours (Berlin 22–05) und Tages-Quota-Guard.
+Ablauf:
 
 1. Lade alle aktiven `workspace_carrier_credentials`.
 2. Pro Workspace: lade alle offenen Deals
-   (`status='Unterwegs'`, `tracking IS NOT NULL`, `arrival_date IS NULL`).
+   (`status='Unterwegs'`, `tracking IS NOT NULL`, `arrival_date IS NULL`),
+   filtere auf **fällige** Deals (`out_for_delivery` stündlich,
+   `in_transit` ~4h, `pending` 2×/Tag).
 3. Pro Deal: erkenne Carrier aus Tracking-Nummer (Adapter aus
    [`tracking_adapters.ts`](../../supabase/functions/_shared/tracking_adapters.ts))
-   und ruf den Carrier-API-Endpoint mit gespeichertem API-Key auf.
+   und ruf den Carrier-API-Endpoint mit gespeichertem API-Key auf;
+   persistiere den vollen Event-Verlauf in `tracking_events`.
 4. Bei `delivered`: setze Deal `status='Angekommen'` + `arrival_date`,
-   schreib `activity_log`, optional Push.
+   schreib `activity_log`. Bei jedem Status-Wechsel: Push.
 
-Rate-Limit: max 200 Tracking-Calls pro Lauf. Reihenfolge: ältester
-`order_date` zuerst.
+Details (adaptive Gating, Quota, Status-Push) siehe
+[07 — Edge Functions](07-edge-functions.md#tracking-poll).
 
 ## Dedup-Logik
 
@@ -405,6 +482,8 @@ Mehr Diagnose-Pfade in [09-troubleshooting.md](09-troubleshooting.md).
 - [`supabase/functions/_shared/inbox_parse_runner.ts`](../../supabase/functions/_shared/inbox_parse_runner.ts) — Sweep-Logik
 - [`supabase/functions/tracking-poll/index.ts`](../../supabase/functions/tracking-poll/index.ts) — Carrier-Tracking
 - [`supabase/functions/_shared/tracking_adapters.ts`](../../supabase/functions/_shared/tracking_adapters.ts) — DHL/DPD/UPS-Adapter
+- [`supabase/functions/_shared/tracking_detection.ts`](../../supabase/functions/_shared/tracking_detection.ts) — Mail-Detection (Pattern + Carrier-Gating, inkl. GLS)
+- [`supabase/functions/_shared/carriers.ts`](../../supabase/functions/_shared/carriers.ts) — kanonische Carrier-Registry
 - [`supabase/migrations/20260507000000_inbox.sql`](../../supabase/migrations/20260507000000_inbox.sql) — Mail-Schema + RPCs
 - [`supabase/migrations/20260508000000_workspace_carrier_credentials.sql`](../../supabase/migrations/20260508000000_workspace_carrier_credentials.sql) — Carrier-Keys
 - [`lib/screens/inbox_screen.dart`](../../lib/screens/inbox_screen.dart) — UI
