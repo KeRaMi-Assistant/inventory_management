@@ -203,6 +203,18 @@ class _HelpScreenState extends State<HelpScreen> {
             l10n.helpDealsTrackingDesc,
           ),
           _HelpItem.text(
+            l10n.helpDealsTimelineTitle,
+            l10n.helpDealsTimelineDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpDealsEtaTitle,
+            l10n.helpDealsEtaDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpDealsCopyLinkTitle,
+            l10n.helpDealsCopyLinkDesc,
+          ),
+          _HelpItem.text(
             l10n.helpDealsDropShipTitle,
             l10n.helpDealsDropShipDesc,
           ),
@@ -224,6 +236,10 @@ class _HelpScreenState extends State<HelpScreen> {
           _HelpItem.text(
             l10n.helpShippingDhlTitle,
             l10n.helpShippingDhlDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpShippingDpdTitle,
+            l10n.helpShippingDpdDesc,
           ),
           _HelpItem.text(
             l10n.helpShippingApiOnlyTitle,
@@ -365,6 +381,10 @@ class _HelpScreenState extends State<HelpScreen> {
           _HelpItem.text(l10n.helpPushIosTitle, l10n.helpPushIosDesc),
           _HelpItem.text(l10n.helpPushAndroidTitle, l10n.helpPushAndroidDesc),
           _HelpItem.text(l10n.helpPushWhenTitle, l10n.helpPushWhenDesc),
+          _HelpItem.text(
+            l10n.helpPushDeliveryTitle,
+            l10n.helpPushDeliveryDesc,
+          ),
         ],
       ),
       _HelpSection(
@@ -397,6 +417,9 @@ class _HelpScreenState extends State<HelpScreen> {
           _HelpItem.text(l10n.helpFaqQ23, l10n.helpFaqA23),
           _HelpItem.text(l10n.helpFaqQ24, l10n.helpFaqA24),
           _HelpItem.text(l10n.helpFaqQ25, l10n.helpFaqA25),
+          _HelpItem.text(l10n.helpFaqQ26, l10n.helpFaqA26),
+          _HelpItem.text(l10n.helpFaqQ27, l10n.helpFaqA27),
+          _HelpItem.text(l10n.helpFaqQ28, l10n.helpFaqA28),
         ],
       ),
       _HelpSection(
@@ -436,6 +459,10 @@ class _HelpScreenState extends State<HelpScreen> {
           _HelpItem.text(
             l10n.helpTroubleLowStockPushTitle,
             l10n.helpTroubleLowStockPushDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpTroubleStatusStaleTitle,
+            l10n.helpTroubleStatusStaleDesc,
           ),
         ],
       ),

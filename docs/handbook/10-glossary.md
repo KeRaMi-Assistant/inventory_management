@@ -93,6 +93,15 @@ die `matches`, `looksLikeOrder` und `parse` zur Verfügung stellt. Pro
 Tracking-Carrier ein Adapter in `tracking_adapters.ts`. Siehe
 [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#adapter-registry).
 
+### Adaptive-Sweep
+
+Der stündliche `tracking-poll-adaptive`-Cron-Lauf (`mode='adaptive-sweep'`,
+Minute :07). Statt fixer 4h-Frequenz entscheidet die Edge-Function pro Deal
+anhand `live_status` + `last_polled_at`, ob ein erneuter Carrier-Call
+fällig ist (`out_for_delivery` stündlich, `in_transit` ~4h, `pending`
+2×/Tag). Plus [Quiet-Hours](#quiet-hours) und Tages-Quota-Guard (Cap 900).
+Siehe [07 — Edge Functions](07-edge-functions.md#tracking-poll).
+
 ### Activity-Log
 
 Tabelle `activity_log`, eine UI-Heatmap der letzten User-Aktionen. Pro

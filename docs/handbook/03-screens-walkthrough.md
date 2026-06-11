@@ -190,8 +190,33 @@ einen **Re-Track-Button** (Refresh-Icon, 48dp Touch-Target). Tap →
 `DealsProvider.retrackDeal(dealId)` → Edge-Function
 `tracking-poll` mit `body.deal_id`. 30s-Cooldown pro Deal (siehe
 [07 — Edge Functions](07-edge-functions.md#tracking-poll)). SnackBars
-für success / 429 / failed / offline. Cron-Polls (alle 4h) sind davon
-unberührt.
+für success / 429 / failed / offline. Cron-Polls sind davon unberührt.
+
+Im Deal-Detail (Paket 1) ergänzt der Block:
+
+- **ETA-Zeile** (`Key('tracking-eta-row')`) — „Voraussichtliche
+  Zustellung: …" aus `deals.live_eta`, nur solange die Sendung nicht
+  zugestellt ist.
+- **Copy-CTA** + **„Sendung verfolgen"-Link** — kopiert die
+  Tracking-Nummer bzw. öffnet die öffentliche Carrier-Tracking-Seite
+  (Deep-Link aus
+  [`lib/utils/carrier_links.dart`](../../lib/utils/carrier_links.dart);
+  `amazon` hat keine öffentliche Seite → kein Link).
+- **`TrackingTimelineSection`** (Klarna-Style-Sendungsverlauf,
+  [`lib/widgets/tracking_timeline.dart`](../../lib/widgets/tracking_timeline.dart))
+  — vertikale Timeline aller Carrier-Scans aus `tracking_events`. Lädt
+  on-demand beim Einblenden, kollabiert auf 4 Einträge, lädt nach
+  Retrack via `refreshToken`-Wechsel neu. Einspaltig, Touch-Target des
+  Expand-Buttons ≥ 48 dp.
+
+In der Deal-Liste rendert
+[`tracking_chip.dart`](../../lib/widgets/tracking_chip.dart) (Paket 3)
+einen farbcodierten **Status-Dot** (`Key('tracking-chip-status-dot')`)
+aus `deal.liveStatus` — gleiche Farb-Semantik wie der Block.
+
+**Pull-to-Refresh** (Paket 3, Phone): die Deal-Liste hängt in einem
+`RefreshIndicator` (`onRefresh: DealsProvider.loadData`) — Mobile-Standard
+zum Resync.
 
 Inline-Aktionen (Status ändern, Buyer ändern, Tracking eintragen) gehen
 über [`DealsProvider`](../../lib/providers/deals_provider.dart) und
@@ -265,6 +290,10 @@ Liste aller Items. Pro Card: Name, SKU, Menge, Lagerort, Status. Aktionen:
   (siehe Master-Detail-Note unten).
 
 Filter: Status, Lagerort, MHD-Frist, Suchtext.
+
+**Pull-to-Refresh** (Paket 3, Phone): die Item-Liste hängt in einem
+`RefreshIndicator` (`onRefresh: StockProvider.loadData`) — resynct Bestand
++ Bewegungen. Auch das [Dashboard](#dashboard) nutzt das gleiche Idiom.
 
 CSV-Export/Import passiert über
 [`csv_service.dart`](../../lib/services/csv_service.dart) und ist im
@@ -508,8 +537,14 @@ Sehr großer Screen (≈3400 LoC) mit vielen Sektionen:
   [`pricing_screen.dart`](../../lib/screens/pricing_screen.dart).
 - **Postfächer** — Add/Edit/Delete für `mailbox_accounts`. Der gleiche
   Dialog wird auch im Inbox-Tab gezeigt.
-- **Carrier** — DHL/DPD/UPS-API-Keys. Speichert via Edge-Function-Path,
-  damit Klartext nie in der DB landet.
+- **Carrier (Versand)** — Carrier-API-Keys. Speichert via
+  Edge-Function-Path, damit Klartext nie in der DB landet. In der UI
+  freigeschaltet sind **DHL** und seit Paket 2 **DPD** (`enabledCarrierIds`
+  in [`carrier_credential.dart`](../../lib/models/carrier_credential.dart),
+  Spiegel der Registry
+  [`carriers.ts`](../../supabase/functions/_shared/carriers.ts)). UPS
+  bleibt backend-seitig unterstützt, aber UI-gesperrt bis zum
+  OAuth-Key-Flow.
 - **Notifications** — Per-User-Preferences (MHD, Delivery, Payment-overdue).
 - **Public Profile** — Handle ändern, Sichtbarkeit umschalten.
 - **Billing-Profile** — Stammdaten für Rechnungen → eigener Screen
