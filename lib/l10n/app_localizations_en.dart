@@ -1518,7 +1518,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpDealsStatusInTransit =>
-      'In transit — shipping confirmation detected or set manually. As soon as a tracking number is assigned, the app checks the status once right away and then daily at 1:00 PM.';
+      'In transit — shipping confirmation detected or set manually. As soon as a tracking number is assigned, the app checks the status once right away and then automatically at the right cadence: out for delivery every hour, in transit roughly every 4 hours (paused overnight). You don\'t have to tap anything.';
 
   @override
   String get helpDealsStatusArrived =>
@@ -1537,7 +1537,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpDealsTrackingDesc =>
-      'When a shipping mail arrives, the app detects the tracking number purely from its structure (format + checksum) — DHL, Amazon Logistics and DPD are supported. No carrier API key is required for this: the number is always saved and the deal flips to \"In transit\" automatically. The live status (out for delivery, delivered) is fetched once a matching carrier API key is set — immediately on assignment and then daily at 1:00 PM. Amazon Logistics shipments are detected but can\'t be tracked live (see FAQ). Other carriers (UPS, Hermes, GLS) you enter manually on the deal when needed. See the \"Shipping & carrier API keys\" section for details.';
+      'When a shipping mail arrives, the app detects the tracking number purely from its structure (format + checksum) — DHL, DPD, Amazon Logistics and GLS are recognised. No carrier API key is required for this: the number is always saved and the deal flips to \"In transit\" automatically. The live status (out for delivery, delivered) is fetched once a matching carrier API key is set — immediately on assignment and then automatically at the right cadence (out for delivery hourly, in transit ~every 4 hours, paused overnight). Amazon Logistics and GLS are detected but can\'t be tracked live (see FAQ) — for GLS there\'s at least a direct link to the tracking page. Other carriers (UPS, Hermes) you enter manually on the deal when needed. See the \"Shipping & carrier API keys\" section for details.';
 
   @override
   String get helpDealsDropShipTitle => 'Multi drop-ship';
@@ -1551,7 +1551,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpDealsRetrackDesc =>
-      'In the deal detail view, next to the tracking number, you\'ll find a refresh icon labelled \"Refresh status\". It asks the carrier for the current status right away instead of waiting for the daily 1:00 PM poll — handy, for example, just before a planned delivery.\nOne retrack per deal is allowed every 30 seconds. While the lock is active the button is greyed out and shows \"Please wait 30s\" — that protects the carrier API from unnecessary calls and you from rate limits.\nFor Amazon Logistics shipments the button stays greyed out permanently: Amazon doesn\'t offer a public status API, so there\'s no live status to refresh.';
+      'In the deal detail view, next to the tracking number, you\'ll find a refresh icon labelled \"Refresh status\". It asks the carrier for the current status right away instead of waiting for the next automatic check — handy, for example, just before a planned delivery.\nOne retrack per deal is allowed every 30 seconds. While the lock is active the button is greyed out and shows \"Please wait 30s\" — that protects the carrier API from unnecessary calls and you from rate limits.\nFor Amazon Logistics and GLS shipments the button stays greyed out permanently: there\'s no public live status to refresh for those services.';
+
+  @override
+  String get helpDealsTimelineTitle => 'Shipment timeline';
+
+  @override
+  String get helpDealsTimelineDesc =>
+      'If a deal has a trackable tracking number, the deal detail shows a Klarna-style shipment timeline below the status: every stop of the parcel with a timestamp and — when the carrier provides it — the location. The newest entry sits at the top and is highlighted.\nThe timeline loads automatically when you open the deal. With many stops you\'ll see the latest four first; \"Show all events\" expands the full history and collapses it again.';
+
+  @override
+  String get helpDealsEtaTitle => 'Estimated delivery';
+
+  @override
+  String get helpDealsEtaDesc =>
+      'As soon as the carrier provides a delivery estimate, an \"Estimated delivery\" line with the projected date appears in the tracking block. It\'s the carrier\'s estimate, not a guarantee — it can shift. Once the parcel is delivered, the line disappears.';
+
+  @override
+  String get helpDealsCopyLinkTitle => 'Copy & track the tracking number';
+
+  @override
+  String get helpDealsCopyLinkDesc =>
+      'The tracking block in the deal detail has two buttons:\n• \"Copy\" puts the tracking number on the clipboard — handy for pasting it elsewhere.\n• \"Track shipment\" opens the carrier\'s official tracking page (e.g. DHL, DPD, GLS, UPS, Hermes) straight away with your number. Amazon Logistics has no public page, so the button is absent there.';
 
   @override
   String get helpShippingSection => 'Shipping & carrier API keys';
@@ -1583,7 +1604,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpShippingComingSoonDesc =>
-      'Tracking numbers from DHL, Amazon Logistics and DPD are detected automatically from mails.\n• DHL and DPD: detection plus live status once the matching carrier API key is set.\n• Amazon Logistics: detected and saved, but no live status — Amazon doesn\'t offer a public status API.\nOther carriers (UPS, Hermes, GLS) are deliberately not guessed from mails — that used to be the main source of wrong tracking numbers. For those, enter the tracking number on the deal manually when needed.';
+      'Tracking numbers from DHL, DPD, Amazon Logistics and GLS are detected automatically from mails.\n• DHL and DPD: detection plus live status once the matching carrier API key is set.\n• Amazon Logistics: detected and saved, but no live status — Amazon doesn\'t offer a public status API.\n• GLS: detected and saved (e.g. from shop mails like PcComponentes), no live status — but you get a direct link to GLS tracking.\nOther carriers (UPS, Hermes) are deliberately not guessed from mails — that used to be the main source of wrong tracking numbers. For those, enter the tracking number on the deal manually when needed.';
+
+  @override
+  String get helpShippingDpdTitle => 'DPD — now with live status';
+
+  @override
+  String get helpShippingDpdDesc =>
+      'Besides DHL you can now store a DPD API key to get the live status of DPD shipments:\n• Paste the DPD key under Settings → Shipping → DPD → \"Save API key\".\n• Then tap Settings → \"Re-evaluate tracking numbers\" once so existing DPD mails are re-parsed.\nDPD tracking numbers are detected from your mails automatically even without a key — the key only unlocks the automatic live status.';
 
   @override
   String get helpShippingKeySafetyTitle => 'What happens to my API key?';
@@ -1791,7 +1819,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpPushWhenDesc =>
-      '• New order confirmation in the mailbox\n• Tracking update (shipped / arrived)\n• Minimum stock undercut (if enabled)\n• Workspace invitation\nYou can disable individual categories under Settings → Push.';
+      '• New order confirmation in the mailbox\n• Shipment status change (in transit, out for delivery, delivered)\n• Minimum stock undercut (if enabled)\n• Workspace invitation\nYou can disable individual categories under Settings → Push.';
+
+  @override
+  String get helpPushDeliveryTitle => 'Push on shipment status change';
+
+  @override
+  String get helpPushDeliveryDesc =>
+      'Whenever a shipment\'s real status changes, you get a push notification automatically — e.g. \"Parcel in transit 📦\", \"Parcel out for delivery 🚚\" or \"Parcel delivered ✅\". There\'s at most one notification per status change, so you won\'t get flooded with duplicates.\nTapping the notification opens the matching deal directly in the app.\nDon\'t want them? Disable the \"Deliveries\" category under Settings → Push — those pushes then stop, while the automatic background updates keep running.';
 
   @override
   String get helpFaqSection => 'Frequently asked questions (FAQ)';
@@ -2006,6 +2041,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get helpTroubleLowStockPushDesc =>
       'First check that push notifications are generally allowed (OS Settings → Notifications → your app). Then: Settings → Push → is the \"Low stock\" category enabled? Note: low-stock pushes are batched per workspace — the notification contains a count only, no product names. If the dashboard already shows the affected items, the alert logic is working correctly; only the push token may be stale — log out and back in to re-register it.';
+
+  @override
+  String get helpTroubleStatusStaleTitle =>
+      'Shipment status not updating / no status-change push';
+
+  @override
+  String get helpTroubleStatusStaleDesc =>
+      'The automatic check runs at the right cadence (out for delivery hourly, in transit ~every 4 hours) and pauses overnight. So right after a shipment goes out it can take a moment for anything to show — for an instant snapshot, tap \"Refresh status\" on the deal.\nNot getting a status-change push? Settings → Push → is the \"Deliveries\" category enabled? It also needs a live status, which is only available for DHL and DPD with a stored API key — Amazon Logistics and GLS have no live status and therefore no status-change push.';
 
   @override
   String get helpWarenwirtschaftSection => 'Warehouse hub';
@@ -2250,6 +2293,29 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get helpFaqA25 =>
       'The app detects Amazon Logistics shipments and saves the tracking number, but Amazon doesn\'t offer a public interface to query the shipping status. That\'s why the deal only shows \"Shipment detected — live status unavailable\" and the \"Refresh status\" icon is greyed out. Amazon often hands the parcel over to DHL — if the same mail also contains a DHL number, the app uses that as the trackable shipment and you get a normal live status there.';
+
+  @override
+  String get helpFaqQ26 => 'Why does my GLS shipment have no live status?';
+
+  @override
+  String get helpFaqA26 =>
+      'The app detects GLS tracking numbers automatically from shop mails (e.g. PcComponentes) and saves them. There\'s no automatic live status for GLS, though, because GLS doesn\'t offer a freely usable tracking service. Instead you get a \"Track shipment\" button that opens the official GLS page with your number.';
+
+  @override
+  String get helpFaqQ27 =>
+      'How often does the shipment status update on its own?';
+
+  @override
+  String get helpFaqA27 =>
+      'Automatically, without any action from you: parcels out for delivery are checked every hour, parcels still in transit roughly every 4 hours. At night (about 10 PM–6 AM) the check pauses, because hardly anything happens in the carrier network then. Delivered shipments are no longer queried. If you want a fresh snapshot right now, tap \"Refresh status\" on the deal (allowed every 30 seconds).';
+
+  @override
+  String get helpFaqQ28 =>
+      'Can I jump from the dashboard straight to the right area?';
+
+  @override
+  String get helpFaqA28 =>
+      'Yes. Tap a tile on the dashboard and the app jumps to the matching area — e.g. from \"Open deliveries\" to Deals or from \"Critical stock\" to Inventory. In the deal list and in Inventory you can also pull down from the top on your phone (pull-to-refresh) to reload the data.';
 
   @override
   String get helpPrivacySection => 'Privacy & contact';

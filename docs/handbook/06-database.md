@@ -44,6 +44,7 @@ Alle Tabellen liegen im `public`-Schema. Workspace-gescoped sind:
 | `warehouses` | Strukturierte Lagerorte | `20260522015018_warehouses.sql` |
 | `stocktakes` | Inventur-Sessions (Kopf) | `20260522021641_stocktakes.sql` |
 | `stocktake_items` | Inventur-Positionen (Zähl-Kind-Tabelle) | `20260522021641_stocktakes.sql` |
+| `tracking_events` | Carrier-Event-Historie pro Deal (Klarna-Style-Timeline) | `20260610090000_tracking_events.sql` |
 
 Views (kein eigener Tabellen-Eintrag in Supabase-Studio, aber abfragbar wie eine Tabelle):
 
@@ -148,8 +149,27 @@ tracking_needs_review BOOLEAN NOT NULL DEFAULT FALSE,             -- 20260513183
 live_status           TEXT,                                       -- 20260515000000
 live_status_last_event TEXT,                                      -- 20260515000000
 live_status_updated_at TIMESTAMPTZ,                               -- 20260515000000
+carrier               TEXT CHECK (carrier IS NULL OR carrier IN
+                        ('dhl','amazon','dpd','gls','ups')),       -- 20260603074312 / 20260610150000
+live_eta              TIMESTAMPTZ,                                 -- 20260610090000
+last_polled_at        TIMESTAMPTZ,                                 -- 20260610090000
 created_at, updated_at, deleted_at TIMESTAMPTZ
 ```
+
+Die `carrier`-Spalte hält den lowercase-Carrier-Key. Migration
+[`20260610150000_deals_carrier_gls.sql`](../../supabase/migrations/20260610150000_deals_carrier_gls.sql)
+erweitert den CHECK auf `'gls'` + `'ups'` — damit ist er die **Obermenge**
+aller Carrier in der kanonischen Registry
+[`carriers.ts`](../../supabase/functions/_shared/carriers.ts) (Audit-Fix
+„Carrier 3-fach inkonsistent"). `amazon` + `gls` sind dabei
+[detection-only](10-glossary.md#detection-only-carrier) (kein Live-Poll).
+
+`live_eta` (geschätztes Zustellfenster, Quelle Carrier-API oder Mail-ETA)
+und `last_polled_at` (letzter **erfolgreicher** Poll, getrennt vom letzten
+Status-Wechsel `live_status_updated_at`) kamen mit Migration
+[`20260610090000_tracking_events.sql`](../../supabase/migrations/20260610090000_tracking_events.sql).
+`last_polled_at` steuert die [adaptive Poll-Frequenz](07-edge-functions.md#tracking-poll)
+und den 30s-Retrack-Cooldown.
 
 Indexe auf `workspace_id`, `(workspace_id, order_date DESC)`, `ticket_id`,
 `tracking`, Partial-Index `deals_needs_tracking_review_idx`
@@ -439,6 +459,20 @@ workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE
 `low_stock`-Alerts (max. ein Push pro Workspace + Kalender-Tag). Der
 PK `(user_id, ref_kind, ref_id)` bleibt unverändert.
 
+Migration
+[`20260610090000_tracking_events.sql`](../../supabase/migrations/20260610090000_tracking_events.sql)
+erweitert den CHECK ein weiteres Mal:
+
+```sql
+-- CHECK-Constraint (NEU):
+ref_kind IN ('mhd','delivery','payment','low_stock','tracking_status')
+```
+
+`tracking_status` deckt die **Status-Wechsel-Pushes** ab, die
+[`tracking-poll`](07-edge-functions.md#tracking-poll) bei einem
+Live-Status-Wechsel sofort sendet (Claim-then-Send-Dedup pro
+Deal + Status).
+
 ### `stocktakes`
 
 Datei:
@@ -477,6 +511,45 @@ created_at, updated_at, updated_by, version TIMESTAMPTZ/INT
 Beim Schließen einer Inventur erzeugt die App pro Differenz
 (`qty_counted ≠ qty_expected`) eine `inventory_movements`-Row mit
 `movement_type='stocktake'` (append-only).
+
+### `tracking_events`
+
+Datei:
+[`supabase/migrations/20260610090000_tracking_events.sql`](../../supabase/migrations/20260610090000_tracking_events.sql)
+
+```sql
+id           BIGSERIAL PRIMARY KEY,
+deal_id      BIGINT NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+tracking     TEXT NOT NULL,           -- Teil des Dedup-Keys (Tracking-Wechsel = frische Timeline)
+carrier      TEXT,
+occurred_at  TIMESTAMPTZ NOT NULL,
+status       TEXT CHECK (status IN
+               ('pending','in_transit','out_for_delivery','delivered','exception')),
+raw_code     TEXT,
+description  TEXT NOT NULL DEFAULT '',  -- Writer kürzt auf 500 Zeichen VOR Upsert (Teil des Dedup-Keys)
+location     TEXT,
+source       TEXT NOT NULL DEFAULT 'poll' CHECK (source IN ('poll','mail','manual')),
+created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+CONSTRAINT tracking_events_dedup UNIQUE (deal_id, tracking, occurred_at, description)
+```
+
+**Carrier-Event-Historie pro Deal** (Klarna-Style-Timeline). Bisher
+persistierte nur `deals.live_status_last_event` den letzten Event-Text;
+die Carrier-APIs liefern aber den kompletten Verlauf, der ab jetzt bei
+jedem Poll idempotent upserted wird (`ON CONFLICT DO NOTHING` über den
+Dedup-UNIQUE). Ohne den Dedup-Key würde die Tabelle pro Poll wachsen —
+`description` ist `NOT NULL DEFAULT ''`, weil UNIQUE NULLs als distinct
+behandelt (= Duplikate). Der **einzige Writer** ist die
+[`tracking-poll`](07-edge-functions.md#tracking-poll)-Edge-Function
+(Service-Role).
+
+**RLS:** nur eine `tracking_events_ws_read`-SELECT-Policy für
+Workspace-Mitglieder. **Keine** INSERT/UPDATE/DELETE-Policy → default-deny
+für `authenticated`; Schreiben darf nur der Service-Role-Pfad (bypassed
+RLS). Indexe: `(deal_id, occurred_at DESC)` für die Timeline-Query und
+`(workspace_id)`. Siehe [Glossar](10-glossary.md#tracking_events) und die
+UI-Anbindung in [03 — Screens](03-screens-walkthrough.md#deals).
 
 ### `mailbox_accounts` & `mailbox_credentials`
 
@@ -532,6 +605,27 @@ Zusätzliche Strict-Tracking-Spalten:
 
 Verschlüsselte Carrier-API-Keys (DHL, DPD, UPS) pro Workspace. Selbes
 Vault-Pattern wie Mailbox.
+
+Migration
+[`20260610090000_tracking_events.sql`](../../supabase/migrations/20260610090000_tracking_events.sql)
+ergänzt zwei Tages-Quota-Spalten:
+
+```sql
+daily_call_count INTEGER NOT NULL DEFAULT 0,
+daily_call_date  DATE
+```
+
+Harter Guard gegen einen Quota-Riss beim
+[adaptiven Polling](07-edge-functions.md#tracking-poll): DHL erlaubt
+1.000 Queries/Tag, wir kappen bei **900** pro Workspace×Carrier. Der
+Zähler wird ausschließlich über die SECURITY-DEFINER-RPC
+`bump_carrier_daily_calls(_workspace_id, _carrier_id, _calls, _today,
+_last_error)` inkrementiert — ein **atomares** UPDATE in einem Statement
+(row-level lock), damit parallele Poll-Läufe (stündlicher Sweep +
+Event-Trigger-Polls) sich die Zähler nicht via Lost-Update-Race
+überschreiben. Datums-Rollover (anderes `daily_call_date`) startet den
+Zähler neu. `GRANT EXECUTE` nur an `service_role` (REVOKE von
+`anon`/`authenticated`).
 
 ### `audit_log` vs. `activity_log`
 
@@ -654,6 +748,28 @@ Auf das UPDATE feuert `purchase_order_items_status_trg` → aktualisiert
 `authenticated` (nicht `anon`/`public`). Siehe
 [07 — Edge Functions](07-edge-functions.md) für den UI-Aufrufpfad.
 
+### RPC `bump_carrier_daily_calls`
+
+Datei:
+[`supabase/migrations/20260610090000_tracking_events.sql`](../../supabase/migrations/20260610090000_tracking_events.sql)
+
+```sql
+public.bump_carrier_daily_calls(
+  _workspace_id UUID, _carrier_id TEXT, _calls INTEGER,
+  _today DATE, _last_error TEXT DEFAULT NULL)
+RETURNS void
+LANGUAGE sql SECURITY DEFINER
+SET search_path = public
+```
+
+Atomarer Tages-Quota-Bump auf `workspace_carrier_credentials` (siehe
+[oben](#workspace_carrier_credentials)). Increment in **einem** Statement
+(row-level lock durch `UPDATE`), damit parallele
+[`tracking-poll`](07-edge-functions.md#tracking-poll)-Läufe sich die
+Zähler nicht via Lost-Update-Race überschreiben. Datums-Rollover →
+Zähler startet neu. `GRANT EXECUTE` nur an `service_role` (REVOKE von
+`anon`/`authenticated`).
+
 ## Cron-Jobs (pg_cron)
 
 Datei:
@@ -665,8 +781,15 @@ Aktivierte Jobs (siehe Migrations + Edge-Function-SETUPs):
 |---|---|---|
 | `cleanup_inbox_history_daily` | `15 3 * * *` (täglich 03:15 UTC) | Mails > 30 Tage löschen |
 | `inbox-poll` | `*/5 * * * *` | siehe [04-inbox-mail-pipeline.md](04-inbox-mail-pipeline.md) |
-| `tracking-poll` | `0 */4 * * *` | Carrier-API-Refresh |
+| `tracking-poll-adaptive` | `7 * * * *` (stündlich, Minute :07) | Carrier-API-Refresh, In-Function-Gating + Quiet-Hours + Quota-Guard |
 | `send-notifications` | hängt von Setup ab | Push-Trigger |
+
+> Der alte `tracking-poll-daily`-Job (`0 */4 * * *`, 1×/Tag) wurde von
+> Migration
+> [`20260610090100_tracking_poll_adaptive_cron.sql`](../../supabase/migrations/20260610090100_tracking_poll_adaptive_cron.sql)
+> auf den stündlichen `tracking-poll-adaptive`-Sweep umgestellt
+> (`mode='adaptive-sweep'`). Die Frequenz-Logik liegt **in** der Edge-Function
+> (siehe [07 — Edge Functions](07-edge-functions.md#tracking-poll)).
 
 > Cron-Setup ist in den Function-`SETUP.md`s dokumentiert (siehe z.B.
 > [`tracking-poll/SETUP.md`](../../supabase/functions/tracking-poll/SETUP.md)).

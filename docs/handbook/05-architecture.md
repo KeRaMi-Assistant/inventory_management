@@ -53,6 +53,7 @@ graph TD
     SFP[StatisticsFilterProvider]
     APP[AppPreferencesProvider]
     SM[SessionManager]
+    NIP[NavigationIntentsProvider]
   end
 
   subgraph ProxyProviders [ChangeNotifierProxyProvider]
@@ -90,6 +91,9 @@ graph TD
   MP --> SFP
   MP --> APP
   MP --> SM
+  MP --> NIP
+  PS --> NIP
+  NIP --> MS2[MainScreen]
   SM --> AP
   MP --> CAT
   MP --> PUR
@@ -121,6 +125,10 @@ Erklärung:
   `ChangeNotifierProxyProvider4`). Details siehe `### Provider-Domänen` unten.
 - **`SessionManager`** ist `lazy: false` und wird sofort gestartet — er
   registriert sich auf Pointer-Events und resetet einen Idle-Timer.
+- **`NavigationIntentsProvider`** (Paket 3) entkoppelt „irgendwo will
+  jemand zu Tab X springen" von der MainScreen-internen Tab-State-
+  Verwaltung. `PushService.onNotificationTap` ist in `main.dart` auf
+  `handlePushData` verdrahtet; `MainScreen` konsumiert die Intents.
 
 > Konkret nachzulesen in
 > [`lib/main.dart`](../../lib/main.dart#L99-L176).
@@ -328,6 +336,26 @@ Startet einen Idle-Timer (Default 30 Min). Bei Inaktivität:
 
 Steuert den Onboarding-Stepper. `WorkspaceService.markOnboarded()` setzt am
 Ende `workspaces.onboarded_at = NOW()`.
+
+### `NavigationIntentsProvider`
+
+Datei:
+[`lib/providers/navigation_intents_provider.dart`](../../lib/providers/navigation_intents_provider.dart)
+(Paket 3). Schlanker `ChangeNotifier`, der einen einzelnen pending
+Navigations-Intent (`MainTab` + optional `dealId`) hält und damit
+Push-Deep-Links und KPI-Drilldowns von der MainScreen-Tab-Logik
+entkoppelt.
+
+- **Producer:**
+  - `handlePushData(data)` — mappt einen FCM-Data-Payload (`kind`) auf
+    ein Ziel: `tracking_status`/`delivery`/`payment` → `MainTab.deals`
+    (mit `dealId`), `low_stock`/`mhd` → `MainTab.warehouse`. Unbekannte
+    `kind`-Werte werden ignoriert (kein Sprung ins Nichts). In `main.dart`
+    auf `PushService.onNotificationTap` verdrahtet (FG-Tap +
+    `getInitialMessage`).
+  - `requestTab(tab, {dealId})` — z. B. KPI-Drilldowns im Dashboard.
+- **Consumer:** `MainScreen` beobachtet den Provider, springt zum Tab,
+  öffnet ggf. den Deal-Dialog und ruft `consume()` auf.
 
 ## Service-Schicht
 

@@ -69,7 +69,7 @@ Dialogs müssen auf 390×844 ohne horizontalen Scroll funktionieren.
 
 | Trigger | File | Pflicht-Tests |
 |---|---|---|
-| `/deals` → New-/Edit-Deal | [`lib/widgets/add_edit_deal_dialog.dart`](../../lib/widgets/add_edit_deal_dialog.dart) | smoke-theme, mobile-overflow |
+| `/deals` → New-/Edit-Deal | [`lib/widgets/add_edit_deal_dialog.dart`](../../lib/widgets/add_edit_deal_dialog.dart) | smoke-theme, mobile-overflow | Deal-Detail-Dialog enthält seit Paket 1 den **Sendungsverlauf** (`TrackingTimelineSection` aus [`lib/widgets/tracking_timeline.dart`](../../lib/widgets/tracking_timeline.dart), `tracking_events`-Timeline, kollabiert auf 4 Einträge), die **ETA-Zeile** (`Key('tracking-eta-row')`), Copy-CTA + „Sendung verfolgen"-Deep-Link. Mobile-Audit muss diese Block-Erweiterungen auf 390×844 ohne Overflow prüfen. `tracking-timeline`-Spezialtest noch nicht im Tester-Prompt definiert (siehe TODO). |
 | `/inventory` → Edit-Item | [`lib/screens/inventory_screen.dart`](../../lib/screens/inventory_screen.dart) (`_AddEditItemDialog`) | smoke-theme, mobile-overflow |
 | `/inventory` → Batch-Sheet | [`lib/widgets/inventory_batches_sheet.dart`](../../lib/widgets/inventory_batches_sheet.dart) | smoke-theme, mobile-overflow |
 | `/inventory` → Barcode-Scan | [`lib/widgets/barcode_scanner_sheet.dart`](../../lib/widgets/barcode_scanner_sheet.dart) | smoke-theme |

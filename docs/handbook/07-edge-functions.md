@@ -14,7 +14,7 @@ Trigger, Auth, Inputs, Outputs, Secrets und das Deploy-Kommando.
 |---|---|---|---|
 | [`inbox-poll`](#inbox-poll) | pg_cron alle 5min + UI-Button | Cron / User-JWT / service_role | IMAP holen + parsed_messages befüllen |
 | [`inbox-parse`](#inbox-parse) | inline aus inbox-poll + UI | Cron / service_role | Pending-Mails klassifizieren |
-| [`tracking-poll`](#tracking-poll) | pg_cron alle 4h | Cron | Carrier-API für offene Deals |
+| [`tracking-poll`](#tracking-poll) | pg_cron stündlich (`tracking-poll-adaptive`, Minute :07) + UI-Retrack | Cron / User-JWT | Carrier-API für offene Deals (adaptive Frequenz) |
 | [`send-notifications`](#send-notifications) | pg_cron / manuell | Cron | Push via FCM HTTP v1 |
 | [`seed-demo-workspace`](#seed-demo-workspace) | manuell aus App | User-JWT (`test@test.com` only!) | Demo-Daten in Test-Workspace |
 | [`delete-account`](#delete-account) | manuell aus App | User-JWT | Account + alle Workspace-Daten löschen |
@@ -25,6 +25,12 @@ Shared-Code in [`supabase/functions/_shared/`](../../supabase/functions/_shared/
   PCComponentes, X-kom).
 - `inbox_parse_runner.ts` — Sweep-Logik (`runParseSweep`).
 - `tracking_adapters.ts` — Carrier-Adapter (DHL, DPD, UPS).
+- `tracking_detection.ts` — algorithmische Mail-Detection (Carrier + Tracking,
+  siehe [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#carrier-registry-detection-only-carrier)).
+- `carriers.ts` — kanonische Carrier-Registry (eine Quelle der Wahrheit über
+  Carrier + ihre Fähigkeiten).
+- `fcm.ts` — FCM-HTTP-v1-Helpers (aus `send-notifications` extrahiert, von
+  `tracking-poll` für Status-Wechsel-Pushes mitgenutzt).
 - Tests: `*_test.ts` (Deno-Test-Pattern).
 
 ## inbox-poll
@@ -164,13 +170,18 @@ Datei:
 [`supabase/functions/tracking-poll/index.ts`](../../supabase/functions/tracking-poll/index.ts)
 
 **Aufgabe:** Tracking-API der Carrier (DHL, DPD, UPS) für offene Deals
-abfragen.
+abfragen, den **vollständigen Event-Verlauf** in `tracking_events`
+persistieren, `deals.live_status`/`live_eta`/`last_polled_at` pflegen und
+bei einem Status-Wechsel sofort einen Push senden.
 
-### Auth
+### Auth & Modi
 
 Zwei Pfade:
 
-1. **Cron-Secret** — Sweep-Mode (alle 4h, alle Workspaces).
+1. **Cron-Secret** — Sweep-Mode. Body `{ "mode": "adaptive-sweep" }`
+   (stündlicher `tracking-poll-adaptive`-Job, Minute :07) mit
+   In-Function-Frequenz-Gating; ohne `mode` läuft der klassische
+   Daily-Sweep über alle fälligen Deals.
 2. **User-JWT** mit `body.deal_id` — Single-Deal-Re-Track aus der UI
    (Refresh-Button im
    [`TrackingStatusBlock`](../../lib/widgets/tracking_status_block.dart),
@@ -179,18 +190,46 @@ Zwei Pfade:
 
 ### Logik (Sweep-Mode)
 
-1. Lade alle `workspace_carrier_credentials` mit `enabled=TRUE`.
-2. Pro Workspace: lade alle offenen Deals (`status='Unterwegs'`,
+1. **Quiet-Hours-Guard** (nur `adaptive-sweep`): zwischen **22–05 Uhr
+   Berlin** wird der ganze Lauf geskippt (`skipped: 'quiet-hours'`) —
+   nachts bewegt sich im Carrier-Netz fast nichts, Polls wären reine
+   Quota-Verschwendung.
+2. Lade alle `workspace_carrier_credentials` mit `enabled=TRUE`, gruppiere
+   pro Workspace und berechne das **Tages-Quota-Restbudget** pro
+   Workspace×Carrier (`remainingDailyQuota`).
+3. Pro Workspace: lade alle offenen Deals (`status='Unterwegs'`,
    `tracking IS NOT NULL`, `arrival_date IS NULL`).
-3. Pro Deal:
+4. **Adaptive Fälligkeit** (`adaptive-sweep`, `isDuePoll` anhand
+   `last_polled_at` + `live_status`):
+   - `out_for_delivery` → jede Stunde (≥ 50 min),
+   - `in_transit` → alle ~4 h (≥ 230 min),
+   - `pending`/`exception`/`null` → 2×/Tag (≥ 660 min),
+   - `delivered`/expired → nie.
+5. Pro fälligem Deal:
    - **Skip**, wenn `tracking_needs_review = TRUE` UND
      `tracking_confidence = 'none'` (T16, Strict-Tracking) — sonst
      würden API-Calls gegen leere/unsichere Trackings laufen.
-   - Carrier-Adapter erkennen (Tracking-Pattern).
-   - API-Call mit gespeichertem Key.
+   - **Quota-Guard**: ist das Restbudget für `workspace:carrier`
+     erschöpft (`≤ 0`, Cap `DAILY_QUOTA_CAP = 900`), wird der Deal
+     übersprungen (`quota_skipped++`).
+   - Carrier-Adapter erkennen (Tracking-Pattern bzw. `deals.carrier`).
+   - API-Call mit gespeichertem Key; Quota-Restbudget dekrementieren.
+   - **Event-Persistenz**: kompletten Carrier-Event-Array in
+     `tracking_events` upserten (`ON CONFLICT DO NOTHING` über den
+     Dedup-Key, `description` auf 500 Zeichen gekürzt).
+   - `deals.live_status`/`live_status_last_event`/`live_eta`
+     aktualisieren; `last_polled_at = NOW()` auch ohne Status-Wechsel.
+   - **Status-Wechsel-Push** (`newStatus !== live_status &&
+     newStatus !== 'pending'`): Push via `_shared/fcm.ts`, dedupliziert
+     über `notifications_sent` (`ref_kind='tracking_status'`,
+     **Claim-then-Send** = erst die Dedup-Row claimen, dann senden,
+     race-safe). Opt-out via `notification_preferences.delivery_enabled`.
    - Bei `delivered`: setze Deal `status='Angekommen'`, `arrival_date`,
      schreib `activity_log`.
-4. Cap: 200 Calls pro Lauf.
+6. Nach der Schleife: ein atomarer `bump_carrier_daily_calls`-RPC-Aufruf
+   pro Carrier schreibt den Tageszähler + ggf. `last_error` zurück.
+7. Cap: weiterhin max. Calls pro Lauf; Reihenfolge ältester `order_date`
+   zuerst.
 
 ### Logik (Single-Deal-Mode, PR #74)
 
@@ -223,7 +262,14 @@ API-Keys liegen NICHT als Secret, sondern verschlüsselt in
 ### Setup
 
 Siehe [`tracking-poll/SETUP.md`](../../supabase/functions/tracking-poll/SETUP.md)
-für die pg_cron-Schedule-Befehle.
+für die pg_cron-Schedule-Befehle. Das stündliche Schedule legt Migration
+[`20260610090100_tracking_poll_adaptive_cron.sql`](../../supabase/migrations/20260610090100_tracking_poll_adaptive_cron.sql)
+ENV-portabel an (Secret + URL werden aus dem bestehenden Cron-Job
+extrahiert, kein Secret-Literal im Git; auf frischem `db reset` ohne
+Quell-Job → NOTICE + Skip, Reset bleibt grün).
+
+Für die Status-Wechsel-Pushes braucht die Function dasselbe
+`FCM_SERVICE_ACCOUNT_JSON`-Secret wie `send-notifications` (siehe dort).
 
 ### Deploy
 
@@ -260,6 +306,12 @@ Cron-Secret oder service_role.
      Opt-in via bestehender `notification_preferences` (kein neues Flag).
 4. Schreibe in `notifications_sent` (Dedup pro `(ref_kind, ref_id)`).
 5. Sende FCM-Payload.
+
+> Die FCM-HTTP-v1-Helpers (OAuth-Token, Payload-Build, Versand) sind seit
+> Paket 1 nach [`_shared/fcm.ts`](../../supabase/functions/_shared/fcm.ts)
+> extrahiert, damit auch `tracking-poll` die Status-Wechsel-Pushes über
+> denselben Code sendet. `send-notifications` bleibt der Cron-Pfad für
+> `mhd`/`delivery`/`payment`/`low_stock`.
 
 ### Konfiguration
 
@@ -415,6 +467,28 @@ Nummern aus dem strict-Tracking-Pfad. Wichtige Eigenschaft seit PR #73:
 
 Tests: `tracking_validators_test.ts` + `tracking_disambiguation_test.ts`
 (23/23 grün).
+
+### `_shared/carriers.ts`
+
+Kanonische **Carrier-Registry** (Paket 2, Audit-Fix „Carrier 3-fach
+inkonsistent"). Eine Quelle der Wahrheit über alle Carrier und ihre
+Fähigkeiten (`detection`, `pollAdapter`, `requiresApiKey`, `uiEnabled`,
+`publicTrackingPage`). Konsumenten: `tracking_detection.ts` (CarrierIds),
+`tracking_adapters.ts` (Poll-Adapter), `tracking-poll/index.ts`
+(`DETECTION_ONLY_CARRIERS`) sowie die Dart-Spiegel
+`carrier_credential.dart` + `carrier_links.dart` (Konsistenz per
+`carriers_test.ts` mit `--allow-read` geprüft). Die `deals.carrier`-CHECK-
+Constraint ist die Obermenge dieser Ids. Siehe
+[04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#carrier-registry-detection-only-carrier).
+
+### `_shared/fcm.ts`
+
+FCM-HTTP-v1-Helpers (Paket 1, aus `send-notifications` extrahiert):
+`parseServiceAccount`, `getGoogleAccessToken` (RS256-JWT → OAuth-Token),
+Payload-Build und Token-Versand. Wird von `send-notifications` (Cron-
+Push) **und** `tracking-poll` (Status-Wechsel-Push) genutzt. Keine
+Secret-Leaks: `FCM_SERVICE_ACCOUNT_JSON` nur via `Deno.env`, Caller loggen
+nur Status-Codes.
 
 ## increment_po_item_received (RPC)
 

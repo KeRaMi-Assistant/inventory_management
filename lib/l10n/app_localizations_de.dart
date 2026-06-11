@@ -1518,7 +1518,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpDealsStatusInTransit =>
-      'Unterwegs — Versandbestätigung erkannt oder manuell gesetzt. Sobald eine Sendungsnummer zugewiesen wird, fragt die App den Status einmal sofort ab und danach täglich um 13:00 Uhr.';
+      'Unterwegs — Versandbestätigung erkannt oder manuell gesetzt. Sobald eine Sendungsnummer zugewiesen wird, fragt die App den Status einmal sofort ab und danach automatisch im passenden Takt: in Zustellung stündlich, unterwegs etwa alle 4 Stunden (nachts pausiert). Du musst nichts antippen.';
 
   @override
   String get helpDealsStatusArrived =>
@@ -1537,7 +1537,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpDealsTrackingDesc =>
-      'Trifft eine Versandmail ein, erkennt die App die Sendungsnummer rein anhand ihrer Struktur (Format + Prüfsumme) — DHL, Amazon Logistics und DPD werden unterstützt. Dafür ist kein Carrier-API-Key nötig: die Nummer wird immer gespeichert und der Deal automatisch auf „Unterwegs\" gesetzt. Den Live-Status (in Zustellung, zugestellt) holt die App, sobald ein passender Carrier-API-Key hinterlegt ist — sofort bei der Zuweisung und danach täglich um 13:00 Uhr. Amazon-Logistics-Sendungen werden erkannt, lassen sich aber nicht live verfolgen (siehe FAQ). Andere Carrier (UPS, Hermes, GLS) trägst du bei Bedarf manuell im Deal ein. Details siehe Sektion „Versand & Carrier-API-Keys\".';
+      'Trifft eine Versandmail ein, erkennt die App die Sendungsnummer rein anhand ihrer Struktur (Format + Prüfsumme) — DHL, DPD, Amazon Logistics und GLS werden erkannt. Dafür ist kein Carrier-API-Key nötig: die Nummer wird immer gespeichert und der Deal automatisch auf „Unterwegs\" gesetzt. Den Live-Status (in Zustellung, zugestellt) holt die App, sobald ein passender Carrier-API-Key hinterlegt ist — sofort bei der Zuweisung und danach automatisch im passenden Takt (in Zustellung stündlich, unterwegs ~alle 4 Stunden, nachts pausiert). Amazon Logistics und GLS werden erkannt, lassen sich aber nicht live verfolgen (siehe FAQ) — für GLS gibt es immerhin einen Direkt-Link zur Sendungsverfolgung. Andere Carrier (UPS, Hermes) trägst du bei Bedarf manuell im Deal ein. Details siehe Sektion „Versand & Carrier-API-Keys\".';
 
   @override
   String get helpDealsDropShipTitle => 'Multi-Drop-Ship';
@@ -1552,7 +1552,28 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpDealsRetrackDesc =>
-      'Im Deal-Detail neben der Sendungsnummer gibt es ein Refresh-Icon „Status aktualisieren\". Damit fragst du den Carrier sofort nach dem aktuellen Status, ohne auf den täglichen 13-Uhr-Poll zu warten — praktisch z. B. kurz vor einem geplanten Versand.\nEin Retrack pro Deal ist alle 30 Sekunden möglich. Während der Sperre ist der Button ausgegraut und zeigt „Bitte 30s warten\" — das schützt den Carrier vor unnötigen API-Calls und dich vor Rate-Limits.\nBei Amazon-Logistics-Sendungen ist der Button dauerhaft ausgegraut: Amazon bietet keine öffentliche Status-API, deshalb gibt es dort keinen Live-Status zum Aktualisieren.';
+      'Im Deal-Detail neben der Sendungsnummer gibt es ein Refresh-Icon „Status aktualisieren\". Damit fragst du den Carrier sofort nach dem aktuellen Status, ohne auf die nächste automatische Prüfung zu warten — praktisch z. B. kurz vor einem geplanten Versand.\nEin Retrack pro Deal ist alle 30 Sekunden möglich. Während der Sperre ist der Button ausgegraut und zeigt „Bitte 30s warten\" — das schützt den Carrier vor unnötigen API-Calls und dich vor Rate-Limits.\nBei Amazon-Logistics- und GLS-Sendungen ist der Button dauerhaft ausgegraut: Für diese Dienste gibt es keinen öffentlichen Live-Status zum Aktualisieren.';
+
+  @override
+  String get helpDealsTimelineTitle => 'Sendungsverlauf (Timeline)';
+
+  @override
+  String get helpDealsTimelineDesc =>
+      'Hat ein Deal eine verfolgbare Sendungsnummer, zeigt das Deal-Detail unter dem Status einen Sendungsverlauf im Klarna-Stil: jede Station des Pakets mit Zeitpunkt und — falls der Versanddienst ihn liefert — dem Ort. Der neueste Eintrag steht oben und ist hervorgehoben.\nDer Verlauf lädt automatisch, sobald du den Deal öffnest. Bei vielen Stationen siehst du zunächst die letzten vier; über „Alle Ereignisse anzeigen\" klappst du die komplette Historie auf und wieder zu.';
+
+  @override
+  String get helpDealsEtaTitle => 'Voraussichtliche Zustellung';
+
+  @override
+  String get helpDealsEtaDesc =>
+      'Sobald der Versanddienst eine Lieferprognose liefert, erscheint im Tracking-Block eine Zeile „Voraussichtliche Zustellung\" mit dem geschätzten Datum. Das ist eine Schätzung des Carriers, keine Garantie — sie kann sich verschieben. Nach der Zustellung wird die Zeile ausgeblendet.';
+
+  @override
+  String get helpDealsCopyLinkTitle => 'Sendungsnummer kopieren & verfolgen';
+
+  @override
+  String get helpDealsCopyLinkDesc =>
+      'Im Tracking-Block des Deal-Details findest du zwei Schaltflächen:\n• „Kopieren\" legt die Sendungsnummer in die Zwischenablage — praktisch, um sie woanders einzufügen.\n• „Sendung verfolgen\" öffnet die offizielle Verfolgungsseite des Versanddienstes (z. B. DHL, DPD, GLS, UPS, Hermes) direkt mit deiner Nummer. Bei Amazon Logistics gibt es keine öffentliche Seite, deshalb fehlt der Button dort.';
 
   @override
   String get helpShippingSection => 'Versand & Carrier-API-Keys';
@@ -1585,7 +1606,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpShippingComingSoonDesc =>
-      'Automatisch aus Mails erkannt werden Sendungsnummern von DHL, Amazon Logistics und DPD.\n• DHL und DPD: Erkennung plus Live-Status, sobald der passende Carrier-API-Key hinterlegt ist.\n• Amazon Logistics: wird erkannt und gespeichert, hat aber keinen Live-Status — Amazon bietet keine öffentliche Status-API.\nAndere Carrier (UPS, Hermes, GLS) werden bewusst nicht aus Mails geraten — das war früher die Hauptquelle falscher Sendungsnummern. Dort trägst du die Tracking-Nummer bei Bedarf manuell im Deal ein.';
+      'Automatisch aus Mails erkannt werden Sendungsnummern von DHL, DPD, Amazon Logistics und GLS.\n• DHL und DPD: Erkennung plus Live-Status, sobald der passende Carrier-API-Key hinterlegt ist.\n• Amazon Logistics: wird erkannt und gespeichert, hat aber keinen Live-Status — Amazon bietet keine öffentliche Status-API.\n• GLS: wird erkannt und gespeichert (z. B. aus Shop-Mails wie PcComponentes), hat keinen Live-Status — dafür gibt es einen Direkt-Link zur GLS-Sendungsverfolgung.\nAndere Carrier (UPS, Hermes) werden bewusst nicht aus Mails geraten — das war früher die Hauptquelle falscher Sendungsnummern. Dort trägst du die Tracking-Nummer bei Bedarf manuell im Deal ein.';
+
+  @override
+  String get helpShippingDpdTitle => 'DPD — jetzt mit Live-Status';
+
+  @override
+  String get helpShippingDpdDesc =>
+      'Neben DHL kannst du jetzt auch einen DPD-API-Key hinterlegen, um den Live-Status von DPD-Sendungen zu bekommen:\n• Den DPD-Key unter Einstellungen → Versand → DPD → „API-Key hinterlegen\" einfügen.\n• Danach einmal Einstellungen → „Sendungsnummern neu prüfen\" tippen, damit bestehende DPD-Mails neu geparst werden.\nDPD-Sendungsnummern werden auch ohne Key automatisch aus deinen Mails erkannt — der Key schaltet nur den automatischen Live-Status frei.';
 
   @override
   String get helpShippingKeySafetyTitle => 'Was passiert mit meinem API-Key?';
@@ -1794,7 +1822,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpPushWhenDesc =>
-      '• Neue Bestellbestätigung im Postfach\n• Tracking-Update (Versandt / Angekommen)\n• Mindestbestand unterschritten (falls aktiviert)\n• Workspace-Einladung\nÜber Einstellungen → Push kannst du einzelne Kategorien deaktivieren.';
+      '• Neue Bestellbestätigung im Postfach\n• Sendungs-Statuswechsel (unterwegs, in Zustellung, zugestellt)\n• Mindestbestand unterschritten (falls aktiviert)\n• Workspace-Einladung\nÜber Einstellungen → Push kannst du einzelne Kategorien deaktivieren.';
+
+  @override
+  String get helpPushDeliveryTitle => 'Push bei Sendungs-Statuswechsel';
+
+  @override
+  String get helpPushDeliveryDesc =>
+      'Sobald sich der echte Status einer Sendung ändert, bekommst du automatisch eine Push-Mitteilung — z. B. „Paket unterwegs 📦\", „Paket in Zustellung 🚚\" oder „Paket zugestellt ✅\". Pro Statuswechsel gibt es höchstens eine Benachrichtigung, du wirst also nicht mit Dopplungen geflutet.\nTippst du auf die Benachrichtigung, öffnet die App direkt den passenden Deal.\nNicht gewünscht? Unter Einstellungen → Push die Kategorie „Lieferungen\" deaktivieren — dann bleiben diese Pushes aus, die automatische Aktualisierung im Hintergrund läuft trotzdem weiter.';
 
   @override
   String get helpFaqSection => 'Häufige Fragen (FAQ)';
@@ -2008,6 +2043,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get helpTroubleLowStockPushDesc =>
       'Prüfe zuerst, ob Push-Mitteilungen generell zugestellt werden (OS-Einstellungen → Mitteilungen → Lager-App). Dann: Einstellungen → Push → Kategorie „Mindestbestand\" aktiviert? Wichtig: Low-Stock-Pushes werden pro Workspace zusammengefasst — der Push enthält nur eine Zahl, keine Produktnamen. Wenn das Dashboard bereits die betroffenen Artikel zeigt, ist die Benachrichtigung inhaltlich korrekt, nur der Push fehlt — einmal ausloggen und wieder einloggen, damit der Push-Token neu registriert wird.';
+
+  @override
+  String get helpTroubleStatusStaleTitle =>
+      'Sendungsstatus aktualisiert sich nicht / Statuswechsel-Push fehlt';
+
+  @override
+  String get helpTroubleStatusStaleDesc =>
+      'Die automatische Prüfung läuft im passenden Takt (in Zustellung stündlich, unterwegs ~alle 4 Stunden) und pausiert nachts. Direkt nach einem Versand kann es also etwas dauern, bis sich etwas zeigt — für einen sofortigen Stand im Deal auf „Status aktualisieren\" tippen.\nKommt kein Statuswechsel-Push an: Einstellungen → Push → Kategorie „Lieferungen\" aktiviert? Außerdem braucht es einen Live-Status, und den gibt es nur für DHL und DPD mit hinterlegtem API-Key — für Amazon Logistics und GLS gibt es keinen Live-Status und damit auch keinen Statuswechsel-Push.';
 
   @override
   String get helpWarenwirtschaftSection => 'Warenwirtschaft-Hub';
@@ -2253,6 +2296,29 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get helpFaqA25 =>
       'Amazon-Logistics-Sendungen erkennt die App und speichert die Sendungsnummer, aber Amazon bietet keine öffentliche Schnittstelle, um den Versandstatus abzufragen. Deshalb siehst du am Deal nur „Sendung erkannt — Live-Status nicht verfügbar\", und das Refresh-Icon „Status aktualisieren\" ist ausgegraut. Häufig übergibt Amazon das Paket an DHL — steht in derselben Mail zusätzlich eine DHL-Nummer, nutzt die App diese als verfolgbare Sendung und du bekommst dort ganz normal einen Live-Status.';
+
+  @override
+  String get helpFaqQ26 => 'Warum hat meine GLS-Sendung keinen Live-Status?';
+
+  @override
+  String get helpFaqA26 =>
+      'GLS-Sendungsnummern erkennt die App automatisch aus Shop-Mails (z. B. PcComponentes) und speichert sie. Einen automatischen Live-Status gibt es für GLS aber nicht, weil GLS keinen frei nutzbaren Verfolgungs-Dienst anbietet. Du bekommst stattdessen den Button „Sendung verfolgen\", der die offizielle GLS-Seite mit deiner Nummer öffnet.';
+
+  @override
+  String get helpFaqQ27 =>
+      'Wie oft aktualisiert sich der Sendungsstatus von allein?';
+
+  @override
+  String get helpFaqA27 =>
+      'Automatisch und ohne dein Zutun: Pakete in Zustellung werden stündlich geprüft, Pakete, die noch unterwegs sind, etwa alle 4 Stunden. Nachts (ca. 22–6 Uhr) pausiert die Prüfung, weil im Carrier-Netz dann kaum etwas passiert. Zugestellte Sendungen werden nicht mehr abgefragt. Möchtest du sofort einen frischen Stand, tippe im Deal auf „Status aktualisieren\" (alle 30 Sekunden möglich).';
+
+  @override
+  String get helpFaqQ28 =>
+      'Kann ich vom Dashboard direkt zum passenden Bereich springen?';
+
+  @override
+  String get helpFaqA28 =>
+      'Ja. Tippe auf eine Kachel im Dashboard und die App springt in den passenden Bereich — z. B. von „Offene Lieferungen\" zu den Deals oder von „Kritischer Bestand\" ins Lager. In der Deal-Liste und im Bestand kannst du am Handy außerdem von oben nach unten ziehen (Pull-to-Refresh), um die Daten neu zu laden.';
 
   @override
   String get helpPrivacySection => 'Datenschutz & Kontakt';
