@@ -153,7 +153,8 @@ Deno.serve(async (req) => {
   )
 
   // ── Workspace-Membership + Plan (Kontext für die Mail) ─────────────────
-  let plan: string | null = null
+  // Security-Review-Fix: der Plan liegt auf billing_profiles.plan (user-
+  // keyed, 20260504001000 + Realign 20260520000000) — NICHT auf workspaces.
   let workspaceId: string | null = null
   if (payload.workspaceId) {
     const { data: member } = await admin
@@ -162,16 +163,17 @@ Deno.serve(async (req) => {
       .eq('workspace_id', payload.workspaceId)
       .eq('user_id', user.id)
       .maybeSingle()
-    if (member) {
-      workspaceId = payload.workspaceId
-      const { data: ws } = await admin
-        .from('workspaces')
-        .select('plan')
-        .eq('id', workspaceId)
-        .maybeSingle()
-      plan = (ws as { plan?: string } | null)?.plan ?? null
-    }
+    if (member) workspaceId = payload.workspaceId
     // Nicht-Mitglied → Workspace still ignorieren (kein Enumeration-Kanal).
+  }
+  let plan: string | null = null
+  {
+    const { data: bp } = await admin
+      .from('billing_profiles')
+      .select('plan')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    plan = (bp as { plan?: string } | null)?.plan ?? null
   }
 
   // ── 1) Quelle der Wahrheit: atomarer Insert MIT Rate-Limit ─────────────
