@@ -1285,8 +1285,10 @@ class DealsProvider extends ChangeNotifier {
   /// Lädt die Tracking-Event-Timeline eines Deals (Paket 1, Klarna-Style).
   /// Kein lokaler Cache — die Timeline wird on-demand im Deal-Detail geladen
   /// und ist nach Retrack/Poll sofort frisch.
-  Future<List<TrackingEvent>> fetchTrackingEvents(int dealId) =>
-      _repository.fetchTrackingEvents(dealId);
+  /// Multi-Parcel: [tracking] filtert auf ein einzelnes Paket.
+  Future<List<TrackingEvent>> fetchTrackingEvents(int dealId,
+          {String? tracking}) =>
+      _repository.fetchTrackingEvents(dealId, tracking: tracking);
 
   void _patchDeal(
     int dealId, {

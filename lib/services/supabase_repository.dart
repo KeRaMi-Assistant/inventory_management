@@ -1705,17 +1705,56 @@ class SupabaseRepository {
   /// Lädt die Tracking-Event-Timeline eines Deals (Paket 1, Klarna-Style).
   /// Neueste Events zuerst. RLS scoped auf Workspace-Mitglieder; geschrieben
   /// wird die Tabelle nur vom tracking-poll-Backend.
-  Future<List<TrackingEvent>> fetchTrackingEvents(int dealId) async {
-    final rows = await _client
-        .from('tracking_events')
-        .select()
-        .eq('deal_id', dealId)
-        .order('occurred_at', ascending: false)
-        .limit(100);
+  /// Multi-Parcel: [tracking] filtert die Timeline auf EIN Paket — ohne
+  /// Filter kämen bei Mehrpaket-Deals alle Pakete gemischt zurück.
+  Future<List<TrackingEvent>> fetchTrackingEvents(
+    int dealId, {
+    String? tracking,
+  }) async {
+    var query =
+        _client.from('tracking_events').select().eq('deal_id', dealId);
+    if (tracking != null && tracking.isNotEmpty) {
+      query = query.eq('tracking', tracking);
+    }
+    final rows =
+        await query.order('occurred_at', ascending: false).limit(100);
     return (rows as List)
         .cast<Map<String, dynamic>>()
         .map(TrackingEvent.fromSupabase)
         .toList();
+  }
+
+  /// Multi-Parcel-Merge für Client-Accept-Flows: vereinigt die auf dem Deal
+  /// gespeicherten Nummern mit den Nummern einer Suggestion. Neuer Primary
+  /// zuerst, bestehende Sekundäre bleiben erhalten. Spiegel der Server-
+  /// Logik (`mergeDealTrackings` in inbox_parse_runner.ts).
+  Future<List<String>> _mergedTrackingsForDeal(
+    int dealId, {
+    required String newPrimary,
+    required List<String> incoming,
+  }) async {
+    var stored = const <String>[];
+    try {
+      final row = await _client
+          .from('deals')
+          .select('tracking, trackings')
+          .eq('id', dealId)
+          .maybeSingle();
+      final rawList = row?['trackings'];
+      stored = rawList is List
+          ? rawList.map((e) => e.toString()).toList()
+          : [if (row?['tracking'] is String) row!['tracking'] as String];
+    } on Exception {
+      // Merge ist Best-Effort — ohne Lesezugriff bleibt die Mail-Liste.
+    }
+    final merged = <String>[];
+    final seen = <String>{};
+    for (final tn in [newPrimary, ...stored, ...incoming]) {
+      final t = tn.trim();
+      if (t.isEmpty || !seen.add(t)) continue;
+      merged.add(t);
+    }
+    return merged;
   }
 
   // ── Carrier-API-Credentials (Sprint 7) ───────────────────────────────────
@@ -1945,11 +1984,20 @@ class SupabaseRepository {
     required String parsedMessageId,
     required int dealId,
     required String tracking,
+    List<String> trackings = const [],
     String? carrier,
     DateTime? eta,
     String? statusOverride,
   }) async {
     final dealUpdate = <String, dynamic>{'tracking': tracking};
+    // Multi-Parcel: ALLE Nummern der Suggestion mitnehmen, bestehende
+    // Sekundär-Pakete des Deals nicht verlieren.
+    final merged = await _mergedTrackingsForDeal(
+      dealId,
+      newPrimary: tracking,
+      incoming: trackings,
+    );
+    if (merged.isNotEmpty) dealUpdate['trackings'] = merged;
     if (eta != null) {
       dealUpdate['arrival_date'] = eta.toUtc().toIso8601String();
     }
@@ -1979,6 +2027,7 @@ class SupabaseRepository {
     required String parsedMessageId,
     required int dealId,
     String? tracking,
+    List<String> trackings = const [],
     String? orderId,
     DateTime? eta,
   }) async {
@@ -1986,6 +2035,13 @@ class SupabaseRepository {
     if (tracking != null && tracking.isNotEmpty) {
       dealUpdate['tracking'] = tracking;
       dealUpdate['status'] = 'Unterwegs';
+      // Multi-Parcel: Suggestion-Nummern + bestehende Sekundäre vereinigen.
+      final merged = await _mergedTrackingsForDeal(
+        dealId,
+        newPrimary: tracking,
+        incoming: trackings,
+      );
+      if (merged.isNotEmpty) dealUpdate['trackings'] = merged;
     }
     if (eta != null) {
       dealUpdate['arrival_date'] = eta.toUtc().toIso8601String();

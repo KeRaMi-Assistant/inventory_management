@@ -46,6 +46,7 @@ class _FormSnapshot {
     required this.ticket,
     required this.ticketUrl,
     required this.tracking,
+    required this.secondaryTrackings,
     required this.note,
     required this.isDropship,
     required this.shop,
@@ -67,6 +68,7 @@ class _FormSnapshot {
   final String ticket;
   final String ticketUrl;
   final String tracking;
+  final List<String> secondaryTrackings;
   final String note;
   final bool isDropship;
   final String? shop;
@@ -102,6 +104,13 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
   String _currency = 'EUR';
   final _taxRateCtrl = TextEditingController(text: '19');
   List<String> _attachmentPaths = const [];
+  /// Multi-Parcel: Sekundär-Pakete (alle Nummern außer dem Primary im
+  /// Tracking-Feld). Entfernen per Chip-Delete; neue kommen über die
+  /// Inbox-Pipeline oder den Suggestion-Accept.
+  List<String> _secondaryTrackings = [];
+  /// Multi-Parcel: aktuell in der Timeline ausgewähltes Paket
+  /// (null = Primary).
+  String? _timelineParcel;
 
   bool _saving = false;
   bool _retracking = false;
@@ -141,6 +150,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       _ticketCtrl.text = d.ticketNumber ?? '';
       _ticketUrlCtrl.text = d.ticketUrl ?? '';
       _trackingCtrl.text = d.tracking ?? '';
+      _secondaryTrackings = List.of(d.secondaryTrackings);
       _noteCtrl.text = d.note ?? '';
       if (d.ekNetto != null) {
         _priceType = 'Netto';
@@ -207,6 +217,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     ticket: _ticketCtrl.text,
     ticketUrl: _ticketUrlCtrl.text,
     tracking: _trackingCtrl.text,
+    secondaryTrackings: List.of(_secondaryTrackings),
     note: _noteCtrl.text,
     isDropship: _isDropship,
     shop: _shop,
@@ -232,6 +243,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
         _ticketCtrl.text != s.ticket ||
         _ticketUrlCtrl.text != s.ticketUrl ||
         _trackingCtrl.text != s.tracking ||
+        !_attachmentPathsEqual(_secondaryTrackings, s.secondaryTrackings) ||
         _noteCtrl.text != s.note ||
         _isDropship != s.isDropship ||
         _shop != s.shop ||
@@ -407,6 +419,14 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
       }(),
       tracking:
           _trackingCtrl.text.isEmpty ? null : _trackingCtrl.text.trim(),
+      trackings: () {
+        // Multi-Parcel: Primary zuerst, dann Sekundäre — dedupliziert.
+        final seen = <String>{};
+        return [
+          for (final tn in [_trackingCtrl.text.trim(), ..._secondaryTrackings])
+            if (tn.isNotEmpty && seen.add(tn)) tn,
+        ];
+      }(),
       arrivalDate: _arrivalDate,
       status: _status,
       hasReceipt: _hasReceipt,
@@ -788,6 +808,49 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             maxLength: 100,
                           ),
                         ]),
+                        // Multi-Parcel: Sekundär-Pakete als entfernbare
+                        // Chips (gesplittete Bestellung). Primary bleibt
+                        // im Tracking-Feld editierbar.
+                        if (_secondaryTrackings.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              l10n.dealSecondaryParcels,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textSecondaryOf(context),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              for (final tn in _secondaryTrackings)
+                                InputChip(
+                                  key: Key('deal-secondary-parcel-$tn'),
+                                  label: Text(
+                                    tn,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  deleteButtonTooltipMessage:
+                                      l10n.dealRemoveParcelTooltip,
+                                  onDeleted: () {
+                                    setState(() {
+                                      _secondaryTrackings.remove(tn);
+                                      if (_timelineParcel == tn) {
+                                        _timelineParcel = null;
+                                      }
+                                    });
+                                    _checkDirtyChanged();
+                                  },
+                                ),
+                            ],
+                          ),
+                        ],
                         // TrackingStatusBlock: nur bei bestehendem Deal mit
                         // Tracking-Confidence-Daten (Confidence-Feature ab T7).
                         if (widget.deal != null &&
@@ -899,9 +962,52 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                 liveDeal.tracking!.isEmpty) {
                               return const SizedBox.shrink();
                             }
-                            return TrackingTimelineSection(
-                              dealId: widget.deal!.id,
-                              refreshToken: liveDeal.liveStatusUpdatedAt,
+                            // Multi-Parcel: bei Mehrpaket-Deals wählt der
+                            // Selektor das Paket, dessen Verlauf die
+                            // Timeline zeigt (Default: Primary).
+                            final secondaries = liveDeal.secondaryTrackings;
+                            final selected = _timelineParcel != null &&
+                                    (liveDeal.tracking == _timelineParcel ||
+                                        secondaries.contains(_timelineParcel))
+                                ? _timelineParcel!
+                                : liveDeal.tracking!;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (secondaries.isNotEmpty) ...[
+                                  const SizedBox(height: 10),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [
+                                      for (final tn in [
+                                        liveDeal.tracking!,
+                                        ...secondaries,
+                                      ])
+                                        ChoiceChip(
+                                          key: Key(
+                                              'timeline-parcel-chip-$tn'),
+                                          label: Text(
+                                            tn,
+                                            style: const TextStyle(
+                                                fontSize: 11),
+                                          ),
+                                          selected: tn == selected,
+                                          onSelected: (_) => setState(() =>
+                                              _timelineParcel = tn),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                                TrackingTimelineSection(
+                                  dealId: widget.deal!.id,
+                                  tracking: secondaries.isEmpty
+                                      ? null
+                                      : selected,
+                                  refreshToken:
+                                      liveDeal.liveStatusUpdatedAt,
+                                ),
+                              ],
                             );
                           }),
                         ],

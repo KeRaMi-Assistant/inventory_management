@@ -829,6 +829,11 @@ class _SuggestionCard extends StatelessWidget {
       ekBrutto: suggestion.total,
       ticketNumber: orderId,
       tracking: suggestion.tracking,
+      // Multi-Parcel: alle Nummern der Suggestion in den Draft übernehmen —
+      // bisher ging bei Split-Shipments alles außer der ersten verloren.
+      trackings: suggestion.trackings.isNotEmpty
+          ? suggestion.trackings
+          : [if (suggestion.tracking != null) suggestion.tracking!],
       arrivalDate: suggestion.eta,
       status: dealStatus,
       currency: suggestion.currency,

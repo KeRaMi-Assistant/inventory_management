@@ -743,15 +743,36 @@ class _DealRowState extends State<_DealRow> {
                         alignment: Alignment.centerLeft,
                         child: SizedBox(
                           width: widget.cols[12].width - 24,
-                          child: TrackingChip(
-                            tracking: deal.tracking!,
-                            compact: true,
-                            dealCarrier: deal.carrier,
-                            liveStatus: deal.liveStatus,
-                            shopAmazonCountry: amazonCountryFromShop(
-                              shopName: shop?.name,
-                              region: shop?.region,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: TrackingChip(
+                                  tracking: deal.tracking!,
+                                  compact: true,
+                                  dealCarrier: deal.carrier,
+                                  liveStatus: deal.liveStatus,
+                                  shopAmazonCountry: amazonCountryFromShop(
+                                    shopName: shop?.name,
+                                    region: shop?.region,
+                                  ),
+                                ),
+                              ),
+                              // Multi-Parcel-Badge (+N weitere Pakete).
+                              if (deal.secondaryTrackings.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 4),
+                                  child: Tooltip(
+                                    message: AppLocalizations.of(context)
+                                        .dealMoreParcelsTooltip(deal
+                                            .secondaryTrackings.length),
+                                    child: Text(
+                                      '+${deal.secondaryTrackings.length}',
+                                      style: _muted(),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       )

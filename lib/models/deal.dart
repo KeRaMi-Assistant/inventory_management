@@ -15,6 +15,12 @@ class Deal {
   final String? ticketNumber;
   final String? ticketUrl;
   final String? tracking;
+
+  /// Multi-Parcel (2026-06-12): ALLE Sendungsnummern des Deals, inkl. des
+  /// Primary [tracking] (gesplittete Bestellungen). Nur das Primary steuert
+  /// live_status/Push/Cooldown — Sekundäre haben eigene Timeline-Events.
+  /// Leer = Legacy-Deal vor dem Backfill (behandle wie `[tracking]`).
+  final List<String> trackings;
   final DateTime? arrivalDate;
   final DateTime? shippedAt;
   final String status;
@@ -71,6 +77,7 @@ class Deal {
     this.ticketNumber,
     this.ticketUrl,
     this.tracking,
+    this.trackings = const [],
     this.arrivalDate,
     this.shippedAt,
     this.status = 'Bestellt',
@@ -92,6 +99,12 @@ class Deal {
 
   /// Sentinel id used for deals not yet persisted (server assigns BIGSERIAL).
   static const int unsavedId = 0;
+
+  /// Sekundär-Pakete: alle Nummern außer dem Primary [tracking] —
+  /// für Chips/Badges im Deal-Detail und in Card/Tabelle.
+  List<String> get secondaryTrackings => trackings
+      .where((t) => t.trim().isNotEmpty && t != tracking)
+      .toList();
 
   /// Display label for the German UI.
   String get shippingType => isDropship ? 'Dropship' : 'Reship';
@@ -132,6 +145,7 @@ class Deal {
         'ticketNumber': ticketNumber,
         'ticketUrl': ticketUrl,
         'tracking': tracking,
+        'trackings': trackings,
         'arrivalDate': arrivalDate?.toIso8601String(),
         'shippedAt': shippedAt?.toIso8601String(),
         'status': status,
@@ -165,6 +179,10 @@ class Deal {
         ticketNumber: json['ticketNumber'] as String?,
         ticketUrl: json['ticketUrl'] as String?,
         tracking: json['tracking'] as String?,
+        trackings: (json['trackings'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            const [],
         arrivalDate: json['arrivalDate'] != null
             ? DateTime.parse(json['arrivalDate'] as String)
             : null,
@@ -215,6 +233,7 @@ class Deal {
         'ticket_number': ticketNumber,
         'ticket_url': ticketUrl,
         'tracking': tracking,
+        'trackings': trackings.isEmpty ? null : trackings,
         'arrival_date': arrivalDate?.toIso8601String(),
         'shipped_at': shippedAt?.toIso8601String(),
         'status': status,
@@ -253,6 +272,9 @@ class Deal {
       ticketNumber: row['ticket_number'] as String?,
       ticketUrl: row['ticket_url'] as String?,
       tracking: row['tracking'] as String?,
+      trackings: row['trackings'] is List
+          ? (row['trackings'] as List).map((e) => e.toString()).toList()
+          : const [],
       arrivalDate: row['arrival_date'] != null
           ? DateTime.parse(row['arrival_date'] as String)
           : null,
@@ -312,6 +334,7 @@ class Deal {
     Object? ticketNumber = _sentinel,
     Object? ticketUrl = _sentinel,
     Object? tracking = _sentinel,
+    List<String>? trackings,
     Object? arrivalDate = _sentinel,
     Object? shippedAt = _sentinel,
     String? status,
@@ -348,6 +371,7 @@ class Deal {
         ticketUrl: ticketUrl == _sentinel ? this.ticketUrl : ticketUrl as String?,
         tracking:
             tracking == _sentinel ? this.tracking : tracking as String?,
+        trackings: trackings ?? this.trackings,
         arrivalDate: arrivalDate == _sentinel
             ? this.arrivalDate
             : arrivalDate as DateTime?,
