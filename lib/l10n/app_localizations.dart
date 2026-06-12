@@ -1028,6 +1028,90 @@ abstract class AppLocalizations {
   /// **'Allgemein'**
   String get settingsTabGeneral;
 
+  /// No description provided for @settingsTabSupport.
+  ///
+  /// In de, this message translates to:
+  /// **'Support'**
+  String get settingsTabSupport;
+
+  /// No description provided for @supportIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Du hast eine Frage, einen Fehler gefunden oder einen Wunsch? Schreib uns — deine Anfrage geht direkt an das Support-Postfach und wir antworten dir per E-Mail.'**
+  String get supportIntro;
+
+  /// No description provided for @supportSubjectLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Betreff'**
+  String get supportSubjectLabel;
+
+  /// No description provided for @supportSubjectHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Worum geht es?'**
+  String get supportSubjectHint;
+
+  /// No description provided for @supportSubjectTooShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestens 3 Zeichen'**
+  String get supportSubjectTooShort;
+
+  /// No description provided for @supportMessageLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Dein Anliegen'**
+  String get supportMessageLabel;
+
+  /// No description provided for @supportMessageTooShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestens 10 Zeichen'**
+  String get supportMessageTooShort;
+
+  /// No description provided for @supportPrivacyNote.
+  ///
+  /// In de, this message translates to:
+  /// **'Mitgesendet werden deine Konto-E-Mail (für die Antwort), dein Plan und die Workspace-ID — sonst nichts.'**
+  String get supportPrivacyNote;
+
+  /// No description provided for @supportSendCta.
+  ///
+  /// In de, this message translates to:
+  /// **'Anfrage senden'**
+  String get supportSendCta;
+
+  /// No description provided for @supportSending.
+  ///
+  /// In de, this message translates to:
+  /// **'Wird gesendet…'**
+  String get supportSending;
+
+  /// No description provided for @supportSentOk.
+  ///
+  /// In de, this message translates to:
+  /// **'Anfrage gesendet — wir melden uns per E-Mail.'**
+  String get supportSentOk;
+
+  /// No description provided for @supportRateLimited.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu viele Anfragen — bitte versuche es in einer Stunde erneut.'**
+  String get supportRateLimited;
+
+  /// No description provided for @supportSendFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Senden fehlgeschlagen — bitte versuche es später erneut.'**
+  String get supportSendFailed;
+
+  /// No description provided for @supportOffline.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Verbindung — bitte prüfe dein Netzwerk.'**
+  String get supportOffline;
+
   /// No description provided for @shippingIntroTitle.
   ///
   /// In de, this message translates to:

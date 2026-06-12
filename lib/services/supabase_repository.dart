@@ -1666,6 +1666,33 @@ class SupabaseRepository {
     }
   }
 
+  /// Sendet eine Support-Anfrage (Settings → Support) an die Edge Function
+  /// `support-request`. Absender-Identität kommt serverseitig aus dem JWT;
+  /// der Workspace-Kontext lässt den Betreiber Plan + Workspace in der Mail
+  /// sehen. Wirft nie — Ergebnis als [SupportSubmitResult].
+  Future<SupportSubmitResult> submitSupportRequest({
+    required String subject,
+    required String message,
+  }) async {
+    try {
+      final response = await _client.functions.invoke(
+        'support-request',
+        body: {
+          'subject': subject,
+          'message': message,
+          if (_workspaceId != null) 'workspace_id': _workspaceId,
+          // TODO: app_version mitsenden, sobald package_info_plus im Stack ist.
+        },
+      );
+      final status = response.status;
+      if (status == 429) return SupportSubmitResult.rateLimited;
+      if (status >= 400) return SupportSubmitResult.failed;
+      return SupportSubmitResult.ok;
+    } on Exception {
+      return SupportSubmitResult.offline;
+    }
+  }
+
   /// Lädt die Tracking-Event-Timeline eines Deals (Paket 1, Klarna-Style).
   /// Neueste Events zuerst. RLS scoped auf Workspace-Mitglieder; geschrieben
   /// wird die Tabelle nur vom tracking-poll-Backend.
@@ -2131,6 +2158,23 @@ enum RetrackResult {
 
   /// 4xx/5xx (außer 429) — Adapter/Carrier-API-Fehler, fehlende Credentials,
   /// fehlende Auth (sollte UI nie sehen, weil App-Auth da ist).
+  failed,
+
+  /// Netzwerk-Exception (kein HTTP-Status).
+  offline,
+}
+
+/// Ergebnis einer Support-Anfrage (Settings → Support). Wird in der UI in
+/// SnackBars übersetzt (siehe `support*` ARB-Keys).
+enum SupportSubmitResult {
+  /// Anfrage persistiert (Mail/Push-Zustellung läuft serverseitig
+  /// best-effort — für den User zählt: angekommen).
+  ok,
+
+  /// 429: Rate-Limit (max. 5 Anfragen pro Stunde) erreicht.
+  rateLimited,
+
+  /// 4xx/5xx (außer 429) — Validierung/Server-Fehler.
   failed,
 
   /// Netzwerk-Exception (kein HTTP-Status).
