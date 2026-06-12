@@ -1212,6 +1212,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dealTracking => 'Tracking';
 
   @override
+  String get dealSecondaryParcels => 'More parcels';
+
+  @override
+  String get dealRemoveParcelTooltip => 'Remove parcel';
+
+  @override
+  String dealMoreParcelsTooltip(int count) {
+    return '$count more parcels';
+  }
+
+  @override
   String get dealTicketUrl => 'Ticket URL (optional)';
 
   @override

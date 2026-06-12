@@ -2276,6 +2276,24 @@ abstract class AppLocalizations {
   /// **'Tracking'**
   String get dealTracking;
 
+  /// No description provided for @dealSecondaryParcels.
+  ///
+  /// In de, this message translates to:
+  /// **'Weitere Pakete'**
+  String get dealSecondaryParcels;
+
+  /// No description provided for @dealRemoveParcelTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Paket entfernen'**
+  String get dealRemoveParcelTooltip;
+
+  /// No description provided for @dealMoreParcelsTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} weitere Pakete'**
+  String dealMoreParcelsTooltip(int count);
+
   /// No description provided for @dealTicketUrl.
   ///
   /// In de, this message translates to:

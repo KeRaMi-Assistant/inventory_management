@@ -1213,6 +1213,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dealTracking => 'Tracking';
 
   @override
+  String get dealSecondaryParcels => 'Weitere Pakete';
+
+  @override
+  String get dealRemoveParcelTooltip => 'Paket entfernen';
+
+  @override
+  String dealMoreParcelsTooltip(int count) {
+    return '$count weitere Pakete';
+  }
+
+  @override
   String get dealTicketUrl => 'Ticket-URL (optional)';
 
   @override
