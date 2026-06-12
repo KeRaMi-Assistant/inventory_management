@@ -45,26 +45,27 @@ export const CARRIERS: ReadonlyArray<CarrierInfo> = [
     detection: true,
     pollAdapter: true,
     requiresApiKey: true,
-    uiEnabled: true,
+    uiEnabled: false,
     publicTrackingPage: true,
     note:
-      'Pull-API (Bearer-Key) UND Push: DPDs öffentliche Endpoints blocken ' +
-      'serverseitige Requests auf TLS-Ebene (verifiziert 2026-06-11) — der ' +
-      'verlässliche Kanal ist der offizielle Tracking Push Service ' +
-      '(Geschäftskunden-Antrag) → Webhook supabase/functions/dpd-push.',
+      'COMING FEATURE (2026-06-11): öffentliche Endpoints blocken Server-' +
+      'Requests auf TLS-Ebene → Pull unmöglich; der offizielle Tracking ' +
+      'Push Service braucht ein DPD-Geschäftskonto (Stakeholder hat keins). ' +
+      'Webhook supabase/functions/dpd-push liegt fertig + fail-closed ' +
+      'deployt bereit. Bis dahin: Detection + Deep-Link, UI „Bald verfügbar".',
   },
   {
     id: 'ups',
     label: 'UPS',
-    detection: false,
+    detection: true,
     pollAdapter: true,
     requiresApiKey: true,
     uiEnabled: false,
     publicTrackingPage: true,
     note:
-      'Adapter vorhanden, aber detectAdapter routet 1Z bewusst NICht (Plan ' +
-      '2026-06-03 §3.4) und die UI ist gesperrt, bis ein OAuth-Key-Flow ' +
-      'existiert. Registry-Status: key-required/disabled.',
+      'Detection seit 2026-06-11 (1Z-Format ist weltweit eindeutig, ' +
+      'Anchor-gated). Poll-Adapter vorhanden, aber UI gesperrt bis ein ' +
+      'OAuth-Key-Flow existiert — bis dahin Deep-Link via Chip.',
   },
   {
     id: 'amazon',
@@ -75,6 +76,20 @@ export const CARRIERS: ReadonlyArray<CarrierInfo> = [
     uiEnabled: false,
     publicTrackingPage: false,
     note: 'Detection-only — keine öffentliche Status-API, kein Deep-Link.',
+  },
+  {
+    id: 'hermes',
+    label: 'Hermes',
+    detection: true,
+    pollAdapter: false,
+    requiresApiKey: false,
+    uiEnabled: false,
+    publicTrackingPage: true,
+    note:
+      'Detection-only seit 2026-06-11: 14-stellige Nummern NUR mit ' +
+      'explizitem Hermes-Kontext (Doppel-Gate wie dpd-14, kollidiert ' +
+      'sonst mit DHL/DPD) + myhermes-href. Kein öffentlicher Poll-Kanal; ' +
+      'Deep-Link via carrier_links.dart.',
   },
   {
     id: 'gls',

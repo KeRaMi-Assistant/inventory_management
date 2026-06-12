@@ -9,8 +9,8 @@ import { assertEquals } from 'https://deno.land/std@0.224.0/assert/assert_equals
 import { CARRIERS, carrierById, DETECTION_ONLY_CARRIERS } from './carriers.ts'
 import { ADAPTERS } from './tracking_adapters.ts'
 
-Deno.test('registry: detection-only = amazon + gls', () => {
-  assertEquals([...DETECTION_ONLY_CARRIERS].sort(), ['amazon', 'gls'])
+Deno.test('registry: detection-only = amazon + gls + hermes', () => {
+  assertEquals([...DETECTION_ONLY_CARRIERS].sort(), ['amazon', 'gls', 'hermes'])
 })
 
 Deno.test('registry: jeder ADAPTERS-Key ist als pollAdapter registriert', () => {
@@ -69,7 +69,7 @@ Deno.test('registry: Dart carrier_links deckt alle publicTrackingPage-Carrier', 
 Deno.test('registry: deals.carrier-CHECK (Migration) ist Obermenge der Registry', async () => {
   const src = await Deno.readTextFile(
     new URL(
-      '../../migrations/20260610150000_deals_carrier_gls.sql',
+      '../../migrations/20260611190000_deals_carrier_hermes.sql',
       import.meta.url,
     ),
   )

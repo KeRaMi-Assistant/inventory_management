@@ -295,7 +295,12 @@ export function shouldReplaceTracking(
 function normalizeCarrierForDeal(carrier?: string | null): string | null {
   if (!carrier || typeof carrier !== 'string') return null
   const c = carrier.trim().toLowerCase()
-  if (c === 'dhl' || c === 'amazon' || c === 'dpd' || c === 'gls') return c
+  if (
+    c === 'dhl' || c === 'amazon' || c === 'dpd' || c === 'gls' ||
+    c === 'ups' || c === 'hermes'
+  ) {
+    return c
+  }
   return null
 }
 

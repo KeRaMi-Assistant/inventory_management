@@ -349,17 +349,20 @@ Deno.test('Adapter: Dell wird erkannt + orderTotal extrahiert', () => {
   assert(r!.orderTotal !== undefined)
 })
 
-Deno.test('Adapter: Dell shipped → status, aber UPS-Tracking out-of-scope', () => {
-  // Plan 2026-06-03 §1: UPS ist OUT-of-scope. Die Dell-Fixture trägt eine
-  // UPS-1Z-Nummer (1Z999AA10987654321) — die wird NICHT mehr erkannt.
-  // Status-Detection (shipped) bleibt funktional.
+Deno.test('Adapter: Dell shipped → UPS-1Z wird erkannt (Detection-Ausbau 2026-06-11)', () => {
+  // Historie: Plan 2026-06-03 §1 hatte UPS out-of-scope gestellt; seit dem
+  // Detection-Ausbau 2026-06-11 wird das weltweit eindeutige 1Z-Format
+  // (Anchor-gated) wieder erkannt — Real-Fixture-Beweis mit der
+  // Dell-Versandmail. UPS bleibt poll-seitig disabled (kein Key-Flow),
+  // der Wert dient Deep-Link + mail-getriebenem Status.
   const html = loadFixture('dell/shipped.html')
   const r = detectAndParse(ctx('order@dell.com',
     'Your Dell Order has Shipped', html))
   assert(r !== null)
   assertEquals(r!.shopKey, 'dell')
   assertEquals(r!.status, 'shipped')
-  assertEquals(r!.tracking, undefined)
+  assertEquals(r!.tracking, '1Z999AA10987654321')
+  assertEquals(r!.carrier, 'ups')
 })
 
 Deno.test('Adapter: eBay populiert seller', () => {

@@ -1037,7 +1037,7 @@ abstract class AppLocalizations {
   /// No description provided for @shippingIntroBody.
   ///
   /// In de, this message translates to:
-  /// **'Sendungsnummern werden automatisch aus deinen Mails erkannt (DHL, Amazon, DPD) – ganz ohne API-Key. Hinterlege je Carrier einen API-Key, damit die App den Live-Sendungsstatus abruft (täglich um 13:00 Uhr und einmal sofort, sobald ein Deal ein Tracking bekommt) und Deals automatisch auf „Angekommen“ setzt.'**
+  /// **'Sendungsnummern werden automatisch aus deinen Mails erkannt (DHL, Amazon, DPD, GLS, UPS, Hermes) – ganz ohne API-Key. Hinterlege einen Carrier-API-Key (aktuell DHL), damit die App den Live-Sendungsstatus abruft (sofort bei Tracking-Zuweisung, danach automatisch im passenden Takt: in Zustellung stündlich, unterwegs ~alle 4 Stunden) und Deals automatisch auf „Angekommen“ setzt.'**
   String get shippingIntroBody;
 
   /// No description provided for @shippingNoAccess.
@@ -2837,7 +2837,7 @@ abstract class AppLocalizations {
   /// No description provided for @helpDealsTrackingDesc.
   ///
   /// In de, this message translates to:
-  /// **'Trifft eine Versandmail ein, erkennt die App die Sendungsnummer rein anhand ihrer Struktur (Format + Prüfsumme) — DHL, DPD, Amazon Logistics und GLS werden erkannt. Dafür ist kein Carrier-API-Key nötig: die Nummer wird immer gespeichert und der Deal automatisch auf „Unterwegs\" gesetzt. Den Live-Status (in Zustellung, zugestellt) holt die App, sobald ein passender Carrier-API-Key hinterlegt ist — sofort bei der Zuweisung und danach automatisch im passenden Takt (in Zustellung stündlich, unterwegs ~alle 4 Stunden, nachts pausiert). Amazon Logistics und GLS werden erkannt, lassen sich aber nicht live verfolgen (siehe FAQ) — für GLS gibt es immerhin einen Direkt-Link zur Sendungsverfolgung. Andere Carrier (UPS, Hermes) trägst du bei Bedarf manuell im Deal ein. Details siehe Sektion „Versand & Carrier-API-Keys\".'**
+  /// **'Trifft eine Versandmail ein, erkennt die App die Sendungsnummer rein anhand ihrer Struktur (Format + Prüfsumme) — DHL, DPD, Amazon Logistics, GLS, UPS und Hermes werden erkannt. Dafür ist kein Carrier-API-Key nötig: die Nummer wird immer gespeichert und der Deal automatisch auf „Unterwegs\" gesetzt. Den Live-Status (in Zustellung, zugestellt) holt die App, sobald ein passender Carrier-API-Key hinterlegt ist — sofort bei der Zuweisung und danach automatisch im passenden Takt (in Zustellung stündlich, unterwegs ~alle 4 Stunden, nachts pausiert). Amazon Logistics und GLS werden erkannt, lassen sich aber nicht live verfolgen (siehe FAQ) — für GLS gibt es immerhin einen Direkt-Link zur Sendungsverfolgung. Details siehe Sektion „Versand & Carrier-API-Keys\".'**
   String get helpDealsTrackingDesc;
 
   /// No description provided for @helpDealsDropShipTitle.
@@ -2951,19 +2951,19 @@ abstract class AppLocalizations {
   /// No description provided for @helpShippingComingSoonDesc.
   ///
   /// In de, this message translates to:
-  /// **'Automatisch aus Mails erkannt werden Sendungsnummern von DHL, DPD, Amazon Logistics und GLS.\n• DHL und DPD: Erkennung plus Live-Status, sobald der passende Carrier-API-Key hinterlegt ist.\n• Amazon Logistics: wird erkannt und gespeichert, hat aber keinen Live-Status — Amazon bietet keine öffentliche Status-API.\n• GLS: wird erkannt und gespeichert (z. B. aus Shop-Mails wie PcComponentes), hat keinen Live-Status — dafür gibt es einen Direkt-Link zur GLS-Sendungsverfolgung.\nAndere Carrier (UPS, Hermes) werden bewusst nicht aus Mails geraten — das war früher die Hauptquelle falscher Sendungsnummern. Dort trägst du die Tracking-Nummer bei Bedarf manuell im Deal ein.'**
+  /// **'Automatisch aus Mails erkannt werden Sendungsnummern von DHL, DPD, Amazon Logistics und GLS.\n• DHL: Erkennung plus Live-Status, sobald dein DHL-API-Key hinterlegt ist.\n• DPD: Erkennung plus Direkt-Link zur DPD-Verfolgung — der automatische Live-Status ist in Vorbereitung.\n• Amazon Logistics: wird erkannt und gespeichert, hat aber keinen Live-Status — Amazon bietet keine öffentliche Status-API.\n• GLS: wird erkannt und gespeichert (z. B. aus Shop-Mails wie PcComponentes), hat keinen Live-Status — dafür gibt es einen Direkt-Link zur GLS-Sendungsverfolgung.\n• UPS: wird sicher am eindeutigen 1Z-Format erkannt — Live-Status folgt, bis dahin Direkt-Link.\n• Hermes: wird nur mit eindeutigem Hermes-Kontext in der Mail erkannt (verhindert Verwechslung mit DHL/DPD-Nummern) — Direkt-Link zur Hermes-Verfolgung inklusive.'**
   String get helpShippingComingSoonDesc;
 
   /// No description provided for @helpShippingDpdTitle.
   ///
   /// In de, this message translates to:
-  /// **'DPD — jetzt mit Live-Status'**
+  /// **'DPD — Live-Status bald verfügbar'**
   String get helpShippingDpdTitle;
 
   /// No description provided for @helpShippingDpdDesc.
   ///
   /// In de, this message translates to:
-  /// **'Neben DHL kannst du jetzt auch einen DPD-API-Key hinterlegen, um den Live-Status von DPD-Sendungen zu bekommen:\n• Den DPD-Key unter Einstellungen → Versand → DPD → „API-Key hinterlegen\" einfügen.\n• Danach einmal Einstellungen → „Sendungsnummern neu prüfen\" tippen, damit bestehende DPD-Mails neu geparst werden.\nDPD-Sendungsnummern werden auch ohne Key automatisch aus deinen Mails erkannt — der Key schaltet nur den automatischen Live-Status frei.'**
+  /// **'DPD-Sendungsnummern werden bereits automatisch aus deinen Mails erkannt und gespeichert, und über „Sendung verfolgen\" im Deal kommst du direkt zur DPD-Verfolgungsseite. Der automatische Live-Status in der App (Statuswechsel-Push, Timeline) ist für DPD in Vorbereitung und wird freigeschaltet, sobald er verfügbar ist — die Karte unter Einstellungen → Versand zeigt dann statt „Bald verfügbar\" das Key-Feld.'**
   String get helpShippingDpdDesc;
 
   /// No description provided for @helpShippingKeySafetyTitle.
@@ -3707,7 +3707,7 @@ abstract class AppLocalizations {
   /// No description provided for @helpTroubleStatusStaleDesc.
   ///
   /// In de, this message translates to:
-  /// **'Die automatische Prüfung läuft im passenden Takt (in Zustellung stündlich, unterwegs ~alle 4 Stunden) und pausiert nachts. Direkt nach einem Versand kann es also etwas dauern, bis sich etwas zeigt — für einen sofortigen Stand im Deal auf „Status aktualisieren\" tippen.\nKommt kein Statuswechsel-Push an: Einstellungen → Push → Kategorie „Lieferungen\" aktiviert? Außerdem braucht es einen Live-Status, und den gibt es nur für DHL und DPD mit hinterlegtem API-Key — für Amazon Logistics und GLS gibt es keinen Live-Status und damit auch keinen Statuswechsel-Push.'**
+  /// **'Die automatische Prüfung läuft im passenden Takt (in Zustellung stündlich, unterwegs ~alle 4 Stunden) und pausiert nachts. Direkt nach einem Versand kann es also etwas dauern, bis sich etwas zeigt — für einen sofortigen Stand im Deal auf „Status aktualisieren\" tippen.\nKommt kein Statuswechsel-Push an: Einstellungen → Push → Kategorie „Lieferungen\" aktiviert? Außerdem braucht es einen Live-Status, und den gibt es aktuell nur für DHL mit hinterlegtem API-Key (DPD folgt) — für Amazon Logistics und GLS gibt es keinen Live-Status und damit auch keinen Statuswechsel-Push.'**
   String get helpTroubleStatusStaleDesc;
 
   /// No description provided for @helpWarenwirtschaftSection.
@@ -9221,29 +9221,23 @@ abstract class AppLocalizations {
   /// **'Dein aktueller Plan: {plan}. Die automatische Erkennung von Bestell- und Versand-Mails ist ab dem Starter-Plan verfügbar — höhere Pläne erlauben mehr Postfächer und längeren Inbox-Verlauf.'**
   String settingsMailboxFreePlanDesc(String plan);
 
-  /// Plan-Vergleichszeile Starter im Postfach-Tab.
+  /// Plan-Vergleichszeile Team im Postfach-Tab (Werte = pricing_plan.dart).
   ///
   /// In de, this message translates to:
-  /// **'1 Postfach · 7 Tage'**
-  String get settingsMailboxPlanStarter;
+  /// **'1 Postfach · 14 Tage Verlauf'**
+  String get settingsMailboxPlanTeam;
 
-  /// Plan-Vergleichszeile Pro im Postfach-Tab.
+  /// Plan-Vergleichszeile Business im Postfach-Tab (Werte = pricing_plan.dart).
   ///
   /// In de, this message translates to:
-  /// **'3 Postfächer · 14 Tage'**
-  String get settingsMailboxPlanPro;
-
-  /// Plan-Vergleichszeile Business im Postfach-Tab.
-  ///
-  /// In de, this message translates to:
-  /// **'10 Postfächer · 30 Tage'**
+  /// **'5 Postfächer · 30 Tage Verlauf'**
   String get settingsMailboxPlanBusiness;
 
-  /// Plan-Vergleichszeile Ultimate im Postfach-Tab.
+  /// Plan-Vergleichszeile Enterprise im Postfach-Tab (Werte = pricing_plan.dart).
   ///
   /// In de, this message translates to:
-  /// **'15 Postfächer · 90 Tage'**
-  String get settingsMailboxPlanUltimate;
+  /// **'15 Postfächer · 30 Tage Verlauf'**
+  String get settingsMailboxPlanEnterprise;
 
   /// SnackBar wenn keine neuen Amazon-Shops hinzugefügt wurden.
   ///
