@@ -38,6 +38,9 @@ export interface PollDealRow {
   user_id: string
   product: string
   tracking: string | null
+  /// Multi-Parcel: alle Sendungsnummern (inkl. Primary). Nur das Primary
+  /// (`tracking`) steuert live_status/Push — Sekundäre liefern nur Events.
+  trackings: string[] | null
   carrier: string | null
   status: string
   arrival_date: string | null
@@ -46,6 +49,24 @@ export interface PollDealRow {
   live_status_updated_at: string | null
   live_eta: string | null
   last_polled_at: string | null
+}
+
+/// Reine Funktion: alle Sendungsnummern eines Deals, dedupliziert und
+/// getrimmt — Primary (`tracking`) zuerst, dann Sekundäre in
+/// Array-Reihenfolge. Single-Tracking-Deals (trackings=null, Pre-Backfill)
+/// liefern weiterhin genau `[tracking]`. Exportiert für Unit-Tests.
+export function dealParcelNumbers(
+  deal: Pick<PollDealRow, 'tracking' | 'trackings'>,
+): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const tn of [deal.tracking, ...(deal.trackings ?? [])]) {
+    const t = (tn ?? '').trim()
+    if (!t || seen.has(t)) continue
+    seen.add(t)
+    out.push(t)
+  }
+  return out
 }
 
 /// Reine Funktion: berechnet das `UPDATE`-Patch für einen Deal anhand des
@@ -90,14 +111,20 @@ export function buildLiveStatusUpdate(
 /// keine Event-Liste, wird (nur bei `includeSynthetic`, d.h. echtem
 /// Status-Wechsel) ein synthetischer Event aus `lastEvent` gebaut, damit
 /// die Timeline nie leer bleibt. Exportiert für Unit-Tests.
+///
+/// Multi-Parcel (2026-06-12): `trackingOverride` setzt die Nummer für die
+/// Event-Rows explizit — Sekundär-Pakete aus `deals.trackings[]` schreiben
+/// ihre Events unter der EIGENEN Nummer, nicht unter dem Primary
+/// (`deal.tracking`). Ohne Override bleibt das Primary-Verhalten identisch.
 export function buildTrackingEventRows(
   deal: Pick<PollDealRow, 'id' | 'workspace_id' | 'tracking'>,
   carrierId: string,
   parsed: ParsedTracking,
   nowIso: string,
   includeSynthetic: boolean,
+  trackingOverride?: string,
 ): Record<string, unknown>[] {
-  const tracking = (deal.tracking ?? '').trim()
+  const tracking = (trackingOverride ?? deal.tracking ?? '').trim()
   if (!tracking) return []
 
   const rows: Record<string, unknown>[] = []

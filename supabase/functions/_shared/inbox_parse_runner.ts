@@ -63,6 +63,7 @@ function mapShipStatusToDeal(s?: string): string | null {
 interface DealRow {
   status: string
   tracking: string | null
+  trackings?: string[] | null
   arrival_date: string | null
   carrier?: string | null
   tracking_confidence?: 'strong' | 'manual' | 'none' | null
@@ -292,6 +293,46 @@ export function shouldReplaceTracking(
     newIsStrong && !oldIsManual && oldIsWeak
 }
 
+/// Multi-Parcel (2026-06-12): vereinigt die Paketnummern eines Deals mit den
+/// frisch geparsten Nummern einer Mail. Primary steht immer an Index 0.
+/// `droppedOldPrimary=true` (Tracking-Replace): der alte — als falsch
+/// erkannte — Primary fliegt aus der Liste. Gibt `null` zurück, wenn die
+/// gespeicherte Liste bereits identisch ist (kein Write nötig).
+/// Reine Funktion, exportiert für Unit-Tests.
+export function mergeDealTrackings(
+  before: Pick<DealRow, 'tracking' | 'trackings'>,
+  parsed: Pick<ParsedOrder, 'tracking' | 'trackings'>,
+  opts: { newPrimary: string | null; droppedOldPrimary: boolean },
+): string[] | null {
+  const stored = before.trackings && before.trackings.length > 0
+    ? before.trackings
+    : before.tracking ? [before.tracking] : []
+
+  const merged: string[] = []
+  const seen = new Set<string>()
+  const push = (tn: string | null | undefined) => {
+    const t = (tn ?? '').trim()
+    if (!t || seen.has(t)) return
+    seen.add(t)
+    merged.push(t)
+  }
+  push(opts.newPrimary ?? before.tracking)
+  for (const t of stored) {
+    if (opts.droppedOldPrimary && t === before.tracking) continue
+    push(t)
+  }
+  for (const t of parsed.trackings ?? (parsed.tracking ? [parsed.tracking] : [])) {
+    push(t)
+  }
+
+  if (merged.length === 0) return null
+  const unchanged = before.trackings !== null &&
+    before.trackings !== undefined &&
+    merged.length === before.trackings.length &&
+    merged.every((v, i) => v === before.trackings![i])
+  return unchanged ? null : merged
+}
+
 function normalizeCarrierForDeal(carrier?: string | null): string | null {
   if (!carrier || typeof carrier !== 'string') return null
   const c = carrier.trim().toLowerCase()
@@ -325,13 +366,20 @@ async function findMatchingDeal(
     : parsed.tracking ? [parsed.tracking] : []
   for (const tn of candidates) {
     if (!tn) continue
-    const { data } = await admin
+    // Multi-Parcel (2026-06-12): auch Deals matchen, die die Nummer als
+    // SEKUNDÄR-Paket in trackings[] tragen (cs = Array-Containment, nutzt
+    // den GIN-Index deals_trackings_gin). Detect()-Nummern sind normalisiert
+    // alphanumerisch — der Guard schützt die PostgREST-or-Syntax defensiv.
+    let query = admin
       .from('deals')
       .select('id')
       .eq('workspace_id', workspaceId)
-      .eq('tracking', tn)
       .is('deleted_at', null)
       .limit(1)
+    query = /^[A-Za-z0-9-]+$/.test(tn)
+      ? query.or(`tracking.eq.${tn},trackings.cs.{${tn}}`)
+      : query.eq('tracking', tn)
+    const { data } = await query
     const row = (data ?? [])[0]
     if (row) return (row as { id: number }).id
   }
@@ -347,7 +395,7 @@ async function applyUpdateToDeal(
   const { data: dealData, error: readErr } = await admin
     .from('deals')
     .select(
-      'status, tracking, arrival_date, note, carrier, tracking_confidence, tracking_needs_review',
+      'status, tracking, trackings, arrival_date, note, carrier, tracking_confidence, tracking_needs_review',
     )
     .eq('id', dealId)
     .maybeSingle()
@@ -406,6 +454,33 @@ async function applyUpdateToDeal(
     }
   }
 
+  // Multi-Parcel (2026-06-12): trackings[] mit den geparsten Nummern
+  // vereinigen. Greift in zwei Fällen:
+  //   a) Primary wird gerade geschrieben (fresh oder Replace) — dann gehören
+  //      alle Mail-Nummern mit ins Array.
+  //   b) Primary bleibt, aber die Mail bringt ZUSÄTZLICHE starke Nummern
+  //      desselben Carriers (gesplittete Bestellung, zweite Versand-Mail) —
+  //      bisher gingen die still verloren. Carrier-Gate: deals.carrier ist
+  //      Single-Column, ein fremder Carrier würde vom Poll gegen die falsche
+  //      API geprüft → nur mergen, wenn Carrier passt oder noch keiner steht.
+  const primaryWritten = typeof update.tracking === 'string'
+  const carrierCompatible = !!carrierLc && (!before.carrier || before.carrier === carrierLc)
+  if (primaryWritten ||
+      ((parsed.trackingConfidence ?? 'none') === 'strong' && carrierCompatible)) {
+    const mergedTrackings = mergeDealTrackings(before, parsed, {
+      newPrimary: primaryWritten ? (update.tracking as string) : null,
+      droppedOldPrimary: canReplaceTracking,
+    })
+    if (mergedTrackings) {
+      update.trackings = mergedTrackings
+      const storedBefore = before.trackings ?? (before.tracking ? [before.tracking] : [])
+      const added = mergedTrackings.filter((t) =>
+        t !== (primaryWritten ? update.tracking : before.tracking) &&
+        !storedBefore.includes(t))
+      if (added.length > 0) changes.push(`Weitere Pakete: ${added.join(', ')}`)
+    }
+  }
+
   const targetStatus = mapShipStatusToDeal(parsed.status)
   if (targetStatus
       && (STATUS_RANK[targetStatus] ?? 0) > (STATUS_RANK[before.status] ?? 0)) {
@@ -448,7 +523,11 @@ async function applyUpdateToDeal(
     return
   }
 
-  await writeInboxActivityLog(admin, row, dealId, changes)
+  // Reiner trackings[]-Backfill (Array-Sync ohne inhaltliche Änderung)
+  // verdient keinen Activity-Log-Eintrag.
+  if (changes.length > 0) {
+    await writeInboxActivityLog(admin, row, dealId, changes)
+  }
 }
 
 async function writeInboxActivityLog(

@@ -243,12 +243,15 @@ Deno.serve(async (req) => {
 
   // Deal-Lookup über die normalisierte Tracking-Nummer. DPD-pnr ist
   // 13–14-stellig; Detection persistiert normalisiert (uppercase, spaceless).
+  // Multi-Parcel (2026-06-12): auch Deals matchen, die die pnr als
+  // SEKUNDÄR-Paket in trackings[] tragen (cs = Containment, GIN-Index).
+  // pnr ist hier bereits regex-validiert numerisch → or-Syntax-sicher.
   const { data: dealRows, error: dealErr } = await admin
     .from('deals')
     .select(
-      'id, workspace_id, user_id, product, tracking, carrier, status, arrival_date, live_status, live_status_last_event, live_status_updated_at, live_eta, last_polled_at',
+      'id, workspace_id, user_id, product, tracking, trackings, carrier, status, arrival_date, live_status, live_status_last_event, live_status_updated_at, live_eta, last_polled_at',
     )
-    .eq('tracking', converted.pnr)
+    .or(`tracking.eq.${converted.pnr},trackings.cs.{${converted.pnr}}`)
     .is('deleted_at', null)
     .limit(2)
   if (dealErr) {
@@ -271,6 +274,34 @@ Deno.serve(async (req) => {
   // Activity-Log delivered-Guard) — der Retry heilt, ohne zu duplizieren.
   let hadWriteError = false
   for (const deal of deals) {
+    // Multi-Parcel (2026-06-12): trifft die pnr nur ein SEKUNDÄR-Paket aus
+    // trackings[], werden ausschließlich Timeline-Events unter der eigenen
+    // Nummer geschrieben — live_status/Carrier/Push/Activity gehören dem
+    // Primary (deals.tracking). Kein synthetischer Event-Vergleich gegen
+    // deal.live_status (das ist der Primary-Zustand).
+    if ((deal.tracking ?? '').trim() !== converted.pnr) {
+      const secondaryRows = buildTrackingEventRows(
+        deal,
+        'dpd',
+        converted.parsed,
+        nowIso,
+        false,
+        converted.pnr,
+      )
+      if (secondaryRows.length > 0) {
+        const { error: secErr } = await admin
+          .from('tracking_events')
+          .upsert(secondaryRows, {
+            onConflict: 'deal_id,tracking,occurred_at,description',
+            ignoreDuplicates: true,
+          })
+        if (secErr) {
+          console.warn('dpd-push: secondary events upsert failed', deal.id, secErr.message)
+          hadWriteError = true
+        }
+      }
+      continue
+    }
     // Out-of-Order-Schutz: regressive Status-Pushes patchen den Deal nicht
     // (Timeline-Event unten wird trotzdem geschrieben).
     const incoming = converted.parsed.status as LiveStatus

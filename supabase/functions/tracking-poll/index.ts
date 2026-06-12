@@ -31,6 +31,7 @@ import {
   buildStatusPushPayload,
   buildTrackingEventRows,
   createPushContext,
+  dealParcelNumbers,
   type LiveStatus,
   maybeSendStatusPush,
   type PushContext,
@@ -59,6 +60,7 @@ interface DealRow {
   user_id: string
   product: string
   tracking: string | null
+  trackings: string[] | null
   carrier: 'dhl' | 'amazon' | 'dpd' | 'gls' | 'ups' | 'hermes' | null
   tracking_confidence: 'strong' | 'manual' | 'none' | null
   tracking_needs_review: boolean | null
@@ -334,7 +336,7 @@ async function pollWorkspace(
   let dealQuery = admin
     .from('deals')
     .select(
-      'id, workspace_id, user_id, product, tracking, carrier, tracking_confidence, tracking_needs_review, status, arrival_date, order_date, live_status, live_status_last_event, live_status_updated_at, live_eta, last_polled_at',
+      'id, workspace_id, user_id, product, tracking, trackings, carrier, tracking_confidence, tracking_needs_review, status, arrival_date, order_date, live_status, live_status_last_event, live_status_updated_at, live_eta, last_polled_at',
     )
     .eq('workspace_id', workspaceId)
     .eq('status', 'Unterwegs')
@@ -432,42 +434,55 @@ async function pollWorkspace(
     if (!adapter) continue
     if (!carriers.has(adapter.id)) continue
 
-    // Tages-Quota-Guard: Cap erreicht → kein Call mehr für diesen Carrier
-    // heute (DHL sperrt bei >1.000/Tag mit 429, Lesson PR #115).
-    const quotaKey = `${workspaceId}:${adapter.id}`
-    if ((quotaRemaining.get(quotaKey) ?? DAILY_QUOTA_CAP) <= 0) {
-      stat.quota_skipped++
-      continue
-    }
-
     const apiKey = await getKey(adapter.id)
     if (!apiKey) continue
 
-    // Rate-Limit-Schutz: ≥350 ms seit dem letzten echten API-Call (DHL 3 req/s).
-    if (madeApiCall) await _trkSleep(MIN_MS_BETWEEN_TRACKING_CALLS)
-    madeApiCall = true
+    // Multi-Parcel (2026-06-12): alle Nummern des Deals pollen — Primary
+    // zuerst. NUR das Primary schreibt live_status/Push/Activity; Sekundäre
+    // liefern ausschließlich tracking_events (Timeline pro Nummer). Alle
+    // Nummern teilen den Deal-Carrier (Single-carrier-Column — Cross-Carrier-
+    // Mails werden von detect() ohnehin verworfen). Quota: jede Nummer ist
+    // ein eigener Carrier-Call und zählt einzeln gegen das Tages-Cap.
+    const primary = (deal.tracking ?? '').trim()
+    for (const parcelNumber of dealParcelNumbers(deal)) {
+      // Tages-Quota-Guard: Cap erreicht → kein Call mehr für diesen Carrier
+      // heute (DHL sperrt bei >1.000/Tag mit 429, Lesson PR #115).
+      const quotaKey = `${workspaceId}:${adapter.id}`
+      if ((quotaRemaining.get(quotaKey) ?? DAILY_QUOTA_CAP) <= 0) {
+        stat.quota_skipped++
+        break
+      }
 
-    stat.checked++
-    quotaRemaining.set(quotaKey, (quotaRemaining.get(quotaKey) ?? DAILY_QUOTA_CAP) - 1)
-    callsMade.set(adapter.id, (callsMade.get(adapter.id) ?? 0) + 1)
+      // Rate-Limit-Schutz: ≥350 ms seit dem letzten echten API-Call (DHL 3 req/s).
+      if (madeApiCall) await _trkSleep(MIN_MS_BETWEEN_TRACKING_CALLS)
+      madeApiCall = true
 
-    let parsed: ParsedTracking | null = null
-    try {
-      parsed = await adapter.fetchStatus(deal.tracking, apiKey)
-      lastErrorByCarrier.set(adapter.id, null)
-    } catch (e) {
-      console.warn('adapter.fetchStatus failed', adapter.id, deal.id, (e as Error).message)
-      stat.errors++
-      lastErrorByCarrier.set(adapter.id, ((e as Error).message ?? 'fetch failed').slice(0, 500))
-      continue
+      stat.checked++
+      quotaRemaining.set(quotaKey, (quotaRemaining.get(quotaKey) ?? DAILY_QUOTA_CAP) - 1)
+      callsMade.set(adapter.id, (callsMade.get(adapter.id) ?? 0) + 1)
+
+      let parsed: ParsedTracking | null = null
+      try {
+        parsed = await adapter.fetchStatus(parcelNumber, apiKey)
+        lastErrorByCarrier.set(adapter.id, null)
+      } catch (e) {
+        console.warn('adapter.fetchStatus failed', adapter.id, deal.id, (e as Error).message)
+        stat.errors++
+        lastErrorByCarrier.set(adapter.id, ((e as Error).message ?? 'fetch failed').slice(0, 500))
+        continue
+      }
+      if (!parsed) continue
+
+      if (parcelNumber === primary) {
+        // Klarna-style Live-Visibility: bei JEDEM erfolgreichen Parse den
+        // Live-Status persistieren — nicht nur bei 'delivered'. Duplikate
+        // (gleicher Status wie zuletzt) werden geskippt (Spam-Schutz).
+        const ok = await persistLiveStatus(admin, deal, adapter, parsed, pushCtx)
+        if (ok && parsed.status === 'delivered') stat.delivered++
+      } else {
+        await persistSecondaryEvents(admin, deal, adapter, parsed, parcelNumber)
+      }
     }
-    if (!parsed) continue
-
-    // Klarna-style Live-Visibility: bei JEDEM erfolgreichen Parse den
-    // Live-Status persistieren — nicht nur bei 'delivered'. Duplikate (gleicher
-    // Status wie zuletzt) werden geskippt (Spam-Schutz).
-    const ok = await persistLiveStatus(admin, deal, adapter, parsed, pushCtx)
-    if (ok && parsed.status === 'delivered') stat.delivered++
   }
 
   // Credential-Flush: EIN atomarer Bump pro Carrier (Review-Fix: ein
@@ -583,6 +598,39 @@ async function persistLiveStatus(
   }
 
   return true
+}
+
+/// Multi-Parcel (2026-06-12): Persistenz für SEKUNDÄRE Paketnummern aus
+/// `deals.trackings[]`. Schreibt ausschließlich tracking_events unter der
+/// eigenen Nummer — KEIN live_status, KEIN last_polled_at, KEIN Push, KEIN
+/// Activity-Log (das alles gehört dem Primary). Kein synthetischer
+/// Fallback-Event: der hängt an `deal.live_status` (Primary-Zustand) und
+/// würde für Sekundäre stündlich Duplikate erzeugen.
+async function persistSecondaryEvents(
+  admin: ReturnType<typeof createClient>,
+  deal: DealRow,
+  adapter: TrackingAdapter,
+  parsed: ParsedTracking,
+  parcelNumber: string,
+): Promise<void> {
+  const eventRows = buildTrackingEventRows(
+    deal,
+    adapter.id,
+    parsed,
+    new Date().toISOString(),
+    false,
+    parcelNumber,
+  )
+  if (eventRows.length === 0) return
+  const { error } = await admin
+    .from('tracking_events')
+    .upsert(eventRows, {
+      onConflict: 'deal_id,tracking,occurred_at,description',
+      ignoreDuplicates: true,
+    })
+  if (error) {
+    console.warn('secondary tracking_events upsert failed', deal.id, parcelNumber, error.message)
+  }
 }
 
 
