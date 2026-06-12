@@ -32,7 +32,7 @@ export type { TrackingCandidate }
 
 /** Carrier-IDs (Detection-Scope). Immer lowercase (Plan §2.8 Casing-Fix).
  *  Kanonische Registry: `carriers.ts` (Paket 2) — neue Ids dort eintragen. */
-export type CarrierId = 'dhl' | 'amazon' | 'dpd' | 'gls'
+export type CarrierId = 'dhl' | 'amazon' | 'dpd' | 'gls' | 'ups' | 'hermes'
 
 /** Versand-Status (Spiegel von `ParsedOrder.status` in inbox_adapters.ts). */
 export type ShipStatus =
@@ -185,6 +185,8 @@ type ValidatorId =
   | 'tba-source-gate'
   | 'dpd-name-anchor'
   | 'gls-name-anchor'
+  | 'ups-1z-format'
+  | 'hermes-name-anchor'
   | 'amazon-shipment-id'
 
 // ── Strong-Pattern (alpha-präfigiert / format-eindeutig) — Plan §2.3 ─────────
@@ -236,6 +238,18 @@ const STRONG_PATTERNS: ReadonlyArray<BodyPattern> = [
   // 80-Zeichen-Fenster davor steht — reale Amazon-/DHL-DE-Mails ("Your tracking
   // number is: DE…", "Sendungsnummer: DE…") erfüllen das; ein „Kundennummer:"-
   // Footer nicht (kein Tracking-Anchor).
+  // UPS 1Z (2026-06-11): `1Z` + exakt 16 alphanumerisch — das Prefix ist
+  // weltweit eindeutig UPS, strukturell kein VAT-/IBAN-/Order-Kollisions-
+  // risiko. Leerzeichen-tolerant (Mails gruppieren: "1Z 999 AA1 …").
+  // Trotzdem ANCHOR-Pflicht (FP-Budget = 0): eine 18-stellige SKU, die
+  // zufällig mit 1Z beginnt, soll ohne Versand-Kontext nicht matchen.
+  {
+    id: 'ups-1z',
+    re: /\b1Z(?:[ \u00A0]?[A-Z0-9]){16}(?![ \u00A0]?[A-Z0-9])\b/g,
+    carrier: 'ups',
+    requiresAnchor: true,
+    validator: 'ups-1z-format',
+  },
   {
     id: 'dhl-de',
     // Leerzeichen-Toleranz (Paket 2, Audit-Recall-Fix): erlaubt EINZELNE
@@ -282,6 +296,18 @@ const ANCHORED_PATTERNS: ReadonlyArray<BodyPattern> = [
     requiresAnchor: true,
     validator: 'dpd-name-anchor',
   },
+  // Hermes 14-stellig (2026-06-11): kollidiert strukturell mit DHL/DPD →
+  // Doppel-Gate wie dpd-14: Tracking-Anchor PFLICHT (requiresAnchor) UND
+  // „Hermes" muss explizit im 80-Zeichen-Fenster vor dem Match stehen
+  // (hermesNameInWindow). Hermes ist detection-only (kein Poll-Adapter,
+  // siehe carriers.ts) — Wert dient Deep-Link + mail-getriebenem Status.
+  {
+    id: 'hermes-14',
+    re: /\b(?<!\d[ \u00A0])\d(?:[ \u00A0]?\d){13}(?![ \u00A0]?\d)\b/g,
+    carrier: 'hermes',
+    requiresAnchor: true,
+    validator: 'hermes-name-anchor',
+  },
   // GLS 11–20-stellig (Paket 2): national 11–12, Unit-No 14, GLS-Spain 20
   // (Real-Fixture pccomponentesGls: 11766771249246689455). KEINE öffentliche
   // Checksum → Doppel-Gate wie dpd-14: Tracking-Anchor PFLICHT (requiresAnchor)
@@ -323,6 +349,15 @@ const HREF_PATTERNS: ReadonlyArray<HrefPattern> = [
   // nationale Ableger wie gls-spain.es). `match=` ist der kanonische Param.
   { re: /gls(?:-group|-pakete|-spain|-italy|-france)?\.[a-z.]+\/[^"'\s]*?[?&#]match=([A-Z0-9]{8,25})/i, carrier: 'gls', source: 'html-href' },
   { re: /gls-group\.[a-z.]+\/[^"'\s]*?(?:track|paketverfolgung|parcel)[^"'\s]*?[?&]txtRefNo=([A-Z0-9]{8,25})/i, carrier: 'gls', source: 'html-href' },
+  // UPS (2026-06-11) — Tracking-Links (ups.com/track?tracknum= bzw. das
+  // ältere WebTracking mit InquiryNumber1=). Capture wird vom Validator
+  // auf das 1Z-Format gewallt.
+  { re: /ups\.[a-z.]+\/[^"'\s]*?[?&]track(?:ing)?num(?:ber)?=([A-Z0-9]{8,34})/i, carrier: 'ups', source: 'html-href' },
+  { re: /wwwapps\.ups\.[a-z.]+\/[^"'\s]*?[?&]InquiryNumber1=([A-Z0-9]{8,34})/i, carrier: 'ups', source: 'html-href' },
+  // Hermes (2026-06-11) — myhermes-Sendungsinformation (Hash-Fragment) +
+  // generischer trackingNumber-Param auf hermes-Domains.
+  { re: /myhermes\.de\/[^"'\s]*?sendungsinformation[^"'\s#]*#(\d{11,20})/i, carrier: 'hermes', source: 'html-href' },
+  { re: /hermes[a-z-]*\.[a-z.]+\/[^"'\s]*?[?&](?:trackingNumber|TrackID)=(\d{11,20})/i, carrier: 'hermes', source: 'html-href' },
 ]
 
 // Amazon-Kontext-Token (für tba-source-gate Variante 3).
@@ -345,6 +380,8 @@ interface RawMatch {
   dpdNameInWindow?: boolean
   /** `true`, wenn „GLS" im 80-Zeichen-Fenster vor dem Match steht (gls-num). */
   glsNameInWindow?: boolean
+  /** `true`, wenn „Hermes" im 80-Zeichen-Fenster vor dem Match steht (hermes-14). */
+  hermesNameInWindow?: boolean
 }
 
 interface ClassifyContext {
@@ -445,6 +482,29 @@ function classifyAndValidate(
       return { outcome: 'drop' }
     }
 
+    case 'ups-1z-format': {
+      // 1Z + exakt 16 alphanumerisch auf dem normalisierten Token — das
+      // Prefix ist weltweit eindeutig UPS. Anchor war im Body-Pfad bereits
+      // Pflicht (requiresAnchor); href-Quelle ist ohnehin source-eindeutig.
+      const v = m.value
+      if (!/^1Z[A-Z0-9]{16}$/.test(v)) return { outcome: 'drop' }
+      return { outcome: 'strong' }
+    }
+
+    case 'hermes-name-anchor': {
+      // Doppel-Gate analog dpd-14: aus Hermes-href ODER mit explizitem
+      // „Hermes"-Namen im Fenster. Body-Pfad verlangt exakt 14 Ziffern;
+      // href erlaubt 11–20 (myhermes-Links tragen teils längere Codes).
+      const v = m.value
+      const fromHref = m.source === 'html-href'
+      if (fromHref) {
+        return /^\d{11,20}$/.test(v) ? { outcome: 'strong' } : { outcome: 'drop' }
+      }
+      if (!/^\d{14}$/.test(v)) return { outcome: 'drop' }
+      if (m.hermesNameInWindow) return { outcome: 'strong' }
+      return { outcome: 'drop' }
+    }
+
     case 'gls-name-anchor': {
       // 11–20 Ziffern aus GLS-href ODER mit explizitem „GLS"-Namen im Fenster
       // (Doppel-Gate analog dpd-name-anchor; GLS hat keine öffentliche
@@ -503,6 +563,9 @@ function collectBodyMatches(
       const glsNameInWindow = p.id === 'gls-num'
         ? /\bgls\b/i.test(bodyText.slice(winStart, m.index))
         : undefined
+      const hermesNameInWindow = p.id === 'hermes-14'
+        ? /\bhermes\b/i.test(bodyText.slice(winStart, m.index))
+        : undefined
       out.push({
         value,
         raw,
@@ -514,6 +577,7 @@ function collectBodyMatches(
         senderDomainMatch: senderIsAmazon,
         dpdNameInWindow,
         glsNameInWindow,
+        hermesNameInWindow,
       })
     }
   }
@@ -573,7 +637,11 @@ function collectHrefMatches(rawHtml: string, senderIsAmazon: boolean): RawMatch[
               ? 'dpd-name-anchor'
               : p.carrier === 'gls'
                 ? 'gls-name-anchor'
-                : 'jjd-prefix' // dhl href-capture: source-eindeutig (Domain) → strong
+                : p.carrier === 'ups'
+                  ? 'ups-1z-format'
+                  : p.carrier === 'hermes'
+                    ? 'hermes-name-anchor'
+                    : 'jjd-prefix' // dhl href-capture: source-eindeutig (Domain) → strong
         out.push({
           value,
           raw: captured,

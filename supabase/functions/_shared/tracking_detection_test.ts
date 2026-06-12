@@ -423,3 +423,61 @@ Deno.test('detect: gespacte Zahl mit falscher Checksum → none (kein FP)', () =
   const r = detect(base({ text: 'Sendungsnummer 0034 0433 8364 4263 6598' }))
   assertEquals(r.tracking, null)
 })
+
+// ── 2026-06-11: UPS-1Z + Hermes-Detection ────────────────────────────────
+
+Deno.test('detect: UPS 1Z mit Anchor → strong ups', () => {
+  const r = detect(base({ text: 'Tracking number: 1Z999AA10123456784' }))
+  assertEquals(r.tracking, '1Z999AA10123456784')
+  assertEquals(r.carrier, 'ups')
+  assertEquals(r.confidence, 'strong')
+})
+
+Deno.test('detect: UPS 1Z mit Leerzeichen-Gruppen → strong, normalisiert', () => {
+  const r = detect(base({ text: 'Sendungsnummer: 1Z 999 AA1 01 2345 6784' }))
+  assertEquals(r.tracking, '1Z999AA10123456784')
+  assertEquals(r.carrier, 'ups')
+})
+
+Deno.test('detect: UPS 1Z OHNE Anchor → none (FP-Budget 0)', () => {
+  const r = detect(base({ text: 'Artikel 1Z999AA10123456784 im Footer' }))
+  assertEquals(r.tracking, null)
+})
+
+Deno.test('detect: UPS via tracknum=-href → strong ups', () => {
+  const r = detect(base({
+    html: '<a href="https://www.ups.com/track?loc=de_DE&tracknum=1Z999AA10123456784">Track</a>',
+  }))
+  assertEquals(r.tracking, '1Z999AA10123456784')
+  assertEquals(r.carrier, 'ups')
+})
+
+Deno.test('detect: ups-href mit Nicht-1Z-Capture → drop (Format-Wand)', () => {
+  const r = detect(base({
+    html: '<a href="https://www.ups.com/track?tracknum=INFONOTICE123">Track</a>',
+  }))
+  assertEquals(r.tracking, null)
+})
+
+Deno.test('detect: Hermes 14-stellig mit Hermes-Name → strong hermes', () => {
+  const r = detect(base({
+    text: 'Deine Hermes Sendungsnummer: 99887766554433',
+  }))
+  assertEquals(r.tracking, '99887766554433')
+  assertEquals(r.carrier, 'hermes')
+  assertEquals(r.confidence, 'strong')
+})
+
+Deno.test('detect: 14-stellig mit Anchor aber OHNE Hermes-Name → kein hermes', () => {
+  // Kollidiert mit DHL/DPD — ohne expliziten Hermes-Kontext kein Routing.
+  const r = detect(base({ text: 'Sendungsnummer: 99887766554433' }))
+  assertEquals(r.carrier, null)
+})
+
+Deno.test('detect: Hermes via myhermes-#-href → strong hermes', () => {
+  const r = detect(base({
+    html: '<a href="https://www.myhermes.de/empfangen/sendungsverfolgung/sendungsinformation#99887766554433">verfolgen</a>',
+  }))
+  assertEquals(r.tracking, '99887766554433')
+  assertEquals(r.carrier, 'hermes')
+})

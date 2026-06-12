@@ -59,7 +59,7 @@ interface DealRow {
   user_id: string
   product: string
   tracking: string | null
-  carrier: 'dhl' | 'amazon' | 'dpd' | 'gls' | 'ups' | null
+  carrier: 'dhl' | 'amazon' | 'dpd' | 'gls' | 'ups' | 'hermes' | null
   tracking_confidence: 'strong' | 'manual' | 'none' | null
   tracking_needs_review: boolean | null
   status: string

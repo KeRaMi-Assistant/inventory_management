@@ -515,7 +515,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get shippingIntroBody =>
-      'Sendungsnummern werden automatisch aus deinen Mails erkannt (DHL, Amazon, DPD, GLS) – ganz ohne API-Key. Hinterlege einen Carrier-API-Key (aktuell DHL), damit die App den Live-Sendungsstatus abruft (sofort bei Tracking-Zuweisung, danach automatisch im passenden Takt: in Zustellung stündlich, unterwegs ~alle 4 Stunden) und Deals automatisch auf „Angekommen“ setzt.';
+      'Sendungsnummern werden automatisch aus deinen Mails erkannt (DHL, Amazon, DPD, GLS, UPS, Hermes) – ganz ohne API-Key. Hinterlege einen Carrier-API-Key (aktuell DHL), damit die App den Live-Sendungsstatus abruft (sofort bei Tracking-Zuweisung, danach automatisch im passenden Takt: in Zustellung stündlich, unterwegs ~alle 4 Stunden) und Deals automatisch auf „Angekommen“ setzt.';
 
   @override
   String get shippingNoAccess =>
@@ -1537,7 +1537,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpDealsTrackingDesc =>
-      'Trifft eine Versandmail ein, erkennt die App die Sendungsnummer rein anhand ihrer Struktur (Format + Prüfsumme) — DHL, DPD, Amazon Logistics und GLS werden erkannt. Dafür ist kein Carrier-API-Key nötig: die Nummer wird immer gespeichert und der Deal automatisch auf „Unterwegs\" gesetzt. Den Live-Status (in Zustellung, zugestellt) holt die App, sobald ein passender Carrier-API-Key hinterlegt ist — sofort bei der Zuweisung und danach automatisch im passenden Takt (in Zustellung stündlich, unterwegs ~alle 4 Stunden, nachts pausiert). Amazon Logistics und GLS werden erkannt, lassen sich aber nicht live verfolgen (siehe FAQ) — für GLS gibt es immerhin einen Direkt-Link zur Sendungsverfolgung. Andere Carrier (UPS, Hermes) trägst du bei Bedarf manuell im Deal ein. Details siehe Sektion „Versand & Carrier-API-Keys\".';
+      'Trifft eine Versandmail ein, erkennt die App die Sendungsnummer rein anhand ihrer Struktur (Format + Prüfsumme) — DHL, DPD, Amazon Logistics, GLS, UPS und Hermes werden erkannt. Dafür ist kein Carrier-API-Key nötig: die Nummer wird immer gespeichert und der Deal automatisch auf „Unterwegs\" gesetzt. Den Live-Status (in Zustellung, zugestellt) holt die App, sobald ein passender Carrier-API-Key hinterlegt ist — sofort bei der Zuweisung und danach automatisch im passenden Takt (in Zustellung stündlich, unterwegs ~alle 4 Stunden, nachts pausiert). Amazon Logistics und GLS werden erkannt, lassen sich aber nicht live verfolgen (siehe FAQ) — für GLS gibt es immerhin einen Direkt-Link zur Sendungsverfolgung. Details siehe Sektion „Versand & Carrier-API-Keys\".';
 
   @override
   String get helpDealsDropShipTitle => 'Multi-Drop-Ship';
@@ -1606,7 +1606,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpShippingComingSoonDesc =>
-      'Automatisch aus Mails erkannt werden Sendungsnummern von DHL, DPD, Amazon Logistics und GLS.\n• DHL: Erkennung plus Live-Status, sobald dein DHL-API-Key hinterlegt ist.\n• DPD: Erkennung plus Direkt-Link zur DPD-Verfolgung — der automatische Live-Status ist in Vorbereitung.\n• Amazon Logistics: wird erkannt und gespeichert, hat aber keinen Live-Status — Amazon bietet keine öffentliche Status-API.\n• GLS: wird erkannt und gespeichert (z. B. aus Shop-Mails wie PcComponentes), hat keinen Live-Status — dafür gibt es einen Direkt-Link zur GLS-Sendungsverfolgung.\nAndere Carrier (UPS, Hermes) werden bewusst nicht aus Mails geraten — das war früher die Hauptquelle falscher Sendungsnummern. Dort trägst du die Tracking-Nummer bei Bedarf manuell im Deal ein.';
+      'Automatisch aus Mails erkannt werden Sendungsnummern von DHL, DPD, Amazon Logistics und GLS.\n• DHL: Erkennung plus Live-Status, sobald dein DHL-API-Key hinterlegt ist.\n• DPD: Erkennung plus Direkt-Link zur DPD-Verfolgung — der automatische Live-Status ist in Vorbereitung.\n• Amazon Logistics: wird erkannt und gespeichert, hat aber keinen Live-Status — Amazon bietet keine öffentliche Status-API.\n• GLS: wird erkannt und gespeichert (z. B. aus Shop-Mails wie PcComponentes), hat keinen Live-Status — dafür gibt es einen Direkt-Link zur GLS-Sendungsverfolgung.\n• UPS: wird sicher am eindeutigen 1Z-Format erkannt — Live-Status folgt, bis dahin Direkt-Link.\n• Hermes: wird nur mit eindeutigem Hermes-Kontext in der Mail erkannt (verhindert Verwechslung mit DHL/DPD-Nummern) — Direkt-Link zur Hermes-Verfolgung inklusive.';
 
   @override
   String get helpShippingDpdTitle => 'DPD — Live-Status bald verfügbar';

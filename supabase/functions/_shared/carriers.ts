@@ -57,15 +57,15 @@ export const CARRIERS: ReadonlyArray<CarrierInfo> = [
   {
     id: 'ups',
     label: 'UPS',
-    detection: false,
+    detection: true,
     pollAdapter: true,
     requiresApiKey: true,
     uiEnabled: false,
     publicTrackingPage: true,
     note:
-      'Adapter vorhanden, aber detectAdapter routet 1Z bewusst NICht (Plan ' +
-      '2026-06-03 §3.4) und die UI ist gesperrt, bis ein OAuth-Key-Flow ' +
-      'existiert. Registry-Status: key-required/disabled.',
+      'Detection seit 2026-06-11 (1Z-Format ist weltweit eindeutig, ' +
+      'Anchor-gated). Poll-Adapter vorhanden, aber UI gesperrt bis ein ' +
+      'OAuth-Key-Flow existiert — bis dahin Deep-Link via Chip.',
   },
   {
     id: 'amazon',
@@ -76,6 +76,20 @@ export const CARRIERS: ReadonlyArray<CarrierInfo> = [
     uiEnabled: false,
     publicTrackingPage: false,
     note: 'Detection-only — keine öffentliche Status-API, kein Deep-Link.',
+  },
+  {
+    id: 'hermes',
+    label: 'Hermes',
+    detection: true,
+    pollAdapter: false,
+    requiresApiKey: false,
+    uiEnabled: false,
+    publicTrackingPage: true,
+    note:
+      'Detection-only seit 2026-06-11: 14-stellige Nummern NUR mit ' +
+      'explizitem Hermes-Kontext (Doppel-Gate wie dpd-14, kollidiert ' +
+      'sonst mit DHL/DPD) + myhermes-href. Kein öffentlicher Poll-Kanal; ' +
+      'Deep-Link via carrier_links.dart.',
   },
   {
     id: 'gls',
