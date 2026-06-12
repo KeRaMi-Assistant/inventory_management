@@ -510,6 +510,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTabGeneral => 'General';
 
   @override
+  String get settingsTabSupport => 'Support';
+
+  @override
+  String get supportIntro =>
+      'Got a question, found a bug or have a feature request? Write to us — your request goes straight to the support inbox and we reply by email.';
+
+  @override
+  String get supportSubjectLabel => 'Subject';
+
+  @override
+  String get supportSubjectHint => 'What is it about?';
+
+  @override
+  String get supportSubjectTooShort => 'At least 3 characters';
+
+  @override
+  String get supportMessageLabel => 'Your message';
+
+  @override
+  String get supportMessageTooShort => 'At least 10 characters';
+
+  @override
+  String get supportPrivacyNote =>
+      'We include your account email (for the reply), your plan and the workspace ID — nothing else.';
+
+  @override
+  String get supportSendCta => 'Send request';
+
+  @override
+  String get supportSending => 'Sending…';
+
+  @override
+  String get supportSentOk =>
+      'Request sent — we will get back to you by email.';
+
+  @override
+  String get supportRateLimited =>
+      'Too many requests — please try again in an hour.';
+
+  @override
+  String get supportSendFailed => 'Sending failed — please try again later.';
+
+  @override
+  String get supportOffline => 'No connection — please check your network.';
+
+  @override
   String get shippingIntroTitle => 'Carrier API keys';
 
   @override
@@ -5161,6 +5207,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsMailboxFreePlanDesc(String plan) {
     return 'Your current plan: $plan. Automatic detection of order and shipping emails is available from the Starter plan — higher plans allow more mailboxes and a longer inbox history.';
   }
+
+  @override
+  String get settingsMailboxPlanSoloPro => '1 mailbox · 14-day history';
 
   @override
   String get settingsMailboxPlanTeam => '1 mailbox · 14-day history';

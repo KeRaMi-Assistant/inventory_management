@@ -94,6 +94,12 @@ class SettingsScreen extends StatelessWidget {
       label: l10n.settingsTabGeneral,
       build: () => const _GeneralTab(),
     ),
+    SectionHubTile(
+      key: const Key('settingsHubTileSupport'),
+      icon: Icons.support_agent_outlined,
+      label: l10n.settingsTabSupport,
+      build: () => const _SupportTab(),
+    ),
   ];
 
   @override
@@ -2796,8 +2802,13 @@ class _MailboxFreePlanGate extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Plan-Vergleich = echter Katalog (Team/Business/Enterprise
-                  // sind die Postfach-Pläne; Werte folgen pricing_plan.dart).
+                  // Plan-Vergleich = echter Katalog (Solo Pro/Team/Business/
+                  // Enterprise sind die Postfach-Pläne; Werte folgen
+                  // pricing_plan.dart).
+                  _PlanComparisonRow(
+                    label: 'Solo Pro',
+                    value: l10n.settingsMailboxPlanSoloPro,
+                  ),
                   _PlanComparisonRow(
                     label: 'Team',
                     value: l10n.settingsMailboxPlanTeam,
@@ -3896,4 +3907,157 @@ String _paletteName(AppLocalizations l10n, AppColorPalette palette) {
     AppColorPalette.teal => l10n.settingsPaletteTeal,
     AppColorPalette.rose => l10n.settingsPaletteRose,
   };
+}
+
+// ── Support Tab (Stakeholder-Direktive 2026-06-12) ────────────────────────
+//
+// Kontaktformular → Edge Function `support-request`: persistiert die
+// Anfrage serverseitig und stellt sie dem Betreiber per Mail/Push zu.
+// Absender-Identität (E-Mail/Plan/Workspace) kommt aus dem JWT — der User
+// tippt nur Betreff + Anliegen.
+class _SupportTab extends StatefulWidget {
+  const _SupportTab();
+
+  @override
+  State<_SupportTab> createState() => _SupportTabState();
+}
+
+class _SupportTabState extends State<_SupportTab> {
+  final _formKey = GlobalKey<FormState>();
+  final _subjectCtrl = TextEditingController();
+  final _messageCtrl = TextEditingController();
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _subjectCtrl.dispose();
+    _messageCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final l10n = AppLocalizations.of(context);
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _sending = true);
+    final result = await context.read<SupabaseRepository>().submitSupportRequest(
+          subject: _subjectCtrl.text.trim(),
+          message: _messageCtrl.text.trim(),
+        );
+    if (!mounted) return;
+    setState(() => _sending = false);
+    final msg = switch (result) {
+      SupportSubmitResult.ok => l10n.supportSentOk,
+      SupportSubmitResult.rateLimited => l10n.supportRateLimited,
+      SupportSubmitResult.failed => l10n.supportSendFailed,
+      SupportSubmitResult.offline => l10n.supportOffline,
+    };
+    if (result == SupportSubmitResult.ok) {
+      AppFeedback.success(context, msg);
+    } else {
+      AppFeedback.error(context, msg);
+    }
+    if (result == SupportSubmitResult.ok) {
+      _subjectCtrl.clear();
+      _messageCtrl.clear();
+      _formKey.currentState?.reset();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.supportIntro,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.5,
+                    color: AppTheme.textSecondaryOf(context),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  key: const Key('supportSubjectField'),
+                  controller: _subjectCtrl,
+                  maxLength: 150,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: l10n.supportSubjectLabel,
+                    hintText: l10n.supportSubjectHint,
+                  ),
+                  validator: (v) => (v ?? '').trim().length < 3
+                      ? l10n.supportSubjectTooShort
+                      : null,
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  key: const Key('supportMessageField'),
+                  controller: _messageCtrl,
+                  maxLength: 5000,
+                  minLines: 6,
+                  maxLines: 14,
+                  keyboardType: TextInputType.multiline,
+                  decoration: InputDecoration(
+                    labelText: l10n.supportMessageLabel,
+                    alignLabelWithHint: true,
+                  ),
+                  validator: (v) => (v ?? '').trim().length < 10
+                      ? l10n.supportMessageTooShort
+                      : null,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.privacy_tip_outlined,
+                        size: 16, color: AppTheme.textMutedOf(context)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        l10n.supportPrivacyNote,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.4,
+                          color: AppTheme.textMutedOf(context),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    key: const Key('supportSendButton'),
+                    onPressed: _sending ? null : _send,
+                    icon: _sending
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send_outlined, size: 18),
+                    label: Text(
+                        _sending ? l10n.supportSending : l10n.supportSendCta),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

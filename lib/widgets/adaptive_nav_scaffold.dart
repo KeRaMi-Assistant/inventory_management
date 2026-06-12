@@ -200,6 +200,11 @@ class AdaptiveNavScaffold extends StatelessWidget {
                 icon: bottomIconBuilder(section, false),
                 selectedIcon: bottomIconBuilder(section, true),
                 label: sectionLabelBuilder(section),
+                // Tooltip erzeugt auf Flutter Web einen eigenen
+                // Semantics-Knoten — ohne ihn sind die Bottom-Nav-Slots
+                // für A11y-Tools/Browser-Tester nicht klickbar adressierbar
+                // (Audit-Hinweis smoke-full-app-audit 2026-06-10).
+                tooltip: sectionLabelBuilder(section),
               ),
           ],
         ),
@@ -321,6 +326,7 @@ class AdaptiveNavScaffold extends StatelessWidget {
                   onImport: onImport,
                   onExport: onExport,
                   onSearch: onSearch,
+                  onHelp: onHelp,
                 ),
                 Expanded(child: body),
               ],
@@ -344,6 +350,7 @@ class _ContentHeader extends StatelessWidget {
   final VoidCallback onImport;
   final VoidCallback onExport;
   final VoidCallback onSearch;
+  final VoidCallback onHelp;
 
   const _ContentHeader({
     required this.title,
@@ -352,6 +359,7 @@ class _ContentHeader extends StatelessWidget {
     required this.onImport,
     required this.onExport,
     required this.onSearch,
+    required this.onHelp,
   });
 
   @override
@@ -397,6 +405,14 @@ class _ContentHeader extends StatelessWidget {
                 icon: Icon(Icons.download_outlined,
                     size: 18, color: AppTheme.textMutedOf(context)),
                 onPressed: onExport,
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                key: const Key('header-help-action'),
+                tooltip: l10n.actionHelp,
+                icon: Icon(Icons.help_outlined,
+                    size: 18, color: AppTheme.textMutedOf(context)),
+                onPressed: onHelp,
               ),
               const SizedBox(width: 8),
               const InvitesBell(),

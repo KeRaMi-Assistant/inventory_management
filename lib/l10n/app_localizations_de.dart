@@ -511,6 +511,52 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTabGeneral => 'Allgemein';
 
   @override
+  String get settingsTabSupport => 'Support';
+
+  @override
+  String get supportIntro =>
+      'Du hast eine Frage, einen Fehler gefunden oder einen Wunsch? Schreib uns — deine Anfrage geht direkt an das Support-Postfach und wir antworten dir per E-Mail.';
+
+  @override
+  String get supportSubjectLabel => 'Betreff';
+
+  @override
+  String get supportSubjectHint => 'Worum geht es?';
+
+  @override
+  String get supportSubjectTooShort => 'Mindestens 3 Zeichen';
+
+  @override
+  String get supportMessageLabel => 'Dein Anliegen';
+
+  @override
+  String get supportMessageTooShort => 'Mindestens 10 Zeichen';
+
+  @override
+  String get supportPrivacyNote =>
+      'Mitgesendet werden deine Konto-E-Mail (für die Antwort), dein Plan und die Workspace-ID — sonst nichts.';
+
+  @override
+  String get supportSendCta => 'Anfrage senden';
+
+  @override
+  String get supportSending => 'Wird gesendet…';
+
+  @override
+  String get supportSentOk => 'Anfrage gesendet — wir melden uns per E-Mail.';
+
+  @override
+  String get supportRateLimited =>
+      'Zu viele Anfragen — bitte versuche es in einer Stunde erneut.';
+
+  @override
+  String get supportSendFailed =>
+      'Senden fehlgeschlagen — bitte versuche es später erneut.';
+
+  @override
+  String get supportOffline => 'Keine Verbindung — bitte prüfe dein Netzwerk.';
+
+  @override
   String get shippingIntroTitle => 'Carrier-API-Keys';
 
   @override
@@ -5192,6 +5238,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String settingsMailboxFreePlanDesc(String plan) {
     return 'Dein aktueller Plan: $plan. Die automatische Erkennung von Bestell- und Versand-Mails ist ab dem Starter-Plan verfügbar — höhere Pläne erlauben mehr Postfächer und längeren Inbox-Verlauf.';
   }
+
+  @override
+  String get settingsMailboxPlanSoloPro => '1 Postfach · 14 Tage Verlauf';
 
   @override
   String get settingsMailboxPlanTeam => '1 Postfach · 14 Tage Verlauf';
