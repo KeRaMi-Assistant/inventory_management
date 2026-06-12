@@ -2336,6 +2336,9 @@
     "placeholders": { "plan": { "type": "String" } }
   },
 
+  "settingsMailboxPlanSoloPro": "1 Postfach · 14 Tage Verlauf",
+  "@settingsMailboxPlanSoloPro": { "description": "Plan-Vergleichszeile Solo Pro im Postfach-Tab (Werte = pricing_plan.dart)." },
+
   "settingsMailboxPlanTeam": "1 Postfach · 14 Tage Verlauf",
   "@settingsMailboxPlanTeam": { "description": "Plan-Vergleichszeile Team im Postfach-Tab (Werte = pricing_plan.dart)." },
 

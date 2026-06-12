@@ -53,6 +53,11 @@ export function validateSupportPayload(
   if (subject.length < 3 || subject.length > 150) {
     return { error: 'subject must be 3-150 chars' }
   }
+  // Review-Fix: kein CRLF im Betreff — er landet u.a. im ntfy-HTTP-Header
+  // (Header-Injection-Wand; JSON-Pfade wären safe, defense-in-depth).
+  if (/[\r\n]/.test(subject)) {
+    return { error: 'subject must be a single line' }
+  }
   if (message.length < 10 || message.length > 5000) {
     return { error: 'message must be 10-5000 chars' }
   }
@@ -169,46 +174,51 @@ Deno.serve(async (req) => {
     // Nicht-Mitglied → Workspace still ignorieren (kein Enumeration-Kanal).
   }
 
-  // ── Rate-Limit: 5/h pro User ────────────────────────────────────────────
-  const hourAgo = new Date(Date.now() - 3_600_000).toISOString()
-  const { count } = await admin
-    .from('support_requests')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .gte('created_at', hourAgo)
-  if ((count ?? 0) >= MAX_REQUESTS_PER_HOUR) {
-    return jsonResp({ error: 'rate_limited' }, 429)
-  }
-
-  // ── 1) Quelle der Wahrheit: DB-Row ──────────────────────────────────────
-  const { data: inserted, error: insErr } = await admin
-    .from('support_requests')
-    .insert({
-      workspace_id: workspaceId,
-      user_id: user.id,
-      email,
-      plan,
-      subject: payload.subject,
-      message: payload.message,
-      app_version: payload.appVersion ?? null,
-    })
-    .select('id')
-    .single()
-  if (insErr || !inserted) {
-    console.error('support-request: insert failed', insErr?.message)
+  // ── 1) Quelle der Wahrheit: atomarer Insert MIT Rate-Limit ─────────────
+  // Review-Fix (TOCTOU): Count + Insert laufen in EINEM SQL-Statement
+  // (RPC insert_support_request) — parallele Requests können das
+  // 5/h-Limit nicht mehr per Race aufhebeln. NULL = Limit erreicht.
+  const { data: insertedId, error: insErr } = await admin.rpc(
+    'insert_support_request',
+    {
+      _workspace_id: workspaceId,
+      _user_id: user.id,
+      _email: email,
+      _plan: plan,
+      _subject: payload.subject,
+      _message: payload.message,
+      _app_version: payload.appVersion ?? null,
+      _max_per_hour: MAX_REQUESTS_PER_HOUR,
+    },
+  )
+  if (insErr) {
+    console.error('support-request: insert failed', insErr.message)
     return jsonResp({ error: 'persist failed' }, 500)
   }
-  const requestId = (inserted as { id: number }).id
+  if (insertedId === null || insertedId === undefined) {
+    return jsonResp({ error: 'rate_limited' }, 429)
+  }
+  const requestId = Number(insertedId)
 
   // ── 2) ntfy-Push (Best-Effort) ──────────────────────────────────────────
+  // SICHERHEITS-KONTRAKT (Review): ntfy.sh-Topics sind öffentlich lesbar
+  // für jeden, der den Topic-Namen kennt — der Payload enthält Kunden-Mail
+  // + Anliegen. Deshalb: Topic MUSS ≥16 Zeichen Zufall sein (z.B.
+  // `openssl rand -hex 12`-Suffix), sonst wird der Kanal geskippt.
   let pushSent = false
   const ntfyTopic = Deno.env.get('NTFY_SUPPORT_TOPIC')
-  if (ntfyTopic) {
+  if (ntfyTopic && ntfyTopic.length < 16) {
+    console.warn('support-request: NTFY_SUPPORT_TOPIC zu kurz (<16) — Push-Kanal deaktiviert')
+  } else if (ntfyTopic) {
     try {
+      // CRLF ist durch die Validierung schon raus; Header-Sanitizing
+      // trotzdem defensiv (defense-in-depth).
+      const safeTitle = `Support #${requestId}: ${payload.subject.slice(0, 80)}`
+        .replace(/[\r\n]/g, ' ')
       const res = await fetch(`https://ntfy.sh/${encodeURIComponent(ntfyTopic)}`, {
         method: 'POST',
         headers: {
-          'Title': `Support #${requestId}: ${payload.subject.slice(0, 80)}`,
+          'Title': safeTitle,
           'Tags': 'envelope',
           'Priority': 'high',
         },

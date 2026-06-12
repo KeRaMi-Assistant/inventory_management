@@ -1,3 +1,4 @@
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/activity_entry.dart';
@@ -1675,13 +1676,21 @@ class SupabaseRepository {
     required String message,
   }) async {
     try {
+      // App-Version best-effort (Web/Tests können werfen → dann ohne).
+      String? appVersion;
+      try {
+        final info = await PackageInfo.fromPlatform();
+        appVersion = '${info.version}+${info.buildNumber}';
+      } catch (_) {
+        appVersion = null;
+      }
       final response = await _client.functions.invoke(
         'support-request',
         body: {
           'subject': subject,
           'message': message,
           if (_workspaceId != null) 'workspace_id': _workspaceId,
-          // TODO: app_version mitsenden, sobald package_info_plus im Stack ist.
+          'app_version': ?appVersion,
         },
       );
       final status = response.status;

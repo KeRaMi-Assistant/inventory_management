@@ -5209,6 +5209,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get settingsMailboxPlanSoloPro => '1 mailbox · 14-day history';
+
+  @override
   String get settingsMailboxPlanTeam => '1 mailbox · 14-day history';
 
   @override

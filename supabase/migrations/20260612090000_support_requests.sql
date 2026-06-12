@@ -35,3 +35,39 @@ COMMENT ON TABLE public.support_requests IS
   '2026-06-12: Support-Anfragen aus Settings → Support. Default-deny-RLS; '
   'nur die Edge Function support-request (Service-Role) schreibt. Mail/'
   'Push sind Best-Effort (mail_sent/push_sent), die Row ist die Wahrheit.';
+
+-- ── Atomarer Insert mit Rate-Limit (Review-Fix: TOCTOU) ──────────────────
+-- Count + Insert in EINEM Statement: parallele Requests können das
+-- 5/h-Limit nicht mehr per Race aufhebeln (separates SELECT-dann-INSERT
+-- in der Edge Function wäre check-then-act). Gibt die neue Row-Id zurück
+-- oder NULL, wenn das Limit erreicht ist.
+CREATE OR REPLACE FUNCTION public.insert_support_request(
+  _workspace_id uuid,
+  _user_id      uuid,
+  _email        text,
+  _plan         text,
+  _subject      text,
+  _message      text,
+  _app_version  text,
+  _max_per_hour integer DEFAULT 5
+)
+RETURNS bigint
+LANGUAGE sql SECURITY DEFINER
+SET search_path = public
+AS $$
+  INSERT INTO public.support_requests
+    (workspace_id, user_id, email, plan, subject, message, app_version)
+  SELECT _workspace_id, _user_id, _email, _plan, _subject, _message, _app_version
+  WHERE (
+    SELECT count(*) FROM public.support_requests
+     WHERE user_id = _user_id
+       AND created_at > now() - interval '1 hour'
+  ) < _max_per_hour
+  RETURNING id;
+$$;
+
+-- Nur das Backend (Service-Role) — Supabase-Default-Grants für anon/
+-- authenticated entfernen (pg_default_acl-Klasse, etabliertes Muster).
+REVOKE EXECUTE ON FUNCTION public.insert_support_request(uuid, uuid, text, text, text, text, text, integer) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.insert_support_request(uuid, uuid, text, text, text, text, text, integer) FROM anon, authenticated;
+GRANT  EXECUTE ON FUNCTION public.insert_support_request(uuid, uuid, text, text, text, text, text, integer) TO service_role;

@@ -63,6 +63,7 @@ dependencies:
   # Kept as a regular dependency so main.dart can import it without
   # triggering the depend_on_referenced_packages lint.
   accessibility_tools: ^2.8.0
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:

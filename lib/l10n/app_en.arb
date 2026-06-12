@@ -2336,6 +2336,9 @@
     "placeholders": { "plan": { "type": "String" } }
   },
 
+  "settingsMailboxPlanSoloPro": "1 mailbox · 14-day history",
+  "@settingsMailboxPlanSoloPro": { "description": "Plan comparison row Solo Pro in the mailbox tab (values = pricing_plan.dart)." },
+
   "settingsMailboxPlanTeam": "1 mailbox · 14-day history",
   "@settingsMailboxPlanTeam": { "description": "Plan comparison row Team in the mailbox tab (values = pricing_plan.dart)." },
 

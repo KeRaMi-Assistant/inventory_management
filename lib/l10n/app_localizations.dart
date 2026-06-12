@@ -9305,6 +9305,12 @@ abstract class AppLocalizations {
   /// **'Dein aktueller Plan: {plan}. Die automatische Erkennung von Bestell- und Versand-Mails ist ab dem Starter-Plan verfügbar — höhere Pläne erlauben mehr Postfächer und längeren Inbox-Verlauf.'**
   String settingsMailboxFreePlanDesc(String plan);
 
+  /// Plan-Vergleichszeile Solo Pro im Postfach-Tab (Werte = pricing_plan.dart).
+  ///
+  /// In de, this message translates to:
+  /// **'1 Postfach · 14 Tage Verlauf'**
+  String get settingsMailboxPlanSoloPro;
+
   /// Plan-Vergleichszeile Team im Postfach-Tab (Werte = pricing_plan.dart).
   ///
   /// In de, this message translates to:

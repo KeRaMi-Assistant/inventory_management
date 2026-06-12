@@ -93,3 +93,11 @@ Deno.test('buildSupportMail: User-Input wird HTML-escaped (kein XSS in Mail)', (
 Deno.test('escapeHtml: alle 5 Spezialzeichen', () => {
   assertEquals(escapeHtml(`<a href="x" data-y='z'>&`), '&lt;a href=&quot;x&quot; data-y=&#39;z&#39;&gt;&amp;')
 })
+
+Deno.test('validate: CRLF im Betreff wird abgelehnt (Header-Injection-Wand)', () => {
+  const msg = 'Eine ausreichend lange Nachricht für den Test.'
+  assert('error' in validateSupportPayload({ subject: 'Titel\r\nX-Evil: 1', message: msg }))
+  assert('error' in validateSupportPayload({ subject: 'Titel\nzweite Zeile', message: msg }))
+  // Mehrzeilige NACHRICHT bleibt erlaubt (landet nur in JSON-Bodies).
+  assert('payload' in validateSupportPayload({ subject: 'Titel', message: 'Zeile 1\nZeile 2 lang genug.' }))
+})

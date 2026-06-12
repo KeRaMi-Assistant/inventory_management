@@ -2802,8 +2802,13 @@ class _MailboxFreePlanGate extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Plan-Vergleich = echter Katalog (Team/Business/Enterprise
-                  // sind die Postfach-Pläne; Werte folgen pricing_plan.dart).
+                  // Plan-Vergleich = echter Katalog (Solo Pro/Team/Business/
+                  // Enterprise sind die Postfach-Pläne; Werte folgen
+                  // pricing_plan.dart).
+                  _PlanComparisonRow(
+                    label: 'Solo Pro',
+                    value: l10n.settingsMailboxPlanSoloPro,
+                  ),
                   _PlanComparisonRow(
                     label: 'Team',
                     value: l10n.settingsMailboxPlanTeam,

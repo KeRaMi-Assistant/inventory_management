@@ -5240,6 +5240,9 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get settingsMailboxPlanSoloPro => '1 Postfach · 14 Tage Verlauf';
+
+  @override
   String get settingsMailboxPlanTeam => '1 Postfach · 14 Tage Verlauf';
 
   @override
