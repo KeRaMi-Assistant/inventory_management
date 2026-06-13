@@ -1569,6 +1569,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die App liest nur Mails von bekannten Shops/Carriern (Whitelist). Werbe-Newsletter, persönliche Mails und unbekannte Absender werden ignoriert. Wenn ein Shop fehlt, melde ihn über „Probleme melden\" — neue Adapter werden serverseitig nachgepflegt.';
 
   @override
+  String get helpInboxSoloProTitle => 'Postfach mit Solo Pro';
+
+  @override
+  String get helpInboxSoloProDesc =>
+      'Solo Pro enthält 1 verbundenes Postfach mit 14 Tagen Mail-Verlauf. Damit werden Bestell- und Versandmails der letzten 14 Tage automatisch erkannt und als Deals vorgeschlagen. Höhere Pläne erlauben mehr Postfächer und längeren Verlauf — die aktuellen Grenzen siehst du auf dem Pricing-Screen.';
+
+  @override
   String get helpDealsSection => 'Deals';
 
   @override
@@ -1616,6 +1623,13 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get helpDealsRetrackDesc =>
       'Im Deal-Detail neben der Sendungsnummer gibt es ein Refresh-Icon „Status aktualisieren\". Damit fragst du den Carrier sofort nach dem aktuellen Status, ohne auf die nächste automatische Prüfung zu warten — praktisch z. B. kurz vor einem geplanten Versand.\nEin Retrack pro Deal ist alle 30 Sekunden möglich. Während der Sperre ist der Button ausgegraut und zeigt „Bitte 30s warten\" — das schützt den Carrier vor unnötigen API-Calls und dich vor Rate-Limits.\nBei Amazon-Logistics- und GLS-Sendungen ist der Button dauerhaft ausgegraut: Für diese Dienste gibt es keinen öffentlichen Live-Status zum Aktualisieren.';
+
+  @override
+  String get helpDealsMultiParcelTitle => 'Mehrere Pakete pro Deal';
+
+  @override
+  String get helpDealsMultiParcelDesc =>
+      'Wurde eine Bestellung in mehrere Pakete gesplittet, kann ein Deal mehrere Sendungsnummern verfolgen.\n• Im Deal-Bearbeiten-Dialog erscheinen die weiteren Pakete als Chips — über das Löschsymbol am Chip entfernst du ein Paket, das nicht dazugehört.\n• Ein Umschalter zeigt die Timeline für jedes Paket einzeln.\n• In der Deal-Liste und -Tabelle weist ein „+N\"-Badge auf weitere Pakete hin.\nDer Deal gilt erst dann als angekommen, wenn alle Pakete zugestellt sind.';
 
   @override
   String get helpDealsTimelineTitle => 'Sendungsverlauf (Timeline)';
@@ -2384,6 +2398,45 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ja. Tippe auf eine Kachel im Dashboard und die App springt in den passenden Bereich — z. B. von „Offene Lieferungen\" zu den Deals oder von „Kritischer Bestand\" ins Lager. In der Deal-Liste und im Bestand kannst du am Handy außerdem von oben nach unten ziehen (Pull-to-Refresh), um die Daten neu zu laden.';
 
   @override
+  String get helpFaqQ29 => 'Kann ich mit Solo Pro ein Postfach verbinden?';
+
+  @override
+  String get helpFaqA29 =>
+      'Ja. Solo Pro erlaubt jetzt 1 verbundenes Postfach mit 14 Tagen Mail-Verlauf. Verbinde es unter Einstellungen → Postfach. Bestell- und Versandmails der letzten 14 Tage werden dann automatisch erkannt und als Deals vorgeschlagen.';
+
+  @override
+  String get helpFaqQ30 =>
+      'Wann gilt ein Deal mit mehreren Paketen als angekommen?';
+
+  @override
+  String get helpFaqA30 =>
+      'Erst wenn alle Pakete zugestellt sind. Wurde eine Bestellung gesplittet (mehrere Sendungsnummern), wartet der Deal mit dem Wechsel auf „Angekommen\", bis das letzte Paket geliefert wurde. Den Stand pro Paket siehst du im Deal über den Paket-Umschalter.';
+
+  @override
+  String get helpSupportSection => 'Support kontaktieren';
+
+  @override
+  String get helpSupportWhereTitle => 'Wo finde ich das Kontaktformular?';
+
+  @override
+  String get helpSupportWhereDesc =>
+      'Unter Einstellungen → Support. Dort schreibst du uns direkt aus der App — du musst keine eigene Mail aufsetzen.';
+
+  @override
+  String get helpSupportHowTitle => 'Was passiert, wenn ich absende?';
+
+  @override
+  String get helpSupportHowDesc =>
+      'Du gibst einen Betreff und dein Anliegen ein und tippst auf Senden. Die Anfrage geht direkt an unser Team. Wir antworten dir per Mail an die Adresse, mit der du angemeldet bist — in der Regel innerhalb von 48 Stunden.';
+
+  @override
+  String get helpSupportLimitsTitle => 'Gibt es Grenzen?';
+
+  @override
+  String get helpSupportLimitsDesc =>
+      'Damit nichts verloren geht, gelten ein paar Schranken:\n• Betreff: 3 bis 150 Zeichen\n• Nachricht: 10 bis 5.000 Zeichen\n• Maximal 5 Anfragen pro Stunde\nWird das Stunden-Limit erreicht, versuche es etwas später erneut.';
+
+  @override
   String get helpPrivacySection => 'Datenschutz & Kontakt';
 
   @override
@@ -2398,7 +2451,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpPrivacySupportDesc =>
-      'Über „Probleme melden\" wird eine Mail mit App-Version, OS und Workspace-ID generiert (keine Passwörter). Antwortzeit in der Regel < 48 h.';
+      'Über Einstellungen → Support sendest du Betreff und Anliegen direkt an das Team (App-Version und Plan werden automatisch mitgeschickt, keine Passwörter). Antwortzeit in der Regel < 48 h.';
 
   @override
   String get helpPrivacyNoteTitle => 'Wichtige Hinweise';

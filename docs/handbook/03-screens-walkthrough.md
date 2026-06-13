@@ -549,6 +549,12 @@ Sehr großer Screen (≈3400 LoC) mit vielen Sektionen:
 - **Public Profile** — Handle ändern, Sichtbarkeit umschalten.
 - **Billing-Profile** — Stammdaten für Rechnungen → eigener Screen
   [`billing_profile_screen.dart`](../../lib/screens/billing_profile_screen.dart).
+- **Support** — Kontaktformular (`_SupportTab`, Schlüssel
+  `settingsHubTileSupport`): Titel + Anliegen gehen an die Edge-Function
+  [`support-request`](07-edge-functions.md#support-request), die die
+  Anfrage persistiert und per ntfy-Push + Resend-Mail an den Betreiber
+  zustellt. Rate-Limit 5 Anfragen/Stunde; das Ergebnis wird als SnackBar
+  rückgemeldet (`ok` / `rateLimited` / `failed` / `offline`).
 - **Account löschen** — Aufruf der Edge-Function `delete-account`.
 
 ## Pricing

@@ -183,6 +183,10 @@ class _HelpScreenState extends State<HelpScreen> {
             l10n.helpInboxWhitelistTitle,
             l10n.helpInboxWhitelistDesc,
           ),
+          _HelpItem.text(
+            l10n.helpInboxSoloProTitle,
+            l10n.helpInboxSoloProDesc,
+          ),
         ],
       ),
       _HelpSection(
@@ -221,6 +225,10 @@ class _HelpScreenState extends State<HelpScreen> {
           _HelpItem.text(
             l10n.helpDealsRetrackTitle,
             l10n.helpDealsRetrackDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpDealsMultiParcelTitle,
+            l10n.helpDealsMultiParcelDesc,
           ),
         ],
       ),
@@ -420,6 +428,8 @@ class _HelpScreenState extends State<HelpScreen> {
           _HelpItem.text(l10n.helpFaqQ26, l10n.helpFaqA26),
           _HelpItem.text(l10n.helpFaqQ27, l10n.helpFaqA27),
           _HelpItem.text(l10n.helpFaqQ28, l10n.helpFaqA28),
+          _HelpItem.text(l10n.helpFaqQ29, l10n.helpFaqA29),
+          _HelpItem.text(l10n.helpFaqQ30, l10n.helpFaqA30),
         ],
       ),
       _HelpSection(
@@ -609,6 +619,25 @@ class _HelpScreenState extends State<HelpScreen> {
           _HelpItem.text(
             l10n.helpWwReportingAbcTitle,
             l10n.helpWwReportingAbcDesc,
+          ),
+        ],
+      ),
+      _HelpSection(
+        id: 'support',
+        title: l10n.helpSupportSection,
+        icon: Icons.support_agent_outlined,
+        items: [
+          _HelpItem.text(
+            l10n.helpSupportWhereTitle,
+            l10n.helpSupportWhereDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpSupportHowTitle,
+            l10n.helpSupportHowDesc,
+          ),
+          _HelpItem.text(
+            l10n.helpSupportLimitsTitle,
+            l10n.helpSupportLimitsDesc,
           ),
         ],
       ),

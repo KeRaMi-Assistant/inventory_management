@@ -45,6 +45,7 @@ Alle Tabellen liegen im `public`-Schema. Workspace-gescoped sind:
 | `stocktakes` | Inventur-Sessions (Kopf) | `20260522021641_stocktakes.sql` |
 | `stocktake_items` | Inventur-Positionen (Zähl-Kind-Tabelle) | `20260522021641_stocktakes.sql` |
 | `tracking_events` | Carrier-Event-Historie pro Deal (Klarna-Style-Timeline) | `20260610090000_tracking_events.sql` |
+| `support_requests` | Support-Anfragen aus Settings → Support (default-deny, Edge-Fn-only) | `20260612090000_support_requests.sql` |
 
 Views (kein eigener Tabellen-Eintrag in Supabase-Studio, aber abfragbar wie eine Tabelle):
 
@@ -153,8 +154,23 @@ carrier               TEXT CHECK (carrier IS NULL OR carrier IN
                         ('dhl','amazon','dpd','gls','ups')),       -- 20260603074312 / 20260610150000
 live_eta              TIMESTAMPTZ,                                 -- 20260610090000
 last_polled_at        TIMESTAMPTZ,                                 -- 20260610090000
+trackings             TEXT[],                                      -- 20260612100000 (Multi-Parcel)
 created_at, updated_at, deleted_at TIMESTAMPTZ
 ```
+
+Die `trackings`-Spalte (Migration
+[`20260612100000_deals_trackings_array.sql`](../../supabase/migrations/20260612100000_deals_trackings_array.sql),
+[Multi-Parcel](10-glossary.md#multi-parcel-deal)) hält **alle**
+Sendungsnummern eines Deals inkl. der Primary `deals.tracking` — ein Deal
+kann gesplittete Bestellungen mit mehreren Paketen tragen. Konvention:
+nur das **Primary** (`deals.tracking`) steuert `live_status`/`live_eta`/
+Push/Retrack-Cooldown; **Sekundär**-Pakete schreiben ausschließlich
+`tracking_events` (eigene Timeline pro Nummer). Backfill setzt bestehende
+Single-Tracking-Deals idempotent auf `ARRAY[tracking]`; ein GIN-Index
+`deals_trackings_gin` trägt die Array-Containment-Lookups
+(`trackings @> ARRAY[…]`) von [`dpd-push`](07-edge-functions.md#dpd-push)
+und `findMatchingDeal` (siehe
+[04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#multi-parcel-mehrere-pakete-pro-deal)).
 
 Die `carrier`-Spalte hält den lowercase-Carrier-Key. Migration
 [`20260610150000_deals_carrier_gls.sql`](../../supabase/migrations/20260610150000_deals_carrier_gls.sql)
@@ -551,6 +567,63 @@ RLS). Indexe: `(deal_id, occurred_at DESC)` für die Timeline-Query und
 `(workspace_id)`. Siehe [Glossar](10-glossary.md#tracking_events) und die
 UI-Anbindung in [03 — Screens](03-screens-walkthrough.md#deals).
 
+### `support_requests`
+
+Datei:
+[`supabase/migrations/20260612090000_support_requests.sql`](../../supabase/migrations/20260612090000_support_requests.sql)
+
+```sql
+id           BIGSERIAL PRIMARY KEY,
+workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
+user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+email        TEXT NOT NULL,            -- Absender (aus dem JWT, NICHT User-Input)
+plan         TEXT,
+subject      TEXT NOT NULL CHECK (char_length(subject) BETWEEN 3 AND 150),
+message      TEXT NOT NULL CHECK (char_length(message) BETWEEN 10 AND 5000),
+app_version  TEXT,
+status       TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','answered','closed')),
+mail_sent    BOOLEAN NOT NULL DEFAULT false,   -- Best-Effort-Zustell-Telemetrie
+push_sent    BOOLEAN NOT NULL DEFAULT false,
+created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+```
+
+**Quelle der Wahrheit** für das Support-Kontaktformular (Settings →
+Support, [Stakeholder-Direktive 2026-06-12](07-edge-functions.md#support-request)).
+Mail (Resend) und ntfy-Push sind nur **Best-Effort**-Zustellkanäle — fällt
+ein Kanal aus, geht nichts verloren, weil die Row schon persistiert ist
+(`mail_sent`/`push_sent` reflektieren den Kanal-Status).
+
+**RLS:** Bewusst **keine** Policies → default-deny für `anon`/
+`authenticated`. Schreiben/Lesen läuft ausschließlich über die
+Edge-Function [`support-request`](07-edge-functions.md#support-request)
+(Service-Role), damit Rate-Limit + Validierung serverseitig unumgehbar
+bleiben und kein Client fremde Anfragen lesen kann. Index
+`support_requests_user_idx` auf `(user_id, created_at DESC)` trägt den
+Rate-Limit-Count. Siehe [Glossar](10-glossary.md#support_requests).
+
+### RPC `insert_support_request`
+
+Gleiche Migration. Atomarer Insert **mit** Rate-Limit in EINEM Statement
+(Review-Fix gegen TOCTOU — separates `SELECT count`-dann-`INSERT` wäre
+check-then-act und per Race aufhebelbar):
+
+```sql
+public.insert_support_request(
+  _workspace_id uuid, _user_id uuid, _email text, _plan text,
+  _subject text, _message text, _app_version text,
+  _max_per_hour integer DEFAULT 5)
+RETURNS bigint
+LANGUAGE sql SECURITY DEFINER
+SET search_path = public
+```
+
+Der `INSERT … SELECT … WHERE (SELECT count(*) … WHERE created_at > now() -
+interval '1 hour') < _max_per_hour RETURNING id` gibt die neue Row-Id
+zurück oder **NULL**, wenn das 5/h-Limit erreicht ist (→ Edge-Fn
+antwortet `429`). `GRANT EXECUTE` nur an `service_role` (REVOKE von
+`anon`/`authenticated`). Siehe
+[07 — Edge Functions](07-edge-functions.md#support-request).
+
 ### `mailbox_accounts` & `mailbox_credentials`
 
 Zwei Tabellen, weil das Sicherheits-Modell streng ist:
@@ -660,6 +733,9 @@ Faustregel: **Pro Workspace-Filter ein Index.** Beispiele:
 
 - `deals_workspace_idx` auf `(workspace_id)`.
 - `deals_user_order_date_idx` auf `(user_id, order_date DESC)`.
+- `deals_trackings_gin` GIN-Index auf `(trackings)` für
+  Array-Containment-Lookups (`trackings @> ARRAY[…]`) aus `dpd-push` +
+  `findMatchingDeal` ([Multi-Parcel](10-glossary.md#multi-parcel-deal)).
 - `mailbox_accounts_poll_idx` auf `(last_polled_at NULLS FIRST) WHERE enabled = TRUE`.
 - `parsed_messages_pending_idx` auf `(status) WHERE status = 'pending'`.
 

@@ -341,6 +341,31 @@ sofort frisch bewertet. Die `tracking_events`-Timeline bleibt erhalten —
 sie ist per Dedup-Key an die Tracking-Nummer gebunden und filtert sich
 selbst.
 
+## Multi-Parcel (mehrere Pakete pro Deal)
+
+Seit 2026-06-12 kann ein Deal mehrere Sendungsnummern tragen (gesplittete
+Bestellungen, z. B. zwei Versand-Mails zum selben Auftrag). Das Schema
+hält sie in [`deals.trackings TEXT[]`](06-database.md#deals); die Pipeline
+in [`inbox_parse_runner.ts`](../../supabase/functions/_shared/inbox_parse_runner.ts)
+pflegt sie an zwei Stellen:
+
+- **`findMatchingDeal`** matcht eine eingehende Mail nicht nur über die
+  Primary `deals.tracking`, sondern auch über **Sekundär**-Nummern per
+  Array-Containment (`tracking.eq.<tn>,trackings.cs.{<tn>}` — nutzt den
+  GIN-Index `deals_trackings_gin`). So findet die zweite Versand-Mail
+  denselben Deal wieder.
+- **`mergeDealTrackings`** ergänzt beim Match die neu erkannten Nummern in
+  `deals.trackings[]`, ohne Duplikate und ohne die Primary zu verlieren.
+  Reine Array-Syncs (z. B. Backfill bestehender Single-Tracking-Deals auf
+  `[tracking]`) laufen ohne inhaltliche Status-Änderung durch.
+
+**Konvention** (siehe [07 — Edge Functions](07-edge-functions.md#tracking-poll)):
+nur die Primary `deals.tracking` steuert `live_status`/Push/Retrack-
+Cooldown; Sekundär-Pakete liefern ausschließlich `tracking_events`. Der
+Deal schließt erst, wenn **alle** Pakete `delivered` sind
+(Aggregat-Completion im `tracking-poll`). Siehe
+[Glossar](10-glossary.md#multi-parcel-deal).
+
 ## inbox-parse — Klassifizierung & Match
 
 Datei:

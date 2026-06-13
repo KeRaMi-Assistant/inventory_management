@@ -295,10 +295,10 @@ atomarer RPC `increment_po_item_received`. Siehe
 ### Edge Function
 
 Serverless-Function, die auf Supabase-Infrastruktur in Deno läuft. Liegen
-in [`supabase/functions/`](../../supabase/functions/). Sechs Stück:
-`inbox-poll`, `inbox-parse`, `tracking-poll`, `send-notifications`,
-`seed-demo-workspace`, `delete-account`. Siehe
-[07 — Edge Functions](07-edge-functions.md).
+in [`supabase/functions/`](../../supabase/functions/). Acht Stück:
+`inbox-poll`, `inbox-parse`, `tracking-poll`, `dpd-push`,
+`support-request`, `send-notifications`, `seed-demo-workspace`,
+`delete-account`. Siehe [07 — Edge Functions](07-edge-functions.md).
 
 ## F
 
@@ -441,6 +441,21 @@ SQL-File in
 [`supabase/migrations/`](../../supabase/migrations/) mit dem Schema
 `YYYYMMDDHHMMSS_<slug>.sql`. Wird per `supabase db push` deployed. Siehe
 [06 — Datenbank](06-database.md#migrations-konventionen).
+
+### Multi-Parcel-Deal
+
+Ein [Deal](#deal) mit mehreren Sendungsnummern (gesplittete Bestellung),
+gespeichert in `deals.trackings TEXT[]` (Migration
+[`20260612100000`](../../supabase/migrations/20260612100000_deals_trackings_array.sql)).
+Nur die **Primary** `deals.tracking` steuert `live_status`/Push/Retrack-
+Cooldown; **Sekundär**-Pakete schreiben ausschließlich
+[`tracking_events`](#tracking_events). Der Deal schließt erst per
+**Aggregat-Completion**, wenn alle Pakete `delivered` sind. Lookup per
+Array-Containment (`trackings @> {…}`, GIN-Index `deals_trackings_gin`)
+in `findMatchingDeal` ([04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#multi-parcel-mehrere-pakete-pro-deal))
+und [`dpd-push`](07-edge-functions.md#dpd-push). Siehe
+[06 — Datenbank](06-database.md#deals) und
+[07 — Edge Functions](07-edge-functions.md#tracking-poll).
 
 ### MultiProvider
 
@@ -638,6 +653,26 @@ Siehe [04 — Inbox-Pipeline](04-inbox-mail-pipeline.md#strict-tracking-extracti
 
 Großhändler / Lieferant. Tabelle `suppliers`. Siehe
 [02 — Konzepte](02-concepts.md#supplier).
+
+### support-request (Edge Function)
+
+Edge-Function [`support-request`](../../supabase/functions/support-request/index.ts),
+die das Support-Kontaktformular (Settings → Support) bedient: JWT-Pflicht,
+INSERT in [`support_requests`](#support_requests) (Quelle der Wahrheit,
+atomares 5/h-Rate-Limit) + Best-Effort-ntfy-Push (`NTFY_SUPPORT_TOPIC`) +
+Best-Effort-Resend-Mail (`RESEND_API_KEY`/`SUPPORT_EMAIL`, `reply_to` =
+Kunden-Mail aus dem JWT). Siehe
+[07 — Edge Functions](07-edge-functions.md#support-request).
+
+### support_requests
+
+Tabelle `support_requests` (Migration
+[`20260612090000`](../../supabase/migrations/20260612090000_support_requests.sql)):
+persistierte Support-Anfragen aus dem Kontaktformular. **Default-deny-RLS**
+(keine Policies) — nur die Edge-Function [`support-request`](#support-request-edge-function)
+(Service-Role) schreibt über die RPC `insert_support_request`. Mail/Push
+sind Best-Effort (`mail_sent`/`push_sent`), die Row ist die Wahrheit. Siehe
+[06 — Datenbank](06-database.md#support_requests).
 
 ### UnsavedChangesGuard
 
