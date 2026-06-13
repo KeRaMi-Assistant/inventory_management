@@ -1569,6 +1569,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'The app only reads mails from known shops/carriers (whitelist). Marketing newsletters, personal mail and unknown senders are ignored. If a shop is missing, report it via \"Report issues\" — new adapters are added server-side.';
 
   @override
+  String get helpInboxSoloProTitle => 'Mailbox on Solo Pro';
+
+  @override
+  String get helpInboxSoloProDesc =>
+      'Solo Pro includes 1 connected mailbox with 14 days of mail history. Order and shipping mails from the last 14 days are detected automatically and suggested as deals. Higher plans allow more mailboxes and a longer history — see the current limits on the pricing screen.';
+
+  @override
   String get helpDealsSection => 'Deals';
 
   @override
@@ -1615,6 +1622,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get helpDealsRetrackDesc =>
       'In the deal detail view, next to the tracking number, you\'ll find a refresh icon labelled \"Refresh status\". It asks the carrier for the current status right away instead of waiting for the next automatic check — handy, for example, just before a planned delivery.\nOne retrack per deal is allowed every 30 seconds. While the lock is active the button is greyed out and shows \"Please wait 30s\" — that protects the carrier API from unnecessary calls and you from rate limits.\nFor Amazon Logistics and GLS shipments the button stays greyed out permanently: there\'s no public live status to refresh for those services.';
+
+  @override
+  String get helpDealsMultiParcelTitle => 'Several parcels per deal';
+
+  @override
+  String get helpDealsMultiParcelDesc =>
+      'If an order was split into several parcels, a deal can track multiple tracking numbers.\n• In the edit-deal dialog the additional parcels appear as chips — use the delete icon on a chip to remove a parcel that doesn\'t belong.\n• A switcher shows the timeline for each parcel individually.\n• In the deal list and table a \"+N\" badge indicates further parcels.\nThe deal only counts as arrived once every parcel has been delivered.';
 
   @override
   String get helpDealsTimelineTitle => 'Shipment timeline';
@@ -2381,6 +2395,45 @@ class AppLocalizationsEn extends AppLocalizations {
       'Yes. Tap a tile on the dashboard and the app jumps to the matching area — e.g. from \"Open deliveries\" to Deals or from \"Critical stock\" to Inventory. In the deal list and in Inventory you can also pull down from the top on your phone (pull-to-refresh) to reload the data.';
 
   @override
+  String get helpFaqQ29 => 'Can I connect a mailbox on Solo Pro?';
+
+  @override
+  String get helpFaqA29 =>
+      'Yes. Solo Pro now allows 1 connected mailbox with 14 days of mail history. Connect it under Settings → Mailbox. Order and shipping mails from the last 14 days are then detected automatically and suggested as deals.';
+
+  @override
+  String get helpFaqQ30 =>
+      'When does a deal with several parcels count as arrived?';
+
+  @override
+  String get helpFaqA30 =>
+      'Only once every parcel has been delivered. If an order was split (several tracking numbers), the deal waits to switch to \"Arrived\" until the last parcel has been delivered. You can see the status per parcel in the deal via the parcel switcher.';
+
+  @override
+  String get helpSupportSection => 'Contact support';
+
+  @override
+  String get helpSupportWhereTitle => 'Where do I find the contact form?';
+
+  @override
+  String get helpSupportWhereDesc =>
+      'Under Settings → Support. From there you can write to us straight from the app — no need to compose your own email.';
+
+  @override
+  String get helpSupportHowTitle => 'What happens when I send?';
+
+  @override
+  String get helpSupportHowDesc =>
+      'You enter a subject and your request and tap Send. The request goes directly to our team. We reply by email to the address you signed up with — usually within 48 hours.';
+
+  @override
+  String get helpSupportLimitsTitle => 'Are there any limits?';
+
+  @override
+  String get helpSupportLimitsDesc =>
+      'To make sure nothing gets lost, a few limits apply:\n• Subject: 3 to 150 characters\n• Message: 10 to 5,000 characters\n• At most 5 requests per hour\nIf you hit the hourly limit, just try again a little later.';
+
+  @override
   String get helpPrivacySection => 'Privacy & contact';
 
   @override
@@ -2395,7 +2448,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpPrivacySupportDesc =>
-      '\"Report issues\" generates a mail with app version, OS and workspace ID (no passwords). Reply time usually < 48 h.';
+      'Settings → Support sends your subject and message straight to the team (app version and plan are attached automatically, no passwords). Reply time usually < 48 h.';
 
   @override
   String get helpPrivacyNoteTitle => 'Important notes';

@@ -1,6 +1,6 @@
 # 07 — Edge Functions
 
-Die App hat **sechs** Supabase Edge Functions und eine SECURITY-DEFINER-RPC in
+Die App hat **acht** Supabase Edge Functions und eine SECURITY-DEFINER-RPC in
 [`supabase/functions/`](../../supabase/functions/). Sie laufen auf Deno und
 sind in TypeScript geschrieben. Dieses Kapitel beschreibt jede Function:
 Trigger, Auth, Inputs, Outputs, Secrets und das Deploy-Kommando.
@@ -16,6 +16,7 @@ Trigger, Auth, Inputs, Outputs, Secrets und das Deploy-Kommando.
 | [`inbox-parse`](#inbox-parse) | inline aus inbox-poll + UI | Cron / service_role | Pending-Mails klassifizieren |
 | [`tracking-poll`](#tracking-poll) | pg_cron stündlich (`tracking-poll-adaptive`, Minute :07) + UI-Retrack | Cron / User-JWT | Carrier-API für offene Deals (adaptive Frequenz) |
 | [`dpd-push`](#dpd-push) | DPD Tracking Push Service (extern, ~15 min) | DPD-Server (`token=`-Wand) | Webhook: DPD-Scans → live_status + tracking_events |
+| [`support-request`](#support-request) | UI-Button (Settings → Support) | User-JWT (`verify_jwt=true`) | Support-Anfrage persistieren + 3-stufig zustellen |
 | [`send-notifications`](#send-notifications) | pg_cron / manuell | Cron | Push via FCM HTTP v1 |
 | [`seed-demo-workspace`](#seed-demo-workspace) | manuell aus App | User-JWT (`test@test.com` only!) | Demo-Daten in Test-Workspace |
 | [`delete-account`](#delete-account) | manuell aus App | User-JWT | Account + alle Workspace-Daten löschen |
@@ -208,7 +209,11 @@ Zwei Pfade:
    - `out_for_delivery` → jede Stunde (≥ 50 min),
    - `in_transit` → alle ~4 h (≥ 230 min),
    - `pending`/`exception`/`null` → 2×/Tag (≥ 660 min),
-   - `delivered`/expired → nie.
+   - `delivered`/expired → nie — **Ausnahme Multi-Parcel**: ist das
+     Primary `delivered`, der Deal aber noch `status='Unterwegs'` (also
+     [Aggregat-Completion](#tracking-poll) noch nicht erreicht, Sekundäre
+     offen), bleibt der Deal fällig (`isDuePoll`), damit die übrigen
+     Pakete nicht verhungern.
 5. Pro fälligem Deal:
    - **Skip**, wenn `tracking_needs_review = TRUE` UND
      `tracking_confidence = 'none'` (T16, Strict-Tracking) — sonst
@@ -216,6 +221,11 @@ Zwei Pfade:
    - **Quota-Guard**: ist das Restbudget für `workspace:carrier`
      erschöpft (`≤ 0`, Cap `DAILY_QUOTA_CAP = 900`), wird der Deal
      übersprungen (`quota_skipped++`).
+   - **Multi-Parcel** ([`deals.trackings`](06-database.md#deals)):
+     jede Nummer des Deals wird gepollt (Primary zuerst). Nur das
+     **Primary** (`deals.tracking`) schreibt `live_status`/Push/Activity;
+     **Sekundär**-Pakete schreiben ausschließlich `tracking_events`
+     (`persistSecondaryEvents`).
    - Carrier-Adapter erkennen (Tracking-Pattern bzw. `deals.carrier`).
    - API-Call mit gespeichertem Key; Quota-Restbudget dekrementieren.
    - **Event-Persistenz**: kompletten Carrier-Event-Array in
@@ -228,8 +238,13 @@ Zwei Pfade:
      über `notifications_sent` (`ref_kind='tracking_status'`,
      **Claim-then-Send** = erst die Dedup-Row claimen, dann senden,
      race-safe). Opt-out via `notification_preferences.delivery_enabled`.
-   - Bei `delivered`: setze Deal `status='Angekommen'`, `arrival_date`,
-     schreib `activity_log`.
+   - **Aggregat-Completion** (Multi-Parcel): ein Mehrpaket-Deal schließt
+     erst, wenn **ALLE** Pakete `delivered` sind. Beim Primary-Poll wird
+     `suppressCompletion` gesetzt (es setzt `live_status='delivered'`,
+     aber **nicht** `status='Angekommen'`); erst der Aggregat-Block
+     vergibt `status='Angekommen'` + `arrival_date` + `activity_log`,
+     sobald jede Nummer zugestellt ist. Bei Single-Tracking-Deals
+     unverändert: `delivered` → sofort `status='Angekommen'`.
 6. Nach der Schleife: ein atomarer `bump_carrier_daily_calls`-RPC-Aufruf
    pro Carrier schreibt den Tageszähler + ggf. `last_error` zurück.
 7. Cap: weiterhin max. Calls pro Lauf; Reihenfolge ältester `order_date`
@@ -295,17 +310,106 @@ GET-Request (~15 min Latenz) an diese Function.
 - **Auth:** `verify_jwt=false` + PFLICHT-Query-Token `token=<DPD_PUSH_TOKEN>`
   (`supabase secrets set DPD_PUSH_TOKEN=…`, fail-closed: 503 ohne Secret,
   403 bei Mismatch). DPD-Absender-IP (213.95.42.108) wird soft geprüft.
-- **Ablauf:** `pnr` normalisieren → Deal via `deals.tracking` matchen →
-  Status-Map (`delivery_carload`→`out_for_delivery`, `delivery_customer`→
+- **pnr-Validierung:** `pnr` wird normalisiert (Whitespace raus, uppercase)
+  und an der Validierungsgrenze hart auf `/^[A-Z0-9]+$/` begrenzt — die pnr
+  fließt später in einen Array-Containment-Filter, der hart alphanumerisch
+  bleiben muss.
+- **Ablauf:** `pnr` normalisieren → Deal via `deals.tracking` **oder**
+  `deals.trackings @> {pnr}` matchen ([Multi-Parcel](10-glossary.md#multi-parcel-deal),
+  GIN-Index, `cs`-Containment) → Status-Map
+  (`delivery_carload`→`out_for_delivery`, `delivery_customer`→
   `delivered`, …) → `live_status` + `tracking_events` via
   `_shared/live_status.ts` → Status-Wechsel-Push (FCM) → XML-ACK
   `<push><pushid>…</pushid><status>OK</status></push>`.
+- **Cross-Tenant-Schutz:** der Service-Role-Lookup kennt keinen Workspace
+  (der Webhook hat nur pnr + Token). Trägt dieselbe pnr in zwei Workspaces,
+  ist der Treffer mehrdeutig → es wird **nichts** geschrieben (kein
+  Cross-Tenant-Leak), fail-safe ACK. Trifft die pnr nur ein
+  **Sekundär**-Paket aus `trackings[]`, werden ausschließlich
+  Timeline-Events unter der eigenen Nummer geschrieben (kein Primary-
+  Status-Update).
 - **Unmatched pnr / unbekannter Status:** trotzdem ACK (sonst retried DPD
   48 h und mailt Fehler) — nur Telemetrie-Log (pnr redacted).
 - **PII:** `receiver=`/`pod=` werden weder persistiert noch geloggt.
 - **Formular-Werte für den DPD-Antrag:** Push-URL =
   `https://<ref>.functions.supabase.co/dpd-push?token=<DPD_PUSH_TOKEN>`,
   Antwort = XML wie oben, Verzögerung 500 ms, max. Antwortzeit 5000 ms.
+
+## support-request
+
+Datei:
+[`supabase/functions/support-request/index.ts`](../../supabase/functions/support-request/index.ts)
+
+**Aufgabe:** Support-Anfragen aus dem Kontaktformular (Settings → Support,
+siehe [03 — Screens](03-screens-walkthrough.md#settings)) entgegennehmen
+und dem Betreiber **dreistufig** zustellen.
+
+### Auth
+
+`verify_jwt=true` (Standard-Gateway-Check) + zusätzlich `auth.getUser()`.
+Die User-Identität und die Absender-**E-Mail** kommen ausschließlich aus
+dem Token, **nie** aus dem Body (kein Spoofing). Membership des optionalen
+`workspace_id` wird gegen `workspace_members` geprüft; Nicht-Mitglieder →
+Workspace still ignoriert (kein Enumeration-Kanal). Der `plan` kommt aus
+`billing_profiles.plan` (user-keyed).
+
+### Inputs (POST-Body)
+
+```ts
+{
+  subject: string       // 3–150 Zeichen, single-line (kein CRLF)
+  message: string       // 10–5000 Zeichen
+  workspace_id?: string // optional, nur wenn Member
+  app_version?: string  // optional, auf 50 Zeichen gekappt
+}
+```
+
+Validierung (`validateSupportPayload`) ist zod-artig per Hand und
+deckungsgleich mit den DB-CHECKs. Der Betreff darf kein `\r`/`\n`
+enthalten (Header-Injection-Wand, weil er u.a. in den ntfy-HTTP-Header
+fließt).
+
+### Drei-stufige Zustellung
+
+1. **INSERT** via RPC `insert_support_request` — die
+   [`support_requests`](06-database.md#support_requests)-Row ist die
+   **Quelle der Wahrheit** und nie verlierbar. Der RPC erzwingt atomar
+   das **Rate-Limit von 5 Anfragen/User/Stunde** (NULL = Limit erreicht
+   → HTTP `429 rate_limited`).
+2. **ntfy-Push** (Best-Effort, env `NTFY_SUPPORT_TOPIC`) — sofort aufs
+   Handy. Sicherheits-Kontrakt: ntfy-Topics sind öffentlich lesbar, also
+   wird der Kanal geskippt, wenn der Topic-Name `< 16` Zeichen Zufall hat.
+3. **E-Mail via Resend** (Best-Effort, env `RESEND_API_KEY`) — formatierte
+   Betreiber-Mail mit Titel, Kunden-Kontext (E-Mail/Plan/Workspace/
+   App-Version) und Anliegen. `reply_to` = Kunden-Mail aus dem JWT,
+   Empfänger aus env `SUPPORT_EMAIL` (Fallback im Code). Subject/Message
+   werden HTML-escaped (`escapeHtml`).
+
+Kanäle 2+3 sind Best-Effort: Fehler landen nur in `mail_sent`/`push_sent`
+auf der Row, der Request bleibt erfolgreich. **PII:** Logs enthalten nur
+Request-Id + Kanal-Status, nie Inhalt oder E-Mail.
+
+### Konfiguration via Secrets
+
+| Secret | Pflicht | Beschreibung |
+|---|---|---|
+| `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | runtime | von Supabase gesetzt |
+| `NTFY_SUPPORT_TOPIC` | optional | ntfy-Topic (≥ 16 Zeichen Zufall, sonst Skip) |
+| `RESEND_API_KEY` | optional | Resend-API-Key für den Mail-Kanal |
+| `SUPPORT_EMAIL` | optional | Empfänger-Adresse (Fallback im Code) |
+| `SUPPORT_FROM` | optional | Absender-Adresse der Resend-Mail |
+
+### Outputs
+
+```json
+{ "ok": true, "id": 42, "mailSent": true, "pushSent": false }
+```
+
+### Deploy
+
+```bash
+supabase functions deploy support-request
+```
 
 ## send-notifications
 
@@ -596,6 +700,7 @@ Keine Tokens, Mails oder PII in Logs schreiben — siehe
 - [`supabase/functions/inbox-poll/index.ts`](../../supabase/functions/inbox-poll/index.ts) — IMAP-Polling
 - [`supabase/functions/inbox-parse/index.ts`](../../supabase/functions/inbox-parse/index.ts) — Klassifizierung
 - [`supabase/functions/tracking-poll/index.ts`](../../supabase/functions/tracking-poll/index.ts) — Carrier-Refresh
+- [`supabase/functions/support-request/index.ts`](../../supabase/functions/support-request/index.ts) — Support-Kontaktformular
 - [`supabase/functions/send-notifications/index.ts`](../../supabase/functions/send-notifications/index.ts) — Push
 - [`supabase/functions/seed-demo-workspace/index.ts`](../../supabase/functions/seed-demo-workspace/index.ts) — Demo-Daten
 - [`supabase/functions/delete-account/index.ts`](../../supabase/functions/delete-account/index.ts) — Account-Löschung

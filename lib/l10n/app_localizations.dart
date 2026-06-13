@@ -2888,6 +2888,18 @@ abstract class AppLocalizations {
   /// **'Die App liest nur Mails von bekannten Shops/Carriern (Whitelist). Werbe-Newsletter, persönliche Mails und unbekannte Absender werden ignoriert. Wenn ein Shop fehlt, melde ihn über „Probleme melden\" — neue Adapter werden serverseitig nachgepflegt.'**
   String get helpInboxWhitelistDesc;
 
+  /// No description provided for @helpInboxSoloProTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Postfach mit Solo Pro'**
+  String get helpInboxSoloProTitle;
+
+  /// No description provided for @helpInboxSoloProDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Solo Pro enthält 1 verbundenes Postfach mit 14 Tagen Mail-Verlauf. Damit werden Bestell- und Versandmails der letzten 14 Tage automatisch erkannt und als Deals vorgeschlagen. Höhere Pläne erlauben mehr Postfächer und längeren Verlauf — die aktuellen Grenzen siehst du auf dem Pricing-Screen.'**
+  String get helpInboxSoloProDesc;
+
   /// No description provided for @helpDealsSection.
   ///
   /// In de, this message translates to:
@@ -2965,6 +2977,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Im Deal-Detail neben der Sendungsnummer gibt es ein Refresh-Icon „Status aktualisieren\". Damit fragst du den Carrier sofort nach dem aktuellen Status, ohne auf die nächste automatische Prüfung zu warten — praktisch z. B. kurz vor einem geplanten Versand.\nEin Retrack pro Deal ist alle 30 Sekunden möglich. Während der Sperre ist der Button ausgegraut und zeigt „Bitte 30s warten\" — das schützt den Carrier vor unnötigen API-Calls und dich vor Rate-Limits.\nBei Amazon-Logistics- und GLS-Sendungen ist der Button dauerhaft ausgegraut: Für diese Dienste gibt es keinen öffentlichen Live-Status zum Aktualisieren.'**
   String get helpDealsRetrackDesc;
+
+  /// No description provided for @helpDealsMultiParcelTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Mehrere Pakete pro Deal'**
+  String get helpDealsMultiParcelTitle;
+
+  /// No description provided for @helpDealsMultiParcelDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Wurde eine Bestellung in mehrere Pakete gesplittet, kann ein Deal mehrere Sendungsnummern verfolgen.\n• Im Deal-Bearbeiten-Dialog erscheinen die weiteren Pakete als Chips — über das Löschsymbol am Chip entfernst du ein Paket, das nicht dazugehört.\n• Ein Umschalter zeigt die Timeline für jedes Paket einzeln.\n• In der Deal-Liste und -Tabelle weist ein „+N\"-Badge auf weitere Pakete hin.\nDer Deal gilt erst dann als angekommen, wenn alle Pakete zugestellt sind.'**
+  String get helpDealsMultiParcelDesc;
 
   /// No description provided for @helpDealsTimelineTitle.
   ///
@@ -4268,6 +4292,72 @@ abstract class AppLocalizations {
   /// **'Ja. Tippe auf eine Kachel im Dashboard und die App springt in den passenden Bereich — z. B. von „Offene Lieferungen\" zu den Deals oder von „Kritischer Bestand\" ins Lager. In der Deal-Liste und im Bestand kannst du am Handy außerdem von oben nach unten ziehen (Pull-to-Refresh), um die Daten neu zu laden.'**
   String get helpFaqA28;
 
+  /// No description provided for @helpFaqQ29.
+  ///
+  /// In de, this message translates to:
+  /// **'Kann ich mit Solo Pro ein Postfach verbinden?'**
+  String get helpFaqQ29;
+
+  /// No description provided for @helpFaqA29.
+  ///
+  /// In de, this message translates to:
+  /// **'Ja. Solo Pro erlaubt jetzt 1 verbundenes Postfach mit 14 Tagen Mail-Verlauf. Verbinde es unter Einstellungen → Postfach. Bestell- und Versandmails der letzten 14 Tage werden dann automatisch erkannt und als Deals vorgeschlagen.'**
+  String get helpFaqA29;
+
+  /// No description provided for @helpFaqQ30.
+  ///
+  /// In de, this message translates to:
+  /// **'Wann gilt ein Deal mit mehreren Paketen als angekommen?'**
+  String get helpFaqQ30;
+
+  /// No description provided for @helpFaqA30.
+  ///
+  /// In de, this message translates to:
+  /// **'Erst wenn alle Pakete zugestellt sind. Wurde eine Bestellung gesplittet (mehrere Sendungsnummern), wartet der Deal mit dem Wechsel auf „Angekommen\", bis das letzte Paket geliefert wurde. Den Stand pro Paket siehst du im Deal über den Paket-Umschalter.'**
+  String get helpFaqA30;
+
+  /// No description provided for @helpSupportSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Support kontaktieren'**
+  String get helpSupportSection;
+
+  /// No description provided for @helpSupportWhereTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wo finde ich das Kontaktformular?'**
+  String get helpSupportWhereTitle;
+
+  /// No description provided for @helpSupportWhereDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Unter Einstellungen → Support. Dort schreibst du uns direkt aus der App — du musst keine eigene Mail aufsetzen.'**
+  String get helpSupportWhereDesc;
+
+  /// No description provided for @helpSupportHowTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Was passiert, wenn ich absende?'**
+  String get helpSupportHowTitle;
+
+  /// No description provided for @helpSupportHowDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Du gibst einen Betreff und dein Anliegen ein und tippst auf Senden. Die Anfrage geht direkt an unser Team. Wir antworten dir per Mail an die Adresse, mit der du angemeldet bist — in der Regel innerhalb von 48 Stunden.'**
+  String get helpSupportHowDesc;
+
+  /// No description provided for @helpSupportLimitsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Gibt es Grenzen?'**
+  String get helpSupportLimitsTitle;
+
+  /// No description provided for @helpSupportLimitsDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Damit nichts verloren geht, gelten ein paar Schranken:\n• Betreff: 3 bis 150 Zeichen\n• Nachricht: 10 bis 5.000 Zeichen\n• Maximal 5 Anfragen pro Stunde\nWird das Stunden-Limit erreicht, versuche es etwas später erneut.'**
+  String get helpSupportLimitsDesc;
+
   /// No description provided for @helpPrivacySection.
   ///
   /// In de, this message translates to:
@@ -4295,7 +4385,7 @@ abstract class AppLocalizations {
   /// No description provided for @helpPrivacySupportDesc.
   ///
   /// In de, this message translates to:
-  /// **'Über „Probleme melden\" wird eine Mail mit App-Version, OS und Workspace-ID generiert (keine Passwörter). Antwortzeit in der Regel < 48 h.'**
+  /// **'Über Einstellungen → Support sendest du Betreff und Anliegen direkt an das Team (App-Version und Plan werden automatisch mitgeschickt, keine Passwörter). Antwortzeit in der Regel < 48 h.'**
   String get helpPrivacySupportDesc;
 
   /// No description provided for @helpPrivacyNoteTitle.
