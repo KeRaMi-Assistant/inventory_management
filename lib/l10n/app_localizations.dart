@@ -2291,7 +2291,7 @@ abstract class AppLocalizations {
   /// No description provided for @dealMoreParcelsTooltip.
   ///
   /// In de, this message translates to:
-  /// **'{count} weitere Pakete'**
+  /// **'{count, plural, one{1 weiteres Paket} other{{count} weitere Pakete}}'**
   String dealMoreParcelsTooltip(int count);
 
   /// No description provided for @dealTicketUrl.

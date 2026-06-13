@@ -1219,7 +1219,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dealMoreParcelsTooltip(int count) {
-    return '$count more parcels';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more parcels',
+      one: '1 more parcel',
+    );
+    return '$_temp0';
   }
 
   @override
