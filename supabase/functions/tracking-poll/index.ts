@@ -743,10 +743,13 @@ export function remainingDailyQuota(
 /// darf der delivered-Early-Return NICHT greifen — sonst verhungern die
 /// Sekundär-Pakete. Dann zählt die in_transit-Kadenz (~4 h).
 export function isDuePoll(
-  deal: Pick<DealRow, 'live_status' | 'last_polled_at' | 'trackings'>,
+  deal: Pick<DealRow, 'live_status' | 'last_polled_at' | 'tracking' | 'trackings'>,
   nowMs: number,
 ): boolean {
-  const isMultiParcel = (deal.trackings?.length ?? 0) > 1
+  // Single Source of Truth: dieselbe Paket-Zählung wie der Poll-Loop
+  // (dedupliziert [tracking, ...trackings]) — verhindert Drift, falls
+  // trackings[] den Primary mal nicht enthält.
+  const isMultiParcel = dealParcelNumbers(deal).length > 1
   const primaryDeliveredButOpen = isMultiParcel && deal.live_status === 'delivered'
   if (
     (deal.live_status === 'delivered' || deal.live_status === 'expired') &&
