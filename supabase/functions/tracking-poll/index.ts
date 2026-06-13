@@ -629,7 +629,12 @@ async function persistSecondaryEvents(
       ignoreDuplicates: true,
     })
   if (error) {
-    console.warn('secondary tracking_events upsert failed', deal.id, parcelNumber, error.message)
+    // PII-arm: Tracking-Nummer nur als Suffix loggen (konsistent zum
+    // redact()-Pattern in dpd-push / tracking_detection).
+    const redacted = parcelNumber.length <= 4
+      ? `…${parcelNumber}`
+      : `…${parcelNumber.slice(-4)}`
+    console.warn('secondary tracking_events upsert failed', deal.id, redacted, error.message)
   }
 }
 

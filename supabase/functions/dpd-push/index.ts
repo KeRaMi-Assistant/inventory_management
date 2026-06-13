@@ -157,6 +157,14 @@ export function dpdPushToParsed(params: URLSearchParams): {
   const pnr = (params.get('pnr') ?? '').replace(/\s+/g, '').toUpperCase()
   const statusRaw = (params.get('status') ?? '').toLowerCase()
   if (!pnr || !statusRaw) return null
+  // Security (Review feature/multi-parcel-deals #1): pnr fließt später in
+  // einen PostgREST-`.or()`-Filterstring, der mit Service-Role (RLS aus)
+  // läuft — die einzige Workspace-Scoping-Grenze. Filter-Metazeichen
+  // (`,` `.` `(` `)` `*` `:` `{` `}`) würden den Filter aufbrechen und
+  // cross-workspace lesen. Hier an der Validierungsgrenze hart auf
+  // alphanumerisch begrenzen (DPD-pnr ist rein numerisch 13–14-stellig);
+  // alles andere → null → fail-safe-ACK ohne Deal-Match.
+  if (!/^[A-Z0-9]+$/.test(pnr)) return null
   const mapped = DPD_STATUS_MAP[statusRaw]
   if (!mapped) return null
   const occurredAt = parseDpdStatusDate(params.get('statusdate'))
@@ -245,7 +253,8 @@ Deno.serve(async (req) => {
   // 13–14-stellig; Detection persistiert normalisiert (uppercase, spaceless).
   // Multi-Parcel (2026-06-12): auch Deals matchen, die die pnr als
   // SEKUNDÄR-Paket in trackings[] tragen (cs = Containment, GIN-Index).
-  // pnr ist hier bereits regex-validiert numerisch → or-Syntax-sicher.
+  // pnr ist in dpdPushToParsed hart auf /^[A-Z0-9]+$/ validiert (sonst
+  // null → früher ACK) → keine Filter-Metazeichen, or-Syntax-sicher.
   const { data: dealRows, error: dealErr } = await admin
     .from('deals')
     .select(
