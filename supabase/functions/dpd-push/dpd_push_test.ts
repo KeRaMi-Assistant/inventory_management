@@ -123,6 +123,25 @@ Deno.test('dpdPushToParsed: unbekannter Status / fehlende pnr → null', () => {
   assertEquals(dpdPushToParsed(params({ pnr: '123' })), null)
 })
 
+Deno.test('dpdPushToParsed: pnr mit Filter-Metazeichen → null (or-Injection-Wand)', () => {
+  // Security-Review feature/multi-parcel-deals #1: pnr fließt in einen
+  // PostgREST-.or()-Filterstring (Service-Role, RLS aus). Filter-Metazeichen
+  // dürfen die Validierungsgrenze nicht passieren.
+  for (const evil of [
+    '01476810375209,id.gt.0', // or-Filter-Bruch
+    '0147)*,(deleted_at.not.is.null',
+    '0147.6810', // Punkt = Operator-Trenner
+    'DE-123', // Bindestrich ist bei DPD nicht erlaubt
+    '014768*',
+  ]) {
+    assertEquals(
+      dpdPushToParsed(params({ pnr: evil, status: 'delivery_customer' })),
+      null,
+      `pnr "${evil}" hätte abgelehnt werden müssen`,
+    )
+  }
+})
+
 Deno.test('dpdPushToParsed: fehlendes statusdate → Event ohne occurredAt', () => {
   const r = dpdPushToParsed(params({ pnr: '01476810375209', status: 'pickup_driver' }))
   assert(r)

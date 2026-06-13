@@ -532,6 +532,16 @@
   "dealBuyerNone": "— Kein —",
   "dealTicketNumber": "Ticketnummer",
   "dealTracking": "Tracking",
+  "dealSecondaryParcels": "Weitere Pakete",
+  "dealRemoveParcelTooltip": "Paket entfernen",
+  "dealMoreParcelsTooltip": "{count, plural, one{1 weiteres Paket} other{{count} weitere Pakete}}",
+  "@dealMoreParcelsTooltip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "dealTicketUrl": "Ticket-URL (optional)",
   "dealTicketUrlHint": "Link aus Discord einfügen…",
   "dealDiscordChannelHint": "Kanal finden → Rechtsklick → „Link kopieren\" → hier einfügen",

@@ -31,6 +31,7 @@ import {
   buildStatusPushPayload,
   buildTrackingEventRows,
   createPushContext,
+  dealParcelNumbers,
   type LiveStatus,
   maybeSendStatusPush,
   type PushContext,
@@ -59,6 +60,7 @@ interface DealRow {
   user_id: string
   product: string
   tracking: string | null
+  trackings: string[] | null
   carrier: 'dhl' | 'amazon' | 'dpd' | 'gls' | 'ups' | 'hermes' | null
   tracking_confidence: 'strong' | 'manual' | 'none' | null
   tracking_needs_review: boolean | null
@@ -334,7 +336,7 @@ async function pollWorkspace(
   let dealQuery = admin
     .from('deals')
     .select(
-      'id, workspace_id, user_id, product, tracking, carrier, tracking_confidence, tracking_needs_review, status, arrival_date, order_date, live_status, live_status_last_event, live_status_updated_at, live_eta, last_polled_at',
+      'id, workspace_id, user_id, product, tracking, trackings, carrier, tracking_confidence, tracking_needs_review, status, arrival_date, order_date, live_status, live_status_last_event, live_status_updated_at, live_eta, last_polled_at',
     )
     .eq('workspace_id', workspaceId)
     .eq('status', 'Unterwegs')
@@ -406,6 +408,13 @@ async function pollWorkspace(
   // Throttle-State: ≥350 ms zwischen echten Carrier-API-Calls (DHL 3 req/s).
   let madeApiCall = false
   for (const deal of dueDeals) {
+    // Call-Budget-Guard (Review-Fix #1/#2/#14): `budget` ist seit Multi-Parcel
+    // ein CALL-Budget (stat.checked zählt Calls, nicht Deals — ein Deal kann N
+    // Pakete = N Calls auslösen). Ohne diesen Break wäre die Lauflänge nicht
+    // mehr gedeckelt (200 Deals × 3 Pakete × 350 ms ≈ 210 s > Edge-Wall-Clock)
+    // und totalBudget -= stat.checked würde nachgelagerte Workspaces verzerren.
+    // Reste fängt der nächste (stündliche) Sweep.
+    if (stat.checked >= budget) break
     if (!deal.tracking || deal.tracking.trim().length === 0) continue
     // Detection-only-Carrier (amazon, gls — siehe carriers.ts): keine
     // öffentliche Status-API. Defensiver Short-Circuit VOR der Adapter-Wahl:
@@ -432,42 +441,117 @@ async function pollWorkspace(
     if (!adapter) continue
     if (!carriers.has(adapter.id)) continue
 
-    // Tages-Quota-Guard: Cap erreicht → kein Call mehr für diesen Carrier
-    // heute (DHL sperrt bei >1.000/Tag mit 429, Lesson PR #115).
-    const quotaKey = `${workspaceId}:${adapter.id}`
-    if ((quotaRemaining.get(quotaKey) ?? DAILY_QUOTA_CAP) <= 0) {
-      stat.quota_skipped++
-      continue
-    }
-
     const apiKey = await getKey(adapter.id)
     if (!apiKey) continue
 
-    // Rate-Limit-Schutz: ≥350 ms seit dem letzten echten API-Call (DHL 3 req/s).
-    if (madeApiCall) await _trkSleep(MIN_MS_BETWEEN_TRACKING_CALLS)
-    madeApiCall = true
+    // Multi-Parcel (2026-06-12): alle Nummern des Deals pollen — Primary
+    // zuerst. NUR das Primary schreibt live_status/Push/Activity; Sekundäre
+    // liefern ausschließlich tracking_events (Timeline pro Nummer). Alle
+    // Nummern teilen den Deal-Carrier (Single-carrier-Column — Cross-Carrier-
+    // Mails werden von detect() ohnehin verworfen). Quota: jede Nummer ist
+    // ein eigener Carrier-Call und zählt einzeln gegen das Tages-Cap.
+    const primary = (deal.tracking ?? '').trim()
+    const parcels = dealParcelNumbers(deal)
+    const isMultiParcel = parcels.length > 1
+    // Aggregat-Completion (Review-Fix #10): ein Multi-Parcel-Deal gilt erst als
+    // 'Angekommen', wenn ALLE Pakete zugestellt sind. Sonst würde das gelieferte
+    // Primary den Deal abschließen (status='Angekommen' + arrival_date) und ihn
+    // aus der Poll-Query werfen — die noch unterwegs befindlichen Sekundär-
+    // Pakete (DHL/UPS ohne Webhook) würden nie wieder gepollt.
+    let allDelivered = true
+    let latestDeliveredAt: string | null = null
+    for (const parcelNumber of parcels) {
+      // Tages-Quota-Guard: Cap erreicht → kein Call mehr für diesen Carrier
+      // heute (DHL sperrt bei >1.000/Tag mit 429, Lesson PR #115).
+      const quotaKey = `${workspaceId}:${adapter.id}`
+      if ((quotaRemaining.get(quotaKey) ?? DAILY_QUOTA_CAP) <= 0) {
+        stat.quota_skipped++
+        allDelivered = false
+        break
+      }
+      // Call-Budget innerhalb des Deals respektieren (Review-Fix #1/#14):
+      // verbleibt kein Budget, brechen wir VOR dem Call ab — der Deal bleibt
+      // unvollständig gepollt (allDelivered=false → kein vorzeitiges Schließen).
+      if (stat.checked >= budget) {
+        allDelivered = false
+        break
+      }
 
-    stat.checked++
-    quotaRemaining.set(quotaKey, (quotaRemaining.get(quotaKey) ?? DAILY_QUOTA_CAP) - 1)
-    callsMade.set(adapter.id, (callsMade.get(adapter.id) ?? 0) + 1)
+      // Rate-Limit-Schutz: ≥350 ms seit dem letzten echten API-Call (DHL 3 req/s).
+      if (madeApiCall) await _trkSleep(MIN_MS_BETWEEN_TRACKING_CALLS)
+      madeApiCall = true
 
-    let parsed: ParsedTracking | null = null
-    try {
-      parsed = await adapter.fetchStatus(deal.tracking, apiKey)
-      lastErrorByCarrier.set(adapter.id, null)
-    } catch (e) {
-      console.warn('adapter.fetchStatus failed', adapter.id, deal.id, (e as Error).message)
-      stat.errors++
-      lastErrorByCarrier.set(adapter.id, ((e as Error).message ?? 'fetch failed').slice(0, 500))
-      continue
+      stat.checked++
+      quotaRemaining.set(quotaKey, (quotaRemaining.get(quotaKey) ?? DAILY_QUOTA_CAP) - 1)
+      callsMade.set(adapter.id, (callsMade.get(adapter.id) ?? 0) + 1)
+
+      let parsed: ParsedTracking | null = null
+      try {
+        parsed = await adapter.fetchStatus(parcelNumber, apiKey)
+        lastErrorByCarrier.set(adapter.id, null)
+      } catch (e) {
+        console.warn('adapter.fetchStatus failed', adapter.id, deal.id, (e as Error).message)
+        stat.errors++
+        lastErrorByCarrier.set(adapter.id, ((e as Error).message ?? 'fetch failed').slice(0, 500))
+        allDelivered = false
+        continue
+      }
+      if (!parsed) {
+        allDelivered = false
+        continue
+      }
+
+      if (parsed.status === 'delivered') {
+        const ts = parsed.deliveredAt ?? parsed.statusTimestamp ?? null
+        if (ts && (!latestDeliveredAt || ts > latestDeliveredAt)) latestDeliveredAt = ts
+      } else {
+        allDelivered = false
+      }
+
+      if (parcelNumber === primary) {
+        // Klarna-style Live-Visibility: bei JEDEM erfolgreichen Parse den
+        // Live-Status persistieren — nicht nur bei 'delivered'. Duplikate
+        // (gleicher Status wie zuletzt) werden geskippt (Spam-Schutz).
+        // Multi-Parcel: Completion (status='Angekommen'/arrival_date/Activity)
+        // wird unterdrückt — das macht der Aggregat-Block unten, sobald ALLE
+        // Pakete zugestellt sind. live_status (Primary) wird normal gesetzt.
+        const ok = await persistLiveStatus(
+          admin, deal, adapter, parsed, pushCtx,
+          { suppressCompletion: isMultiParcel },
+        )
+        if (ok && parsed.status === 'delivered') stat.delivered++
+      } else {
+        await persistSecondaryEvents(admin, deal, adapter, parsed, parcelNumber)
+      }
     }
-    if (!parsed) continue
 
-    // Klarna-style Live-Visibility: bei JEDEM erfolgreichen Parse den
-    // Live-Status persistieren — nicht nur bei 'delivered'. Duplikate (gleicher
-    // Status wie zuletzt) werden geskippt (Spam-Schutz).
-    const ok = await persistLiveStatus(admin, deal, adapter, parsed, pushCtx)
-    if (ok && parsed.status === 'delivered') stat.delivered++
+    // Aggregat-Completion: alle Pakete zugestellt → Deal abschließen. Der
+    // .eq('status','Unterwegs').is('arrival_date',null)-Guard macht den Write
+    // idempotent + race-safe (parallele Polls / dpd-push).
+    if (isMultiParcel && allDelivered) {
+      const arrivalIso = latestDeliveredAt ?? new Date().toISOString()
+      const { data: completed, error: complErr } = await admin
+        .from('deals')
+        .update({ status: 'Angekommen', arrival_date: arrivalIso })
+        .eq('id', deal.id)
+        .eq('workspace_id', deal.workspace_id)
+        .eq('status', 'Unterwegs')
+        .is('arrival_date', null)
+        .select('id')
+      if (complErr) {
+        console.warn('multi-parcel completion update failed', deal.id, complErr.message)
+      } else if (completed && completed.length > 0) {
+        // Nur beim ECHTEN Übergang loggen — der Guard oben matcht beim
+        // zweiten Lauf 0 Rows (kein doppelter Activity-Log-Eintrag).
+        await admin.from('activity_log').insert({
+          workspace_id: deal.workspace_id,
+          user_id: deal.user_id,
+          type: 'tracking_delivered',
+          message: `Sendung "${deal.product}" vollständig angekommen (${parcels.length} Pakete)`,
+          date: arrivalIso,
+        })
+      }
+    }
   }
 
   // Credential-Flush: EIN atomarer Bump pro Carrier (Review-Fix: ein
@@ -501,9 +585,14 @@ async function persistLiveStatus(
   adapter: TrackingAdapter,
   parsed: ParsedTracking,
   pushCtx: PushContext,
+  opts: { suppressCompletion?: boolean } = {},
 ): Promise<boolean> {
   const nowIso = new Date().toISOString()
-  const patch = buildLiveStatusUpdate(deal, parsed, nowIso)
+  // Multi-Parcel: suppressCompletion=true (Primary eines Mehrpaket-Deals)
+  // setzt zwar live_status='delivered', aber NICHT status='Angekommen' /
+  // arrival_date — der Deal-Abschluss erfolgt erst, wenn alle Pakete da sind
+  // (Aggregat-Block im Poll-Loop).
+  const patch = buildLiveStatusUpdate(deal, parsed, nowIso, opts)
 
   // last_polled_at wird IMMER gestempelt — auch bei Duplicate-Status. Das
   // steuert die adaptive Poll-Frequenz (isDuePoll) + den Retrack-Cooldown.
@@ -523,7 +612,7 @@ async function persistLiveStatus(
     .update(update)
     .eq('id', deal.id)
     .eq('workspace_id', deal.workspace_id)
-  if (patch && parsed.status === 'delivered') {
+  if (patch && parsed.status === 'delivered' && !opts.suppressCompletion) {
     query = query.eq('status', 'Unterwegs').is('arrival_date', null)
   }
   const { error: updErr } = await query
@@ -569,7 +658,10 @@ async function persistLiveStatus(
     await maybeSendStatusPush(admin, pushCtx, deal, newStatus, parsed)
   }
 
-  if (parsed.status === 'delivered') {
+  // Activity-Log nur beim echten Deal-Abschluss. Bei suppressCompletion
+  // (Multi-Parcel-Primary) übernimmt das der Aggregat-Block, sobald ALLE
+  // Pakete zugestellt sind — sonst gäbe es einen verfrühten „angekommen".
+  if (parsed.status === 'delivered' && !opts.suppressCompletion) {
     const message = parsed.lastEvent
       ? `Sendung "${deal.product}" via ${adapter.label} angekommen: ${parsed.lastEvent}`
       : `Sendung "${deal.product}" via ${adapter.label} angekommen`
@@ -583,6 +675,44 @@ async function persistLiveStatus(
   }
 
   return true
+}
+
+/// Multi-Parcel (2026-06-12): Persistenz für SEKUNDÄRE Paketnummern aus
+/// `deals.trackings[]`. Schreibt ausschließlich tracking_events unter der
+/// eigenen Nummer — KEIN live_status, KEIN last_polled_at, KEIN Push, KEIN
+/// Activity-Log (das alles gehört dem Primary). Kein synthetischer
+/// Fallback-Event: der hängt an `deal.live_status` (Primary-Zustand) und
+/// würde für Sekundäre stündlich Duplikate erzeugen.
+async function persistSecondaryEvents(
+  admin: ReturnType<typeof createClient>,
+  deal: DealRow,
+  adapter: TrackingAdapter,
+  parsed: ParsedTracking,
+  parcelNumber: string,
+): Promise<void> {
+  const eventRows = buildTrackingEventRows(
+    deal,
+    adapter.id,
+    parsed,
+    new Date().toISOString(),
+    false,
+    parcelNumber,
+  )
+  if (eventRows.length === 0) return
+  const { error } = await admin
+    .from('tracking_events')
+    .upsert(eventRows, {
+      onConflict: 'deal_id,tracking,occurred_at,description',
+      ignoreDuplicates: true,
+    })
+  if (error) {
+    // PII-arm: Tracking-Nummer nur als Suffix loggen (konsistent zum
+    // redact()-Pattern in dpd-push / tracking_detection).
+    const redacted = parcelNumber.length <= 4
+      ? `…${parcelNumber}`
+      : `…${parcelNumber.slice(-4)}`
+    console.warn('secondary tracking_events upsert failed', deal.id, redacted, error.message)
+  }
 }
 
 
@@ -606,18 +736,34 @@ export function remainingDailyQuota(
 ///   pending/exception/null → 2×/Tag (≥660 min)
 ///   delivered/expired → nie
 /// Nie gepollte Deals (last_polled_at null) sind immer fällig.
+///
+/// Multi-Parcel (Review-Fix #10): live_status spiegelt das PRIMARY-Paket. Ist
+/// das Primary 'delivered', der Deal aber noch in der Poll-Query (status=
+/// 'Unterwegs' → Aggregat-Completion noch nicht erreicht, also Sekundäre offen),
+/// darf der delivered-Early-Return NICHT greifen — sonst verhungern die
+/// Sekundär-Pakete. Dann zählt die in_transit-Kadenz (~4 h).
 export function isDuePoll(
-  deal: Pick<DealRow, 'live_status' | 'last_polled_at'>,
+  deal: Pick<DealRow, 'live_status' | 'last_polled_at' | 'tracking' | 'trackings'>,
   nowMs: number,
 ): boolean {
-  if (deal.live_status === 'delivered' || deal.live_status === 'expired') {
+  // Single Source of Truth: dieselbe Paket-Zählung wie der Poll-Loop
+  // (dedupliziert [tracking, ...trackings]) — verhindert Drift, falls
+  // trackings[] den Primary mal nicht enthält.
+  const isMultiParcel = dealParcelNumbers(deal).length > 1
+  const primaryDeliveredButOpen = isMultiParcel && deal.live_status === 'delivered'
+  if (
+    (deal.live_status === 'delivered' || deal.live_status === 'expired') &&
+    !primaryDeliveredButOpen
+  ) {
     return false
   }
   if (!deal.last_polled_at) return true
   const last = Date.parse(deal.last_polled_at)
   if (!Number.isFinite(last)) return true
   const elapsedMin = (nowMs - last) / 60_000
-  switch (deal.live_status) {
+  // Primary geliefert, Sekundäre offen → wie in_transit weiterpollen.
+  const effectiveStatus = primaryDeliveredButOpen ? 'in_transit' : deal.live_status
+  switch (effectiveStatus) {
     case 'out_for_delivery':
       return elapsedMin >= 50
     case 'in_transit':

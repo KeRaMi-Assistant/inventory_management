@@ -20,12 +20,17 @@ import '../providers/deals_provider.dart';
 class TrackingTimelineSection extends StatefulWidget {
   final int dealId;
 
+  /// Multi-Parcel: filtert die Timeline auf EIN Paket. `null` = alle Events
+  /// des Deals (Single-Parcel-Verhalten, dort gibt es nur eine Nummer).
+  final String? tracking;
+
   /// Bei Wechsel dieses Tokens (z.B. nach Retrack) wird neu geladen.
   final Object? refreshToken;
 
   const TrackingTimelineSection({
     super.key,
     required this.dealId,
+    this.tracking,
     this.refreshToken,
   });
 
@@ -50,13 +55,15 @@ class _TrackingTimelineSectionState extends State<TrackingTimelineSection> {
   void didUpdateWidget(covariant TrackingTimelineSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.dealId != widget.dealId ||
+        oldWidget.tracking != widget.tracking ||
         oldWidget.refreshToken != widget.refreshToken) {
       setState(() => _future = _load());
     }
   }
 
-  Future<List<TrackingEvent>> _load() =>
-      context.read<DealsProvider>().fetchTrackingEvents(widget.dealId);
+  Future<List<TrackingEvent>> _load() => context
+      .read<DealsProvider>()
+      .fetchTrackingEvents(widget.dealId, tracking: widget.tracking);
 
   @override
   Widget build(BuildContext context) {

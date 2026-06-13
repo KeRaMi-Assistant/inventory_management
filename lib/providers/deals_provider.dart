@@ -1259,13 +1259,29 @@ class DealsProvider extends ChangeNotifier {
   /// Verwirft das Tracking eines Deals.
   Future<void> discardDealTracking(int dealId) async {
     await _repository.discardDealTracking(dealId);
-    _patchDeal(dealId, tracking: null, trackingConfidence: TrackingConfidence.none, trackingNeedsReview: false);
+    _patchDeal(dealId, tracking: null, trackings: const [], trackingConfidence: TrackingConfidence.none, trackingNeedsReview: false);
   }
 
   /// Setzt eine manuell eingegebene Tracking-Nummer auf einem Deal.
   Future<void> updateDealTrackingManually(int dealId, String tracking) async {
     await _repository.updateDealTrackingManually(dealId, tracking);
-    _patchDeal(dealId, tracking: tracking, trackingConfidence: TrackingConfidence.manual, trackingNeedsReview: false);
+    // Multi-Parcel (Review-Fix #9/#11): trackings[] in-memory mitziehen —
+    // der alte Primary fliegt raus, vorhandene Sekundäre (≠ alter/neuer
+    // Primary) bleiben. Spiegelt den Hard-Replace im Repository.
+    final idx = _deals.indexWhere((d) => d.id == dealId);
+    final old = idx == -1 ? null : _deals[idx];
+    final mergedTrackings = old == null
+        ? <String>[tracking]
+        : <String>[
+            tracking,
+            for (final t in old.trackings)
+              if (t != old.tracking && t != tracking) t,
+          ];
+    _patchDeal(dealId,
+        tracking: tracking,
+        trackings: mergedTrackings,
+        trackingConfidence: TrackingConfidence.manual,
+        trackingNeedsReview: false);
   }
 
   /// User-initiiertes Re-Tracking eines einzelnen Deals (Klarna-Pattern).
@@ -1285,12 +1301,15 @@ class DealsProvider extends ChangeNotifier {
   /// Lädt die Tracking-Event-Timeline eines Deals (Paket 1, Klarna-Style).
   /// Kein lokaler Cache — die Timeline wird on-demand im Deal-Detail geladen
   /// und ist nach Retrack/Poll sofort frisch.
-  Future<List<TrackingEvent>> fetchTrackingEvents(int dealId) =>
-      _repository.fetchTrackingEvents(dealId);
+  /// Multi-Parcel: [tracking] filtert auf ein einzelnes Paket.
+  Future<List<TrackingEvent>> fetchTrackingEvents(int dealId,
+          {String? tracking}) =>
+      _repository.fetchTrackingEvents(dealId, tracking: tracking);
 
   void _patchDeal(
     int dealId, {
     Object? tracking = _kSentinel,
+    List<String>? trackings,
     TrackingConfidence? trackingConfidence,
     bool? trackingNeedsReview,
   }) {
@@ -1299,6 +1318,7 @@ class DealsProvider extends ChangeNotifier {
     final old = _deals[idx];
     _deals[idx] = old.copyWith(
       tracking: tracking == _kSentinel ? old.tracking : tracking as String?,
+      trackings: trackings ?? old.trackings,
       trackingConfidence: trackingConfidence ?? old.trackingConfidence,
       trackingNeedsReview: trackingNeedsReview ?? old.trackingNeedsReview,
     );

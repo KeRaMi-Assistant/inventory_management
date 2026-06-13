@@ -242,6 +242,19 @@ class DealCard extends StatelessWidget {
                         region: shop?.region,
                       ),
                     ),
+                  // Multi-Parcel-Badge: Deal hat weitere Pakete neben dem
+                  // Primary — Details (Chips + Timeline) im Deal-Dialog.
+                  if (deal.tracking != null &&
+                      deal.secondaryTrackings.isNotEmpty)
+                    Tooltip(
+                      message: l10n.dealMoreParcelsTooltip(
+                          deal.secondaryTrackings.length),
+                      child: _MetaChip(
+                        icon: Icons.layers_outlined,
+                        label: '+${deal.secondaryTrackings.length}',
+                        color: AppTheme.accent,
+                      ),
+                    ),
                   if (deal.hasReceipt)
                     _MetaChip(
                       icon: Icons.receipt_long_outlined,

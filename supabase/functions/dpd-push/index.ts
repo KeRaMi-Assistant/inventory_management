@@ -157,6 +157,14 @@ export function dpdPushToParsed(params: URLSearchParams): {
   const pnr = (params.get('pnr') ?? '').replace(/\s+/g, '').toUpperCase()
   const statusRaw = (params.get('status') ?? '').toLowerCase()
   if (!pnr || !statusRaw) return null
+  // Security (Review feature/multi-parcel-deals #1): pnr fließt später in
+  // einen PostgREST-`.or()`-Filterstring, der mit Service-Role (RLS aus)
+  // läuft — die einzige Workspace-Scoping-Grenze. Filter-Metazeichen
+  // (`,` `.` `(` `)` `*` `:` `{` `}`) würden den Filter aufbrechen und
+  // cross-workspace lesen. Hier an der Validierungsgrenze hart auf
+  // alphanumerisch begrenzen (DPD-pnr ist rein numerisch 13–14-stellig);
+  // alles andere → null → fail-safe-ACK ohne Deal-Match.
+  if (!/^[A-Z0-9]+$/.test(pnr)) return null
   const mapped = DPD_STATUS_MAP[statusRaw]
   if (!mapped) return null
   const occurredAt = parseDpdStatusDate(params.get('statusdate'))
@@ -243,12 +251,16 @@ Deno.serve(async (req) => {
 
   // Deal-Lookup über die normalisierte Tracking-Nummer. DPD-pnr ist
   // 13–14-stellig; Detection persistiert normalisiert (uppercase, spaceless).
+  // Multi-Parcel (2026-06-12): auch Deals matchen, die die pnr als
+  // SEKUNDÄR-Paket in trackings[] tragen (cs = Containment, GIN-Index).
+  // pnr ist in dpdPushToParsed hart auf /^[A-Z0-9]+$/ validiert (sonst
+  // null → früher ACK) → keine Filter-Metazeichen, or-Syntax-sicher.
   const { data: dealRows, error: dealErr } = await admin
     .from('deals')
     .select(
-      'id, workspace_id, user_id, product, tracking, carrier, status, arrival_date, live_status, live_status_last_event, live_status_updated_at, live_eta, last_polled_at',
+      'id, workspace_id, user_id, product, tracking, trackings, carrier, status, arrival_date, live_status, live_status_last_event, live_status_updated_at, live_eta, last_polled_at',
     )
-    .eq('tracking', converted.pnr)
+    .or(`tracking.eq.${converted.pnr},trackings.cs.{${converted.pnr}}`)
     .is('deleted_at', null)
     .limit(2)
   if (dealErr) {
@@ -256,9 +268,35 @@ Deno.serve(async (req) => {
     // 500 → DPD puffert + retried (gewollt bei DB-Hickup).
     return new Response('lookup failed', { status: 500, headers: corsHeaders })
   }
-  const deals = (dealRows ?? []) as PollDealRow[]
-  if (deals.length === 0) {
+  const allMatches = (dealRows ?? []) as PollDealRow[]
+  if (allMatches.length === 0) {
     console.log(JSON.stringify({ event: 'dpd_push_no_deal', pnr: redact(converted.pnr) }))
+    return ack()
+  }
+
+  // Cross-Tenant-Schutz (Review-Fix #8): der Service-Role-Lookup kennt kein
+  // Workspace (Webhook hat nur pnr+Token). Trägt dieselbe pnr in Workspace A
+  // als PRIMARY und in Workspace B als SEKUNDÄR-Paket, lieferte der Containment-
+  // Match beide — und WS B sähe die Carrier-Events der fremden WS-A-Sendung.
+  // Auflösung: Primary-Treffer haben Vorrang (der „Eigentümer" der Nummer);
+  // Sekundär-Treffer werden NUR verarbeitet, wenn sie eindeutig sind (genau
+  // ein Match, kein konkurrierender Primary/anderer Deal).
+  const primaryMatches = allMatches.filter(
+    (d) => (d.tracking ?? '').trim() === converted.pnr,
+  )
+  let deals: PollDealRow[]
+  if (primaryMatches.length > 0) {
+    deals = primaryMatches
+  } else if (allMatches.length === 1) {
+    deals = allMatches // eindeutiger Sekundär-Treffer
+  } else {
+    // Mehrdeutiger Sekundär-Treffer über potenziell mehrere Workspaces →
+    // nichts schreiben (kein Cross-Tenant-Leak), fail-safe ACK.
+    console.log(JSON.stringify({
+      event: 'dpd_push_ambiguous_secondary',
+      pnr: redact(converted.pnr),
+      matches: allMatches.length,
+    }))
     return ack()
   }
 
@@ -271,6 +309,34 @@ Deno.serve(async (req) => {
   // Activity-Log delivered-Guard) — der Retry heilt, ohne zu duplizieren.
   let hadWriteError = false
   for (const deal of deals) {
+    // Multi-Parcel (2026-06-12): trifft die pnr nur ein SEKUNDÄR-Paket aus
+    // trackings[], werden ausschließlich Timeline-Events unter der eigenen
+    // Nummer geschrieben — live_status/Carrier/Push/Activity gehören dem
+    // Primary (deals.tracking). Kein synthetischer Event-Vergleich gegen
+    // deal.live_status (das ist der Primary-Zustand).
+    if ((deal.tracking ?? '').trim() !== converted.pnr) {
+      const secondaryRows = buildTrackingEventRows(
+        deal,
+        'dpd',
+        converted.parsed,
+        nowIso,
+        false,
+        converted.pnr,
+      )
+      if (secondaryRows.length > 0) {
+        const { error: secErr } = await admin
+          .from('tracking_events')
+          .upsert(secondaryRows, {
+            onConflict: 'deal_id,tracking,occurred_at,description',
+            ignoreDuplicates: true,
+          })
+        if (secErr) {
+          console.warn('dpd-push: secondary events upsert failed', deal.id, secErr.message)
+          hadWriteError = true
+        }
+      }
+      continue
+    }
     // Out-of-Order-Schutz: regressive Status-Pushes patchen den Deal nicht
     // (Timeline-Event unten wird trotzdem geschrieben).
     const incoming = converted.parsed.status as LiveStatus

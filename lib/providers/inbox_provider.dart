@@ -710,6 +710,7 @@ class InboxProvider extends ChangeNotifier {
       parsedMessageId: suggestion.parsedMessageId,
       dealId: dealId,
       tracking: suggestion.tracking!,
+      trackings: suggestion.trackings,
       carrier: suggestion.carrier,
       eta: suggestion.eta,
     );
@@ -729,6 +730,7 @@ class InboxProvider extends ChangeNotifier {
       parsedMessageId: suggestion.parsedMessageId,
       dealId: dealId,
       tracking: suggestion.tracking,
+      trackings: suggestion.trackings,
       orderId: suggestion.orderId,
       eta: suggestion.eta,
     );
