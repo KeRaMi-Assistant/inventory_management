@@ -421,6 +421,11 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
           _trackingCtrl.text.isEmpty ? null : _trackingCtrl.text.trim(),
       trackings: () {
         // Multi-Parcel: Primary zuerst, dann Sekundäre — dedupliziert.
+        // Invariante (Review-Fix #13): ohne Primary KEINE trackings[] — sonst
+        // entstünde ein Deal ohne deals.tracking, der von der Poll-Query
+        // (.not('tracking','is',null)) ausgeschlossen wird → Sekundäre
+        // würden nie gepollt.
+        if (_trackingCtrl.text.trim().isEmpty) return const <String>[];
         final seen = <String>{};
         return [
           for (final tn in [_trackingCtrl.text.trim(), ..._secondaryTrackings])
@@ -958,19 +963,24 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                               (d) => d.id == widget.deal!.id,
                               orElse: () => widget.deal!,
                             );
-                            if (liveDeal.tracking == null ||
-                                liveDeal.tracking!.isEmpty) {
+                            // Review-Fix #5: Paket-Liste aus dem LOKALEN
+                            // Edit-State (Primary-Feld + Sekundär-Chips), nicht
+                            // aus liveDeal — sonst bleibt ein gerade per Chip
+                            // gelöschtes Paket im Timeline-Selektor sichtbar,
+                            // bis gespeichert+neugeladen wurde. refreshToken
+                            // bleibt aus liveDeal (Poll-Frische).
+                            final primary = _trackingCtrl.text.trim();
+                            if (primary.isEmpty) {
                               return const SizedBox.shrink();
                             }
-                            // Multi-Parcel: bei Mehrpaket-Deals wählt der
-                            // Selektor das Paket, dessen Verlauf die
-                            // Timeline zeigt (Default: Primary).
-                            final secondaries = liveDeal.secondaryTrackings;
+                            final secondaries = _secondaryTrackings
+                                .where((t) => t.isNotEmpty && t != primary)
+                                .toList();
                             final selected = _timelineParcel != null &&
-                                    (liveDeal.tracking == _timelineParcel ||
+                                    (primary == _timelineParcel ||
                                         secondaries.contains(_timelineParcel))
                                 ? _timelineParcel!
-                                : liveDeal.tracking!;
+                                : primary;
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -981,7 +991,7 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                     runSpacing: 6,
                                     children: [
                                       for (final tn in [
-                                        liveDeal.tracking!,
+                                        primary,
                                         ...secondaries,
                                       ])
                                         ChoiceChip(

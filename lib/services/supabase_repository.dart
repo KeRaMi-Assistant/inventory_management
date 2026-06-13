@@ -1728,22 +1728,31 @@ class SupabaseRepository {
   /// gespeicherten Nummern mit den Nummern einer Suggestion. Neuer Primary
   /// zuerst, bestehende Sekundäre bleiben erhalten. Spiegel der Server-
   /// Logik (`mergeDealTrackings` in inbox_parse_runner.ts).
+  ///
+  /// Die Accept-Flows (applyTrackingToDeal/linkSuggestionToExistingDeal) sind
+  /// ADDITIV: ein bestehender (abweichender) Primary bleibt als Sekundär
+  /// erhalten. Nur der manuelle Korrektur-Pfad (updateDealTrackingManually)
+  /// setzt [dropOldPrimary]=true und wirft den alten Primary raus — analog
+  /// zum Server-`droppedOldPrimary` bei einem Tracking-Replace.
   Future<List<String>> _mergedTrackingsForDeal(
     int dealId, {
     required String newPrimary,
     required List<String> incoming,
+    bool dropOldPrimary = false,
   }) async {
     var stored = const <String>[];
+    String? oldPrimary;
     try {
       final row = await _client
           .from('deals')
           .select('tracking, trackings')
           .eq('id', dealId)
           .maybeSingle();
+      oldPrimary = row?['tracking'] as String?;
       final rawList = row?['trackings'];
       stored = rawList is List
           ? rawList.map((e) => e.toString()).toList()
-          : [if (row?['tracking'] is String) row!['tracking'] as String];
+          : [?oldPrimary];
     } on Exception {
       // Merge ist Best-Effort — ohne Lesezugriff bleibt die Mail-Liste.
     }
@@ -1752,6 +1761,10 @@ class SupabaseRepository {
     for (final tn in [newPrimary, ...stored, ...incoming]) {
       final t = tn.trim();
       if (t.isEmpty || !seen.add(t)) continue;
+      if (dropOldPrimary && oldPrimary != null && t == oldPrimary.trim() &&
+          t != newPrimary.trim()) {
+        continue;
+      }
       merged.add(t);
     }
     return merged;
@@ -2130,6 +2143,11 @@ class SupabaseRepository {
         .from('deals')
         .update({
           'tracking': null,
+          // Multi-Parcel: Primary verworfen → trackings[] ebenfalls leeren,
+          // sonst bliebe ein Deal ohne Primary aber mit Sekundär-Array zurück
+          // (Invariante 'tracking==trackings[0]' verletzt, Poll-Query
+          // schließt ihn via .not('tracking','is',null) aus).
+          'trackings': null,
           'tracking_confidence': 'none',
           'tracking_needs_review': false,
         })
@@ -2153,6 +2171,17 @@ class SupabaseRepository {
     if (carrier != null) {
       payload['carrier'] = carrier.toLowerCase();
     }
+    // Multi-Parcel (Review-Fix #9/#11): trackings[] mitziehen, sonst bleibt
+    // der alte (jetzt überschriebene) Primary als Phantom-Sekundär im Array
+    // und würde weiter gepollt (Quota) + als +N-Chip angezeigt. Hard-Replace:
+    // neuer Primary an Index 0, alter Primary fliegt raus, vorhandene
+    // Sekundäre bleiben erhalten — spiegelt den Server-droppedOldPrimary-Pfad.
+    payload['trackings'] = await _mergedTrackingsForDeal(
+      dealId,
+      newPrimary: tracking,
+      incoming: const [],
+      dropOldPrimary: true,
+    );
     await _client.from('deals').update(payload).eq('id', dealId);
   }
 }

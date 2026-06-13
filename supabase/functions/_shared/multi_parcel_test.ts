@@ -6,7 +6,11 @@
 
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/assert_equals.ts'
 import { mergeDealTrackings } from './inbox_parse_runner.ts'
-import { buildTrackingEventRows, dealParcelNumbers } from './live_status.ts'
+import {
+  buildLiveStatusUpdate,
+  buildTrackingEventRows,
+  dealParcelNumbers,
+} from './live_status.ts'
 import type { ParsedTracking } from './tracking_adapters.ts'
 
 // ── mergeDealTrackings ─────────────────────────────────────────────────────
@@ -158,4 +162,35 @@ Deno.test('events: Sekundär ohne Event-Array + includeSynthetic=false → leer'
     'SECOND2',
   )
   assertEquals(rows.length, 0)
+})
+
+// ── buildLiveStatusUpdate: suppressCompletion (Multi-Parcel-Aggregat) ──────
+
+Deno.test('liveStatus: suppressCompletion setzt live_status=delivered, aber NICHT status/arrival_date', () => {
+  const deal = { live_status: 'in_transit' as const, live_status_last_event: 'x' }
+  const parsed = {
+    status: 'delivered',
+    lastEvent: 'Zugestellt',
+    deliveredAt: '2026-06-12T10:00:00Z',
+  } as ParsedTracking
+  const patch = buildLiveStatusUpdate(deal, parsed, '2026-06-12T11:00:00Z', {
+    suppressCompletion: true,
+  })
+  assertEquals(patch?.live_status, 'delivered')
+  // Deal-Abschluss unterdrückt → der Aggregat-Block setzt das erst, wenn ALLE
+  // Pakete da sind.
+  assertEquals(patch?.status, undefined)
+  assertEquals(patch?.arrival_date, undefined)
+})
+
+Deno.test('liveStatus: ohne suppressCompletion schließt das Primary den Deal (Bestandsverhalten)', () => {
+  const deal = { live_status: 'in_transit' as const, live_status_last_event: 'x' }
+  const parsed = {
+    status: 'delivered',
+    lastEvent: 'Zugestellt',
+    deliveredAt: '2026-06-12T10:00:00Z',
+  } as ParsedTracking
+  const patch = buildLiveStatusUpdate(deal, parsed, '2026-06-12T11:00:00Z')
+  assertEquals(patch?.status, 'Angekommen')
+  assertEquals(patch?.arrival_date, '2026-06-12T10:00:00Z')
 })

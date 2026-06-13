@@ -43,6 +43,20 @@ Deno.test('isDuePoll: delivered/expired nie fällig', () => {
   )
 })
 
+Deno.test('isDuePoll: Multi-Parcel mit geliefertem Primary bleibt fällig (in_transit-Kadenz)', () => {
+  // Review-Fix #10: Primary 'delivered', aber Deal noch in der Poll-Query
+  // (Sekundäre offen) → NICHT als delivered abschalten, sondern auf der
+  // in_transit-Kadenz (~4h) weiterpollen.
+  const multi = { live_status: 'delivered' as const, trackings: ['A1', 'B2'] }
+  assertEquals(isDuePoll({ ...multi, last_polled_at: minAgo(229) }, NOW), false)
+  assertEquals(isDuePoll({ ...multi, last_polled_at: minAgo(231) }, NOW), true)
+  // Single-Parcel delivered (1 Nummer) bleibt abgeschaltet.
+  assertEquals(
+    isDuePoll({ live_status: 'delivered', trackings: ['A1'], last_polled_at: null }, NOW),
+    false,
+  )
+})
+
 Deno.test('isDuePoll: out_for_delivery stündlich (≥50 min)', () => {
   assertEquals(
     isDuePoll({ live_status: 'out_for_delivery', last_polled_at: minAgo(49) }, NOW),

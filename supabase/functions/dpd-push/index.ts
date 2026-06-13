@@ -268,9 +268,35 @@ Deno.serve(async (req) => {
     // 500 → DPD puffert + retried (gewollt bei DB-Hickup).
     return new Response('lookup failed', { status: 500, headers: corsHeaders })
   }
-  const deals = (dealRows ?? []) as PollDealRow[]
-  if (deals.length === 0) {
+  const allMatches = (dealRows ?? []) as PollDealRow[]
+  if (allMatches.length === 0) {
     console.log(JSON.stringify({ event: 'dpd_push_no_deal', pnr: redact(converted.pnr) }))
+    return ack()
+  }
+
+  // Cross-Tenant-Schutz (Review-Fix #8): der Service-Role-Lookup kennt kein
+  // Workspace (Webhook hat nur pnr+Token). Trägt dieselbe pnr in Workspace A
+  // als PRIMARY und in Workspace B als SEKUNDÄR-Paket, lieferte der Containment-
+  // Match beide — und WS B sähe die Carrier-Events der fremden WS-A-Sendung.
+  // Auflösung: Primary-Treffer haben Vorrang (der „Eigentümer" der Nummer);
+  // Sekundär-Treffer werden NUR verarbeitet, wenn sie eindeutig sind (genau
+  // ein Match, kein konkurrierender Primary/anderer Deal).
+  const primaryMatches = allMatches.filter(
+    (d) => (d.tracking ?? '').trim() === converted.pnr,
+  )
+  let deals: PollDealRow[]
+  if (primaryMatches.length > 0) {
+    deals = primaryMatches
+  } else if (allMatches.length === 1) {
+    deals = allMatches // eindeutiger Sekundär-Treffer
+  } else {
+    // Mehrdeutiger Sekundär-Treffer über potenziell mehrere Workspaces →
+    // nichts schreiben (kein Cross-Tenant-Leak), fail-safe ACK.
+    console.log(JSON.stringify({
+      event: 'dpd_push_ambiguous_secondary',
+      pnr: redact(converted.pnr),
+      matches: allMatches.length,
+    }))
     return ack()
   }
 

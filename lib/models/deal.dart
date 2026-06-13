@@ -233,6 +233,13 @@ class Deal {
         'ticket_number': ticketNumber,
         'ticket_url': ticketUrl,
         'tracking': tracking,
+        // Multi-Parcel: full-row write. Wie tracking/status/note unterliegt
+        // trackings damit dem Last-Write-Wins eines Dialog-Saves auf einem
+        // Snapshot — mergt der Server (zweite Versand-Mail) ein Sekundär-Paket,
+        // WÄHREND der Dialog offen ist, überschreibt der Save es mit dem
+        // lokalen Stand (kommt über die nächste Mail zurück). Die concurrent-
+        // sicheren Pfade (Accept-Flows + updateDealTrackingManually) nutzen
+        // bewusst Delta-Writes mit frischem DB-Merge statt toSupabaseInsert.
         'trackings': trackings.isEmpty ? null : trackings,
         'arrival_date': arrivalDate?.toIso8601String(),
         'shipped_at': shippedAt?.toIso8601String(),

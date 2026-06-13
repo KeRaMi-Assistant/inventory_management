@@ -76,6 +76,7 @@ export function buildLiveStatusUpdate(
   deal: Pick<PollDealRow, 'live_status' | 'live_status_last_event'>,
   parsed: ParsedTracking,
   nowIso: string,
+  opts: { suppressCompletion?: boolean } = {},
 ): Record<string, unknown> | null {
   // 'unknown' niemals persistieren — würde echte Status überschreiben.
   if (parsed.status === 'unknown') return null
@@ -98,7 +99,12 @@ export function buildLiveStatusUpdate(
     live_status_updated_at: nowIso,
   }
 
-  if (parsed.status === 'delivered') {
+  // Multi-Parcel: suppressCompletion hält den Deal in 'Unterwegs', auch wenn
+  // das PRIMARY-Paket zugestellt ist — der Deal-Abschluss (status='Angekommen'
+  // + arrival_date) erfolgt erst, wenn ALLE Pakete da sind (Aggregat-Block im
+  // tracking-poll). live_status='delivered' wird trotzdem gesetzt, damit die
+  // UI das Primary-Paket korrekt anzeigt.
+  if (parsed.status === 'delivered' && !opts.suppressCompletion) {
     update.status = 'Angekommen'
     update.arrival_date = parsed.deliveredAt ?? nowIso
   }
