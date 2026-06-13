@@ -534,7 +534,7 @@
   "dealTracking": "Tracking",
   "dealSecondaryParcels": "More parcels",
   "dealRemoveParcelTooltip": "Remove parcel",
-  "dealMoreParcelsTooltip": "{count} more parcels",
+  "dealMoreParcelsTooltip": "{count, plural, one{1 more parcel} other{{count} more parcels}}",
   "@dealMoreParcelsTooltip": {
     "placeholders": {
       "count": {
