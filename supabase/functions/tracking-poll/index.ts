@@ -311,7 +311,9 @@ Deno.serve(async (req) => {
   return jsonResp({ ok: true, workspaces: stats.length, stats })
 })
 
-async function pollWorkspace(
+// Exportiert für Integrationstests (Mock-Admin + ADAPTERS-Override) — der
+// produktive Aufruf bleibt in Deno.serve.
+export async function pollWorkspace(
   admin: ReturnType<typeof createClient>,
   workspaceId: string,
   carriers: Set<'dhl' | 'dpd' | 'ups'>,
