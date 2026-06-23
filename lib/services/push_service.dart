@@ -51,6 +51,16 @@ class PushService {
       // Web bräuchte VAPID-Key + service-worker-Setup — out of scope.
       return;
     }
+    // iOS/macOS-Push ist noch nicht eingerichtet: ohne GoogleService-Info.plist
+    // crasht `Firebase.initializeApp()` auf Apple-Plattformen NATIV — die
+    // Objective-C-Exception ist in Dart NICHT abfangbar (das try/catch unten
+    // greift nicht), die App schließt sofort bzw. zeigt nur einen weißen
+    // Screen. Bis plist + APNs-Setup vorliegen, Firebase/Push hier
+    // überspringen. (Android läuft über google-services.json normal weiter.)
+    if (defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      return;
+    }
     try {
       await Firebase.initializeApp();
       _firebaseAvailable = true;
