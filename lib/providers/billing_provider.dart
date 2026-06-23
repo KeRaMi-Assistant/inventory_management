@@ -20,8 +20,15 @@ class BillingProvider extends ChangeNotifier {
   bool get isLoading => _loading;
   String? get error => _error;
 
-  /// Aktueller Plan — Default Free, wenn noch kein Profil geladen wurde.
-  BillingPlan get currentPlan => _profile?.plan ?? BillingPlan.free;
+  /// Aktueller Plan.
+  ///
+  /// TEST-PHASE (Kauf-/Abo-Flow noch nicht live): ALLE Nutzer bekommen den
+  /// Top-Plan, damit Tester den vollen Funktionsumfang sehen. Bewusst ein
+  /// reiner Gating-/Anzeige-Override — die `billing_profiles`-Zeile in der DB
+  /// bleibt unangetastet (kein Cleanup/„Downgrade" der Tester beim Launch).
+  /// Sobald der Kauf-Flow live geht, diese eine Zeile zurücksetzen auf:
+  ///   `return _profile?.plan ?? BillingPlan.free;`
+  BillingPlan get currentPlan => BillingPlan.enterprise;
 
   /// Convenience-Getter für UI-Logik. `-1` = unbegrenzt.
   int get workspaceLimit => currentPlan.workspaceLimit;
