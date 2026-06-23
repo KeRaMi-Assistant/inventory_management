@@ -104,6 +104,10 @@ class KpiCard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.2,
                   ),
+                  // Lange Labels („Offene Bestellungen") dürfen auf zwei Zeilen
+                  // umbrechen statt einzeilig zu kürzen — passt in die
+                  // 32-px-Icon-Höhe, Karten werden dadurch nicht höher.
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

@@ -37,6 +37,7 @@ import '../widgets/add_edit_mailbox_dialog.dart';
 import '../widgets/add_edit_shop_dialog.dart';
 import '../widgets/section_hub_screen.dart';
 import '../utils/responsive.dart';
+import 'about_screen.dart';
 import 'billing_profile_screen.dart';
 import 'help_screen.dart';
 import 'pricing_screen.dart';
@@ -785,6 +786,23 @@ class _GeneralTab extends StatelessWidget {
             const _LowStockThresholdCard(),
             const _DemoReloadSection(),
             const _DemoWipeSection(),
+            const SizedBox(height: 24),
+            _SectionHeader(title: l10n.settingsAboutSection),
+            const SizedBox(height: 8),
+            Card(
+              child: ListTile(
+                leading: Icon(Icons.info_outline,
+                    color: AppTheme.accentTextOf(context)),
+                title: Text(l10n.settingsAboutTile),
+                subtitle: Text(l10n.settingsAboutSubtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AboutScreen(),
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 32),
             const Divider(),
             const SizedBox(height: 16),

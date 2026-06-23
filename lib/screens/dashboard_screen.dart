@@ -449,111 +449,215 @@ class _BuyerOverview extends StatelessWidget {
           icon: Icons.people_outline,
           child: rows.isEmpty
               ? _MutedText(l10n.dashboardBuyerEmpty)
-              : Column(
-                  children: [
-                    // Header row
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppTheme.space8),
-                      child: Row(
-                        children: [
-                          const SizedBox(width: AppTheme.space20),
-                          Expanded(
-                            child: Text(l10n.dashboardColBuyer,
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.textMutedOf(context),
-                                    letterSpacing: 0.5)),
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Phone (< 380 px): die mehrspaltige Tabelle wird zu eng →
+                    // der Käufer-Name würde beschnitten. Dann pro Käufer stapeln:
+                    // Name auf eigener Zeile (volle Breite), darunter
+                    // „N DEALS · Betrag OFFEN". Ab 380 px die volle Tabelle inkl.
+                    // „Letzter Deal" (Produktname dort per Tooltip erreichbar).
+                    final stacked = constraints.maxWidth < 380;
+                    final showLastDeal = !stacked;
+
+                    if (stacked) {
+                      return Column(
+                        children: rows
+                            .map(
+                              (row) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: AppTheme.space10),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                      bottom: BorderSide(
+                                          color: AppTheme.borderOf(context))),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 10,
+                                      height: 10,
+                                      margin: const EdgeInsets.only(top: 3), // off-grid: dot mit erster Textzeile ausrichten
+                                      decoration: BoxDecoration(
+                                          color: row.buyer.buyerCellColor,
+                                          shape: BoxShape.circle),
+                                    ),
+                                    const SizedBox(width: AppTheme.space10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Tooltip(
+                                            message: row.buyer.name,
+                                            child: Text(row.buyer.name,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 13,
+                                                    color:
+                                                        AppTheme.textPrimaryOf(
+                                                            context))),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                  '${row.count} ${l10n.dashboardColDeals}',
+                                                  style: TextStyle(
+                                                      fontSize: 11,
+                                                      color:
+                                                          AppTheme.textMutedOf(
+                                                              context))),
+                                              Text('  ·  ',
+                                                  style: TextStyle(
+                                                      fontSize: 11,
+                                                      color:
+                                                          AppTheme.textMutedOf(
+                                                              context))),
+                                              Flexible(
+                                                child: Text(
+                                                    '${fmt.format(row.open)} ${l10n.dashboardColOpen}',
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color:
+                                                            AppTheme.warning)),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      );
+                    }
+
+                    return Column(
+                      children: [
+                        // Header row
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppTheme.space8),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: AppTheme.space20),
+                              Expanded(
+                                child: Text(l10n.dashboardColBuyer,
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textMutedOf(context),
+                                        letterSpacing: 0.5)),
+                              ),
+                              SizedBox(
+                                width: 70,
+                                child: Text(l10n.dashboardColDeals,
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textMutedOf(context),
+                                        letterSpacing: 0.5)),
+                              ),
+                              SizedBox(
+                                width: 110,
+                                child: Text(l10n.dashboardColOpen,
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textMutedOf(context),
+                                        letterSpacing: 0.5)),
+                              ),
+                              if (showLastDeal) ...[
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(l10n.dashboardColLastDeal,
+                                      textAlign: TextAlign.right,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.textMutedOf(context),
+                                          letterSpacing: 0.5)),
+                                ),
+                              ],
+                            ],
                           ),
-                          SizedBox(
-                            width: 70,
-                            child: Text(l10n.dashboardColDeals,
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.textMutedOf(context),
-                                    letterSpacing: 0.5)),
-                          ),
-                          SizedBox(
-                            width: 110,
-                            child: Text(l10n.dashboardColOpen,
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.textMutedOf(context),
-                                    letterSpacing: 0.5)),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(l10n.dashboardColLastDeal,
-                                textAlign: TextAlign.right,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.textMutedOf(context),
-                                    letterSpacing: 0.5)),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Divider(height: 1, color: AppTheme.borderStrongOf(context)),
-                    ...rows.map(
-                      (row) => Container(
-                        padding: const EdgeInsets.symmetric(vertical: AppTheme.space10),
-                        decoration: BoxDecoration(
-                          border: Border(bottom: BorderSide(color: AppTheme.borderOf(context))),
                         ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 10,  // off-grid: buyer dot indicator size (visual, not layout spacing)
-                              height: 10, // off-grid: buyer dot indicator size (visual, not layout spacing)
-                              decoration: BoxDecoration(
-                                  color: row.buyer.buyerCellColor,
-                                  shape: BoxShape.circle),
+                        Divider(height: 1, color: AppTheme.borderStrongOf(context)),
+                        ...rows.map(
+                          (row) => Container(
+                            padding: const EdgeInsets.symmetric(vertical: AppTheme.space10),
+                            decoration: BoxDecoration(
+                              border: Border(bottom: BorderSide(color: AppTheme.borderOf(context))),
                             ),
-                            const SizedBox(width: AppTheme.space10),
-                            Expanded(
-                              child: Text(row.buyer.name,
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                      color: AppTheme.textPrimaryOf(context)),
-                                  overflow: TextOverflow.ellipsis),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 10,  // off-grid: buyer dot indicator size (visual, not layout spacing)
+                                  height: 10, // off-grid: buyer dot indicator size (visual, not layout spacing)
+                                  decoration: BoxDecoration(
+                                      color: row.buyer.buyerCellColor,
+                                      shape: BoxShape.circle),
+                                ),
+                                const SizedBox(width: AppTheme.space10),
+                                Expanded(
+                                  child: Tooltip(
+                                    message: row.buyer.name,
+                                    child: Text(row.buyer.name,
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                            color: AppTheme.textPrimaryOf(context)),
+                                        overflow: TextOverflow.ellipsis),
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 70,
+                                  child: Text('${row.count}',
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                          fontSize: 13, color: AppTheme.textSecondaryOf(context))),
+                                ),
+                                SizedBox(
+                                  width: 110,
+                                  child: Text(fmt.format(row.open),
+                                      textAlign: TextAlign.right,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          color: AppTheme.warning,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13)),
+                                ),
+                                if (showLastDeal) ...[
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Tooltip(
+                                      message: row.last?.product ?? '-',
+                                      child: Text(row.last?.product ?? '-',
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.right,
+                                          style: TextStyle(
+                                              fontSize: 12, color: AppTheme.textMutedOf(context))),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
-                            SizedBox(
-                              width: 70,
-                              child: Text('${row.count}',
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                      fontSize: 13, color: AppTheme.textSecondaryOf(context))),
-                            ),
-                            SizedBox(
-                              width: 110,
-                              child: Text(fmt.format(row.open),
-                                  textAlign: TextAlign.right,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      color: AppTheme.warning,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13)),
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(row.last?.product ?? '-',
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                      fontSize: 12, color: AppTheme.textMutedOf(context))),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
         );
       },

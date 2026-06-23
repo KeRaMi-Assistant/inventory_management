@@ -1802,6 +1802,60 @@ abstract class AppLocalizations {
   /// **'{deals} Deals · {buyers} Käufer · {shops} Shops · {items} Lagerartikel'**
   String settingsDataSubtitle(int deals, int buyers, int shops, int items);
 
+  /// No description provided for @aboutScreenTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Über'**
+  String get aboutScreenTitle;
+
+  /// No description provided for @aboutAppName.
+  ///
+  /// In de, this message translates to:
+  /// **'InventoryOS'**
+  String get aboutAppName;
+
+  /// No description provided for @aboutTagline.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestell-, Lager- & Deal-Verwaltung für Reseller.'**
+  String get aboutTagline;
+
+  /// No description provided for @aboutVersionLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Version'**
+  String get aboutVersionLabel;
+
+  /// No description provided for @aboutCopyright.
+  ///
+  /// In de, this message translates to:
+  /// **'© 2026 Kerem Özkan'**
+  String get aboutCopyright;
+
+  /// No description provided for @aboutAllRightsReserved.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Rechte vorbehalten.'**
+  String get aboutAllRightsReserved;
+
+  /// No description provided for @settingsAboutSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Über'**
+  String get settingsAboutSection;
+
+  /// No description provided for @settingsAboutTile.
+  ///
+  /// In de, this message translates to:
+  /// **'Über die App'**
+  String get settingsAboutTile;
+
+  /// No description provided for @settingsAboutSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Version, Copyright & Rechtliches'**
+  String get settingsAboutSubtitle;
+
   /// No description provided for @settingsLanguageSection.
   ///
   /// In de, this message translates to:

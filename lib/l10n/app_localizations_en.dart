@@ -949,6 +949,34 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get aboutScreenTitle => 'About';
+
+  @override
+  String get aboutAppName => 'InventoryOS';
+
+  @override
+  String get aboutTagline =>
+      'Order, inventory & deal management for resellers.';
+
+  @override
+  String get aboutVersionLabel => 'Version';
+
+  @override
+  String get aboutCopyright => '© 2026 Kerem Özkan';
+
+  @override
+  String get aboutAllRightsReserved => 'All rights reserved.';
+
+  @override
+  String get settingsAboutSection => 'About';
+
+  @override
+  String get settingsAboutTile => 'About this app';
+
+  @override
+  String get settingsAboutSubtitle => 'Version, copyright & legal';
+
+  @override
   String get settingsLanguageSection => 'Language';
 
   @override

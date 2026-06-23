@@ -440,6 +440,15 @@
       "items": { "type": "int" }
     }
   },
+  "aboutScreenTitle": "Über",
+  "aboutAppName": "InventoryOS",
+  "aboutTagline": "Bestell-, Lager- & Deal-Verwaltung für Reseller.",
+  "aboutVersionLabel": "Version",
+  "aboutCopyright": "© 2026 Kerem Özkan",
+  "aboutAllRightsReserved": "Alle Rechte vorbehalten.",
+  "settingsAboutSection": "Über",
+  "settingsAboutTile": "Über die App",
+  "settingsAboutSubtitle": "Version, Copyright & Rechtliches",
   "settingsLanguageSection": "Sprache",
   "settingsLanguageTitle": "Sprache / Language",
   "settingsLanguageSubtitle": "Auf Deutsch oder Englisch umstellen. „System\" folgt dem Geräte-Setting.",
