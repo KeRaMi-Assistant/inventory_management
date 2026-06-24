@@ -109,6 +109,11 @@ class AdaptiveNavScaffold extends StatelessWidget {
   final VoidCallback onImport;
   final VoidCallback onExport;
 
+  /// Wenn gesetzt: zeigt einen Zurück-Pfeil (leading) in der Phone-AppBar
+  /// und blendet das Hilfe-Icon aus. Für Overlay-Tabs wie die Hilfe, die
+  /// sonst keinen Rückweg hätten.
+  final VoidCallback? onBack;
+
   const AdaptiveNavScaffold({
     super.key,
     required this.sections,
@@ -127,6 +132,7 @@ class AdaptiveNavScaffold extends StatelessWidget {
     required this.onExport,
     this.railBadgeBuilder,
     this.floatingActionButton,
+    this.onBack,
   });
 
   @override
@@ -240,6 +246,15 @@ class AdaptiveNavScaffold extends StatelessWidget {
   ) {
     return SliverAppBar(
       title: Text(sectionTitle),
+      automaticallyImplyLeading: false,
+      leading: onBack == null
+          ? null
+          : IconButton(
+              key: const Key('appBar-back-action'),
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              icon: const Icon(Icons.arrow_back),
+              onPressed: onBack,
+            ),
       floating: true,
       snap: true,
       // pinned: false (default) — Bar verschwindet beim Runter-Scrollen
@@ -252,12 +267,13 @@ class AdaptiveNavScaffold extends StatelessWidget {
           icon: const Icon(Icons.search),
           onPressed: onSearch,
         ),
-        IconButton(
-          key: const Key('appBar-help-action'),
-          tooltip: l10n.actionHelp,
-          icon: const Icon(Icons.help_outlined),
-          onPressed: onHelp,
-        ),
+        if (onBack == null)
+          IconButton(
+            key: const Key('appBar-help-action'),
+            tooltip: l10n.actionHelp,
+            icon: const Icon(Icons.help_outlined),
+            onPressed: onHelp,
+          ),
         // T1.7 — CSV import/export on phone via overflow menu.
         PopupMenuButton<_PhoneMenuAction>(
           key: const Key('appBar-overflow-menu'),

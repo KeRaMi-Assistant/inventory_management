@@ -45,6 +45,10 @@ class _MainScreenState extends State<MainScreen> {
   // Wird OHNE setState aktualisiert (reines Bookkeeping, kein Rebuild-Trigger).
   final Map<MainSection, MainTab> _lastTabPerSection = {};
 
+  /// Tab, von dem aus die Hilfe geöffnet wurde — für den Zurück-Pfeil in der
+  /// AppBar. `null`, wenn die Hilfe nicht offen ist.
+  MainTab? _tabBeforeHelp;
+
   // ── Sektions-Ebene (Tier-2b) ───────────────────────────────────────────
   // Die 5 Sektionen liegen ÜBER dem stabilen MainTab-Enum. Icons/Labels
   // werden pro Sektion aufgelöst — der State-Schlüssel bleibt _selectedIndex
@@ -389,7 +393,18 @@ class _MainScreenState extends State<MainScreen> {
   /// die Sektion bereits aktiv ist (verhindert Sub-Tab-Reset).
   /// T3.6: Stellt den zuletzt aktiven Sub-Tab der Ziel-Sektion wieder her.
   void _selectSection(MainSection section) {
-    if (sectionOf(_selectedIndex) == section) return;
+    if (sectionOf(_selectedIndex) == section) {
+      // Bereits in der Sektion → normalerweise No-op (kein Sub-Tab-Reset).
+      // Ausnahme: Ist das Overlay-Tab Hilfe offen, verlässt ein erneuter
+      // Tap auf den (aktiven) Slot die Hilfe und kehrt in die Sektion zurück.
+      if (_selectedIndex == MainTab.help) {
+        setState(() {
+          _tabBeforeHelp = null;
+          _selectedIndex = _lastTabPerSection[section] ?? defaultTabOf(section);
+        });
+      }
+      return;
+    }
     setState(() {
       final restored = _lastTabPerSection[section];
       if (restored == null) {
@@ -400,6 +415,15 @@ class _MainScreenState extends State<MainScreen> {
         // durch den Downgrade-Guard korrigiert).
         _selectedIndex = restored;
       }
+    });
+  }
+
+  /// Verlässt die Hilfe und kehrt zum Tab zurück, von dem sie geöffnet wurde
+  /// (Fallback: Settings). Verdrahtet mit dem Zurück-Pfeil in der Phone-AppBar.
+  void _backFromHelp() {
+    setState(() {
+      _selectedIndex = _tabBeforeHelp ?? MainTab.settings;
+      _tabBeforeHelp = null;
     });
   }
 
@@ -499,7 +523,12 @@ class _MainScreenState extends State<MainScreen> {
         // gesetzt wird (Bottom-Nav, Rail, Deep-Link, _openTicket, Help-Icon,
         // GlobalSearch selectTab).
         // ignore: invalid_use_of_protected_member
-        _lastTabPerSection[sectionOf(_selectedIndex)] = _selectedIndex;
+        // Hilfe ist ein Overlay-Tab (kein eigener Slot) — NICHT als „letzter
+        // Tab" der Konto-Sektion merken, sonst landet man beim Zurückkehren
+        // in Konto wieder in der Hilfe statt in den Einstellungen.
+        if (_selectedIndex != MainTab.help) {
+          _lastTabPerSection[sectionOf(_selectedIndex)] = _selectedIndex;
+        }
 
         // T3.6 Edge-Case (a): Inbox-Tab im Memory, aber Plan ohne Postfach
         // → beim nächsten Betreten der Sektion schlägt der Memory keinen
@@ -617,7 +646,11 @@ class _MainScreenState extends State<MainScreen> {
           body: body,
           floatingActionButton: fab,
           onSearch: _openSearch,
-          onHelp: () => setState(() => _selectedIndex = MainTab.help),
+          onHelp: () => setState(() {
+            _tabBeforeHelp = _selectedIndex;
+            _selectedIndex = MainTab.help;
+          }),
+          onBack: _selectedIndex == MainTab.help ? _backFromHelp : null,
           onImport: () => _import(context, provider),
           onExport: () =>
               _export(context, provider, context.read<CatalogProvider>()),
