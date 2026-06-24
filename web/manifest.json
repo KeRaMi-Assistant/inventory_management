@@ -1,11 +1,11 @@
 {
-    "name": "CanLogistics",
-    "short_name": "CanLogistics",
+    "name": "Can Logistics",
+    "short_name": "Can Logistics",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#312E81",
     "theme_color": "#4338CA",
-    "description": "CanLogistics — Inventar, Sendungsverfolgung und Verkäufe in einer App. Vom Wareneingang bis zum verkauften Stück.",
+    "description": "Can Logistics — Inventar, Sendungsverfolgung und Verkäufe in einer App. Vom Wareneingang bis zum verkauften Stück.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
