@@ -1,6 +1,6 @@
 {
   "@@locale": "de",
-  "appTitle": "Lagerverwaltung",
+  "appTitle": "Can Logistics",
 
   "actionSave": "Speichern",
   "actionCancel": "Abbrechen",
@@ -441,7 +441,7 @@
     }
   },
   "aboutScreenTitle": "Über",
-  "aboutAppName": "InventoryOS",
+  "aboutAppName": "Can Logistics",
   "aboutTagline": "Bestell-, Lager- & Deal-Verwaltung für Reseller.",
   "aboutVersionLabel": "Version",
   "aboutCopyright": "© 2026 Kerem Özkan",
@@ -1363,7 +1363,7 @@
   "publicProfileItemPrice": "Preis",
   "publicProfileItemQuantity": "Verfügbar: {count}",
   "@publicProfileItemQuantity": { "placeholders": { "count": { "type": "int" } } },
-  "publicProfileFooter": "Erstellt mit InventoryOS",
+  "publicProfileFooter": "Erstellt mit Can Logistics",
 
   "settingsDemoSection": "Demo / Daten",
   "settingsDemoReloadTitle": "Demo-Daten neu laden",
@@ -1380,7 +1380,7 @@
   "onboardingBack": "Zurück",
   "onboardingFinish": "Fertig",
   "onboardingStepWelcomeTitle": "Willkommen",
-  "onboardingStepWelcomeSubtitle": "InventoryOS hilft dir, Bestellungen, Lager und Käufer im Blick zu behalten. Wir richten dich in 6 kurzen Schritten ein.",
+  "onboardingStepWelcomeSubtitle": "Can Logistics hilft dir, Bestellungen, Lager und Käufer im Blick zu behalten. Wir richten dich in 6 kurzen Schritten ein.",
   "onboardingStepWorkspaceTitle": "Dein Workspace",
   "onboardingStepWorkspaceSubtitle": "Alle Daten landen in einem Workspace. Du kannst später Team-Mitglieder einladen oder weitere Workspaces anlegen.",
   "onboardingWorkspaceFallback": "Mein Workspace",

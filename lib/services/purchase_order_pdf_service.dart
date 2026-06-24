@@ -144,7 +144,7 @@ class PurchaseOrderPdfService {
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(
-              'Generiert ${_date.format(DateTime.now())} · InventoryOS',
+              'Generiert ${_date.format(DateTime.now())} · Can Logistics',
               style: const pw.TextStyle(
                 fontSize: 8,
                 color: PdfColors.grey500,

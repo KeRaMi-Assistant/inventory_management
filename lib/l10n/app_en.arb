@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "Inventory Manager",
+  "appTitle": "Can Logistics",
 
   "actionSave": "Save",
   "actionCancel": "Cancel",
@@ -431,7 +431,7 @@
   "settingsCloudTitle": "Cloud storage",
   "settingsCloudSubtitle": "Data is stored in your Supabase account and synced across devices.",
   "aboutScreenTitle": "About",
-  "aboutAppName": "InventoryOS",
+  "aboutAppName": "Can Logistics",
   "aboutTagline": "Order, inventory & deal management for resellers.",
   "aboutVersionLabel": "Version",
   "aboutCopyright": "© 2026 Kerem Özkan",
@@ -1363,7 +1363,7 @@
   "publicProfileItemPrice": "Price",
   "publicProfileItemQuantity": "Available: {count}",
   "@publicProfileItemQuantity": { "placeholders": { "count": { "type": "int" } } },
-  "publicProfileFooter": "Built with InventoryOS",
+  "publicProfileFooter": "Built with Can Logistics",
 
   "settingsDemoSection": "Demo / data",
   "settingsDemoReloadTitle": "Reload demo data",
@@ -1380,7 +1380,7 @@
   "onboardingBack": "Back",
   "onboardingFinish": "Done",
   "onboardingStepWelcomeTitle": "Welcome",
-  "onboardingStepWelcomeSubtitle": "InventoryOS helps you keep track of orders, inventory, and buyers. Six quick steps and you're set up.",
+  "onboardingStepWelcomeSubtitle": "Can Logistics helps you keep track of orders, inventory, and buyers. Six quick steps and you're set up.",
   "onboardingStepWorkspaceTitle": "Your workspace",
   "onboardingStepWorkspaceSubtitle": "All data lives inside a workspace. You can invite team members or create more workspaces later.",
   "onboardingWorkspaceFallback": "My workspace",

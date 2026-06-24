@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Inventory Manager';
+  String get appTitle => 'Can Logistics';
 
   @override
   String get actionSave => 'Save';
@@ -952,7 +952,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutScreenTitle => 'About';
 
   @override
-  String get aboutAppName => 'InventoryOS';
+  String get aboutAppName => 'Can Logistics';
 
   @override
   String get aboutTagline =>
@@ -3553,7 +3553,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get publicProfileFooter => 'Built with InventoryOS';
+  String get publicProfileFooter => 'Built with Can Logistics';
 
   @override
   String get settingsDemoSection => 'Demo / data';
@@ -3600,7 +3600,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingStepWelcomeSubtitle =>
-      'InventoryOS helps you keep track of orders, inventory, and buyers. Six quick steps and you\'re set up.';
+      'Can Logistics helps you keep track of orders, inventory, and buyers. Six quick steps and you\'re set up.';
 
   @override
   String get onboardingStepWorkspaceTitle => 'Your workspace';

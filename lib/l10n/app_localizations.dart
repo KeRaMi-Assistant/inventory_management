@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In de, this message translates to:
-  /// **'Lagerverwaltung'**
+  /// **'Can Logistics'**
   String get appTitle;
 
   /// No description provided for @actionSave.
@@ -1811,7 +1811,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutAppName.
   ///
   /// In de, this message translates to:
-  /// **'InventoryOS'**
+  /// **'Can Logistics'**
   String get aboutAppName;
 
   /// No description provided for @aboutTagline.
@@ -6467,7 +6467,7 @@ abstract class AppLocalizations {
   /// No description provided for @publicProfileFooter.
   ///
   /// In de, this message translates to:
-  /// **'Erstellt mit InventoryOS'**
+  /// **'Erstellt mit Can Logistics'**
   String get publicProfileFooter;
 
   /// No description provided for @settingsDemoSection.
@@ -6551,7 +6551,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingStepWelcomeSubtitle.
   ///
   /// In de, this message translates to:
-  /// **'InventoryOS hilft dir, Bestellungen, Lager und Käufer im Blick zu behalten. Wir richten dich in 6 kurzen Schritten ein.'**
+  /// **'Can Logistics hilft dir, Bestellungen, Lager und Käufer im Blick zu behalten. Wir richten dich in 6 kurzen Schritten ein.'**
   String get onboardingStepWelcomeSubtitle;
 
   /// No description provided for @onboardingStepWorkspaceTitle.
