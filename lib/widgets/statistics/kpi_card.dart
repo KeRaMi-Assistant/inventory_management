@@ -111,6 +111,11 @@ class KpiCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              // Tap-Affordance: navigierbare Karten (Dashboard-Drilldown)
+              // sind sonst nicht von statischen Info-Kacheln unterscheidbar.
+              if (onTap != null)
+                Icon(Icons.chevron_right,
+                    size: 16, color: AppTheme.textMutedOf(context)),
             ],
           ),
           const SizedBox(height: 12),

@@ -51,54 +51,63 @@ class SettingsScreen extends StatelessWidget {
       key: const Key('settingsHubTileBuyers'),
       icon: Icons.people_outlined,
       label: l10n.settingsTabBuyers,
+      subtitle: l10n.settingsTabBuyersSub,
       build: () => const _BuyersTab(),
     ),
     SectionHubTile(
       key: const Key('settingsHubTileShops'),
       icon: Icons.store_outlined,
       label: l10n.settingsTabShops,
+      subtitle: l10n.settingsTabShopsSub,
       build: () => const _ShopsTab(),
     ),
     SectionHubTile(
       key: const Key('settingsHubTileTeam'),
       icon: Icons.group_outlined,
       label: l10n.settingsTabTeam,
+      subtitle: l10n.settingsTabTeamSub,
       build: () => const _TeamTab(),
     ),
     SectionHubTile(
       key: const Key('settingsHubTilePush'),
       icon: Icons.notifications_outlined,
       label: l10n.settingsTabPush,
+      subtitle: l10n.settingsTabPushSub,
       build: () => const _NotificationsTab(),
     ),
     SectionHubTile(
       key: const Key('settingsHubTileMailbox'),
       icon: Icons.mail_outlined,
       label: l10n.settingsTabMailbox,
+      subtitle: l10n.settingsTabMailboxSub,
       build: () => const _MailboxTab(),
     ),
     SectionHubTile(
       key: const Key('settingsHubTileShipping'),
       icon: Icons.local_shipping_outlined,
       label: l10n.settingsTabShipping,
+      subtitle: l10n.settingsTabShippingSub,
       build: () => const _ShippingTab(),
     ),
     SectionHubTile(
       key: const Key('settingsHubTilePublicProfile'),
       icon: Icons.public,
       label: l10n.publicProfileTab,
+      subtitle: l10n.publicProfileTabSub,
       build: () => const _PublicProfileTab(),
     ),
     SectionHubTile(
       key: const Key('settingsHubTileGeneral'),
       icon: Icons.tune,
       label: l10n.settingsTabGeneral,
+      subtitle: l10n.settingsTabGeneralSub,
       build: () => const _GeneralTab(),
     ),
     SectionHubTile(
       key: const Key('settingsHubTileSupport'),
       icon: Icons.support_agent_outlined,
       label: l10n.settingsTabSupport,
+      subtitle: l10n.settingsTabSupportSub,
       build: () => const _SupportTab(),
     ),
   ];
@@ -660,42 +669,9 @@ class _GeneralTab extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            const _PlanSection(),
-            const SizedBox(height: 24),
-            _SettingsCard(
-              icon: Icons.percent_outlined,
-              title: l10n.settingsTaxRateTitle,
-              subtitle: l10n.settingsTaxRateSubtitle,
-              trailing: const Text('19%'),
-            ),
-            const SizedBox(height: 12),
-            _SettingsCard(
-              icon: Icons.sort_outlined,
-              title: l10n.settingsSortTitle,
-              subtitle: l10n.settingsSortSubtitle,
-              trailing: Text(l10n.settingsSortValue),
-            ),
-            const SizedBox(height: 12),
-            _SettingsCard(
-              icon: Icons.cloud_done_outlined,
-              title: l10n.settingsCloudTitle,
-              subtitle: l10n.settingsCloudSubtitle,
-              trailing: const Text('Supabase'),
-            ),
-            const SizedBox(height: 12),
-            _SettingsCard(
-              icon: Icons.storage_outlined,
-              title: l10n.settingsDataTitle,
-              subtitle: l10n.settingsDataSubtitle(
-                provider.deals.length,
-                provider.buyers.length,
-                provider.shops.length,
-                stock.inventoryItems.length,
-              ),
-              trailing: Text(l10n.commonItems(
-                  provider.deals.length + stock.inventoryItems.length)),
-            ),
-            const SizedBox(height: 24),
+            // Personalisierung zuerst: Design + Sprache sind die am
+            // häufigsten gesuchten Einstellungen — vorher lagen sie unter
+            // Plan/MwSt/Cloud vergraben (UX-Audit 2026-07-22, Finding #8).
             _SectionHeader(title: l10n.settingsThemeSection),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -778,6 +754,42 @@ class _GeneralTab extends StatelessWidget {
             _SectionHeader(title: l10n.settingsLanguageSection),
             const SizedBox(height: 8),
             const _LanguageCard(),
+            const SizedBox(height: 24),
+            const _PlanSection(),
+            const SizedBox(height: 24),
+            _SettingsCard(
+              icon: Icons.percent_outlined,
+              title: l10n.settingsTaxRateTitle,
+              subtitle: l10n.settingsTaxRateSubtitle,
+              trailing: const Text('19%'),
+            ),
+            const SizedBox(height: 12),
+            _SettingsCard(
+              icon: Icons.sort_outlined,
+              title: l10n.settingsSortTitle,
+              subtitle: l10n.settingsSortSubtitle,
+              trailing: Text(l10n.settingsSortValue),
+            ),
+            const SizedBox(height: 12),
+            _SettingsCard(
+              icon: Icons.cloud_done_outlined,
+              title: l10n.settingsCloudTitle,
+              subtitle: l10n.settingsCloudSubtitle,
+              trailing: Text(l10n.settingsCloudActive),
+            ),
+            const SizedBox(height: 12),
+            _SettingsCard(
+              icon: Icons.storage_outlined,
+              title: l10n.settingsDataTitle,
+              subtitle: l10n.settingsDataSubtitle(
+                provider.deals.length,
+                provider.buyers.length,
+                provider.shops.length,
+                stock.inventoryItems.length,
+              ),
+              trailing: Text(l10n.commonItems(
+                  provider.deals.length + stock.inventoryItems.length)),
+            ),
             const SizedBox(height: 24),
             _SectionHeader(title: l10n.settingsStatsSection),
             const SizedBox(height: 8),
@@ -1143,7 +1155,15 @@ class _LogoutCard extends StatelessWidget {
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    await context.read<AuthProvider>().signOut();
+    // Provider VOR dem Poppen capturen (Dialog-Context-Pattern): popUntil
+    // disposed diese Route samt Widget — danach wäre context tot.
+    final auth = context.read<AuthProvider>();
+    // Gepushte Sub-Routen (Konto → Allgemein) erst abräumen, sonst bleibt der
+    // Settings-Screen nach dem Auth-Wechsel als tote Route über dem Login
+    // hängen und „Abmelden" wirkt folgenlos. Im embedded Fall (Desktop,
+    // keine gepushte Route) ist popUntil(isFirst) ein No-op.
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    await auth.signOut();
   }
 
   @override

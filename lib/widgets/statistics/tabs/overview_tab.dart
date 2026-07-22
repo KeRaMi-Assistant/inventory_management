@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
+import '../../../app_theme.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../providers/statistics_filter_provider.dart';
 import '../../../services/statistics_service.dart';
 import '../../../utils/responsive.dart';
 import '../charts/donut_chart.dart';
@@ -35,6 +38,66 @@ class OverviewTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Empty-State-Hinweis: Der User HAT Deals, aber keiner liegt im
+        // gewählten Zeitraum (z. B. Default „30 Tage" nach einem ruhigen
+        // Monat). Ohne den Hinweis wirken die 0,00-€-KPIs wie „App trackt
+        // nichts" (UX-Audit 2026-07-22, Finding #3).
+        if (stats.dealCount == 0 && stats.allDeals.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.infoBgOf(context),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.event_busy_outlined,
+                        size: 20, color: AppTheme.infoTextOf(context)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.statsEmptyRangeTitle,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: AppTheme.infoTextOf(context),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            l10n.statsEmptyRangeBody,
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.4,
+                              color: AppTheme.infoTextOf(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => context
+                        .read<StatisticsFilterProvider>()
+                        .setPreset(StatsPreset.thisYear),
+                    child: Text(l10n.statsEmptyRangeCta),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         KpiGrid(
           cards: [
             KpiCard(

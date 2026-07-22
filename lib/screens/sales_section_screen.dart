@@ -24,7 +24,8 @@ class SalesSectionScreen extends StatelessWidget {
   /// Ob der Inbox-Sub-Tab freigeschaltet ist (Plan ≥ Starter).
   final bool inboxEnabled;
 
-  /// Aggregierter Tracking-Needs-Review-Count für den Inbox-Badge.
+  /// Aggregierter Tracking-Needs-Review-Count für den Deals-Badge
+  /// (der „Prüfen (n)"-Filter lebt im Deals-Tab).
   final int badgeCount;
 
   /// Callback bei Sub-Tab-Wechsel (liefert deals/tickets/inbox).
@@ -128,6 +129,10 @@ class _SalesSegmentedBar extends StatelessWidget {
         keyName: 'salesSeg-deals',
         label: l10n.navDeals,
         icon: Icons.list_alt_outlined,
+        // Tracking-Review-Badge gehört zu den Deals: der „Prüfen (n)"-Filter
+        // lebt im Deals-Tab. Am Inbox-Segment (alte Position) wirkte der
+        // Count wie ungelesene Mails — bei leerem Postfach pure Verwirrung.
+        badgeCount: badgeCount,
       ),
       _segment(
         tab: MainTab.tickets,
@@ -141,7 +146,6 @@ class _SalesSegmentedBar extends StatelessWidget {
           keyName: 'salesSeg-inbox',
           label: l10n.navInbox,
           icon: Icons.mail_outlined,
-          badgeCount: badgeCount,
         ),
     ];
 

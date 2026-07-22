@@ -1787,8 +1787,14 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCloudSubtitle.
   ///
   /// In de, this message translates to:
-  /// **'Daten werden in deinem Supabase-Konto gespeichert und über alle Geräte synchronisiert.'**
+  /// **'Deine Daten werden sicher in der Cloud gespeichert und über alle Geräte synchronisiert.'**
   String get settingsCloudSubtitle;
+
+  /// No description provided for @settingsCloudActive.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktiv'**
+  String get settingsCloudActive;
 
   /// No description provided for @settingsDataTitle.
   ///
@@ -1837,6 +1843,126 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Alle Rechte vorbehalten.'**
   String get aboutAllRightsReserved;
+
+  /// No description provided for @statsEmptyRangeTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Deals im gewählten Zeitraum'**
+  String get statsEmptyRangeTitle;
+
+  /// No description provided for @statsEmptyRangeBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Deine Deals liegen außerhalb des aktuellen Filters. Erweitere den Zeitraum, um sie zu sehen.'**
+  String get statsEmptyRangeBody;
+
+  /// No description provided for @statsEmptyRangeCta.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieses Jahr anzeigen'**
+  String get statsEmptyRangeCta;
+
+  /// No description provided for @warehouseHubTileInventorySub.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktuelle Bestände einsehen & buchen'**
+  String get warehouseHubTileInventorySub;
+
+  /// No description provided for @warehouseHubTileProductCatalogSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel-Stammdaten: Namen, SKUs, Preise'**
+  String get warehouseHubTileProductCatalogSub;
+
+  /// No description provided for @warehouseHubTilePurchaseOrdersSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestellungen anlegen & Wareneingang buchen'**
+  String get warehouseHubTilePurchaseOrdersSub;
+
+  /// No description provided for @warehouseHubTileSuppliersSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Lieferanten verwalten'**
+  String get warehouseHubTileSuppliersSub;
+
+  /// No description provided for @warehouseHubTileWarehousesSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Lagerorte anlegen & verwalten'**
+  String get warehouseHubTileWarehousesSub;
+
+  /// No description provided for @warehouseHubTileCategoriesSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Artikel in Warengruppen ordnen'**
+  String get warehouseHubTileCategoriesSub;
+
+  /// No description provided for @warehouseHubTileStocktakeSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestände zählen & Differenzen buchen'**
+  String get warehouseHubTileStocktakeSub;
+
+  /// No description provided for @warehouseHubTileReportingSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Lager-Auswertungen & Export'**
+  String get warehouseHubTileReportingSub;
+
+  /// No description provided for @settingsTabBuyersSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Deine Käufer & Kontakte'**
+  String get settingsTabBuyersSub;
+
+  /// No description provided for @settingsTabShopsSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Einkaufsquellen wie Amazon & Co.'**
+  String get settingsTabShopsSub;
+
+  /// No description provided for @settingsTabTeamSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Workspaces & Mitglieder einladen'**
+  String get settingsTabTeamSub;
+
+  /// No description provided for @settingsTabPushSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Push-Mitteilungen an/aus je Kategorie'**
+  String get settingsTabPushSub;
+
+  /// No description provided for @settingsTabMailboxSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestell-Postfach verbinden & verwalten'**
+  String get settingsTabMailboxSub;
+
+  /// No description provided for @settingsTabShippingSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Paketdienste & Sendungsverfolgung'**
+  String get settingsTabShippingSub;
+
+  /// No description provided for @publicProfileTabSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Öffentliche Verkaufsseite einrichten'**
+  String get publicProfileTabSub;
+
+  /// No description provided for @settingsTabGeneralSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Design, Sprache, Plan & Konto'**
+  String get settingsTabGeneralSub;
+
+  /// No description provided for @settingsTabSupportSub.
+  ///
+  /// In de, this message translates to:
+  /// **'Probleme melden & Hilfe erhalten'**
+  String get settingsTabSupportSub;
 
   /// No description provided for @settingsAboutSection.
   ///
@@ -2957,7 +3083,7 @@ abstract class AppLocalizations {
   /// No description provided for @helpInboxWhitelistDesc.
   ///
   /// In de, this message translates to:
-  /// **'Die App liest nur Mails von bekannten Shops/Carriern (Whitelist). Werbe-Newsletter, persönliche Mails und unbekannte Absender werden ignoriert. Wenn ein Shop fehlt, melde ihn über „Probleme melden\" — neue Adapter werden serverseitig nachgepflegt.'**
+  /// **'Die App liest nur Mails von bekannten Shops/Paketdiensten. Werbe-Newsletter, persönliche Mails und unbekannte Absender werden ignoriert. Wenn ein Shop fehlt, melde ihn über „Probleme melden\" — neue Shops werden zentral nachgepflegt.'**
   String get helpInboxWhitelistDesc;
 
   /// No description provided for @helpInboxSoloProTitle.
@@ -3269,7 +3395,7 @@ abstract class AppLocalizations {
   /// No description provided for @helpEntitiesShopsDesc.
   ///
   /// In de, this message translates to:
-  /// **'Online-/Offline-Quellen, bei denen du einkaufst (z. B. „Amazon\", „Saturn\", „Otto\"). Bei Versand-Mails ordnet die App die Mail automatisch dem passenden Shop zu, sofern der Adapter den Absender kennt.'**
+  /// **'Online-/Offline-Quellen, bei denen du einkaufst (z. B. „Amazon\", „Saturn\", „Otto\"). Bei Versand-Mails ordnet die App die Mail automatisch dem passenden Shop zu, sofern sie den Absender kennt.'**
   String get helpEntitiesShopsDesc;
 
   /// No description provided for @helpEntitiesSuppliersTitle.
@@ -3785,7 +3911,7 @@ abstract class AppLocalizations {
   /// No description provided for @helpTroubleConnectionDesc.
   ///
   /// In de, this message translates to:
-  /// **'Prüfe deine Internet-Verbindung und versuche „Aktualisieren\" (Pull-to-Refresh). Wenn das Problem bleibt: Status-Seite über die Webseite prüfen, ggf. ein paar Minuten warten — Supabase-Restarts brauchen kurz.'**
+  /// **'Prüfe deine Internet-Verbindung und versuche „Aktualisieren\" (Pull-to-Refresh). Wenn das Problem bleibt: ein paar Minuten warten und erneut versuchen — kurze Server-Wartungen kommen vor.'**
   String get helpTroubleConnectionDesc;
 
   /// No description provided for @helpTroubleImapAuthTitle.
@@ -6791,7 +6917,7 @@ abstract class AppLocalizations {
   /// No description provided for @trackingAmazonShipmentIdHint.
   ///
   /// In de, this message translates to:
-  /// **'Amazon-interne Shipment-ID — kein vollwertiges Carrier-Tracking'**
+  /// **'Amazon-interne Sendungsreferenz — noch keine echte Sendungsnummer eines Paketdienstes'**
   String get trackingAmazonShipmentIdHint;
 
   /// No description provided for @trackingBannerImprovedDetection.
@@ -8999,7 +9125,7 @@ abstract class AppLocalizations {
   /// Untertitel des Re-Parse-Tracking-Menüeintrags.
   ///
   /// In de, this message translates to:
-  /// **'Wendet die aktuelle Adapter-Registry erneut auf alle Vorschläge an. Korrigiert falsch extrahierte Tracking-Nummern (z.B. wenn ein Adapter-Bug eine interne Shipment-ID statt der echten Carrier-Nr gespeichert hat).'**
+  /// **'Prüft alle Vorschläge noch einmal mit der neuesten Erkennung und korrigiert falsch erkannte Sendungsnummern automatisch.'**
   String get inboxReparseTrackingSubtitle;
 
   /// Label im Shop-Filter-Sheet wenn kein Shop-Filter aktiv.

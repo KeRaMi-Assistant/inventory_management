@@ -41,6 +41,7 @@ class WarehouseHubScreen extends StatelessWidget {
           key: const Key('hubTileInventory'),
           icon: Icons.inventory_2_outlined,
           label: l10n.warehouseHubTileInventory,
+          subtitle: l10n.warehouseHubTileInventorySub,
           build: () => const InventoryScreen(embedded: true),
         ),
 
@@ -50,6 +51,7 @@ class WarehouseHubScreen extends StatelessWidget {
           key: const Key('hubTileProductCatalog'),
           icon: Icons.style_outlined,
           label: l10n.warehouseHubTileProductCatalog,
+          subtitle: l10n.warehouseHubTileProductCatalogSub,
           build: () => const ProductCatalogScreen(embedded: true),
         ),
 
@@ -58,6 +60,7 @@ class WarehouseHubScreen extends StatelessWidget {
           key: const Key('hubTilePurchaseOrders'),
           icon: Icons.shopping_cart_outlined,
           label: l10n.warehouseHubTilePurchaseOrders,
+          subtitle: l10n.warehouseHubTilePurchaseOrdersSub,
           build: () => const PurchaseOrdersScreen(embedded: true),
         ),
 
@@ -66,6 +69,7 @@ class WarehouseHubScreen extends StatelessWidget {
           key: const Key('hubTileSuppliers'),
           icon: Icons.handshake_outlined,
           label: l10n.warehouseHubTileSuppliers,
+          subtitle: l10n.warehouseHubTileSuppliersSub,
           build: () => const SuppliersScreen(embedded: true),
         ),
 
@@ -74,6 +78,7 @@ class WarehouseHubScreen extends StatelessWidget {
           key: const Key('hubTileWarehouses'),
           icon: Icons.warehouse_outlined,
           label: l10n.warehouseHubTileWarehouses,
+          subtitle: l10n.warehouseHubTileWarehousesSub,
           build: () => const WarehousesScreen(embedded: true),
         ),
 
@@ -82,6 +87,7 @@ class WarehouseHubScreen extends StatelessWidget {
           key: const Key('hubTileCategories'),
           icon: Icons.category_outlined,
           label: l10n.warehouseHubTileCategories,
+          subtitle: l10n.warehouseHubTileCategoriesSub,
           build: () => const CategoriesScreen(embedded: true),
         ),
 
@@ -90,6 +96,7 @@ class WarehouseHubScreen extends StatelessWidget {
           key: const Key('hubTileStocktake'),
           icon: Icons.fact_check_outlined,
           label: l10n.warehouseHubTileStocktake,
+          subtitle: l10n.warehouseHubTileStocktakeSub,
           build: () => const StocktakeScreen(embedded: true),
         ),
 
@@ -103,6 +110,7 @@ class WarehouseHubScreen extends StatelessWidget {
           key: const Key('hubTileReporting'),
           icon: Icons.bar_chart_outlined,
           label: l10n.warehouseHubTileReporting,
+          subtitle: l10n.warehouseHubTileReportingSub,
           build: () => const StatisticsScreen(embedded: true),
         ),
       ],

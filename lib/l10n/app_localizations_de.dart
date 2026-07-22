@@ -939,7 +939,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsCloudSubtitle =>
-      'Daten werden in deinem Supabase-Konto gespeichert und über alle Geräte synchronisiert.';
+      'Deine Daten werden sicher in der Cloud gespeichert und über alle Geräte synchronisiert.';
+
+  @override
+  String get settingsCloudActive => 'Aktiv';
 
   @override
   String get settingsDataTitle => 'Datenbestand';
@@ -966,6 +969,71 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get aboutAllRightsReserved => 'Alle Rechte vorbehalten.';
+
+  @override
+  String get statsEmptyRangeTitle => 'Keine Deals im gewählten Zeitraum';
+
+  @override
+  String get statsEmptyRangeBody =>
+      'Deine Deals liegen außerhalb des aktuellen Filters. Erweitere den Zeitraum, um sie zu sehen.';
+
+  @override
+  String get statsEmptyRangeCta => 'Dieses Jahr anzeigen';
+
+  @override
+  String get warehouseHubTileInventorySub =>
+      'Aktuelle Bestände einsehen & buchen';
+
+  @override
+  String get warehouseHubTileProductCatalogSub =>
+      'Artikel-Stammdaten: Namen, SKUs, Preise';
+
+  @override
+  String get warehouseHubTilePurchaseOrdersSub =>
+      'Bestellungen anlegen & Wareneingang buchen';
+
+  @override
+  String get warehouseHubTileSuppliersSub => 'Lieferanten verwalten';
+
+  @override
+  String get warehouseHubTileWarehousesSub => 'Lagerorte anlegen & verwalten';
+
+  @override
+  String get warehouseHubTileCategoriesSub => 'Artikel in Warengruppen ordnen';
+
+  @override
+  String get warehouseHubTileStocktakeSub =>
+      'Bestände zählen & Differenzen buchen';
+
+  @override
+  String get warehouseHubTileReportingSub => 'Lager-Auswertungen & Export';
+
+  @override
+  String get settingsTabBuyersSub => 'Deine Käufer & Kontakte';
+
+  @override
+  String get settingsTabShopsSub => 'Einkaufsquellen wie Amazon & Co.';
+
+  @override
+  String get settingsTabTeamSub => 'Workspaces & Mitglieder einladen';
+
+  @override
+  String get settingsTabPushSub => 'Push-Mitteilungen an/aus je Kategorie';
+
+  @override
+  String get settingsTabMailboxSub => 'Bestell-Postfach verbinden & verwalten';
+
+  @override
+  String get settingsTabShippingSub => 'Paketdienste & Sendungsverfolgung';
+
+  @override
+  String get publicProfileTabSub => 'Öffentliche Verkaufsseite einrichten';
+
+  @override
+  String get settingsTabGeneralSub => 'Design, Sprache, Plan & Konto';
+
+  @override
+  String get settingsTabSupportSub => 'Probleme melden & Hilfe erhalten';
 
   @override
   String get settingsAboutSection => 'Über';
@@ -1605,7 +1673,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpInboxWhitelistDesc =>
-      'Die App liest nur Mails von bekannten Shops/Carriern (Whitelist). Werbe-Newsletter, persönliche Mails und unbekannte Absender werden ignoriert. Wenn ein Shop fehlt, melde ihn über „Probleme melden\" — neue Adapter werden serverseitig nachgepflegt.';
+      'Die App liest nur Mails von bekannten Shops/Paketdiensten. Werbe-Newsletter, persönliche Mails und unbekannte Absender werden ignoriert. Wenn ein Shop fehlt, melde ihn über „Probleme melden\" — neue Shops werden zentral nachgepflegt.';
 
   @override
   String get helpInboxSoloProTitle => 'Postfach mit Solo Pro';
@@ -1791,7 +1859,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpEntitiesShopsDesc =>
-      'Online-/Offline-Quellen, bei denen du einkaufst (z. B. „Amazon\", „Saturn\", „Otto\"). Bei Versand-Mails ordnet die App die Mail automatisch dem passenden Shop zu, sofern der Adapter den Absender kennt.';
+      'Online-/Offline-Quellen, bei denen du einkaufst (z. B. „Amazon\", „Saturn\", „Otto\"). Bei Versand-Mails ordnet die App die Mail automatisch dem passenden Shop zu, sofern sie den Absender kennt.';
 
   @override
   String get helpEntitiesSuppliersTitle => 'Lieferanten (Suppliers)';
@@ -2093,7 +2161,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpTroubleConnectionDesc =>
-      'Prüfe deine Internet-Verbindung und versuche „Aktualisieren\" (Pull-to-Refresh). Wenn das Problem bleibt: Status-Seite über die Webseite prüfen, ggf. ein paar Minuten warten — Supabase-Restarts brauchen kurz.';
+      'Prüfe deine Internet-Verbindung und versuche „Aktualisieren\" (Pull-to-Refresh). Wenn das Problem bleibt: ein paar Minuten warten und erneut versuchen — kurze Server-Wartungen kommen vor.';
 
   @override
   String get helpTroubleImapAuthTitle => '„IMAP-Login fehlgeschlagen\"';
@@ -3754,7 +3822,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trackingAmazonShipmentIdHint =>
-      'Amazon-interne Shipment-ID — kein vollwertiges Carrier-Tracking';
+      'Amazon-interne Sendungsreferenz — noch keine echte Sendungsnummer eines Paketdienstes';
 
   @override
   String get trackingBannerImprovedDetection =>
@@ -5018,7 +5086,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get inboxReparseTrackingSubtitle =>
-      'Wendet die aktuelle Adapter-Registry erneut auf alle Vorschläge an. Korrigiert falsch extrahierte Tracking-Nummern (z.B. wenn ein Adapter-Bug eine interne Shipment-ID statt der echten Carrier-Nr gespeichert hat).';
+      'Prüft alle Vorschläge noch einmal mit der neuesten Erkennung und korrigiert falsch erkannte Sendungsnummern automatisch.';
 
   @override
   String get inboxFilterAllShops => 'Alle Shops';

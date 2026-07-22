@@ -428,6 +428,16 @@ class StockProvider extends ChangeNotifier {
   /// the next DB load (the activity screen loads from DB anyway). This is an
   /// accepted, documented behavioural regression scoped to stock activity
   /// entries; see plan §5.
+  /// Löst eine Produkt-ID in den Anzeigenamen auf (Catalog-Cache).
+  /// Fallback: gekürzte ID — rohe UUIDs gehören nicht in den User-sichtbaren
+  /// Aktivitäts-Feed.
+  String _productLabel(String productId) {
+    final product =
+        _catalogProducts.where((p) => p.id == productId).firstOrNull;
+    if (product != null) return product.name;
+    return productId.length > 8 ? '${productId.substring(0, 8)}…' : productId;
+  }
+
   void _log(String message, String type) {
     final entry = ActivityEntry(
       id: _uuid.v4(),
@@ -660,7 +670,7 @@ class StockProvider extends ChangeNotifier {
     }
 
     _log(
-      'Wareneingang gebucht: +$receivedQty für Produkt $productId',
+      'Wareneingang gebucht: +$receivedQty × ${_productLabel(productId)}',
       'purchase_order',
     );
     await _refreshProductStock();
@@ -805,7 +815,8 @@ class StockProvider extends ChangeNotifier {
   ) async {
     final updated = item.copyWith(countedQty: countedQty);
     final saved = await _repository.updateStocktakeItem(updated);
-    _log('Inventur-Zählung: Produkt ${item.productId} → $countedQty',
+    _log(
+        'Inventur-Zählung: ${_productLabel(item.productId)} → $countedQty Stk.',
         'stocktake');
     return saved;
   }
