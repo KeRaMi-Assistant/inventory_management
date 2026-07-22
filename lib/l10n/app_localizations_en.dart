@@ -977,6 +977,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAboutSubtitle => 'Version, copyright & legal';
 
   @override
+  String get billingTestPhaseLabel => 'Test phase – all features unlocked';
+
+  @override
+  String get pricingTestPhaseBanner =>
+      'The app is in its test phase: all features are unlocked for free. Subscriptions & payment will arrive at launch.';
+
+  @override
+  String get pricingTestPhaseSnack =>
+      'Test phase – no purchase needed yet, everything is already unlocked.';
+
+  @override
   String get settingsLanguageSection => 'Language';
 
   @override

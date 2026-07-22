@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/billing_profile.dart';
 import '../models/pricing_plan.dart';
 import '../providers/billing_provider.dart';
+import '../widgets/app_feedback.dart';
 import 'billing_profile_screen.dart';
 
 /// Pricing-/Plan-Übersicht. Aktuell rein „Dummy" — keine Anbindung an
@@ -91,6 +92,36 @@ class _PricingScreenState extends State<PricingScreen>
                       color: AppTheme.textMutedOf(context),
                     ),
                   ),
+                  // Test-Phase: klarer Hinweis, dass nichts gekauft werden
+                  // muss — verhindert „Muss ich jetzt zahlen?"-Verwirrung.
+                  if (!BillingProvider.purchaseFlowLive) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppTheme.infoBgOf(context),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.science_outlined,
+                              size: 20, color: AppTheme.infoTextOf(context)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              l10n.pricingTestPhaseBanner,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.4,
+                                color: AppTheme.infoTextOf(context),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   _BillingCycleToggle(
                     cycle: _cycle,
@@ -148,6 +179,13 @@ class _PricingScreenState extends State<PricingScreen>
     final navigator = Navigator.of(context);
 
     if (plan.plan == billing.currentPlan) return;
+
+    // Test-Phase: kein Kauf möglich — freundlicher Hinweis statt
+    // Adress-Zwang + Fake-Checkout, der ohnehin nichts ändern würde.
+    if (!BillingProvider.purchaseFlowLive) {
+      AppFeedback.info(context, AppLocalizations.of(context).pricingTestPhaseSnack);
+      return;
+    }
 
     // Free: kein Billing-Setup nötig. Direkt umschalten.
     if (plan.plan == BillingPlan.free) {

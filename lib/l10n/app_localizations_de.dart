@@ -977,6 +977,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsAboutSubtitle => 'Version, Copyright & Rechtliches';
 
   @override
+  String get billingTestPhaseLabel =>
+      'Testphase – alle Funktionen freigeschaltet';
+
+  @override
+  String get pricingTestPhaseBanner =>
+      'Die App ist in der Testphase: Alle Funktionen sind kostenlos freigeschaltet. Abos & Zahlung kommen zum offiziellen Start.';
+
+  @override
+  String get pricingTestPhaseSnack =>
+      'Testphase – ein Kauf ist noch nicht nötig, alles ist bereits freigeschaltet.';
+
+  @override
   String get settingsLanguageSection => 'Sprache';
 
   @override

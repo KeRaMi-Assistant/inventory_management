@@ -10,6 +10,12 @@ import '../utils/error_messages.dart';
 class BillingProvider extends ChangeNotifier {
   BillingProvider(this._service);
 
+  /// Zentraler Schalter für die Test-Phase: solange der Kauf-/Abo-Flow nicht
+  /// live ist, blenden Settings-Plan-Karte und Pricing-Screen Preis-/
+  /// Kauf-Elemente aus bzw. ersetzen sie durch einen Testphase-Hinweis.
+  /// Beim Go-Live auf `true` setzen (zusammen mit dem [currentPlan]-Revert).
+  static const bool purchaseFlowLive = false;
+
   final BillingService _service;
 
   BillingProfile? _profile;

@@ -439,6 +439,9 @@
   "settingsAboutSection": "About",
   "settingsAboutTile": "About this app",
   "settingsAboutSubtitle": "Version, copyright & legal",
+  "billingTestPhaseLabel": "Test phase – all features unlocked",
+  "pricingTestPhaseBanner": "The app is in its test phase: all features are unlocked for free. Subscriptions & payment will arrive at launch.",
+  "pricingTestPhaseSnack": "Test phase – no purchase needed yet, everything is already unlocked.",
   "settingsDataTitle": "Data",
   "settingsDataSubtitle": "{deals} deals · {buyers} buyers · {shops} shops · {items} inventory items",
   "@settingsDataSubtitle": {

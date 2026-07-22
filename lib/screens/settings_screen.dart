@@ -2154,12 +2154,18 @@ class _PlanSectionState extends State<_PlanSection> {
     final theme = Theme.of(context);
     final accent = theme.colorScheme.primary;
 
-    final priceLabel = plan == BillingPlan.free
-        ? l10n.settingsBillingPriceFree
-        : l10n.settingsBillingPricePerMonth(_fmtEur(pricing.monthlyPriceEur));
+    // Test-Phase (Kauf-Flow nicht live): kein Preis, keine Adress-Warnung —
+    // Tester sollen nicht denken, dass etwas kostet oder fehlt.
+    final priceLabel = !BillingProvider.purchaseFlowLive
+        ? l10n.billingTestPhaseLabel
+        : plan == BillingPlan.free
+            ? l10n.settingsBillingPriceFree
+            : l10n
+                .settingsBillingPricePerMonth(_fmtEur(pricing.monthlyPriceEur));
 
-    final addressMissing =
-        plan.isPaid && (profile == null || !profile.hasCompleteBillingAddress);
+    final addressMissing = BillingProvider.purchaseFlowLive &&
+        plan.isPaid &&
+        (profile == null || !profile.hasCompleteBillingAddress);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

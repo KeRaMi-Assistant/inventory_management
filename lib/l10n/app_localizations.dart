@@ -1856,6 +1856,24 @@ abstract class AppLocalizations {
   /// **'Version, Copyright & Rechtliches'**
   String get settingsAboutSubtitle;
 
+  /// No description provided for @billingTestPhaseLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Testphase – alle Funktionen freigeschaltet'**
+  String get billingTestPhaseLabel;
+
+  /// No description provided for @pricingTestPhaseBanner.
+  ///
+  /// In de, this message translates to:
+  /// **'Die App ist in der Testphase: Alle Funktionen sind kostenlos freigeschaltet. Abos & Zahlung kommen zum offiziellen Start.'**
+  String get pricingTestPhaseBanner;
+
+  /// No description provided for @pricingTestPhaseSnack.
+  ///
+  /// In de, this message translates to:
+  /// **'Testphase – ein Kauf ist noch nicht nötig, alles ist bereits freigeschaltet.'**
+  String get pricingTestPhaseSnack;
+
   /// No description provided for @settingsLanguageSection.
   ///
   /// In de, this message translates to:
