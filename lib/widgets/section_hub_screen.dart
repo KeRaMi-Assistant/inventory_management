@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/responsive.dart';
+import 'entrance.dart';
 
 /// Descriptor for a single tile in a [SectionHubScreen].
 ///
@@ -50,9 +51,9 @@ class SectionHubTile {
     this.build,
     this.onPushFullscreen,
   }) : assert(
-          (build != null) != (onPushFullscreen != null),
-          'Exactly one of build or onPushFullscreen must be provided.',
-        );
+         (build != null) != (onPushFullscreen != null),
+         'Exactly one of build or onPushFullscreen must be provided.',
+       );
 }
 
 /// Generic hub screen that renders a list of [SectionHubTile]s.
@@ -71,10 +72,7 @@ class SectionHubTile {
 /// - Detail-Pane (leer): `Key('detailPaneEmpty')`
 /// - Detail-Pane (mit Inhalt): `Key('detailPane')`
 class SectionHubScreen extends StatefulWidget {
-  const SectionHubScreen({
-    super.key,
-    required this.tiles,
-  });
+  const SectionHubScreen({super.key, required this.tiles});
 
   final List<SectionHubTile> tiles;
 
@@ -174,10 +172,7 @@ class _SectionHubScreenState extends State<SectionHubScreen> {
                   layoutBuilder: (currentChild, previousChildren) => Stack(
                     alignment: Alignment.topLeft,
                     fit: StackFit.expand,
-                    children: [
-                      ...previousChildren,
-                      ?currentChild,
-                    ],
+                    children: [...previousChildren, ?currentChild],
                   ),
                   child: _DetailPane(
                     // ValueKey changes only when the selected tile changes, so
@@ -219,11 +214,14 @@ class _TileList extends StatelessWidget {
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final tile = tiles[index];
-        return _SectionHubTileCard(
-          key: tile.key,
-          tile: tile,
-          selected: isDesktop && selected?.key == tile.key,
-          onTap: () => onTileTap(tile),
+        return Entrance(
+          index: index,
+          child: _SectionHubTileCard(
+            key: tile.key,
+            tile: tile,
+            selected: isDesktop && selected?.key == tile.key,
+            onTap: () => onTileTap(tile),
+          ),
         );
       },
     );
@@ -287,7 +285,7 @@ class _DetailPaneEmpty extends StatelessWidget {
 
 // ─── Tile card ─────────────────────────────────────────────────────────────────
 
-class _SectionHubTileCard extends StatelessWidget {
+class _SectionHubTileCard extends StatefulWidget {
   const _SectionHubTileCard({
     super.key,
     required this.tile,
@@ -300,78 +298,97 @@ class _SectionHubTileCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_SectionHubTileCard> createState() => _SectionHubTileCardState();
+}
+
+class _SectionHubTileCardState extends State<_SectionHubTileCard> {
+  /// Pressed-Feedback: Kachel schrumpft minimal unter dem Finger (0.98) —
+  /// physisches Feedback zusätzlich zum Ripple.
+  bool _pressed = false;
+
+  SectionHubTile get tile => widget.tile;
+  bool get selected => widget.selected;
+  VoidCallback get onTap => widget.onTap;
+
+  @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      color: selected ? AppTheme.accentLightOf(context) : null,
-      shape: selected
-          ? RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: BorderSide(
-                color: AppTheme.accentTextOf(context),
-                width: 1.5,
-              ),
-            )
-          : null,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          // Vertical padding ensures touch target ≥ 48 dp even with short text.
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Row(
-            children: [
-              // Icon container (48×48 dp touch-target compliant)
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppTheme.accentLightOf(context),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  tile.icon,
-                  size: 24,
+    return AnimatedScale(
+      scale: _pressed ? 0.98 : 1.0,
+      duration: const Duration(milliseconds: 110),
+      curve: Curves.easeOut,
+      child: Card(
+        margin: EdgeInsets.zero,
+        color: selected ? AppTheme.accentLightOf(context) : null,
+        shape: selected
+            ? RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
                   color: AppTheme.accentTextOf(context),
+                  width: 1.5,
                 ),
-              ),
-              const SizedBox(width: 16),
-              // Labels
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tile.label,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimaryOf(context),
-                      ),
-                    ),
-                    if (tile.subtitle != null) ...[
-                      const SizedBox(height: 2),
+              )
+            : null,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          onHighlightChanged: (v) => setState(() => _pressed = v),
+          child: Padding(
+            // Vertical padding ensures touch target ≥ 48 dp even with short text.
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                // Icon container (48×48 dp touch-target compliant)
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentLightOf(context),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    tile.icon,
+                    size: 24,
+                    color: AppTheme.accentTextOf(context),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Labels
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        tile.subtitle!,
+                        tile.label,
                         style: TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.textMutedOf(context),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimaryOf(context),
                         ),
                       ),
+                      if (tile.subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          tile.subtitle!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.textMutedOf(context),
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              // Chevron — non-embeddable tiles always push, show external icon
-              Icon(
-                tile.onPushFullscreen != null
-                    ? Icons.open_in_new_outlined
-                    : Icons.chevron_right,
-                size: 20,
-                color: AppTheme.textMutedOf(context),
-              ),
-            ],
+                // Chevron — non-embeddable tiles always push, show external icon
+                Icon(
+                  tile.onPushFullscreen != null
+                      ? Icons.open_in_new_outlined
+                      : Icons.chevron_right,
+                  size: 20,
+                  color: AppTheme.textMutedOf(context),
+                ),
+              ],
+            ),
           ),
         ),
       ),

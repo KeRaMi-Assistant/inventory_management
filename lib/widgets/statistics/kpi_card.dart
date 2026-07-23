@@ -13,7 +13,7 @@ import '../../app_theme.dart';
 /// - Statistics (`overview_tab.dart`): vollständige API inkl. Delta-Pfeil.
 ///
 /// Das frühere `lib/widgets/kpi_card.dart` ist gelöscht (T4.1-Dedupe).
-class KpiCard extends StatelessWidget {
+class KpiCard extends StatefulWidget {
   final String label;
   final String value;
   final IconData icon;
@@ -38,6 +38,24 @@ class KpiCard extends StatelessWidget {
     this.onTap,
   });
 
+  @override
+  State<KpiCard> createState() => _KpiCardState();
+}
+
+class _KpiCardState extends State<KpiCard> {
+  /// Pressed-Feedback: tappbare Karten schrumpfen minimal (0.97) unter dem
+  /// Finger — physisches Feedback wie bei Linear/Revolut, statt nur Ripple.
+  bool _pressed = false;
+
+  String get label => widget.label;
+  String get value => widget.value;
+  IconData get icon => widget.icon;
+  Color get accent => widget.accent;
+  double? get deltaPct => widget.deltaPct;
+  String? get deltaLabel => widget.deltaLabel;
+  bool get deltaInverted => widget.deltaInverted;
+  VoidCallback? get onTap => widget.onTap;
+
   /// Baut das Semantics-Label für Screen-Reader.
   ///
   /// Format: „KPI `label`, Wert `value`" — ohne Trend wenn kein [deltaPct]
@@ -48,8 +66,9 @@ class KpiCard extends StatelessWidget {
     }
     final pctStr = '${deltaPct!.abs().toStringAsFixed(1)}%';
     final sign = deltaPct! > 0 ? '+' : (deltaPct! < 0 ? '-' : '');
-    final trendStr =
-        deltaLabel != null ? '$sign$pctStr $deltaLabel' : '$sign$pctStr';
+    final trendStr = deltaLabel != null
+        ? '$sign$pctStr $deltaLabel'
+        : '$sign$pctStr';
     return 'KPI $label, Wert $value, Trend $trendStr';
   }
 
@@ -63,13 +82,13 @@ class KpiCard extends StatelessWidget {
     final deltaColor = goodDirection
         ? AppTheme.successTextOf(context)
         : badDirection
-            ? AppTheme.dangerTextOf(context)
-            : AppTheme.textMutedOf(context);
+        ? AppTheme.dangerTextOf(context)
+        : AppTheme.textMutedOf(context);
     final arrow = isPositive
         ? Icons.arrow_upward
         : isNegative
-            ? Icons.arrow_downward
-            : Icons.remove;
+        ? Icons.arrow_downward
+        : Icons.remove;
 
     final card = Container(
       padding: const EdgeInsets.all(16),
@@ -87,9 +106,8 @@ class KpiCard extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: accent.withAlpha(
-                      Theme.of(context).brightness == Brightness.dark
-                          ? 50
-                          : 20),
+                    Theme.of(context).brightness == Brightness.dark ? 50 : 20,
+                  ),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, size: 16, color: accent),
@@ -114,8 +132,11 @@ class KpiCard extends StatelessWidget {
               // Tap-Affordance: navigierbare Karten (Dashboard-Drilldown)
               // sind sonst nicht von statischen Info-Kacheln unterscheidbar.
               if (onTap != null)
-                Icon(Icons.chevron_right,
-                    size: 16, color: AppTheme.textMutedOf(context)),
+                Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: AppTheme.textMutedOf(context),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -171,10 +192,16 @@ class KpiCard extends StatelessWidget {
       button: onTap != null,
       child: onTap == null
           ? card
-          : InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(12),
-              child: card,
+          : AnimatedScale(
+              scale: _pressed ? 0.97 : 1.0,
+              duration: const Duration(milliseconds: 110),
+              curve: Curves.easeOut,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(12),
+                onHighlightChanged: (v) => setState(() => _pressed = v),
+                child: card,
+              ),
             ),
     );
   }
@@ -193,18 +220,16 @@ class KpiGrid extends StatelessWidget {
         final cols = w < 480
             ? 2
             : w < 800
-                ? 3
-                : w < 1200
-                    ? 4
-                    : 6;
+            ? 3
+            : w < 1200
+            ? 4
+            : 6;
         const gap = 12.0;
         final cardW = (w - gap * (cols - 1)) / cols;
         return Wrap(
           spacing: gap,
           runSpacing: gap,
-          children: cards
-              .map((c) => SizedBox(width: cardW, child: c))
-              .toList(),
+          children: cards.map((c) => SizedBox(width: cardW, child: c)).toList(),
         );
       },
     );

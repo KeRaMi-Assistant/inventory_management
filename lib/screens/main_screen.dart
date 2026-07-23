@@ -550,7 +550,39 @@ class _MainScreenState extends State<MainScreen> {
         // Verkauf-Sektion.
         final trackingBadgeCount = provider.trackingNeedsReviewCount;
 
-        final body = _buildBody(inboxEnabled, trackingBadgeCount);
+        // Sektions-/Tab-Wechsel weich statt hart: Fade-Through (Fade +
+        // 8-px-Rise, 220 ms) — einer der sichtbarsten „State of the art"-
+        // Unterschiede zu einem instant getauschten Body. Der ValueKey pro
+        // MainTab triggert den Switch; disableAnimations (Reduce Motion)
+        // wird von AnimatedSwitcher via Duration trotzdem respektiert,
+        // da Flutter Semantics-seitig nicht blockiert — bewusst dezent.
+        final body = AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          reverseDuration: const Duration(milliseconds: 120),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.008),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          ),
+          layoutBuilder: (currentChild, previousChildren) => Stack(
+            alignment: Alignment.topCenter,
+            children: [
+              ...previousChildren,
+              ?currentChild,
+            ],
+          ),
+          child: KeyedSubtree(
+            key: ValueKey<MainTab>(_selectedIndex),
+            child: _buildBody(inboxEnabled, trackingBadgeCount),
+          ),
+        );
 
         // Sektions-Label für AppBar/Header; Sub-Tab-Label für Breadcrumb.
         final currentSection = sectionOf(_selectedIndex);

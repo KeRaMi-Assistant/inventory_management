@@ -13,6 +13,7 @@ import '../providers/stock_provider.dart';
 import '../utils/responsive.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/entrance.dart';
 import '../widgets/statistics/kpi_card.dart';
 import 'main_tab.dart';
 import 'purchase_orders_screen.dart';
@@ -326,24 +327,30 @@ class _KpiGrid extends StatelessWidget {
         //            1280 px → 4,00 → clamp → 4
         //            2560 px → 8,00 → clamp → 4  ← Ultrawide-Begrenzung
         final cols = (width / 320).floor().clamp(2, 4);
+        final itemWidth = (width - (cols - 1) * 12) / cols;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: kpis.map((k) {
-            final itemWidth = (width - (cols - 1) * 12) / cols;
-            return SizedBox(
-              width: itemWidth,
-              child: KpiCard(
-                icon: k.$1,
-                label: k.$2,
-                value: k.$3,
-                accent: k.$4,
-                onTap: () => context
-                    .read<NavigationIntentsProvider>()
-                    .requestTab(k.$5),
+          children: [
+            // Gestaffelte Entrance (35 ms Versatz pro Karte): das Grid baut
+            // sich spürbar „auf" statt schlagartig da zu sein.
+            for (var i = 0; i < kpis.length; i++)
+              Entrance(
+                index: i,
+                child: SizedBox(
+                  width: itemWidth,
+                  child: KpiCard(
+                    icon: kpis[i].$1,
+                    label: kpis[i].$2,
+                    value: kpis[i].$3,
+                    accent: kpis[i].$4,
+                    onTap: () => context
+                        .read<NavigationIntentsProvider>()
+                        .requestTab(kpis[i].$5),
+                  ),
+                ),
               ),
-            );
-          }).toList(),
+          ],
         );
       },
     );
