@@ -329,7 +329,20 @@ class _KpiGrid extends StatelessWidget {
         //             960 px → 3,00 → clamp → 3
         //            1280 px → 4,00 → clamp → 4
         //            2560 px → 8,00 → clamp → 4  ← Ultrawide-Begrenzung
-        final cols = (width / 320).floor().clamp(2, 4);
+        var cols = (width / 320).floor().clamp(2, 4);
+        // Grid-Balance: bei 8 KPIs keine Leerzellen in der letzten Reihe —
+        // wenn die Kartenzahl nicht durch die Spaltenzahl teilbar ist, auf
+        // die nächste teilende Spaltenzahl (4 oder 2) ausweichen, sofern die
+        // Karten dabei ≥ 260 px breit bleiben (Design-Critic R2 #2: Desktop
+        // rendete 3+3+2 mit toter Endzelle).
+        if (kpis.length % cols != 0) {
+          for (final candidate in const [4, 2]) {
+            if (width / candidate >= 260 && kpis.length % candidate == 0) {
+              cols = candidate;
+              break;
+            }
+          }
+        }
         final itemWidth = (width - (cols - 1) * 12) / cols;
         return Wrap(
           spacing: 12,

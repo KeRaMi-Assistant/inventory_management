@@ -91,14 +91,23 @@ class ProfitLineChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 56,
-                getTitlesWidget: (v, _) => Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: Text(
-                    money.format(v),
-                    style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)),
-                    textAlign: TextAlign.right,
-                  ),
-                ),
+                getTitlesWidget: (v, meta) {
+                  // Rand-Label am oberen Chart-Ende unterdrücken — es
+                  // überdruckt sonst das letzte Intervall-Label
+                  // („12105 €"/„12005 €", Design-Critic R2 #1).
+                  if (v == meta.max && v != meta.min) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text(
+                      money.format(v),
+                      style: const TextStyle(
+                          fontSize: 10, color: Color(0xFF9CA3AF)),
+                      textAlign: TextAlign.right,
+                    ),
+                  );
+                },
               ),
             ),
             bottomTitles: AxisTitles(

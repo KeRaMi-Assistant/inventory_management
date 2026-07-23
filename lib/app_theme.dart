@@ -259,12 +259,14 @@ class AppTheme {
   // geben Cards im Light-Mode Tiefe wie bei Stripe/Linear. Dark-Mode bewusst
   // OHNE Schatten: Tiefe entsteht dort tonal (Surface heller als App-BG).
   static const List<BoxShadow> shadowSm = [
-    BoxShadow(color: Color(0x0A0F172A), blurRadius: 2, offset: Offset(0, 1)),
-    BoxShadow(color: Color(0x0F0F172A), blurRadius: 8, offset: Offset(0, 2)),
+    // Contact- + Key- + Ambient-Layer (Design-Critic R2 #3: einlagig wirkte
+    // zu zaghaft) — bleibt bewusst dezent, aber mit klarerem „Lift".
+    BoxShadow(color: Color(0x140F172A), blurRadius: 3, offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x0F0F172A), blurRadius: 12, offset: Offset(0, 4)),
   ];
   static const List<BoxShadow> shadowMd = [
-    BoxShadow(color: Color(0x0D0F172A), blurRadius: 4, offset: Offset(0, 2)),
-    BoxShadow(color: Color(0x140F172A), blurRadius: 16, offset: Offset(0, 6)),
+    BoxShadow(color: Color(0x140F172A), blurRadius: 6, offset: Offset(0, 2)),
+    BoxShadow(color: Color(0x170F172A), blurRadius: 20, offset: Offset(0, 8)),
   ];
 
   static List<BoxShadow> shadowSmOf(BuildContext context) =>
