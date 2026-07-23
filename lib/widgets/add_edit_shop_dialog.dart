@@ -151,7 +151,10 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
     } else {
       provider.addShop(shop);
     }
-    Navigator.pop(context);
+    // Name als Dialog-Ergebnis: erlaubt Inline-Anlage aus dem Deal-Dialog
+    // (Dropdown wählt den frisch angelegten Shop direkt aus). Bestehende
+    // Caller ohne showDialog<String> ignorieren den Wert.
+    Navigator.pop(context, shop.name);
   }
 
   @override

@@ -13,6 +13,8 @@ import '../utils/status_l10n.dart';
 import '../utils/url_helper.dart';
 import '../utils/validators.dart';
 import '../utils/carrier_links.dart';
+import 'add_edit_buyer_dialog.dart';
+import 'add_edit_shop_dialog.dart';
 import 'attachment_gallery.dart';
 import 'deal_comments_section.dart';
 import 'tracking_status_block.dart';
@@ -95,6 +97,18 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
 
   bool _isDropship = false;
   String? _shop;
+
+  /// Sentinel-Wert für den „+ Neu anlegen"-Eintrag in Shop-/Käufer-Dropdown.
+  /// Wird nie persistiert — bei Auswahl öffnet sich der jeweilige
+  /// Anlage-Dialog und der Dropdown springt auf den neuen (oder alten) Wert.
+  static const String _kCreateNewSentinel = '__createNew__';
+
+  /// Erzwingen einen Rebuild der DropdownButtonFormFields nach einem
+  /// Inline-Anlage-Dialog: `initialValue` greift nur beim (Neu-)Bau des
+  /// FormFields, daher wandert der Zähler in dessen ValueKey — auch bei
+  /// Abbruch (alter Wert bleibt) muss der transiente Sentinel-Zustand raus.
+  int _shopPickerEpoch = 0;
+  int _buyerPickerEpoch = 0;
   DateTime _orderDate = DateTime.now();
   DateTime? _arrivalDate;
   String _status = 'Bestellt';
@@ -459,6 +473,39 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
     }
   }
 
+  /// Öffnet den Shop-Anlage-Dialog direkt aus dem Dropdown („+ Neuen Shop
+  /// anlegen"). Erstnutzer ohne Shops mussten vorher das Deal-Formular
+  /// verlassen (Einstellungen → Shops) und alles neu eintippen. Bei Erfolg
+  /// wird der neue Shop direkt ausgewählt; bei Abbruch bleibt der alte Wert.
+  /// Der Epoch-Tick im ValueKey baut das FormField neu, damit der transiente
+  /// Sentinel nie als Auswahl stehen bleibt.
+  Future<void> _createShopInline() async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => const AddEditShopDialog(),
+    );
+    if (!mounted) return;
+    setState(() {
+      _shopPickerEpoch++;
+      if (name != null && name.isNotEmpty) _shop = name;
+    });
+    _checkDirtyChanged();
+  }
+
+  /// Analog [_createShopInline] für Käufer.
+  Future<void> _createBuyerInline() async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => const AddEditBuyerDialog(),
+    );
+    if (!mounted) return;
+    setState(() {
+      _buyerPickerEpoch++;
+      if (name != null && name.isNotEmpty) _buyer = name;
+    });
+    _checkDirtyChanged();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -597,6 +644,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                             },
                           ),
                           DropdownButtonFormField<String>(
+                            key: ValueKey(
+                                'dealShopPicker-$_shopPickerEpoch-$_shop'),
                             initialValue: _shop,
                             decoration:
                                 InputDecoration(labelText: '${l10n.dealShop} *'),
@@ -613,14 +662,36 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                               for (final s in otherShops)
                                 DropdownMenuItem(
                                     value: s.name, child: Text(s.name)),
+                              if (activeShops.isNotEmpty)
+                                const DropdownMenuItem<String>(
+                                  enabled: false,
+                                  child: Divider(height: 1),
+                                ),
+                              DropdownMenuItem(
+                                value: _kCreateNewSentinel,
+                                child: Text(
+                                  l10n.dealCreateNewShop,
+                                  style: TextStyle(
+                                    color: AppTheme.accentTextOf(context),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                             ],
                             onChanged: (v) {
+                              if (v == _kCreateNewSentinel) {
+                                _createShopInline();
+                                return;
+                              }
                               setState(() => _shop = v);
                               _checkDirtyChanged();
                             },
-                            validator: (v) => v == null || v.isEmpty
-                                ? l10n.commonRequired
-                                : null,
+                            validator: (v) =>
+                                v == null ||
+                                        v.isEmpty ||
+                                        v == _kCreateNewSentinel
+                                    ? l10n.commonRequired
+                                    : null,
                           ),
                         ]),
                         const SizedBox(height: 20),
@@ -729,6 +800,8 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                         const SizedBox(height: 10),
                         _row(narrow, [
                           DropdownButtonFormField<String>(
+                            key: ValueKey(
+                                'dealBuyerPicker-$_buyerPickerEpoch-$_buyer'),
                             initialValue: _buyer,
                             decoration: InputDecoration(
                                 labelText: l10n.dealBuyer),
@@ -738,8 +811,26 @@ class _AddEditDealDialogState extends State<AddEditDealDialog> {
                                   child: Text(l10n.dealBuyerNone)),
                               ...buyers.map((b) => DropdownMenuItem(
                                   value: b.name, child: Text(b.name))),
+                              const DropdownMenuItem<String>(
+                                enabled: false,
+                                child: Divider(height: 1),
+                              ),
+                              DropdownMenuItem(
+                                value: _kCreateNewSentinel,
+                                child: Text(
+                                  l10n.dealCreateNewBuyer,
+                                  style: TextStyle(
+                                    color: AppTheme.accentTextOf(context),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                             ],
                             onChanged: (v) {
+                              if (v == _kCreateNewSentinel) {
+                                _createBuyerInline();
+                                return;
+                              }
                               setState(() => _buyer = v);
                               _checkDirtyChanged();
                             },

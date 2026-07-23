@@ -198,7 +198,9 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
     } else {
       provider.addBuyer(buyer);
     }
-    Navigator.pop(context);
+    // Name als Dialog-Ergebnis: erlaubt Inline-Anlage aus dem Deal-Dialog
+    // (Dropdown wählt den frisch angelegten Käufer direkt aus).
+    Navigator.pop(context, buyer.name);
   }
 
   String _colorLabel(AppLocalizations l10n, String key) => switch (key) {

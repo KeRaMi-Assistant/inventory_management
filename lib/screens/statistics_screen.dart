@@ -13,6 +13,7 @@ import '../providers/stock_provider.dart';
 import '../providers/statistics_filter_provider.dart';
 import '../services/statistics_export_service.dart';
 import '../services/statistics_service.dart';
+import '../utils/responsive.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/statistics/filter_bar.dart';
 import '../widgets/statistics/tabs/buyers_tab.dart';
@@ -167,27 +168,63 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                 Material(
                   color: AppTheme.bgSurfaceOf(context),
                   elevation: 0,
-                  child: TabBar(
-                    controller: _tab,
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
-                    indicatorColor: AppTheme.accentTextOf(context),
-                    indicatorWeight: 2,
-                    labelColor: AppTheme.accentTextOf(context),
-                    unselectedLabelColor: AppTheme.textMutedOf(context),
-                    dividerColor: AppTheme.borderOf(context),
-                    labelStyle: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w700),
-                    unselectedLabelStyle: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w500),
-                    tabs: [
-                      Tab(icon: const Icon(Icons.dashboard_outlined, size: 16), text: AppLocalizations.of(context).statsTabOverview),
-                      Tab(icon: const Icon(Icons.people_outline, size: 16), text: AppLocalizations.of(context).statsTabBuyers),
-                      Tab(icon: const Icon(Icons.shopping_bag_outlined, size: 16), text: AppLocalizations.of(context).statsTabProductsShops),
-                      Tab(icon: const Icon(Icons.inventory_2_outlined, size: 16), text: AppLocalizations.of(context).statsTabInventorySuppliers),
-                      Tab(icon: const Icon(Icons.account_balance_outlined, size: 16), text: AppLocalizations.of(context).statsTabFinance),
-                    ],
-                  ),
+                  child: LayoutBuilder(builder: (tabCtx, tabConstraints) {
+                    final tabBar = TabBar(
+                      controller: _tab,
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      indicatorColor: AppTheme.accentTextOf(context),
+                      indicatorWeight: 2,
+                      labelColor: AppTheme.accentTextOf(context),
+                      unselectedLabelColor: AppTheme.textMutedOf(context),
+                      dividerColor: AppTheme.borderOf(context),
+                      labelStyle: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700),
+                      unselectedLabelStyle: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w500),
+                      tabs: [
+                        Tab(icon: const Icon(Icons.dashboard_outlined, size: 16), text: AppLocalizations.of(context).statsTabOverview),
+                        Tab(icon: const Icon(Icons.people_outline, size: 16), text: AppLocalizations.of(context).statsTabBuyers),
+                        Tab(icon: const Icon(Icons.shopping_bag_outlined, size: 16), text: AppLocalizations.of(context).statsTabProductsShops),
+                        Tab(icon: const Icon(Icons.inventory_2_outlined, size: 16), text: AppLocalizations.of(context).statsTabInventorySuppliers),
+                        Tab(icon: const Icon(Icons.account_balance_outlined, size: 16), text: AppLocalizations.of(context).statsTabFinance),
+                      ],
+                    );
+                    // Phone: rechte Fade-Kante als Scroll-Affordance — sonst
+                    // wirkt die scrollbare Tab-Leiste abgeschnitten und
+                    // „Finanzen" bleibt unentdeckt (UX-Audit, Finding #9).
+                    if (!isCompact(tabConstraints.maxWidth)) return tabBar;
+                    final surface = AppTheme.bgSurfaceOf(tabCtx);
+                    return Stack(
+                      children: [
+                        tabBar,
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          child: IgnorePointer(
+                            child: Container(
+                              width: 32,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    surface.withValues(alpha: 0),
+                                    surface,
+                                  ],
+                                ),
+                              ),
+                              alignment: Alignment.centerRight,
+                              child: Icon(
+                                Icons.chevron_right,
+                                size: 16,
+                                color: AppTheme.textMutedOf(tabCtx),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
                 ),
                 Expanded(
                   // ExcludeSemantics prevents accessibility_tools from

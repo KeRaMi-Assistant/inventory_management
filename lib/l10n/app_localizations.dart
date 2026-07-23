@@ -1844,6 +1844,30 @@ abstract class AppLocalizations {
   /// **'Alle Rechte vorbehalten.'**
   String get aboutAllRightsReserved;
 
+  /// No description provided for @dealCreateNewShop.
+  ///
+  /// In de, this message translates to:
+  /// **'+ Neuen Shop anlegen …'**
+  String get dealCreateNewShop;
+
+  /// No description provided for @dealCreateNewBuyer.
+  ///
+  /// In de, this message translates to:
+  /// **'+ Neuen Käufer anlegen …'**
+  String get dealCreateNewBuyer;
+
+  /// No description provided for @statsFilterButton.
+  ///
+  /// In de, this message translates to:
+  /// **'Filter'**
+  String get statsFilterButton;
+
+  /// No description provided for @statsFilterSheetTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Statistik filtern'**
+  String get statsFilterSheetTitle;
+
   /// No description provided for @statsEmptyRangeTitle.
   ///
   /// In de, this message translates to:

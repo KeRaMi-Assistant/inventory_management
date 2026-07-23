@@ -971,6 +971,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get aboutAllRightsReserved => 'Alle Rechte vorbehalten.';
 
   @override
+  String get dealCreateNewShop => '+ Neuen Shop anlegen …';
+
+  @override
+  String get dealCreateNewBuyer => '+ Neuen Käufer anlegen …';
+
+  @override
+  String get statsFilterButton => 'Filter';
+
+  @override
+  String get statsFilterSheetTitle => 'Statistik filtern';
+
+  @override
   String get statsEmptyRangeTitle => 'Keine Deals im gewählten Zeitraum';
 
   @override

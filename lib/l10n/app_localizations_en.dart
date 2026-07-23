@@ -971,6 +971,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutAllRightsReserved => 'All rights reserved.';
 
   @override
+  String get dealCreateNewShop => '+ Create new shop …';
+
+  @override
+  String get dealCreateNewBuyer => '+ Create new buyer …';
+
+  @override
+  String get statsFilterButton => 'Filters';
+
+  @override
+  String get statsFilterSheetTitle => 'Filter statistics';
+
+  @override
   String get statsEmptyRangeTitle => 'No deals in the selected period';
 
   @override
