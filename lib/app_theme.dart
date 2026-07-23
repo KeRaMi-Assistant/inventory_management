@@ -254,6 +254,24 @@ class AppTheme {
   static const double radiusLg = 12;  // Dialogs, FAB
   static const double radiusXl = 16;
 
+  // ── Elevation / Tiefe ────────────────────────────────────────────────────
+  // Weiche, mehrschichtige Slate-Schatten (statt harter Schwarz-Shadows) —
+  // geben Cards im Light-Mode Tiefe wie bei Stripe/Linear. Dark-Mode bewusst
+  // OHNE Schatten: Tiefe entsteht dort tonal (Surface heller als App-BG).
+  static const List<BoxShadow> shadowSm = [
+    BoxShadow(color: Color(0x0A0F172A), blurRadius: 2, offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x0F0F172A), blurRadius: 8, offset: Offset(0, 2)),
+  ];
+  static const List<BoxShadow> shadowMd = [
+    BoxShadow(color: Color(0x0D0F172A), blurRadius: 4, offset: Offset(0, 2)),
+    BoxShadow(color: Color(0x140F172A), blurRadius: 16, offset: Offset(0, 6)),
+  ];
+
+  static List<BoxShadow> shadowSmOf(BuildContext context) =>
+      _dark(context) ? const [] : shadowSm;
+  static List<BoxShadow> shadowMdOf(BuildContext context) =>
+      _dark(context) ? const [] : shadowMd;
+
   // -- ThemeData builders --
   static ThemeData get light => lightFor(_active);
   static ThemeData get dark => darkFor(_active);
@@ -312,14 +330,17 @@ class AppTheme {
         toolbarHeight: 52,
       ),
       cardTheme: const CardThemeData(
-        elevation: 0,
+        // Dezente Tiefe statt Border-only-Flachheit: elevation 1 mit weichem
+        // Slate-Schatten wirkt auf ALLE Card-Widgets der App (Hub-Kacheln,
+        // Settings-Cards, Listen) — Design-Exzellenz S2.
+        elevation: 1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(8)),
           side: BorderSide(color: border, width: 1),
         ),
         color: bgSurface,
         margin: EdgeInsets.zero,
-        shadowColor: Colors.transparent,
+        shadowColor: Color(0x2E0F172A),
         surfaceTintColor: Colors.transparent,
       ),
       inputDecorationTheme: InputDecorationTheme(

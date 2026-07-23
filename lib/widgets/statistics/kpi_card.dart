@@ -96,6 +96,7 @@ class _KpiCardState extends State<KpiCard> {
         color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppTheme.borderOf(context)),
+        boxShadow: AppTheme.shadowSmOf(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

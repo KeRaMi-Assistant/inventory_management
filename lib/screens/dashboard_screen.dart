@@ -687,6 +687,7 @@ class _Panel extends StatelessWidget {
         color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
         border: Border.all(color: AppTheme.borderOf(context)),
+        boxShadow: AppTheme.shadowSmOf(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
