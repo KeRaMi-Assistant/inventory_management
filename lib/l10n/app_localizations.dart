@@ -4844,6 +4844,30 @@ abstract class AppLocalizations {
   /// **'Lager kritisch'**
   String get dashboardKpiCriticalStock;
 
+  /// No description provided for @dashboardGreetingMorning.
+  ///
+  /// In de, this message translates to:
+  /// **'Guten Morgen'**
+  String get dashboardGreetingMorning;
+
+  /// No description provided for @dashboardGreetingDay.
+  ///
+  /// In de, this message translates to:
+  /// **'Guten Tag'**
+  String get dashboardGreetingDay;
+
+  /// No description provided for @dashboardGreetingEvening.
+  ///
+  /// In de, this message translates to:
+  /// **'Guten Abend'**
+  String get dashboardGreetingEvening;
+
+  /// No description provided for @dashboardGreetingSummary.
+  ///
+  /// In de, this message translates to:
+  /// **'{shipping} unterwegs · {open} offene Bestellungen'**
+  String dashboardGreetingSummary(int shipping, int open);
+
   /// No description provided for @dashboardKpiMissingInvoice.
   ///
   /// In de, this message translates to:

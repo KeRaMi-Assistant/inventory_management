@@ -47,6 +47,10 @@ class _KpiCardState extends State<KpiCard> {
   /// Finger — physisches Feedback wie bei Linear/Revolut, statt nur Ripple.
   bool _pressed = false;
 
+  /// Hover-Feedback (Desktop): angehobener Schatten + kräftigere Border
+  /// signalisieren Klickbarkeit ohne Layout-Shift (Design-Critic R2 #4).
+  bool _hovered = false;
+
   String get label => widget.label;
   String get value => widget.value;
   IconData get icon => widget.icon;
@@ -90,13 +94,21 @@ class _KpiCardState extends State<KpiCard> {
         ? Icons.arrow_downward
         : Icons.remove;
 
-    final card = Container(
+    final card = AnimatedContainer(
+      duration: const Duration(milliseconds: 140),
+      curve: Curves.easeOut,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.bgSurfaceOf(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.borderOf(context)),
-        boxShadow: AppTheme.shadowSmOf(context),
+        border: Border.all(
+          color: _hovered
+              ? AppTheme.borderStrongOf(context)
+              : AppTheme.borderOf(context),
+        ),
+        boxShadow: _hovered
+            ? AppTheme.shadowMdOf(context)
+            : AppTheme.shadowSmOf(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,15 +210,19 @@ class _KpiCardState extends State<KpiCard> {
       button: onTap != null,
       child: onTap == null
           ? card
-          : AnimatedScale(
-              scale: _pressed ? 0.97 : 1.0,
-              duration: const Duration(milliseconds: 110),
-              curve: Curves.easeOut,
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(12),
-                onHighlightChanged: (v) => setState(() => _pressed = v),
-                child: card,
+          : MouseRegion(
+              onEnter: (_) => setState(() => _hovered = true),
+              onExit: (_) => setState(() => _hovered = false),
+              child: AnimatedScale(
+                scale: _pressed ? 0.97 : 1.0,
+                duration: const Duration(milliseconds: 110),
+                curve: Curves.easeOut,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(12),
+                  onHighlightChanged: (v) => setState(() => _pressed = v),
+                  child: card,
+                ),
               ),
             ),
     );

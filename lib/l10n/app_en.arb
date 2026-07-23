@@ -1027,6 +1027,16 @@
   "dashboardKpiTotalProfit": "Total profit",
   "dashboardKpiOpenAmount": "Open amount",
   "dashboardKpiCriticalStock": "Critical stock",
+  "dashboardGreetingMorning": "Good morning",
+  "dashboardGreetingDay": "Good afternoon",
+  "dashboardGreetingEvening": "Good evening",
+  "dashboardGreetingSummary": "{shipping} in transit · {open} open orders",
+  "@dashboardGreetingSummary": {
+    "placeholders": {
+      "shipping": { "type": "int" },
+      "open": { "type": "int" }
+    }
+  },
   "dashboardKpiMissingInvoice": "Missing receipt",
   "dashboardKpiTotalDeals": "Total deals",
   "dashboardActivityFeed": "Activity feed",

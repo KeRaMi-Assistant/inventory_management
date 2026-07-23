@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/section_hub_screen.dart';
 import 'categories_screen.dart';
@@ -40,6 +41,7 @@ class WarehouseHubScreen extends StatelessWidget {
         SectionHubTile(
           key: const Key('hubTileInventory'),
           icon: Icons.inventory_2_outlined,
+          accent: AppTheme.info,
           label: l10n.warehouseHubTileInventory,
           subtitle: l10n.warehouseHubTileInventorySub,
           build: () => const InventoryScreen(embedded: true),
@@ -50,6 +52,7 @@ class WarehouseHubScreen extends StatelessWidget {
         SectionHubTile(
           key: const Key('hubTileProductCatalog'),
           icon: Icons.style_outlined,
+          accent: AppTheme.purple,
           label: l10n.warehouseHubTileProductCatalog,
           subtitle: l10n.warehouseHubTileProductCatalogSub,
           build: () => const ProductCatalogScreen(embedded: true),
@@ -59,6 +62,7 @@ class WarehouseHubScreen extends StatelessWidget {
         SectionHubTile(
           key: const Key('hubTilePurchaseOrders'),
           icon: Icons.shopping_cart_outlined,
+          accent: AppTheme.warning,
           label: l10n.warehouseHubTilePurchaseOrders,
           subtitle: l10n.warehouseHubTilePurchaseOrdersSub,
           build: () => const PurchaseOrdersScreen(embedded: true),
@@ -68,6 +72,7 @@ class WarehouseHubScreen extends StatelessWidget {
         SectionHubTile(
           key: const Key('hubTileSuppliers'),
           icon: Icons.handshake_outlined,
+          accent: AppTheme.success,
           label: l10n.warehouseHubTileSuppliers,
           subtitle: l10n.warehouseHubTileSuppliersSub,
           build: () => const SuppliersScreen(embedded: true),
@@ -86,6 +91,7 @@ class WarehouseHubScreen extends StatelessWidget {
         SectionHubTile(
           key: const Key('hubTileCategories'),
           icon: Icons.category_outlined,
+          accent: AppTheme.info,
           label: l10n.warehouseHubTileCategories,
           subtitle: l10n.warehouseHubTileCategoriesSub,
           build: () => const CategoriesScreen(embedded: true),
@@ -95,6 +101,7 @@ class WarehouseHubScreen extends StatelessWidget {
         SectionHubTile(
           key: const Key('hubTileStocktake'),
           icon: Icons.fact_check_outlined,
+          accent: AppTheme.purple,
           label: l10n.warehouseHubTileStocktake,
           subtitle: l10n.warehouseHubTileStocktakeSub,
           build: () => const StocktakeScreen(embedded: true),
@@ -109,6 +116,7 @@ class WarehouseHubScreen extends StatelessWidget {
         SectionHubTile(
           key: const Key('hubTileReporting'),
           icon: Icons.bar_chart_outlined,
+          accent: AppTheme.success,
           label: l10n.warehouseHubTileReporting,
           subtitle: l10n.warehouseHubTileReportingSub,
           build: () => const StatisticsScreen(embedded: true),

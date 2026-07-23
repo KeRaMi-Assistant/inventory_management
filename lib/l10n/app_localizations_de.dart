@@ -2695,6 +2695,20 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dashboardKpiCriticalStock => 'Lager kritisch';
 
   @override
+  String get dashboardGreetingMorning => 'Guten Morgen';
+
+  @override
+  String get dashboardGreetingDay => 'Guten Tag';
+
+  @override
+  String get dashboardGreetingEvening => 'Guten Abend';
+
+  @override
+  String dashboardGreetingSummary(int shipping, int open) {
+    return '$shipping unterwegs · $open offene Bestellungen';
+  }
+
+  @override
   String get dashboardKpiMissingInvoice => 'Beleg fehlt';
 
   @override

@@ -31,6 +31,11 @@ class SectionHubTile {
   /// Optional secondary line below [label].
   final String? subtitle;
 
+  /// Optionale Akzentfarbe für Icon + Icon-Box. `null` = Theme-Akzent.
+  /// Bricht die Monotonie identisch blauer Kacheln in langen Hubs
+  /// (Design-Critic R1 #11) — Nachbar-Kacheln sollten sich unterscheiden.
+  final Color? accent;
+
   /// Factory for the embeddable sub-screen body.
   ///
   /// Exactly one of [build] and [onPushFullscreen] must be non-null.
@@ -48,6 +53,7 @@ class SectionHubTile {
     required this.icon,
     required this.label,
     this.subtitle,
+    this.accent,
     this.build,
     this.onPushFullscreen,
   }) : assert(
@@ -355,13 +361,19 @@ class _SectionHubTileCardState extends State<_SectionHubTileCard> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppTheme.accentLightOf(context),
+                    color: tile.accent != null
+                        ? tile.accent!.withAlpha(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? 50
+                                : 22,
+                          )
+                        : AppTheme.accentLightOf(context),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     tile.icon,
                     size: 24,
-                    color: AppTheme.accentTextOf(context),
+                    color: tile.accent ?? AppTheme.accentTextOf(context),
                   ),
                 ),
                 const SizedBox(width: 16),

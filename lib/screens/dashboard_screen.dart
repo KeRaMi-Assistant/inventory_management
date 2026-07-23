@@ -68,6 +68,8 @@ class DashboardScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    _GreetingHeader(provider: provider),
+                    const SizedBox(height: 20),
                     if (isEmpty) const _EmptyStateCard(),
                     if (isEmpty) const SizedBox(height: 24),
                     _LowStockAlertBlock(criticalCount: stock.criticalStockCount),
@@ -286,6 +288,60 @@ class _EmptyStateCardState extends State<_EmptyStateCard> {
               : const Icon(Icons.dataset_outlined),
           label: Text(l10n.dashboardEmptyLoadDemo),
         ),
+      ),
+    );
+  }
+}
+
+// ─── Gruß-Header ───────────────────────────────────────────────────────────────
+
+/// Persönlicher Einstieg statt kaltem Kachel-Grid: tageszeitabhängiger Gruß,
+/// lokalisiertes Datum und eine Kontext-Zeile mit den zwei wichtigsten
+/// Live-Zahlen. Gibt dem Dashboard einen „für dich"-Moment wie bei
+/// Revolut/N26 (Design-Critic R1 #13).
+class _GreetingHeader extends StatelessWidget {
+  final DealsProvider provider;
+  const _GreetingHeader({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final hour = DateTime.now().hour;
+    final greeting = hour < 11
+        ? l10n.dashboardGreetingMorning
+        : hour < 18
+            ? l10n.dashboardGreetingDay
+            : l10n.dashboardGreetingEvening;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final dateStr = DateFormat.yMMMMEEEEd(locale).format(DateTime.now());
+    final summary = l10n.dashboardGreetingSummary(
+      provider.openDeliveriesCount,
+      provider.openOrdersCount,
+    );
+
+    return Entrance(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            greeting,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.4,
+              color: AppTheme.textPrimaryOf(context),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$dateStr · $summary',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.35,
+              color: AppTheme.textMutedOf(context),
+            ),
+          ),
+        ],
       ),
     );
   }

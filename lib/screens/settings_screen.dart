@@ -50,6 +50,7 @@ class SettingsScreen extends StatelessWidget {
     SectionHubTile(
       key: const Key('settingsHubTileBuyers'),
       icon: Icons.people_outlined,
+      accent: AppTheme.info,
       label: l10n.settingsTabBuyers,
       subtitle: l10n.settingsTabBuyersSub,
       build: () => const _BuyersTab(),
@@ -57,6 +58,7 @@ class SettingsScreen extends StatelessWidget {
     SectionHubTile(
       key: const Key('settingsHubTileShops'),
       icon: Icons.store_outlined,
+      accent: AppTheme.purple,
       label: l10n.settingsTabShops,
       subtitle: l10n.settingsTabShopsSub,
       build: () => const _ShopsTab(),
@@ -64,6 +66,7 @@ class SettingsScreen extends StatelessWidget {
     SectionHubTile(
       key: const Key('settingsHubTileTeam'),
       icon: Icons.group_outlined,
+      accent: AppTheme.success,
       label: l10n.settingsTabTeam,
       subtitle: l10n.settingsTabTeamSub,
       build: () => const _TeamTab(),
@@ -71,6 +74,7 @@ class SettingsScreen extends StatelessWidget {
     SectionHubTile(
       key: const Key('settingsHubTilePush'),
       icon: Icons.notifications_outlined,
+      accent: AppTheme.warning,
       label: l10n.settingsTabPush,
       subtitle: l10n.settingsTabPushSub,
       build: () => const _NotificationsTab(),
@@ -78,6 +82,7 @@ class SettingsScreen extends StatelessWidget {
     SectionHubTile(
       key: const Key('settingsHubTileMailbox'),
       icon: Icons.mail_outlined,
+      accent: AppTheme.info,
       label: l10n.settingsTabMailbox,
       subtitle: l10n.settingsTabMailboxSub,
       build: () => const _MailboxTab(),
@@ -85,6 +90,7 @@ class SettingsScreen extends StatelessWidget {
     SectionHubTile(
       key: const Key('settingsHubTileShipping'),
       icon: Icons.local_shipping_outlined,
+      accent: AppTheme.purple,
       label: l10n.settingsTabShipping,
       subtitle: l10n.settingsTabShippingSub,
       build: () => const _ShippingTab(),
@@ -92,6 +98,7 @@ class SettingsScreen extends StatelessWidget {
     SectionHubTile(
       key: const Key('settingsHubTilePublicProfile'),
       icon: Icons.public,
+      accent: AppTheme.success,
       label: l10n.publicProfileTab,
       subtitle: l10n.publicProfileTabSub,
       build: () => const _PublicProfileTab(),
@@ -106,6 +113,7 @@ class SettingsScreen extends StatelessWidget {
     SectionHubTile(
       key: const Key('settingsHubTileSupport'),
       icon: Icons.support_agent_outlined,
+      accent: AppTheme.warning,
       label: l10n.settingsTabSupport,
       subtitle: l10n.settingsTabSupportSub,
       build: () => const _SupportTab(),

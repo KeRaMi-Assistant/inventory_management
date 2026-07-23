@@ -1027,6 +1027,16 @@
   "dashboardKpiTotalProfit": "Gesamtprofit",
   "dashboardKpiOpenAmount": "Offener Betrag",
   "dashboardKpiCriticalStock": "Lager kritisch",
+  "dashboardGreetingMorning": "Guten Morgen",
+  "dashboardGreetingDay": "Guten Tag",
+  "dashboardGreetingEvening": "Guten Abend",
+  "dashboardGreetingSummary": "{shipping} unterwegs · {open} offene Bestellungen",
+  "@dashboardGreetingSummary": {
+    "placeholders": {
+      "shipping": { "type": "int" },
+      "open": { "type": "int" }
+    }
+  },
   "dashboardKpiMissingInvoice": "Beleg fehlt",
   "dashboardKpiTotalDeals": "Deals gesamt",
   "dashboardActivityFeed": "Aktivitäts-Feed",
