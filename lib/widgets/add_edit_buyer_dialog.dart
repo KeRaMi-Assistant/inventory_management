@@ -173,7 +173,7 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
     _checkDirtyChanged();
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final provider = context.read<DealsProvider>();
     final p = _palette[_selectedPalette];
@@ -193,11 +193,15 @@ class _AddEditBuyerDialogState extends State<AddEditBuyerDialog> {
       discordServerIds: serverIds,
     );
 
+    // WICHTIG: await vor dem Pop — sonst ist der Käufer beim Rebuild des
+    // Deal-Dialogs noch nicht in provider.buyers und der Dropdown würde mit
+    // einem Wert ohne passendes Item bauen (Assertion). Siehe Shop-Pendant.
     if (widget.buyer != null) {
-      provider.updateBuyer(buyer.copyWith(id: widget.buyer!.id));
+      await provider.updateBuyer(buyer.copyWith(id: widget.buyer!.id));
     } else {
-      provider.addBuyer(buyer);
+      await provider.addBuyer(buyer);
     }
+    if (!mounted) return;
     // Name als Dialog-Ergebnis: erlaubt Inline-Anlage aus dem Deal-Dialog
     // (Dropdown wählt den frisch angelegten Käufer direkt aus).
     Navigator.pop(context, buyer.name);

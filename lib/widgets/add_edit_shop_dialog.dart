@@ -123,7 +123,7 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
     return amazonCountryOptions.containsKey(suffix) ? suffix : null;
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final provider = context.read<DealsProvider>();
     final rawUrl = _urlCtrl.text.trim();
@@ -146,11 +146,16 @@ class _AddEditShopDialogState extends State<AddEditShopDialog> {
       url: url,
     );
 
+    // WICHTIG: await vor dem Pop — der Inline-Anlage-Flow im Deal-Dialog
+    // wählt den neuen Shop direkt nach Dialog-Rückkehr aus. Ohne await ist
+    // der Shop beim Rebuild noch nicht in provider.shops und die Auswahl
+    // wird vom Nicht-in-Liste-Fallback wieder genullt (Race-Condition).
     if (widget.shop != null) {
-      provider.updateShop(shop.copyWith(id: widget.shop!.id));
+      await provider.updateShop(shop.copyWith(id: widget.shop!.id));
     } else {
-      provider.addShop(shop);
+      await provider.addShop(shop);
     }
+    if (!mounted) return;
     // Name als Dialog-Ergebnis: erlaubt Inline-Anlage aus dem Deal-Dialog
     // (Dropdown wählt den frisch angelegten Shop direkt aus). Bestehende
     // Caller ohne showDialog<String> ignorieren den Wert.
