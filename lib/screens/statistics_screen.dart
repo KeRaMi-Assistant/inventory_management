@@ -43,6 +43,12 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   late final TabController _tab = TabController(length: 5, vsync: this);
   Future<List<InventoryBatch>>? _batchFuture;
 
+  /// Smart-Default-Guard: Der 30-Tage-Default wird beim Erst-Aufruf EINMALIG
+  /// auf „Dieses Jahr" geweitet, wenn er leer wäre, obwohl Deals existieren —
+  /// die Statistik startet nie mit toten 0,00-€-Karten (Design-Critic #5).
+  /// Danach hat immer die User-Wahl Vorrang.
+  bool _autoWidened = false;
+
   @override
   void initState() {
     super.initState();
@@ -153,6 +159,16 @@ class _StatisticsScreenState extends State<StatisticsScreen>
               monthlyProfitGoal: prefs.monthlyProfitGoal,
               lowStockThreshold: prefs.lowStockThreshold,
             );
+
+            if (!_autoWidened &&
+                filter.preset == StatsPreset.last30 &&
+                stats.dealCount == 0 &&
+                inv.deals.isNotEmpty) {
+              _autoWidened = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) filter.setPreset(StatsPreset.thisYear);
+              });
+            }
 
             // Build the shared tab body (TabBar + TabBarView).
             // StatisticsScreen never owns a Scaffold or AppBar — the tab

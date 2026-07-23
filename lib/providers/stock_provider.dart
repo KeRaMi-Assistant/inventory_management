@@ -431,11 +431,28 @@ class StockProvider extends ChangeNotifier {
   /// Löst eine Produkt-ID in den Anzeigenamen auf (Catalog-Cache).
   /// Fallback: gekürzte ID — rohe UUIDs gehören nicht in den User-sichtbaren
   /// Aktivitäts-Feed.
-  String _productLabel(String productId) {
+  String productLabel(String productId) {
     final product =
         _catalogProducts.where((p) => p.id == productId).firstOrNull;
     if (product != null) return product.name;
     return productId.length > 8 ? '${productId.substring(0, 8)}…' : productId;
+  }
+
+  static final RegExp _uuidPattern = RegExp(
+    r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}',
+  );
+
+  /// Ersetzt rohe Produkt-UUIDs in (historischen) Activity-Messages durch
+  /// den Produktnamen. Neue Einträge werden seit 2026-07-22 direkt mit Namen
+  /// geloggt — Alt-Einträge in der DB bleiben aber ewig sichtbar; dieser
+  /// Anzeige-Resolver macht sie lesbar, ohne riskante DB-Backfills
+  /// (Design-Critic 2026-07-23, #6).
+  String humanizeActivityMessage(String message) {
+    if (!message.contains('-')) return message;
+    return message.replaceAllMapped(
+      _uuidPattern,
+      (m) => productLabel(m.group(0)!),
+    );
   }
 
   void _log(String message, String type) {
@@ -670,7 +687,7 @@ class StockProvider extends ChangeNotifier {
     }
 
     _log(
-      'Wareneingang gebucht: +$receivedQty × ${_productLabel(productId)}',
+      'Wareneingang gebucht: +$receivedQty × ${productLabel(productId)}',
       'purchase_order',
     );
     await _refreshProductStock();
@@ -816,7 +833,7 @@ class StockProvider extends ChangeNotifier {
     final updated = item.copyWith(countedQty: countedQty);
     final saved = await _repository.updateStocktakeItem(updated);
     _log(
-        'Inventur-Zählung: ${_productLabel(item.productId)} → $countedQty Stk.',
+        'Inventur-Zählung: ${productLabel(item.productId)} → $countedQty Stk.',
         'stocktake');
     return saved;
   }

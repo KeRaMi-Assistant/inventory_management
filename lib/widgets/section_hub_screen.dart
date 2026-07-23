@@ -72,9 +72,14 @@ class SectionHubTile {
 /// - Detail-Pane (leer): `Key('detailPaneEmpty')`
 /// - Detail-Pane (mit Inhalt): `Key('detailPane')`
 class SectionHubScreen extends StatefulWidget {
-  const SectionHubScreen({super.key, required this.tiles});
+  const SectionHubScreen({super.key, required this.tiles, this.header});
 
   final List<SectionHubTile> tiles;
+
+  /// Optionaler Identitäts-/Kontext-Header über den Kacheln (z. B. Avatar +
+  /// Konto-Infos im Konto-Hub). Phone: erstes Listen-Element; Desktop: über
+  /// der Master-Spalte.
+  final Widget? header;
 
   @override
   State<SectionHubScreen> createState() => _SectionHubScreenState();
@@ -111,6 +116,7 @@ class _SectionHubScreenState extends State<SectionHubScreen> {
           if (!wide) {
             return _TileList(
               tiles: widget.tiles,
+              header: widget.header,
               selected: null,
               isDesktop: false,
               onTileTap: (tile) {
@@ -140,6 +146,7 @@ class _SectionHubScreenState extends State<SectionHubScreen> {
                 width: 320,
                 child: _TileList(
                   tiles: widget.tiles,
+                  header: widget.header,
                   selected: effectiveSelected,
                   isDesktop: true,
                   onTileTap: (tile) {
@@ -199,21 +206,27 @@ class _TileList extends StatelessWidget {
     required this.selected,
     required this.isDesktop,
     required this.onTileTap,
+    this.header,
   });
 
   final List<SectionHubTile> tiles;
+  final Widget? header;
   final SectionHubTile? selected;
   final bool isDesktop;
   final void Function(SectionHubTile) onTileTap;
 
   @override
   Widget build(BuildContext context) {
+    final hasHeader = header != null;
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: tiles.length,
+      itemCount: tiles.length + (hasHeader ? 1 : 0),
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final tile = tiles[index];
+        if (hasHeader && index == 0) {
+          return Entrance(index: 0, child: header!);
+        }
+        final tile = tiles[hasHeader ? index - 1 : index];
         return Entrance(
           index: index,
           child: _SectionHubTileCard(

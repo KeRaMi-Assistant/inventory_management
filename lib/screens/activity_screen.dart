@@ -7,6 +7,7 @@ import '../app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/activity_entry.dart';
 import '../providers/deals_provider.dart';
+import '../providers/stock_provider.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -405,7 +406,11 @@ class _ActivityTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entry.message,
+                  // Alt-Einträge können rohe Produkt-UUIDs enthalten —
+                  // anzeige-seitig in Produktnamen auflösen.
+                  context
+                      .watch<StockProvider>()
+                      .humanizeActivityMessage(entry.message),
                   style: TextStyle(
                     fontSize: 13,
                     color: AppTheme.textPrimaryOf(context),

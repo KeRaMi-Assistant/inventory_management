@@ -104,28 +104,30 @@ class _KpiCardState extends State<KpiCard> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
                   color: accent.withAlpha(
                     Theme.of(context).brightness == Brightness.dark ? 50 : 20,
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, size: 16, color: accent),
+                child: Icon(icon, size: 15, color: accent),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   label,
+                  // Kompakte Icon-Zeile + kein letterSpacing: auf 165-px-
+                  // Phone-Karten brachen lange Wörter sonst MITTEN im Wort
+                  // („Gesamtprofi/t") — Design-Critic 2026-07-23, #3.
                   style: TextStyle(
                     fontSize: 12,
                     color: AppTheme.textMutedOf(context),
                     fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
                   ),
                   // Lange Labels („Offene Bestellungen") dürfen auf zwei Zeilen
                   // umbrechen statt einzeilig zu kürzen — passt in die
-                  // 32-px-Icon-Höhe, Karten werden dadurch nicht höher.
+                  // Icon-Höhe, Karten werden dadurch nicht höher.
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -135,7 +137,7 @@ class _KpiCardState extends State<KpiCard> {
               if (onTap != null)
                 Icon(
                   Icons.chevron_right,
-                  size: 16,
+                  size: 14,
                   color: AppTheme.textMutedOf(context),
                 ),
             ],
@@ -143,11 +145,14 @@ class _KpiCardState extends State<KpiCard> {
           const SizedBox(height: 12),
           Text(
             value,
+            // tabularFigures: Ziffern gleicher Breite — Zahlen „springen"
+            // nicht beim Wertwechsel und fluchten in Grids (Critic #4).
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
               color: AppTheme.textPrimaryOf(context),
               letterSpacing: -0.3,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

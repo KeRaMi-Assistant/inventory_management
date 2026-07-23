@@ -1988,6 +1988,12 @@ abstract class AppLocalizations {
   /// **'Probleme melden & Hilfe erhalten'**
   String get settingsTabSupportSub;
 
+  /// No description provided for @accountHeaderTestPhase.
+  ///
+  /// In de, this message translates to:
+  /// **'Testphase'**
+  String get accountHeaderTestPhase;
+
   /// No description provided for @settingsAboutSection.
   ///
   /// In de, this message translates to:
@@ -4841,8 +4847,14 @@ abstract class AppLocalizations {
   /// No description provided for @dashboardKpiMissingInvoice.
   ///
   /// In de, this message translates to:
-  /// **'Ausstehende Rechnungen'**
+  /// **'Beleg fehlt'**
   String get dashboardKpiMissingInvoice;
+
+  /// No description provided for @dashboardKpiTotalDeals.
+  ///
+  /// In de, this message translates to:
+  /// **'Deals gesamt'**
+  String get dashboardKpiTotalDeals;
 
   /// No description provided for @dashboardActivityFeed.
   ///

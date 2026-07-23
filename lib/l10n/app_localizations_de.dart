@@ -1048,6 +1048,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTabSupportSub => 'Probleme melden & Hilfe erhalten';
 
   @override
+  String get accountHeaderTestPhase => 'Testphase';
+
+  @override
   String get settingsAboutSection => 'Über';
 
   @override
@@ -2692,7 +2695,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dashboardKpiCriticalStock => 'Lager kritisch';
 
   @override
-  String get dashboardKpiMissingInvoice => 'Ausstehende Rechnungen';
+  String get dashboardKpiMissingInvoice => 'Beleg fehlt';
+
+  @override
+  String get dashboardKpiTotalDeals => 'Deals gesamt';
 
   @override
   String get dashboardActivityFeed => 'Aktivitäts-Feed';

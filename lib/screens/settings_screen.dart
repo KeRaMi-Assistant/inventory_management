@@ -115,7 +115,10 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final hub = SectionHubScreen(tiles: _tiles(l10n));
+    final hub = SectionHubScreen(
+      tiles: _tiles(l10n),
+      header: const _AccountHeader(),
+    );
 
     if (embedded) return hub;
 
@@ -137,6 +140,103 @@ class SettingsScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ── Account-Identitäts-Header (Konto-Hub) ──────────────────────────────────────
+
+/// Identitäts-Header über den Konto-Kacheln: Avatar-Initial mit
+/// Akzent-Verlauf, E-Mail und Plan-/Testphase-Chip. Gibt dem Konto-Bereich
+/// ein Gesicht — vorher sprang der Hub direkt in eine anonyme Menü-Liste
+/// (Design-Critic 2026-07-23, #10).
+class _AccountHeader extends StatelessWidget {
+  const _AccountHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final email = context.watch<AuthProvider>().userEmail ?? '—';
+    final plan = context.watch<BillingProvider>().currentPlan;
+    final initial =
+        email.trim().isNotEmpty ? email.trim()[0].toUpperCase() : '?';
+    final accent = Theme.of(context).colorScheme.primary;
+    final chipLabel = BillingProvider.purchaseFlowLive
+        ? plan.label
+        : l10n.accountHeaderTestPhase;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.bgSurfaceOf(context),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(color: AppTheme.borderOf(context)),
+        boxShadow: AppTheme.shadowSmOf(context),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [accent, accent.withValues(alpha: 0.65)],
+              ),
+            ),
+            child: Text(
+              initial,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimaryOf(context),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentLightOf(context),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        chipLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.accentTextOf(context),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -71,7 +71,9 @@ class ProfitLineChart extends StatelessWidget {
       height: height,
       child: LineChart(
         LineChartData(
-          minY: minY - yPadding,
+          // Bei rein positiven Daten NICHT unter 0 padden — sonst zeigt die
+          // Y-Achse absurde Negativ-Ticks wie „-1.103 €" (Design-Critic #9).
+          minY: minY == 0 ? 0 : minY - yPadding,
           maxY: maxY + yPadding,
           gridData: FlGridData(
             show: true,

@@ -113,7 +113,9 @@ class MonthlyBarChart extends StatelessWidget {
       height: height,
       child: BarChart(
         BarChartData(
-          minY: minY - yPadding,
+          // Bei rein positiven Daten NICHT unter 0 padden — sonst zeigt die
+          // Y-Achse absurde Negativ-Ticks (Design-Critic #9).
+          minY: minY == 0 ? 0 : minY - yPadding,
           maxY: maxY + yPadding,
           alignment: BarChartAlignment.spaceAround,
           barGroups: groups,
@@ -258,7 +260,9 @@ class MarginLineChart extends StatelessWidget {
       height: height,
       child: LineChart(
         LineChartData(
-          minY: minY - yPadding,
+          // Bei rein positiven Daten NICHT unter 0 padden — sonst zeigt die
+          // Y-Achse absurde Negativ-Ticks (Design-Critic #9).
+          minY: minY == 0 ? 0 : minY - yPadding,
           maxY: maxY + yPadding,
           gridData: FlGridData(
             show: true,

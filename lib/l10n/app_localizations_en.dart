@@ -1049,6 +1049,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTabSupportSub => 'Report issues & get help';
 
   @override
+  String get accountHeaderTestPhase => 'Test phase';
+
+  @override
   String get settingsAboutSection => 'About';
 
   @override
@@ -2688,7 +2691,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardKpiCriticalStock => 'Critical stock';
 
   @override
-  String get dashboardKpiMissingInvoice => 'Pending invoices';
+  String get dashboardKpiMissingInvoice => 'Missing receipt';
+
+  @override
+  String get dashboardKpiTotalDeals => 'Total deals';
 
   @override
   String get dashboardActivityFeed => 'Activity feed';

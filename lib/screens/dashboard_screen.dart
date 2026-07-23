@@ -312,6 +312,9 @@ class _KpiGrid extends StatelessWidget {
       (Icons.account_balance_wallet_outlined, l10n.dashboardKpiOpenAmount, fmt.format(provider.openAmount), AppTheme.warning, MainTab.stats),
       (Icons.warning_amber_rounded, l10n.dashboardKpiCriticalStock, '${stock.criticalStockCount}', AppTheme.danger, MainTab.warehouse),
       (Icons.receipt_long_outlined, l10n.dashboardKpiMissingInvoice, '${provider.missingInvoiceCount}', AppTheme.purple, MainTab.deals),
+      // 8. KPI: füllt das 2er-/4er-Grid komplett — vorher stand die 7. Karte
+      // verwaist allein in der letzten Reihe (Design-Critic 2026-07-23, #2).
+      (Icons.receipt_outlined, l10n.dashboardKpiTotalDeals, '${provider.deals.length}', AppTheme.info, MainTab.deals),
     ];
 
     return LayoutBuilder(
@@ -366,8 +369,8 @@ class _ActivityFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final fmt = DateFormat('dd.MM. HH:mm');
-    return Consumer<DealsProvider>(
-      builder: (context, provider, _) {
+    return Consumer2<DealsProvider, StockProvider>(
+      builder: (context, provider, stock, _) {
         final activities = provider.activities.take(10).toList();
         return _Panel(
           title: l10n.dashboardActivityFeed,
@@ -377,7 +380,10 @@ class _ActivityFeed extends StatelessWidget {
               : Column(
                   children: activities
                       .map((a) => _ActivityItem(
-                            message: a.message,
+                            // Alt-Einträge können rohe Produkt-UUIDs
+                            // enthalten — anzeige-seitig auflösen.
+                            message:
+                                stock.humanizeActivityMessage(a.message),
                             date: fmt.format(a.date),
                           ))
                       .toList(),
